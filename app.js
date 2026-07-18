@@ -9,7 +9,6 @@ const authView = document.getElementById('auth-view');
 const appShell = document.getElementById('app-shell');
 const authForm = document.getElementById('auth-form');
 const authMessage = document.getElementById('auth-message');
-const signupBtn = document.getElementById('signup-btn');
 const logoutBtn = document.getElementById('logout-btn');
 const nameLabel = document.getElementById('name-label');
 const userNameEl = document.getElementById('user-name');
@@ -47,29 +46,94 @@ supabase.auth.onAuthStateChange((_event, session) => {
   if (currentUser?.id !== wasUser || !rendered) render();
 });
 
-authForm.addEventListener('submit', async (e) => {
-  e.preventDefault();
-  const { error } = await supabase.auth.signInWithPassword(credentials());
-  showAuthMessage(error ? 'Credenziali non valide o email non confermata.' : '');
+// Modalità Accedi / Registrati
+const authCard = document.getElementById('auth-card');
+const authSuccess = document.getElementById('auth-success');
+const authTitle = document.getElementById('auth-title');
+const authSubtitle = document.getElementById('auth-subtitle');
+const authSubmit = document.getElementById('auth-submit');
+const modeLogin = document.getElementById('mode-login');
+const modeSignup = document.getElementById('mode-signup');
+const authSwitch = document.querySelector('.auth-switch');
+let authMode = 'login';
+
+function setAuthMode(mode) {
+  authMode = mode;
+  const signup = mode === 'signup';
+  authSwitch.classList.toggle('signup', signup);
+  modeLogin.classList.toggle('active', !signup);
+  modeSignup.classList.toggle('active', signup);
+  modeLogin.setAttribute('aria-selected', String(!signup));
+  modeSignup.setAttribute('aria-selected', String(signup));
+  nameLabel.classList.toggle('hidden', !signup);
+  authTitle.textContent = signup ? 'Crea il tuo account ✨' : 'Bentornato! 👋';
+  authSubtitle.textContent = signup
+    ? 'Bastano nome, email e una password.'
+    : 'Entra e vedi chi guida oggi.';
+  authSubmit.textContent = signup ? 'Crea account 🚀' : 'Entra 🚗';
+  document.getElementById('password').setAttribute('autocomplete', signup ? 'new-password' : 'current-password');
+  showAuthMessage('');
+}
+
+modeLogin.addEventListener('click', () => setAuthMode('login'));
+modeSignup.addEventListener('click', () => setAuthMode('signup'));
+
+document.getElementById('pw-toggle').addEventListener('click', () => {
+  const pw = document.getElementById('password');
+  const show = pw.type === 'password';
+  pw.type = show ? 'text' : 'password';
+  document.getElementById('pw-toggle').textContent = show ? '🙈' : '👁️';
 });
 
-signupBtn.addEventListener('click', async () => {
-  if (nameLabel.classList.contains('hidden')) {
-    nameLabel.classList.remove('hidden');
-    document.getElementById('display-name').focus();
-    showAuthMessage('Dicci come ti chiami, poi premi di nuovo "Crea account".', true);
+document.getElementById('success-back').addEventListener('click', () => {
+  authSuccess.classList.add('hidden');
+  authCard.classList.remove('hidden');
+  setAuthMode('login');
+});
+
+authForm.addEventListener('submit', async (e) => {
+  e.preventDefault();
+  const { email, password } = credentials();
+
+  if (authMode === 'login') {
+    if (!authForm.reportValidity()) return;
+    authSubmit.disabled = true;
+    const { error } = await supabase.auth.signInWithPassword({ email, password });
+    authSubmit.disabled = false;
+    if (error) {
+      showAuthMessage(error.message.includes('not confirmed')
+        ? '✉️ Devi prima confermare l\'email: controlla la posta.'
+        : '❌ Email o password sbagliate. Riprova!');
+    }
     return;
   }
+
   const name = document.getElementById('display-name').value.trim();
-  if (!name) { showAuthMessage('Serve il tuo nome per farti trovare dagli amici.'); return; }
+  if (!name) {
+    showAuthMessage('✋ Serve il tuo nome: è quello che vedranno gli amici.');
+    document.getElementById('display-name').focus();
+    return;
+  }
   if (!authForm.reportValidity()) return;
-  const { email, password } = credentials();
-  const { error } = await supabase.auth.signUp({
+  authSubmit.disabled = true;
+  const { data, error } = await supabase.auth.signUp({
     email, password,
     options: { data: { display_name: name } },
   });
-  if (error) showAuthMessage(error.message);
-  else showAuthMessage('Registrazione ok! Controlla la mail per confermare.', true);
+  authSubmit.disabled = false;
+  if (error) {
+    showAuthMessage(error.message.includes('already registered')
+      ? '🤔 Questa email è già registrata: prova ad accedere.'
+      : '❌ ' + error.message);
+    return;
+  }
+  if (data.user?.identities?.length === 0) {
+    showAuthMessage('🤔 Questa email è già registrata: prova ad accedere.');
+    return;
+  }
+  document.getElementById('success-email').textContent = email;
+  authCard.classList.add('hidden');
+  authSuccess.classList.remove('hidden');
 });
 
 logoutBtn.addEventListener('click', () => supabase.auth.signOut());

@@ -30,8 +30,17 @@
       </div>
     </div>
     <div class="auth-form-panel">
-      <div class="auth-card">
-        <h2>Sali a bordo</h2>
+
+      <div class="auth-card" id="auth-card">
+        <div class="auth-switch" role="tablist">
+          <button id="mode-login" class="auth-switch-btn active" role="tab" aria-selected="true">Accedi</button>
+          <button id="mode-signup" class="auth-switch-btn" role="tab" aria-selected="false">Registrati</button>
+          <span class="auth-switch-slider" aria-hidden="true"></span>
+        </div>
+
+        <h2 id="auth-title">Bentornato! 👋</h2>
+        <p id="auth-subtitle" class="auth-subtitle">Entra e vedi chi guida oggi.</p>
+
         <form id="auth-form" novalidate>
           <label for="display-name" id="name-label" class="hidden">Il tuo nome
             <input type="text" id="display-name" maxlength="40" autocomplete="name" placeholder="Come ti chiamano gli amici" />
@@ -40,15 +49,24 @@
             <input type="email" id="email" required autocomplete="email" placeholder="tu@esempio.it" />
           </label>
           <label for="password">Password
-            <input type="password" id="password" required minlength="6" autocomplete="current-password" placeholder="Minimo 6 caratteri" />
+            <span class="pw-wrap">
+              <input type="password" id="password" required minlength="6" autocomplete="current-password" placeholder="Minimo 6 caratteri" />
+              <button type="button" id="pw-toggle" class="pw-toggle" aria-label="Mostra password">👁️</button>
+            </span>
           </label>
-          <div class="auth-actions">
-            <button type="submit" id="login-btn" class="btn btn-primary">Entra</button>
-            <button type="button" id="signup-btn" class="btn btn-secondary">Crea account</button>
-          </div>
+          <button type="submit" id="auth-submit" class="btn btn-primary btn-big btn-full">Entra 🚗</button>
         </form>
-        <p id="auth-message" class="auth-message" role="status"></p>
+        <p id="auth-message" class="auth-message" role="alert"></p>
       </div>
+
+      <div class="auth-card auth-success hidden" id="auth-success">
+        <div class="auth-success-icon">📬</div>
+        <h2>Controlla la tua email!</h2>
+        <p class="auth-subtitle">Ti abbiamo mandato un link a<br /><strong id="success-email"></strong></p>
+        <p class="auth-subtitle">Aprilo per confermare l'account,<br />poi torna qui e accedi.</p>
+        <button id="success-back" class="btn btn-secondary btn-full">← Torna al login</button>
+      </div>
+
     </div>
   </section>
 
