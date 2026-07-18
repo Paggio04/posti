@@ -3,8 +3,8 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>Posti — i tuoi luoghi preferiti</title>
-  <meta name="description" content="Salva i posti che ami e scopri quelli consigliati dagli altri." />
+  <title>Posti — chi guida oggi?</title>
+  <meta name="description" content="Organizza i passaggi in macchina della tua comitiva: chi guida, chi sale, chi dove si siede." />
   <link rel="preconnect" href="https://fonts.googleapis.com" />
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet" />
@@ -16,15 +16,18 @@
   <section id="auth-view" class="auth-view">
     <div class="auth-brand-panel">
       <div class="auth-brand-inner">
-        <div class="auth-logo">📍</div>
+        <div class="auth-logo">🚗</div>
         <h1>Posti</h1>
-        <p>Salva i posti che ami.<br />Scopri quelli consigliati dagli altri.</p>
+        <p>Chi guida oggi? Chi sale?<br />Prenota il tuo posto in macchina.</p>
       </div>
     </div>
     <div class="auth-form-panel">
       <div class="auth-card">
         <h2>Entra in Posti</h2>
         <form id="auth-form" novalidate>
+          <label for="display-name" id="name-label" class="hidden">Il tuo nome
+            <input type="text" id="display-name" maxlength="40" autocomplete="name" placeholder="Come ti chiamano gli amici" />
+          </label>
           <label for="email">Email
             <input type="email" id="email" required autocomplete="email" placeholder="tu@esempio.it" />
           </label>
@@ -44,63 +47,57 @@
   <!-- APP -->
   <div id="app-shell" class="app-shell hidden">
     <header class="topbar">
-      <div class="brand">📍 Posti</div>
+      <div class="brand">🚗 Posti</div>
       <div class="topbar-right">
-        <span id="user-email" class="user-email"></span>
+        <span id="user-name" class="user-email"></span>
         <button id="logout-btn" class="btn btn-ghost">Esci</button>
       </div>
     </header>
 
     <main class="app-view">
-      <section class="add-card">
-        <h2>Aggiungi un posto</h2>
-        <form id="place-form">
+      <div class="day-bar">
+        <div class="day-tabs">
+          <button id="day-today" class="tab active">Oggi</button>
+          <button id="day-tomorrow" class="tab">Domani</button>
+          <input type="date" id="day-picker" class="day-picker" aria-label="Scegli un giorno" />
+        </div>
+        <button id="offer-toggle" class="btn btn-primary">🔑 Offri un passaggio</button>
+      </div>
+
+      <section id="offer-card" class="add-card hidden">
+        <h2>Oggi guidi tu</h2>
+        <form id="ride-form">
           <div class="form-row">
-            <input type="text" id="place-name" required maxlength="80" placeholder="Nome del posto *" aria-label="Nome del posto" />
-            <input type="text" id="place-city" maxlength="60" placeholder="Città" aria-label="Città" />
-            <select id="place-category" aria-label="Categoria">
-              <option value="ristorante">🍝 Ristorante</option>
-              <option value="bar">☕ Bar</option>
-              <option value="natura">🌲 Natura</option>
-              <option value="cultura">🏛️ Cultura</option>
-              <option value="mare">🏖️ Mare</option>
-              <option value="altro">✨ Altro</option>
-            </select>
+            <input type="text" id="ride-origin" maxlength="60" placeholder="Partenza (es. Piazza)" aria-label="Partenza" />
+            <input type="text" id="ride-destination" maxlength="60" placeholder="Destinazione *" required aria-label="Destinazione" />
+            <input type="time" id="ride-time" aria-label="Orario di partenza" />
           </div>
-          <textarea id="place-notes" maxlength="500" rows="2" placeholder="Note, consigli, perché ti piace..." aria-label="Note"></textarea>
           <div class="form-row form-row-end">
-            <label class="rating-label" for="place-rating">Voto
-              <select id="place-rating">
-                <option value="5">★★★★★</option>
-                <option value="4">★★★★</option>
-                <option value="3">★★★</option>
-                <option value="2">★★</option>
-                <option value="1">★</option>
+            <label class="rating-label" for="ride-seats">Posti liberi
+              <select id="ride-seats">
+                <option value="4" selected>4</option>
+                <option value="1">1</option>
+                <option value="2">2</option>
+                <option value="3">3</option>
+                <option value="5">5</option>
+                <option value="6">6</option>
               </select>
             </label>
-            <label class="share-label">
-              <input type="checkbox" id="place-public" /> Condividi con tutti
-            </label>
-            <button type="submit" id="save-place-btn" class="btn btn-primary">Salva posto</button>
+            <input type="text" id="ride-note" maxlength="200" placeholder="Nota (es. passo dal bar)" aria-label="Nota" class="note-input" />
+            <button type="submit" class="btn btn-primary">Pubblica passaggio</button>
           </div>
         </form>
       </section>
 
-      <section class="lists">
-        <div class="tabs" role="tablist">
-          <button id="tab-mine" class="tab active" role="tab" aria-selected="true">I miei posti</button>
-          <button id="tab-public" class="tab" role="tab" aria-selected="false">Community</button>
-        </div>
-        <div id="places-list" class="places-grid"></div>
-        <div id="empty-message" class="empty hidden">
-          <div class="empty-icon">🗺️</div>
-          <p class="empty-title">Ancora nessun posto qui</p>
-          <p class="empty-hint">Aggiungi il tuo primo posto con il modulo qui sopra: bastano un nome e un voto.</p>
-        </div>
-      </section>
+      <div id="rides-list" class="rides-grid"></div>
+      <div id="empty-message" class="empty hidden">
+        <div class="empty-icon">🅿️</div>
+        <p class="empty-title">Nessuna macchina per questo giorno</p>
+        <p class="empty-hint">Hai la macchina? Premi "Offri un passaggio" e gli amici prenotano il posto.</p>
+      </div>
     </main>
 
-    <footer class="footer">Posti — fatto con Supabase &amp; Netlify</footer>
+    <footer class="footer">Posti — chi guida, chi sale, chi dove si siede</footer>
   </div>
 
   <script type="module" src="app.js"></script>
