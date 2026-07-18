@@ -9,11 +9,9 @@ const authView = document.getElementById('auth-view');
 const appShell = document.getElementById('app-shell');
 const authForm = document.getElementById('auth-form');
 const authMessage = document.getElementById('auth-message');
-const logoutBtn = document.getElementById('logout-btn');
 const nameLabel = document.getElementById('name-label');
 const userNameEl = document.getElementById('user-name');
 const groupPills = document.getElementById('group-pills');
-const groupInfo = document.getElementById('group-info');
 const dayToday = document.getElementById('day-today');
 const dayTomorrow = document.getElementById('day-tomorrow');
 const dayPicker = document.getElementById('day-picker');
@@ -154,7 +152,9 @@ authForm.addEventListener('submit', async (e) => {
   authSuccess.classList.remove('hidden');
 });
 
-logoutBtn.addEventListener('click', () => supabase.auth.signOut());
+document.getElementById('profile-logout').addEventListener('click', () => {
+  if (confirm('Vuoi uscire dall\'account?')) supabase.auth.signOut();
+});
 
 function credentials() {
   return {
@@ -177,16 +177,47 @@ async function ensureProfile() {
   myName = fallback;
 }
 
+// --- Navigazione a schede ---
+const VIEWS = ['home', 'history', 'groups', 'stats', 'profile'];
+let currentView = 'home';
+
+function switchView(view) {
+  currentView = view;
+  for (const v of VIEWS) {
+    document.getElementById('view-' + v).classList.toggle('hidden', v !== view);
+  }
+  document.querySelectorAll('.nav-item').forEach(b =>
+    b.classList.toggle('active', b.dataset.view === view));
+  window.scrollTo({ top: 0 });
+  if (view === 'history') loadHistory();
+  if (view === 'stats') loadStats();
+  if (view === 'groups') renderGroupsView();
+  if (view === 'profile') renderProfile();
+}
+
+document.querySelectorAll('.nav-item').forEach(b =>
+  b.addEventListener('click', () => switchView(b.dataset.view)));
+
+userNameEl.addEventListener('click', () => switchView('profile'));
+
 // --- Cambia nome ---
-userNameEl.addEventListener('click', async () => {
+document.getElementById('profile-rename').addEventListener('click', async () => {
   const name = prompt('Il tuo nome (come appare sul sedile):', myName);
   if (!name || !name.trim() || name.trim() === myName) return;
   const { error } = await supabase.from('profiles').update({ display_name: name.trim().slice(0, 40) }).eq('id', currentUser.id);
   if (error) { toast('Errore: ' + error.message); return; }
   myName = name.trim().slice(0, 40);
   userNameEl.textContent = myName;
+  renderProfile();
+  toast('Nome aggiornato.');
   loadRides();
 });
+
+function renderProfile() {
+  document.getElementById('profile-avatar').textContent = initials(myName || '?');
+  document.getElementById('profile-name').textContent = myName;
+  document.getElementById('profile-email').textContent = currentUser?.email ?? '';
+}
 
 // --- Gruppi ---
 document.getElementById('group-create').addEventListener('click', async () => {
@@ -196,6 +227,7 @@ document.getElementById('group-create').addEventListener('click', async () => {
   if (error) { toast('Errore: ' + error.message); return; }
   await loadGroups();
   selectGroup(data.id);
+  renderGroupsView();
   toast(`Gruppo creato. Condividi il codice ${data.code} con gli amici.`);
 });
 
@@ -206,6 +238,7 @@ document.getElementById('group-join').addEventListener('click', async () => {
   if (error) { toast(error.message.includes('Codice') ? 'Codice non valido, ricontrolla.' : 'Errore: ' + error.message); return; }
   await loadGroups();
   selectGroup(data.id);
+  renderGroupsView();
   toast(`Sei entrato nel gruppo "${data.name}".`);
 });
 
@@ -224,7 +257,7 @@ function renderGroupBar() {
   groupPills.innerHTML = '';
   const all = document.createElement('button');
   all.className = 'tab' + (currentGroupId === null ? ' active' : '');
-  all.textContent = '🌍 Tutti';
+  all.textContent = 'Tutti';
   all.addEventListener('click', () => selectGroup(null));
   groupPills.appendChild(all);
   for (const g of myGroups) {
@@ -239,62 +272,187 @@ function renderGroupBar() {
 function selectGroup(groupId) {
   currentGroupId = groupId;
   renderGroupBar();
-  renderGroupInfo();
   loadRides();
 }
 
-async function renderGroupInfo() {
-  const g = myGroups.find(x => x.id === currentGroupId);
-  groupInfo.classList.toggle('hidden', !g);
-  groupInfo.innerHTML = '';
-  if (!g) return;
+// --- Vista Gruppi ---
+async function renderGroupsView() {
+  const list = document.getElementById('groups-list');
+  document.getElementById('groups-empty').classList.toggle('hidden', myGroups.length > 0);
+  list.innerHTML = '';
+  for (const g of myGroups) {
+    const card = document.createElement('article');
+    card.className = 'group-card';
 
-  const code = document.createElement('span');
-  code.className = 'group-code';
-  code.textContent = g.code;
-  code.title = 'Codice invito';
-  groupInfo.appendChild(code);
+    const head = document.createElement('div');
+    head.className = 'group-card-head';
+    const name = document.createElement('span');
+    name.className = 'group-card-name';
+    name.textContent = g.name;
+    head.appendChild(name);
+    const code = document.createElement('span');
+    code.className = 'group-code';
+    code.textContent = g.code;
+    code.title = 'Codice invito';
+    head.appendChild(code);
+    card.appendChild(head);
 
-  const members = document.createElement('span');
-  members.className = 'group-members-count';
-  groupInfo.appendChild(members);
-  supabase.from('group_members').select('*', { count: 'exact', head: true }).eq('group_id', g.id)
-    .then(({ count }) => { if (count != null) members.textContent = `${count} membri`; });
+    const membersWrap = document.createElement('div');
+    membersWrap.className = 'group-card-members';
+    card.appendChild(membersWrap);
+    supabase.from('group_members').select('user_id, profile:profiles(display_name)').eq('group_id', g.id)
+      .then(({ data }) => {
+        for (const m of data ?? []) {
+          const chip = document.createElement('span');
+          chip.className = 'history-chip';
+          chip.textContent = m.profile.display_name + (m.user_id === currentUser.id ? ' (tu)' : '');
+          membersWrap.appendChild(chip);
+        }
+      });
 
-  const copy = document.createElement('button');
-  copy.className = 'btn btn-ghost btn-small';
-  copy.textContent = 'Copia';
-  copy.addEventListener('click', async () => {
-    await navigator.clipboard.writeText(g.code);
-    copy.textContent = 'Copiato ✓';
-    setTimeout(() => (copy.textContent = 'Copia'), 1500);
-  });
-  groupInfo.appendChild(copy);
+    const actions = document.createElement('div');
+    actions.className = 'group-card-actions';
 
-  const inviteText = `Entra nel gruppo "${g.name}" su Posti con il codice ${g.code}: ${SITE_URL}`;
-  const invite = document.createElement('button');
-  invite.className = 'btn btn-ghost btn-small';
-  invite.textContent = 'Invita';
-  invite.addEventListener('click', async () => {
-    if (navigator.share) {
-      try { await navigator.share({ title: 'Posti', text: inviteText, url: SITE_URL }); } catch {}
-    } else {
-      window.open('https://wa.me/?text=' + encodeURIComponent(inviteText), '_blank', 'noopener');
+    const copy = document.createElement('button');
+    copy.className = 'btn btn-ghost btn-small';
+    copy.textContent = 'Copia codice';
+    copy.addEventListener('click', async () => {
+      await navigator.clipboard.writeText(g.code);
+      copy.textContent = 'Copiato';
+      setTimeout(() => (copy.textContent = 'Copia codice'), 1500);
+    });
+    actions.appendChild(copy);
+
+    const inviteText = `Entra nel gruppo "${g.name}" su Posti con il codice ${g.code}: ${SITE_URL}`;
+    const invite = document.createElement('button');
+    invite.className = 'btn btn-ghost btn-small';
+    invite.textContent = 'Invita amici';
+    invite.addEventListener('click', async () => {
+      if (navigator.share) {
+        try { await navigator.share({ title: 'Posti', text: inviteText, url: SITE_URL }); } catch {}
+      } else {
+        window.open('https://wa.me/?text=' + encodeURIComponent(inviteText), '_blank', 'noopener');
+      }
+    });
+    actions.appendChild(invite);
+
+    const leave = document.createElement('button');
+    leave.className = 'btn btn-ghost btn-small btn-danger';
+    leave.textContent = 'Esci dal gruppo';
+    leave.addEventListener('click', async () => {
+      if (!confirm(`Vuoi uscire dal gruppo "${g.name}"?`)) return;
+      await supabase.from('group_members').delete().eq('group_id', g.id).eq('user_id', currentUser.id);
+      await loadGroups();
+      renderGroupsView();
+      loadRides();
+    });
+    actions.appendChild(leave);
+
+    card.appendChild(actions);
+    list.appendChild(card);
+  }
+}
+
+// --- Vista Storico ---
+const DAY_FMT = new Intl.DateTimeFormat('it-IT', { weekday: 'long', day: 'numeric', month: 'long' });
+
+async function loadHistory() {
+  const list = document.getElementById('history-list');
+  list.innerHTML = '<div class="skeleton"></div>';
+  const { data, error } = await supabase
+    .from('rides')
+    .select('ride_date, origin, destination, depart_time, driver:profiles!rides_driver_id_fkey(display_name), seat_claims(passenger:profiles!seat_claims_passenger_id_fkey(display_name))')
+    .lt('ride_date', todayISO())
+    .order('ride_date', { ascending: false })
+    .order('depart_time', { ascending: true, nullsFirst: false })
+    .limit(120);
+  list.innerHTML = '';
+  document.getElementById('history-empty').classList.toggle('hidden', !!data?.length);
+  if (error || !data) return;
+
+  let currentDay = null;
+  let dayWrap = null;
+  for (const r of data) {
+    if (r.ride_date !== currentDay) {
+      currentDay = r.ride_date;
+      dayWrap = document.createElement('div');
+      const title = document.createElement('div');
+      title.className = 'history-day-title';
+      title.textContent = DAY_FMT.format(new Date(r.ride_date + 'T12:00:00'));
+      dayWrap.appendChild(title);
+      list.appendChild(dayWrap);
     }
-  });
-  groupInfo.appendChild(invite);
+    const item = document.createElement('div');
+    item.className = 'history-ride';
+    const route = document.createElement('div');
+    route.className = 'history-route';
+    route.textContent = (r.origin ? `${r.origin} → ` : '') + r.destination
+      + (r.depart_time ? ` · ore ${r.depart_time.slice(0, 5)}` : '');
+    item.appendChild(route);
+    const people = document.createElement('div');
+    people.className = 'history-passengers';
+    const drv = document.createElement('span');
+    drv.className = 'history-chip driver';
+    drv.textContent = `${r.driver.display_name} (guidava)`;
+    people.appendChild(drv);
+    if (r.seat_claims.length === 0) {
+      const none = document.createElement('span');
+      none.className = 'history-chip';
+      none.textContent = 'nessun passeggero';
+      people.appendChild(none);
+    }
+    for (const c of r.seat_claims) {
+      const chip = document.createElement('span');
+      chip.className = 'history-chip';
+      chip.textContent = c.passenger.display_name;
+      people.appendChild(chip);
+    }
+    item.appendChild(people);
+    dayWrap.appendChild(item);
+  }
+}
 
-  const leave = document.createElement('button');
-  leave.className = 'btn btn-ghost btn-small btn-danger';
-  leave.textContent = 'Esci dal gruppo';
-  leave.addEventListener('click', async () => {
-    if (!confirm(`Uscire dal gruppo "${g.name}"?`)) return;
-    await supabase.from('group_members').delete().eq('group_id', g.id).eq('user_id', currentUser.id);
-    currentGroupId = null;
-    await loadGroups();
-    selectGroup(null);
-  });
-  groupInfo.appendChild(leave);
+// --- Vista Statistiche ---
+async function loadStats() {
+  const box = document.getElementById('stats-content');
+  box.innerHTML = '<div class="skeleton"></div>';
+  const { data, error } = await supabase
+    .from('rides')
+    .select('driver_id, driver:profiles!rides_driver_id_fkey(display_name), seat_claims(passenger_id, passenger:profiles!seat_claims_passenger_id_fkey(display_name))');
+  if (error || !data) { box.innerHTML = '<p class="view-subtitle">Impossibile caricare le statistiche.</p>'; return; }
+
+  const drives = new Map(); // id -> {name, n}
+  const ridesTaken = new Map();
+  for (const r of data) {
+    const d = drives.get(r.driver_id) ?? { name: r.driver.display_name, n: 0 };
+    d.n++; drives.set(r.driver_id, d);
+    for (const c of r.seat_claims) {
+      const p = ridesTaken.get(c.passenger_id) ?? { name: c.passenger.display_name, n: 0 };
+      p.n++; ridesTaken.set(c.passenger_id, p);
+    }
+  }
+
+  const myDrives = drives.get(currentUser.id)?.n ?? 0;
+  const myRides = ridesTaken.get(currentUser.id)?.n ?? 0;
+
+  const bars = (map, alt) => {
+    const rows = [...map.values()].sort((a, b) => b.n - a.n).slice(0, 8);
+    const max = rows[0]?.n || 1;
+    return rows.map(r =>
+      `<div class="stats-row${alt ? ' alt' : ''}">
+        <span class="stats-row-name">${r.name.replace(/</g, '&lt;')}</span>
+        <span class="stats-row-bar-wrap"><span class="stats-row-bar" style="width:${(r.n / max) * 100}%"></span></span>
+        <span class="stats-row-count">${r.n}</span>
+      </div>`).join('') || '<p class="view-subtitle">Ancora nessun dato.</p>';
+  };
+
+  box.innerHTML =
+    `<div class="stats-me">
+      <div class="stat-box"><strong>${myDrives}</strong><span>volte hai guidato</span></div>
+      <div class="stat-box"><strong>${myRides}</strong><span>passaggi ricevuti</span></div>
+    </div>
+    <div class="stats-section"><h3>Chi guida di più</h3>${bars(drives, false)}</div>
+    <div class="stats-section"><h3>Chi sale più spesso</h3>${bars(ridesTaken, true)}</div>`;
 }
 
 // --- Giorno ---
@@ -415,18 +573,18 @@ async function renderWalkers(rides) {
 }
 
 // --- Macchina SVG ---
-const SEAT_POS = {
-  0: { x: 38, y: 92 },
-  1: { x: 112, y: 92 },
-  2: { x: 24, y: 176 },
-  3: { x: 76, y: 176 },
-  4: { x: 128, y: 176 },
-  5: { x: 42, y: 252 },
-  6: { x: 110, y: 252 },
-};
-const SEAT_SETS = {
-  1: [1], 2: [1, 4], 3: [1, 2, 4], 4: [1, 2, 3, 4],
-  5: [1, 2, 3, 4, 6], 6: [1, 2, 3, 4, 5, 6],
+// Layout sedili centrato nella carrozzeria (larghezza 190, centro x = 95).
+// Il guidatore è sempre davanti a sinistra; le posizioni dei passeggeri
+// dipendono da quanti posti offre l'auto.
+const ROW_FRONT = 92, ROW_BACK = 176, ROW_THIRD = 252;
+const DRIVER_POS = { x: 58, y: ROW_FRONT };
+const SEAT_LAYOUTS = {
+  1: { 1: { x: 132, y: ROW_FRONT } },
+  2: { 1: { x: 132, y: ROW_FRONT }, 4: { x: 95, y: ROW_BACK } },
+  3: { 1: { x: 132, y: ROW_FRONT }, 2: { x: 58, y: ROW_BACK }, 4: { x: 132, y: ROW_BACK } },
+  4: { 1: { x: 132, y: ROW_FRONT }, 2: { x: 43, y: ROW_BACK }, 3: { x: 95, y: ROW_BACK }, 4: { x: 147, y: ROW_BACK } },
+  5: { 1: { x: 132, y: ROW_FRONT }, 2: { x: 43, y: ROW_BACK }, 3: { x: 95, y: ROW_BACK }, 4: { x: 147, y: ROW_BACK }, 6: { x: 95, y: ROW_THIRD } },
+  6: { 1: { x: 132, y: ROW_FRONT }, 2: { x: 43, y: ROW_BACK }, 3: { x: 95, y: ROW_BACK }, 4: { x: 147, y: ROW_BACK }, 5: { x: 58, y: ROW_THIRD }, 6: { x: 132, y: ROW_THIRD } },
 };
 
 function initials(name) {
@@ -458,13 +616,13 @@ function buildCar(ride) {
   const myClaim = ride.seat_claims.find(c => c.passenger_id === currentUser.id);
   const isDriver = ride.driver_id === currentUser.id;
 
-  drawSeat(svg, SEAT_POS[0], { kind: 'driver', label: initials(ride.driver.display_name), name: ride.driver.display_name });
-  const s0 = SEAT_POS[0];
-  svg.appendChild(svgEl('circle', { cx: s0.x + 26, cy: s0.y - 4, r: 9, class: 'car-wheel-steer' }));
+  drawSeat(svg, DRIVER_POS, { kind: 'driver', label: initials(ride.driver.display_name), name: ride.driver.display_name });
+  svg.appendChild(svgEl('circle', { cx: DRIVER_POS.x, cy: DRIVER_POS.y - 32, r: 8, class: 'car-wheel-steer' }));
 
-  for (const idx of SEAT_SETS[ride.seats]) {
+  const layout = SEAT_LAYOUTS[ride.seats];
+  for (const idx of Object.keys(layout).map(Number)) {
     const claim = claims.get(idx);
-    const pos = SEAT_POS[idx];
+    const pos = layout[idx];
     if (claim) {
       const mine = claim.passenger_id === currentUser.id;
       const seat = drawSeat(svg, pos, {
@@ -514,7 +672,7 @@ async function claimSeat(ride, seatIndex) {
 }
 
 async function releaseSeat(ride, claim, mine) {
-  const who = mine ? 'Scendi da questa macchina?' : `Togli ${claim.passenger.display_name} dal posto?`;
+  const who = mine ? 'Vuoi scendere da questa auto?' : `Vuoi liberare il posto di ${claim.passenger.display_name}?`;
   if (!confirm(who)) return;
   await supabase.from('seat_claims').delete().eq('ride_id', ride.id).eq('seat_index', claim.seat_index);
   toast(mine ? 'Sei sceso dall\'auto.' : 'Posto liberato.');
@@ -633,9 +791,10 @@ async function render() {
     await ensureProfile();
     userNameEl.textContent = myName;
     await loadGroups();
-    renderGroupInfo();
+    renderProfile();
     subscribeRealtime();
     setDate(currentDate);
+    switchView('home');
   } else if (realtimeChannel) {
     supabase.removeChannel(realtimeChannel);
     realtimeChannel = null;
