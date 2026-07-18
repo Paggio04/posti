@@ -122,3 +122,90 @@ create policy "claims read" on public.seat_claims for select to authenticated
 -- Realtime su passaggi e prenotazioni
 alter publication supabase_realtime add table public.rides;
 alter publication supabase_realtime add table public.seat_claims;
+
+-- ===== Controlli di integrità =====
+-- Un guidatore può pubblicare una sola auto per giorno (per gruppo)
+create unique index if not exists rides_one_per_day
+  on public.rides (driver_id, ride_date, coalesce(group_id, '00000000-0000-0000-0000-000000000000'::uuid));
+
+-- Controlli alla pubblicazione di un viaggio
+create or replace function public.check_ride() returns trigger
+language plpgsql as $$
+begin
+  if new.ride_date < current_date then
+    raise exception 'Non puoi pubblicare un viaggio in un giorno passato.';
+  end if;
+  if exists (
+    select 1 from public.seat_claims sc
+    join public.rides r on r.id = sc.ride_id
+    where sc.passenger_id = new.driver_id
+      and r.ride_date = new.ride_date
+      and coalesce(r.group_id, '00000000-0000-0000-0000-000000000000'::uuid)
+        = coalesce(new.group_id, '00000000-0000-0000-0000-000000000000'::uuid)
+  ) then
+    raise exception 'Hai già un posto su un''altra auto per quel giorno: prima scendi, poi pubblica la tua.';
+  end if;
+  return new;
+end; $$;
+drop trigger if exists rides_check on public.rides;
+create trigger rides_check before insert on public.rides
+  for each row execute function public.check_ride();
+
+-- Controlli alla prenotazione di un posto
+create or replace function public.check_claim() returns trigger
+language plpgsql as $$
+declare r public.rides%rowtype;
+begin
+  select * into r from public.rides where id = new.ride_id;
+  if r.id is null then raise exception 'Viaggio inesistente.'; end if;
+  if r.ride_date < current_date then
+    raise exception 'Questo viaggio è già passato.';
+  end if;
+  if new.seat_index > r.seats then
+    raise exception 'Posto non valido per questa auto.';
+  end if;
+  if new.passenger_id = r.driver_id then
+    raise exception 'Guidi tu questa auto: sei già a bordo.';
+  end if;
+  if exists (
+    select 1 from public.rides r2
+    where r2.driver_id = new.passenger_id
+      and r2.ride_date = r.ride_date
+      and coalesce(r2.group_id, '00000000-0000-0000-0000-000000000000'::uuid)
+        = coalesce(r.group_id, '00000000-0000-0000-0000-000000000000'::uuid)
+  ) then
+    raise exception 'Quel giorno guidi tu: non puoi prenotare un posto su un''altra auto.';
+  end if;
+  if exists (
+    select 1 from public.seat_claims sc
+    join public.rides r2 on r2.id = sc.ride_id
+    where sc.passenger_id = new.passenger_id
+      and sc.ride_id <> new.ride_id
+      and r2.ride_date = r.ride_date
+      and coalesce(r2.group_id, '00000000-0000-0000-0000-000000000000'::uuid)
+        = coalesce(r.group_id, '00000000-0000-0000-0000-000000000000'::uuid)
+  ) then
+    raise exception 'Hai già un posto su un''altra auto per quel giorno.';
+  end if;
+  return new;
+end; $$;
+drop trigger if exists claims_check on public.seat_claims;
+create trigger claims_check before insert on public.seat_claims
+  for each row execute function public.check_claim();
+
+-- ===== Richieste di passaggio ("cerco un posto") =====
+create table if not exists public.ride_requests (
+  id uuid primary key default gen_random_uuid(),
+  user_id uuid not null references public.profiles(id) on delete cascade,
+  ride_date date not null,
+  group_id uuid references public.groups(id) on delete cascade,
+  created_at timestamptz not null default now()
+);
+create unique index if not exists ride_requests_uni
+  on public.ride_requests (user_id, ride_date, coalesce(group_id, '00000000-0000-0000-0000-000000000000'::uuid));
+alter table public.ride_requests enable row level security;
+create policy "requests read" on public.ride_requests for select to authenticated
+  using (group_id is null or public.is_member(group_id));
+create policy "requests insert own" on public.ride_requests for insert with check (auth.uid() = user_id);
+create policy "requests delete own" on public.ride_requests for delete using (auth.uid() = user_id);
+alter publication supabase_realtime add table public.ride_requests;

@@ -438,6 +438,13 @@ input:focus-visible, select:focus-visible, textarea:focus-visible {
 }
 
 .day-tabs { display: flex; gap: 8px; align-items: center; }
+.day-cta { display: flex; gap: 8px; align-items: center; flex-wrap: wrap; }
+
+.walker-chip.request {
+  background: var(--primary-soft);
+  color: var(--primary);
+  font-weight: 600;
+}
 
 .tab {
   background: var(--surface);

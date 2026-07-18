@@ -469,10 +469,37 @@ function setDate(date) {
   loadRides();
 }
 
+// Prenotando o pubblicando, la richiesta "cerco un passaggio" si toglie da sola
+async function clearMyRequest() {
+  let q = supabase.from('ride_requests').delete().eq('user_id', currentUser.id).eq('ride_date', currentDate);
+  q = currentGroupId ? q.eq('group_id', currentGroupId) : q.is('group_id', null);
+  await q;
+}
+
 // --- Offri passaggio ---
-offerToggle.addEventListener('click', () => {
+offerToggle.addEventListener('click', async () => {
   offerCard.classList.toggle('hidden');
-  if (!offerCard.classList.contains('hidden')) document.getElementById('ride-destination').focus();
+  if (offerCard.classList.contains('hidden')) return;
+  document.getElementById('ride-destination').focus();
+  // Precompila con l'ultimo viaggio pubblicato
+  const dest = document.getElementById('ride-destination');
+  if (!dest.value) {
+    const { data } = await supabase
+      .from('rides')
+      .select('origin, destination, depart_time, seats, note')
+      .eq('driver_id', currentUser.id)
+      .order('created_at', { ascending: false })
+      .limit(1)
+      .maybeSingle();
+    if (data && !dest.value) {
+      document.getElementById('ride-origin').value = data.origin ?? '';
+      dest.value = data.destination ?? '';
+      document.getElementById('ride-time').value = data.depart_time?.slice(0, 5) ?? '';
+      document.getElementById('ride-seats').value = String(data.seats);
+      document.getElementById('ride-note').value = data.note ?? '';
+      toast('Modulo precompilato con il tuo ultimo viaggio: cambia quello che vuoi.');
+    }
+  }
 });
 
 rideForm.addEventListener('submit', async (e) => {
@@ -487,10 +514,16 @@ rideForm.addEventListener('submit', async (e) => {
     seats: Number(document.getElementById('ride-seats').value),
     note: document.getElementById('ride-note').value.trim() || null,
   });
-  if (error) { toast('Errore: ' + error.message); return; }
+  if (error) {
+    toast(error.code === '23505'
+      ? 'Hai già pubblicato la tua auto per questo giorno.'
+      : friendlyError(error));
+    return;
+  }
   rideForm.reset();
   offerCard.classList.add('hidden');
   toast('Auto pubblicata: ora gli amici possono prenotare il posto.');
+  clearMyRequest();
   loadRides();
 });
 
@@ -501,6 +534,7 @@ function subscribeRealtime() {
     .channel('posti-live')
     .on('postgres_changes', { event: '*', schema: 'public', table: 'seat_claims' }, () => loadRides(true))
     .on('postgres_changes', { event: '*', schema: 'public', table: 'rides' }, () => loadRides(true))
+    .on('postgres_changes', { event: '*', schema: 'public', table: 'ride_requests' }, () => loadRides(true))
     .subscribe();
 }
 
@@ -528,6 +562,16 @@ function hueFor(id) {
   return h;
 }
 
+function isPastDay() { return currentDate < todayISO(); }
+
+// Messaggi d'errore: i trigger del DB parlano già italiano
+function friendlyError(error) {
+  if (error.code === 'P0001') return error.message;
+  if (error.code === '23505') return null; // gestito dal chiamante
+  return 'Errore: ' + error.message;
+}
+
+let currentRequests = [];
 let loadToken = 0;
 async function loadRides(silent = false) {
   const token = ++loadToken;
@@ -541,33 +585,89 @@ async function loadRides(silent = false) {
     .eq('ride_date', currentDate)
     .order('depart_time', { ascending: true, nullsFirst: false });
   query = currentGroupId ? query.eq('group_id', currentGroupId) : query.is('group_id', null);
-  const { data, error } = await query;
+
+  let reqQuery = supabase
+    .from('ride_requests')
+    .select('user_id, profile:profiles(display_name)')
+    .eq('ride_date', currentDate);
+  reqQuery = currentGroupId ? reqQuery.eq('group_id', currentGroupId) : reqQuery.is('group_id', null);
+
+  const [{ data, error }, { data: reqs }] = await Promise.all([query, reqQuery]);
   if (token !== loadToken) return; // risposta vecchia, ignora
   if (error) { console.error(error); ridesList.innerHTML = ''; return; }
+  currentRequests = reqs ?? [];
+  updateDayCta(data);
   renderRides(data);
   renderWalkers(data);
 }
 
+// Bottoni del giorno: nascosti nei giorni passati; "Cerco un passaggio" contestuale
+function updateDayCta(rides) {
+  const past = isPastDay();
+  offerToggle.classList.toggle('hidden', past);
+  if (past) offerCard.classList.add('hidden');
+  const reqBtn = document.getElementById('request-toggle');
+  const iDrive = rides.some(r => r.driver_id === currentUser.id);
+  const iSit = rides.some(r => r.seat_claims.some(c => c.passenger_id === currentUser.id));
+  const myReq = currentRequests.some(r => r.user_id === currentUser.id);
+  reqBtn.classList.toggle('hidden', past || iDrive || iSit);
+  reqBtn.innerHTML = myReq
+    ? '<svg width="15" height="15"><use href="#i-x"/></svg> Non cerco più'
+    : '<svg width="15" height="15"><use href="#i-walk"/></svg> Cerco un passaggio';
+}
+
+document.getElementById('request-toggle').addEventListener('click', async () => {
+  const myReq = currentRequests.some(r => r.user_id === currentUser.id);
+  if (myReq) {
+    let q = supabase.from('ride_requests').delete().eq('user_id', currentUser.id).eq('ride_date', currentDate);
+    q = currentGroupId ? q.eq('group_id', currentGroupId) : q.is('group_id', null);
+    await q;
+    toast('Richiesta rimossa.');
+  } else {
+    const { error } = await supabase.from('ride_requests').insert({
+      user_id: currentUser.id, ride_date: currentDate, group_id: currentGroupId,
+    });
+    if (error && error.code !== '23505') { toast(friendlyError(error)); return; }
+    toast('Fatto: i guidatori vedranno che cerchi un passaggio.');
+  }
+  loadRides(true);
+});
+
 // --- "A piedi" (solo nei gruppi) ---
 async function renderWalkers(rides) {
-  if (!currentGroupId) { walkersCard.classList.add('hidden'); return; }
-  const { data, error } = await supabase
-    .from('group_members')
-    .select('user_id, profile:profiles(display_name)')
-    .eq('group_id', currentGroupId);
-  if (error || !data) { walkersCard.classList.add('hidden'); return; }
   const seated = new Set();
   for (const r of rides) {
     seated.add(r.driver_id);
     for (const c of r.seat_claims) seated.add(c.passenger_id);
   }
-  const walkers = data.filter(m => !seated.has(m.user_id));
+  const requesters = new Set(currentRequests.map(r => r.user_id));
+
+  let members = [];
+  if (currentGroupId) {
+    const { data } = await supabase
+      .from('group_members')
+      .select('user_id, profile:profiles(display_name)')
+      .eq('group_id', currentGroupId);
+    members = data ?? [];
+  } else {
+    members = currentRequests.map(r => ({ user_id: r.user_id, profile: r.profile }));
+  }
+
+  const walkers = members.filter(m => !seated.has(m.user_id));
+  // chi cerca un passaggio prima di tutti
+  walkers.sort((a, b) => Number(requesters.has(b.user_id)) - Number(requesters.has(a.user_id)));
   walkersCard.classList.toggle('hidden', walkers.length === 0);
   walkersList.innerHTML = '';
+  const seen = new Set();
   for (const w of walkers) {
+    if (seen.has(w.user_id)) continue;
+    seen.add(w.user_id);
     const chip = document.createElement('span');
-    chip.className = 'walker-chip';
-    chip.textContent = w.profile.display_name + (w.user_id === currentUser.id ? ' (tu)' : '');
+    const wants = requesters.has(w.user_id);
+    chip.className = 'walker-chip' + (wants ? ' request' : '');
+    chip.textContent = w.profile.display_name
+      + (w.user_id === currentUser.id ? ' (tu)' : '')
+      + (wants ? ' · cerca un passaggio' : '');
     walkersList.appendChild(chip);
   }
 }
@@ -615,6 +715,7 @@ function buildCar(ride) {
   const claims = new Map(ride.seat_claims.map(c => [c.seat_index, c]));
   const myClaim = ride.seat_claims.find(c => c.passenger_id === currentUser.id);
   const isDriver = ride.driver_id === currentUser.id;
+  const past = isPastDay();
 
   drawSeat(svg, DRIVER_POS, { kind: 'driver', label: initials(ride.driver.display_name), name: ride.driver.display_name });
   svg.appendChild(svgEl('circle', { cx: DRIVER_POS.x, cy: DRIVER_POS.y - 32, r: 8, class: 'car-wheel-steer' }));
@@ -629,12 +730,13 @@ function buildCar(ride) {
         kind: mine ? 'mine' : 'taken',
         label: initials(claim.passenger.display_name),
         name: claim.passenger.display_name,
-        clickable: mine || isDriver,
+        clickable: !past && (mine || isDriver),
       });
-      if (mine || isDriver) seat.addEventListener('click', () => releaseSeat(ride, claim, mine));
+      if (!past && (mine || isDriver)) seat.addEventListener('click', () => releaseSeat(ride, claim, mine));
     } else {
-      const seat = drawSeat(svg, pos, { kind: 'free', label: '+', name: 'Posto libero', clickable: !isDriver && !myClaim });
-      if (!isDriver && !myClaim) seat.addEventListener('click', () => claimSeat(ride, idx));
+      const canClaim = !past && !isDriver && !myClaim;
+      const seat = drawSeat(svg, pos, { kind: 'free', label: '+', name: 'Posto libero', clickable: canClaim });
+      if (canClaim) seat.addEventListener('click', () => claimSeat(ride, idx));
     }
   }
   return svg;
@@ -664,9 +766,10 @@ async function claimSeat(ride, seatIndex) {
   });
   if (error) {
     if (error.code === '23505') toast('Posto già occupato, oppure sei già su questa auto.');
-    else toast('Errore: ' + error.message);
+    else toast(friendlyError(error));
   } else {
     toast('Posto prenotato: sei a bordo.');
+    clearMyRequest();
   }
   loadRides();
 }
