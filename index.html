@@ -1,0 +1,108 @@
+<!DOCTYPE html>
+<html lang="it">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Posti — i tuoi luoghi preferiti</title>
+  <meta name="description" content="Salva i posti che ami e scopri quelli consigliati dagli altri." />
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet" />
+  <link rel="stylesheet" href="style.css" />
+</head>
+<body>
+
+  <!-- AUTH -->
+  <section id="auth-view" class="auth-view">
+    <div class="auth-brand-panel">
+      <div class="auth-brand-inner">
+        <div class="auth-logo">📍</div>
+        <h1>Posti</h1>
+        <p>Salva i posti che ami.<br />Scopri quelli consigliati dagli altri.</p>
+      </div>
+    </div>
+    <div class="auth-form-panel">
+      <div class="auth-card">
+        <h2>Entra in Posti</h2>
+        <form id="auth-form" novalidate>
+          <label for="email">Email
+            <input type="email" id="email" required autocomplete="email" placeholder="tu@esempio.it" />
+          </label>
+          <label for="password">Password
+            <input type="password" id="password" required minlength="6" autocomplete="current-password" placeholder="Minimo 6 caratteri" />
+          </label>
+          <div class="auth-actions">
+            <button type="submit" id="login-btn" class="btn btn-primary">Accedi</button>
+            <button type="button" id="signup-btn" class="btn btn-secondary">Crea account</button>
+          </div>
+        </form>
+        <p id="auth-message" class="auth-message" role="status"></p>
+      </div>
+    </div>
+  </section>
+
+  <!-- APP -->
+  <div id="app-shell" class="app-shell hidden">
+    <header class="topbar">
+      <div class="brand">📍 Posti</div>
+      <div class="topbar-right">
+        <span id="user-email" class="user-email"></span>
+        <button id="logout-btn" class="btn btn-ghost">Esci</button>
+      </div>
+    </header>
+
+    <main class="app-view">
+      <section class="add-card">
+        <h2>Aggiungi un posto</h2>
+        <form id="place-form">
+          <div class="form-row">
+            <input type="text" id="place-name" required maxlength="80" placeholder="Nome del posto *" aria-label="Nome del posto" />
+            <input type="text" id="place-city" maxlength="60" placeholder="Città" aria-label="Città" />
+            <select id="place-category" aria-label="Categoria">
+              <option value="ristorante">🍝 Ristorante</option>
+              <option value="bar">☕ Bar</option>
+              <option value="natura">🌲 Natura</option>
+              <option value="cultura">🏛️ Cultura</option>
+              <option value="mare">🏖️ Mare</option>
+              <option value="altro">✨ Altro</option>
+            </select>
+          </div>
+          <textarea id="place-notes" maxlength="500" rows="2" placeholder="Note, consigli, perché ti piace..." aria-label="Note"></textarea>
+          <div class="form-row form-row-end">
+            <label class="rating-label" for="place-rating">Voto
+              <select id="place-rating">
+                <option value="5">★★★★★</option>
+                <option value="4">★★★★</option>
+                <option value="3">★★★</option>
+                <option value="2">★★</option>
+                <option value="1">★</option>
+              </select>
+            </label>
+            <label class="share-label">
+              <input type="checkbox" id="place-public" /> Condividi con tutti
+            </label>
+            <button type="submit" id="save-place-btn" class="btn btn-primary">Salva posto</button>
+          </div>
+        </form>
+      </section>
+
+      <section class="lists">
+        <div class="tabs" role="tablist">
+          <button id="tab-mine" class="tab active" role="tab" aria-selected="true">I miei posti</button>
+          <button id="tab-public" class="tab" role="tab" aria-selected="false">Community</button>
+        </div>
+        <div id="places-list" class="places-grid"></div>
+        <div id="empty-message" class="empty hidden">
+          <div class="empty-icon">🗺️</div>
+          <p class="empty-title">Ancora nessun posto qui</p>
+          <p class="empty-hint">Aggiungi il tuo primo posto con il modulo qui sopra: bastano un nome e un voto.</p>
+        </div>
+      </section>
+    </main>
+
+    <footer class="footer">Posti — fatto con Supabase &amp; Netlify</footer>
+  </div>
+
+  <script type="module" src="app.js"></script>
+</body>
+</html>
