@@ -7,7 +7,7 @@
   <meta name="description" content="Organizza i passaggi in macchina della tua comitiva: chi guida, chi sale, chi dove si siede." />
   <link rel="preconnect" href="https://fonts.googleapis.com" />
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
-  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet" />
+  <link href="https://fonts.googleapis.com/css2?family=Nunito:wght@500;700;800;900&display=swap" rel="stylesheet" />
   <link rel="stylesheet" href="style.css" />
   <link rel="manifest" href="manifest.json" />
   <link rel="icon" href="icon.svg" type="image/svg+xml" />
@@ -19,14 +19,19 @@
   <section id="auth-view" class="auth-view">
     <div class="auth-brand-panel">
       <div class="auth-brand-inner">
-        <div class="auth-logo">🚗</div>
+        <div class="auth-logo">🚗💨</div>
         <h1>Posti</h1>
-        <p>Chi guida oggi? Chi sale?<br />Prenota il tuo posto in macchina.</p>
+        <p class="auth-tagline">Basta caos su WhatsApp.<br />Chi guida pubblica la macchina,<br />tu tappi il sedile e sali.</p>
+        <ul class="auth-steps">
+          <li><span>1</span> Crea il gruppo con gli amici</li>
+          <li><span>2</span> Chi guida mette la macchina</li>
+          <li><span>3</span> Tappa un sedile → sei a bordo</li>
+        </ul>
       </div>
     </div>
     <div class="auth-form-panel">
       <div class="auth-card">
-        <h2>Entra in Posti</h2>
+        <h2>Sali a bordo</h2>
         <form id="auth-form" novalidate>
           <label for="display-name" id="name-label" class="hidden">Il tuo nome
             <input type="text" id="display-name" maxlength="40" autocomplete="name" placeholder="Come ti chiamano gli amici" />
@@ -38,7 +43,7 @@
             <input type="password" id="password" required minlength="6" autocomplete="current-password" placeholder="Minimo 6 caratteri" />
           </label>
           <div class="auth-actions">
-            <button type="submit" id="login-btn" class="btn btn-primary">Accedi</button>
+            <button type="submit" id="login-btn" class="btn btn-primary">Entra</button>
             <button type="button" id="signup-btn" class="btn btn-secondary">Crea account</button>
           </div>
         </form>
@@ -58,11 +63,19 @@
     </header>
 
     <main class="app-view">
+
+      <div id="howto" class="howto hidden">
+        <button id="howto-close" class="howto-close" aria-label="Chiudi">✕</button>
+        <div class="howto-step"><span class="howto-emoji">👥</span>Crea un gruppo e manda il codice agli amici</div>
+        <div class="howto-step"><span class="howto-emoji">🔑</span>Chi guida preme "Ho la macchina!"</div>
+        <div class="howto-step"><span class="howto-emoji">👆</span>Gli altri tappano un sedile libero</div>
+      </div>
+
       <div class="group-bar">
         <div id="group-pills" class="group-pills"></div>
         <div class="group-actions">
           <button id="group-create" class="btn btn-ghost">➕ Crea gruppo</button>
-          <button id="group-join" class="btn btn-ghost">🔗 Entra con codice</button>
+          <button id="group-join" class="btn btn-ghost">🔗 Ho un codice</button>
         </div>
       </div>
       <div id="group-info" class="group-info hidden"></div>
@@ -73,15 +86,15 @@
           <button id="day-tomorrow" class="tab">Domani</button>
           <input type="date" id="day-picker" class="day-picker" aria-label="Scegli un giorno" />
         </div>
-        <button id="offer-toggle" class="btn btn-primary">🔑 Offri un passaggio</button>
+        <button id="offer-toggle" class="btn btn-primary btn-big">🚗 Ho la macchina!</button>
       </div>
 
       <section id="offer-card" class="add-card hidden">
-        <h2>Oggi guidi tu</h2>
+        <h2>Grande! Dove si va?</h2>
         <form id="ride-form">
           <div class="form-row">
-            <input type="text" id="ride-origin" maxlength="60" placeholder="Partenza (es. Piazza)" aria-label="Partenza" />
-            <input type="text" id="ride-destination" maxlength="60" placeholder="Destinazione *" required aria-label="Destinazione" />
+            <input type="text" id="ride-origin" maxlength="60" placeholder="Da dove parti?" aria-label="Partenza" />
+            <input type="text" id="ride-destination" maxlength="60" placeholder="Dove si va? *" required aria-label="Destinazione" />
             <input type="time" id="ride-time" aria-label="Orario di partenza" />
           </div>
           <div class="form-row form-row-end">
@@ -96,7 +109,7 @@
               </select>
             </label>
             <input type="text" id="ride-note" maxlength="200" placeholder="Nota (es. passo dal bar)" aria-label="Nota" class="note-input" />
-            <button type="submit" class="btn btn-primary">Pubblica passaggio</button>
+            <button type="submit" id="save-place-btn" class="btn btn-primary">Pubblica 🚀</button>
           </div>
         </form>
       </section>
@@ -109,13 +122,15 @@
       <div id="rides-list" class="rides-grid"></div>
       <div id="empty-message" class="empty hidden">
         <div class="empty-icon">🅿️</div>
-        <p class="empty-title">Nessuna macchina per questo giorno</p>
-        <p class="empty-hint">Hai la macchina? Premi "Offri un passaggio" e gli amici prenotano il posto.</p>
+        <p class="empty-title">Nessuna macchina qui!</p>
+        <p class="empty-hint">Se guidi tu, premi <strong>"🚗 Ho la macchina!"</strong> qui sopra.<br />Altrimenti aspetta che un amico la metta… e fiondati sul sedile.</p>
       </div>
     </main>
 
     <footer class="footer">Posti — chi guida, chi sale, chi dove si siede</footer>
   </div>
+
+  <div id="toast" class="toast hidden" role="status"></div>
 
   <script type="module" src="app.js"></script>
 </body>

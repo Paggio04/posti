@@ -100,7 +100,7 @@ userNameEl.addEventListener('click', async () => {
   const name = prompt('Il tuo nome (come appare sul sedile):', myName);
   if (!name || !name.trim() || name.trim() === myName) return;
   const { error } = await supabase.from('profiles').update({ display_name: name.trim().slice(0, 40) }).eq('id', currentUser.id);
-  if (error) { alert('Errore: ' + error.message); return; }
+  if (error) { toast('Errore: ' + error.message); return; }
   myName = name.trim().slice(0, 40);
   userNameEl.textContent = myName;
   loadRides();
@@ -111,18 +111,20 @@ document.getElementById('group-create').addEventListener('click', async () => {
   const name = prompt('Nome del gruppo (es. Comitiva del mare):');
   if (!name || !name.trim()) return;
   const { data, error } = await supabase.rpc('create_group', { p_name: name.trim().slice(0, 40) });
-  if (error) { alert('Errore: ' + error.message); return; }
+  if (error) { toast('Errore: ' + error.message); return; }
   await loadGroups();
   selectGroup(data.id);
+  toast(`🎉 Gruppo creato! Manda il codice ${data.code} agli amici.`);
 });
 
 document.getElementById('group-join').addEventListener('click', async () => {
   const code = prompt('Codice invito del gruppo:');
   if (!code || !code.trim()) return;
   const { data, error } = await supabase.rpc('join_group', { p_code: code.trim() });
-  if (error) { alert(error.message.includes('Codice') ? 'Codice non valido.' : 'Errore: ' + error.message); return; }
+  if (error) { toast(error.message.includes('Codice') ? '🤔 Codice non valido, ricontrolla.' : 'Errore: ' + error.message); return; }
   await loadGroups();
   selectGroup(data.id);
+  toast(`🙌 Sei nel gruppo "${data.name}"!`);
 });
 
 async function loadGroups() {
@@ -234,9 +236,10 @@ rideForm.addEventListener('submit', async (e) => {
     seats: Number(document.getElementById('ride-seats').value),
     note: document.getElementById('ride-note').value.trim() || null,
   });
-  if (error) { alert('Errore: ' + error.message); return; }
+  if (error) { toast('Errore: ' + error.message); return; }
   rideForm.reset();
   offerCard.classList.add('hidden');
+  toast('🚗 Macchina pubblicata! Ora gli amici possono salire.');
   loadRides();
 });
 
@@ -251,6 +254,29 @@ function subscribeRealtime() {
 }
 
 // --- Caricamento passaggi ---
+// --- Toast + banner "come funziona" ---
+const toastEl = document.getElementById('toast');
+let toastTimer = null;
+function toast(msg) {
+  toastEl.textContent = msg;
+  toastEl.classList.remove('hidden');
+  clearTimeout(toastTimer);
+  toastTimer = setTimeout(() => toastEl.classList.add('hidden'), 3500);
+}
+
+const howto = document.getElementById('howto');
+if (!localStorage.getItem('posti-howto-done')) howto.classList.remove('hidden');
+document.getElementById('howto-close').addEventListener('click', () => {
+  howto.classList.add('hidden');
+  localStorage.setItem('posti-howto-done', '1');
+});
+
+function hueFor(id) {
+  let h = 0;
+  for (const c of id) h = (h * 31 + c.charCodeAt(0)) % 360;
+  return h;
+}
+
 let loadToken = 0;
 async function loadRides(silent = false) {
   const token = ++loadToken;
@@ -386,8 +412,10 @@ async function claimSeat(ride, seatIndex) {
     ride_id: ride.id, seat_index: seatIndex, passenger_id: currentUser.id,
   });
   if (error) {
-    if (error.code === '23505') alert('Troppo tardi: posto appena preso, o sei già su questa macchina.');
-    else alert('Errore: ' + error.message);
+    if (error.code === '23505') toast('😅 Troppo tardi: posto già preso, o sei già su questa macchina.');
+    else toast('Errore: ' + error.message);
+  } else {
+    toast('🎉 Sei a bordo!');
   }
   loadRides();
 }
@@ -396,6 +424,7 @@ async function releaseSeat(ride, claim, mine) {
   const who = mine ? 'Scendi da questa macchina?' : `Togli ${claim.passenger.display_name} dal posto?`;
   if (!confirm(who)) return;
   await supabase.from('seat_claims').delete().eq('ride_id', ride.id).eq('seat_index', claim.seat_index);
+  toast(mine ? '👋 Sei sceso dalla macchina.' : 'Posto liberato.');
   loadRides();
 }
 
@@ -406,6 +435,7 @@ function renderRides(rides) {
   for (const ride of rides) {
     const card = document.createElement('article');
     card.className = 'ride-card';
+    card.style.setProperty('--car-hue', hueFor(ride.driver_id));
 
     const head = document.createElement('div');
     head.className = 'ride-head';
