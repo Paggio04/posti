@@ -4,8 +4,8 @@
   "description": "Organizza i passaggi in macchina della tua comitiva.",
   "start_url": ".",
   "display": "standalone",
-  "background_color": "#fafafa",
-  "theme_color": "#d94f2b",
+  "background_color": "#f5f6f8",
+  "theme_color": "#14243d",
   "icons": [
     { "src": "icon.svg", "sizes": "any", "type": "image/svg+xml", "purpose": "any" }
   ]

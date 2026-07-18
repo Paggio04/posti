@@ -40,7 +40,14 @@ function todayISO(offset = 0) {
 }
 
 // --- Auth ---
-supabase.auth.onAuthStateChange((_event, session) => {
+supabase.auth.onAuthStateChange((event, session) => {
+  if (event === 'PASSWORD_RECOVERY') {
+    const pw = prompt('Imposta la tua nuova password (minimo 6 caratteri):');
+    if (pw && pw.length >= 6) {
+      supabase.auth.updateUser({ password: pw })
+        .then(({ error }) => toast(error ? 'Errore: ' + error.message : 'Password aggiornata.'));
+    }
+  }
   const wasUser = currentUser?.id;
   currentUser = session?.user ?? null;
   if (currentUser?.id !== wasUser || !rendered) render();
@@ -66,11 +73,12 @@ function setAuthMode(mode) {
   modeLogin.setAttribute('aria-selected', String(!signup));
   modeSignup.setAttribute('aria-selected', String(signup));
   nameLabel.classList.toggle('hidden', !signup);
-  authTitle.textContent = signup ? 'Crea il tuo account ✨' : 'Bentornato! 👋';
+  authTitle.textContent = signup ? 'Crea il tuo account' : 'Bentornato';
   authSubtitle.textContent = signup
     ? 'Bastano nome, email e una password.'
-    : 'Entra e vedi chi guida oggi.';
-  authSubmit.textContent = signup ? 'Crea account 🚀' : 'Entra 🚗';
+    : 'Accedi per vedere chi guida oggi.';
+  authSubmit.textContent = signup ? 'Crea account' : 'Accedi';
+  document.getElementById('forgot-btn').classList.toggle('hidden', signup);
   document.getElementById('password').setAttribute('autocomplete', signup ? 'new-password' : 'current-password');
   showAuthMessage('');
 }
@@ -82,7 +90,17 @@ document.getElementById('pw-toggle').addEventListener('click', () => {
   const pw = document.getElementById('password');
   const show = pw.type === 'password';
   pw.type = show ? 'text' : 'password';
-  document.getElementById('pw-toggle').textContent = show ? '🙈' : '👁️';
+  document.getElementById('pw-toggle').innerHTML =
+    `<svg width="18" height="18"><use href="#i-eye${show ? '-off' : ''}"/></svg>`;
+});
+
+document.getElementById('forgot-btn').addEventListener('click', async () => {
+  const email = document.getElementById('email').value.trim()
+    || prompt('Inserisci la tua email per reimpostare la password:');
+  if (!email) return;
+  const { error } = await supabase.auth.resetPasswordForEmail(email, { redirectTo: SITE_URL });
+  if (error) showAuthMessage(error.message);
+  else showAuthMessage(`Ti abbiamo inviato un link per reimpostare la password a ${email}.`, true);
 });
 
 document.getElementById('success-back').addEventListener('click', () => {
@@ -102,15 +120,15 @@ authForm.addEventListener('submit', async (e) => {
     authSubmit.disabled = false;
     if (error) {
       showAuthMessage(error.message.includes('not confirmed')
-        ? '✉️ Devi prima confermare l\'email: controlla la posta.'
-        : '❌ Email o password sbagliate. Riprova!');
+        ? 'Devi prima confermare l\'email: controlla la posta in arrivo.'
+        : 'Email o password non corrette. Riprova.');
     }
     return;
   }
 
   const name = document.getElementById('display-name').value.trim();
   if (!name) {
-    showAuthMessage('✋ Serve il tuo nome: è quello che vedranno gli amici.');
+    showAuthMessage('Inserisci il tuo nome: è quello che vedranno gli amici.');
     document.getElementById('display-name').focus();
     return;
   }
@@ -123,12 +141,12 @@ authForm.addEventListener('submit', async (e) => {
   authSubmit.disabled = false;
   if (error) {
     showAuthMessage(error.message.includes('already registered')
-      ? '🤔 Questa email è già registrata: prova ad accedere.'
-      : '❌ ' + error.message);
+      ? 'Questa email è già registrata: prova ad accedere.'
+      : error.message);
     return;
   }
   if (data.user?.identities?.length === 0) {
-    showAuthMessage('🤔 Questa email è già registrata: prova ad accedere.');
+    showAuthMessage('Questa email è già registrata: prova ad accedere.');
     return;
   }
   document.getElementById('success-email').textContent = email;
@@ -178,17 +196,17 @@ document.getElementById('group-create').addEventListener('click', async () => {
   if (error) { toast('Errore: ' + error.message); return; }
   await loadGroups();
   selectGroup(data.id);
-  toast(`🎉 Gruppo creato! Manda il codice ${data.code} agli amici.`);
+  toast(`Gruppo creato. Condividi il codice ${data.code} con gli amici.`);
 });
 
 document.getElementById('group-join').addEventListener('click', async () => {
   const code = prompt('Codice invito del gruppo:');
   if (!code || !code.trim()) return;
   const { data, error } = await supabase.rpc('join_group', { p_code: code.trim() });
-  if (error) { toast(error.message.includes('Codice') ? '🤔 Codice non valido, ricontrolla.' : 'Errore: ' + error.message); return; }
+  if (error) { toast(error.message.includes('Codice') ? 'Codice non valido, ricontrolla.' : 'Errore: ' + error.message); return; }
   await loadGroups();
   selectGroup(data.id);
-  toast(`🙌 Sei nel gruppo "${data.name}"!`);
+  toast(`Sei entrato nel gruppo "${data.name}".`);
 });
 
 async function loadGroups() {
@@ -225,7 +243,7 @@ function selectGroup(groupId) {
   loadRides();
 }
 
-function renderGroupInfo() {
+async function renderGroupInfo() {
   const g = myGroups.find(x => x.id === currentGroupId);
   groupInfo.classList.toggle('hidden', !g);
   groupInfo.innerHTML = '';
@@ -233,8 +251,15 @@ function renderGroupInfo() {
 
   const code = document.createElement('span');
   code.className = 'group-code';
-  code.textContent = `Codice invito: ${g.code}`;
+  code.textContent = g.code;
+  code.title = 'Codice invito';
   groupInfo.appendChild(code);
+
+  const members = document.createElement('span');
+  members.className = 'group-members-count';
+  groupInfo.appendChild(members);
+  supabase.from('group_members').select('*', { count: 'exact', head: true }).eq('group_id', g.id)
+    .then(({ count }) => { if (count != null) members.textContent = `${count} membri`; });
 
   const copy = document.createElement('button');
   copy.className = 'btn btn-ghost btn-small';
@@ -246,14 +271,18 @@ function renderGroupInfo() {
   });
   groupInfo.appendChild(copy);
 
-  const wa = document.createElement('a');
-  wa.className = 'btn btn-ghost btn-small';
-  wa.textContent = 'Invita su WhatsApp';
-  wa.target = '_blank';
-  wa.rel = 'noopener';
-  wa.href = 'https://wa.me/?text=' + encodeURIComponent(
-    `Entra nel gruppo "${g.name}" su Posti 🚗 codice: ${g.code} → ${SITE_URL}`);
-  groupInfo.appendChild(wa);
+  const inviteText = `Entra nel gruppo "${g.name}" su Posti con il codice ${g.code}: ${SITE_URL}`;
+  const invite = document.createElement('button');
+  invite.className = 'btn btn-ghost btn-small';
+  invite.textContent = 'Invita';
+  invite.addEventListener('click', async () => {
+    if (navigator.share) {
+      try { await navigator.share({ title: 'Posti', text: inviteText, url: SITE_URL }); } catch {}
+    } else {
+      window.open('https://wa.me/?text=' + encodeURIComponent(inviteText), '_blank', 'noopener');
+    }
+  });
+  groupInfo.appendChild(invite);
 
   const leave = document.createElement('button');
   leave.className = 'btn btn-ghost btn-small btn-danger';
@@ -303,7 +332,7 @@ rideForm.addEventListener('submit', async (e) => {
   if (error) { toast('Errore: ' + error.message); return; }
   rideForm.reset();
   offerCard.classList.add('hidden');
-  toast('🚗 Macchina pubblicata! Ora gli amici possono salire.');
+  toast('Auto pubblicata: ora gli amici possono prenotare il posto.');
   loadRides();
 });
 
@@ -476,10 +505,10 @@ async function claimSeat(ride, seatIndex) {
     ride_id: ride.id, seat_index: seatIndex, passenger_id: currentUser.id,
   });
   if (error) {
-    if (error.code === '23505') toast('😅 Troppo tardi: posto già preso, o sei già su questa macchina.');
+    if (error.code === '23505') toast('Posto già occupato, oppure sei già su questa auto.');
     else toast('Errore: ' + error.message);
   } else {
-    toast('🎉 Sei a bordo!');
+    toast('Posto prenotato: sei a bordo.');
   }
   loadRides();
 }
@@ -488,7 +517,7 @@ async function releaseSeat(ride, claim, mine) {
   const who = mine ? 'Scendi da questa macchina?' : `Togli ${claim.passenger.display_name} dal posto?`;
   if (!confirm(who)) return;
   await supabase.from('seat_claims').delete().eq('ride_id', ride.id).eq('seat_index', claim.seat_index);
-  toast(mine ? '👋 Sei sceso dalla macchina.' : 'Posto liberato.');
+  toast(mine ? 'Sei sceso dall\'auto.' : 'Posto liberato.');
   loadRides();
 }
 
@@ -496,6 +525,18 @@ async function releaseSeat(ride, claim, mine) {
 function renderRides(rides) {
   ridesList.innerHTML = '';
   emptyMessage.classList.toggle('hidden', rides.length > 0);
+
+  // Riepilogo del giorno
+  const statsEl = document.getElementById('day-stats');
+  statsEl.classList.toggle('hidden', rides.length === 0);
+  if (rides.length > 0) {
+    const totalFree = rides.reduce((n, r) => n + r.seats - r.seat_claims.length, 0);
+    const aboard = rides.reduce((n, r) => n + 1 + r.seat_claims.length, 0);
+    statsEl.innerHTML =
+      `<span class="stat-chip"><svg width="15" height="15"><use href="#i-car"/></svg><strong>${rides.length}</strong> ${rides.length === 1 ? 'auto' : 'auto'}</span>` +
+      `<span class="stat-chip"><svg width="15" height="15"><use href="#i-plus"/></svg><strong>${totalFree}</strong> posti liberi</span>` +
+      `<span class="stat-chip"><svg width="15" height="15"><use href="#i-users"/></svg><strong>${aboard}</strong> a bordo</span>`;
+  }
   for (const ride of rides) {
     const card = document.createElement('article');
     card.className = 'ride-card';
@@ -517,24 +558,29 @@ function renderRides(rides) {
 
     const actions = document.createElement('div');
     actions.className = 'ride-actions';
-    const share = document.createElement('a');
-    share.className = 'place-delete';
-    share.textContent = '📤';
-    share.title = 'Condividi su WhatsApp';
-    share.target = '_blank';
-    share.rel = 'noopener';
+    const share = document.createElement('button');
+    share.className = 'place-delete share';
+    share.innerHTML = '<svg width="16" height="16"><use href="#i-share"/></svg>';
+    share.title = 'Condividi';
     const free = ride.seats - ride.seat_claims.length;
-    share.href = 'https://wa.me/?text=' + encodeURIComponent(
-      `🚗 ${ride.driver.display_name} guida verso ${ride.destination}` +
+    const shareText =
+      `${ride.driver.display_name} guida verso ${ride.destination}` +
       (ride.depart_time ? ` alle ${ride.depart_time.slice(0, 5)}` : '') +
       ` (${currentDate.split('-').reverse().join('/')})` +
-      (free > 0 ? ` — ${free} posti liberi!` : ' — piena') +
-      ` Prenota il posto: ${SITE_URL}`);
+      (free > 0 ? ` — ${free} posti disponibili.` : ' — auto al completo.') +
+      ` Prenota su ${SITE_URL}`;
+    share.addEventListener('click', async () => {
+      if (navigator.share) {
+        try { await navigator.share({ title: 'Posti', text: shareText, url: SITE_URL }); } catch {}
+      } else {
+        window.open('https://wa.me/?text=' + encodeURIComponent(shareText), '_blank', 'noopener');
+      }
+    });
     actions.appendChild(share);
     if (ride.driver_id === currentUser.id) {
       const del = document.createElement('button');
       del.className = 'place-delete';
-      del.textContent = '✕';
+      del.innerHTML = '<svg width="16" height="16"><use href="#i-x"/></svg>';
       del.title = 'Annulla passaggio';
       del.addEventListener('click', async () => {
         if (!confirm('Annullare il passaggio? I passeggeri perderanno il posto.')) return;
@@ -552,8 +598,19 @@ function renderRides(rides) {
     foot.className = 'ride-foot';
     const count = document.createElement('span');
     count.className = 'place-badge' + (free > 0 ? ' public' : '');
-    count.textContent = free > 0 ? `${free} ${free === 1 ? 'posto libero' : 'posti liberi'}` : 'Macchina piena';
+    count.textContent = free > 0 ? `${free} ${free === 1 ? 'posto libero' : 'posti liberi'}` : 'Al completo';
     foot.appendChild(count);
+    if (ride.driver_id === currentUser.id) {
+      const meBadge = document.createElement('span');
+      meBadge.className = 'place-badge mine';
+      meBadge.textContent = 'La tua auto';
+      foot.appendChild(meBadge);
+    } else if (ride.seat_claims.some(c => c.passenger_id === currentUser.id)) {
+      const meBadge = document.createElement('span');
+      meBadge.className = 'place-badge mine';
+      meBadge.textContent = 'Sei a bordo';
+      foot.appendChild(meBadge);
+    }
     if (ride.note) {
       const note = document.createElement('span');
       note.className = 'ride-note';
