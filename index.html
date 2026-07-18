@@ -9,6 +9,9 @@
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet" />
   <link rel="stylesheet" href="style.css" />
+  <link rel="manifest" href="manifest.json" />
+  <link rel="icon" href="icon.svg" type="image/svg+xml" />
+  <meta name="theme-color" content="#d94f2b" />
 </head>
 <body>
 
@@ -49,12 +52,21 @@
     <header class="topbar">
       <div class="brand">🚗 Posti</div>
       <div class="topbar-right">
-        <span id="user-name" class="user-email"></span>
+        <button id="user-name" class="user-name-btn" title="Cambia il tuo nome"></button>
         <button id="logout-btn" class="btn btn-ghost">Esci</button>
       </div>
     </header>
 
     <main class="app-view">
+      <div class="group-bar">
+        <div id="group-pills" class="group-pills"></div>
+        <div class="group-actions">
+          <button id="group-create" class="btn btn-ghost">➕ Crea gruppo</button>
+          <button id="group-join" class="btn btn-ghost">🔗 Entra con codice</button>
+        </div>
+      </div>
+      <div id="group-info" class="group-info hidden"></div>
+
       <div class="day-bar">
         <div class="day-tabs">
           <button id="day-today" class="tab active">Oggi</button>
@@ -87,6 +99,11 @@
             <button type="submit" class="btn btn-primary">Pubblica passaggio</button>
           </div>
         </form>
+      </section>
+
+      <section id="walkers-card" class="walkers-card hidden">
+        <h2>🚶 Ancora a piedi</h2>
+        <div id="walkers-list" class="walkers-list"></div>
       </section>
 
       <div id="rides-list" class="rides-grid"></div>

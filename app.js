@@ -2,6 +2,7 @@ import { createClient } from 'https://cdn.jsdelivr.net/npm/@supabase/supabase-js
 import { SUPABASE_URL, SUPABASE_ANON_KEY } from './config.js';
 
 const supabase = createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+const SITE_URL = 'https://posti-app.netlify.app';
 
 // --- DOM ---
 const authView = document.getElementById('auth-view');
@@ -12,6 +13,8 @@ const signupBtn = document.getElementById('signup-btn');
 const logoutBtn = document.getElementById('logout-btn');
 const nameLabel = document.getElementById('name-label');
 const userNameEl = document.getElementById('user-name');
+const groupPills = document.getElementById('group-pills');
+const groupInfo = document.getElementById('group-info');
 const dayToday = document.getElementById('day-today');
 const dayTomorrow = document.getElementById('day-tomorrow');
 const dayPicker = document.getElementById('day-picker');
@@ -20,10 +23,16 @@ const offerCard = document.getElementById('offer-card');
 const rideForm = document.getElementById('ride-form');
 const ridesList = document.getElementById('rides-list');
 const emptyMessage = document.getElementById('empty-message');
+const walkersCard = document.getElementById('walkers-card');
+const walkersList = document.getElementById('walkers-list');
 
 let currentUser = null;
 let myName = '';
 let currentDate = todayISO();
+let myGroups = [];
+let currentGroupId = null; // null = Tutti
+let realtimeChannel = null;
+let rendered = false;
 
 function todayISO(offset = 0) {
   const d = new Date();
@@ -33,8 +42,9 @@ function todayISO(offset = 0) {
 
 // --- Auth ---
 supabase.auth.onAuthStateChange((_event, session) => {
+  const wasUser = currentUser?.id;
   currentUser = session?.user ?? null;
-  render();
+  if (currentUser?.id !== wasUser || !rendered) render();
 });
 
 authForm.addEventListener('submit', async (e) => {
@@ -44,7 +54,6 @@ authForm.addEventListener('submit', async (e) => {
 });
 
 signupBtn.addEventListener('click', async () => {
-  // Primo click: mostra il campo nome; secondo click: registra
   if (nameLabel.classList.contains('hidden')) {
     nameLabel.classList.remove('hidden');
     document.getElementById('display-name').focus();
@@ -86,6 +95,113 @@ async function ensureProfile() {
   myName = fallback;
 }
 
+// --- Cambia nome ---
+userNameEl.addEventListener('click', async () => {
+  const name = prompt('Il tuo nome (come appare sul sedile):', myName);
+  if (!name || !name.trim() || name.trim() === myName) return;
+  const { error } = await supabase.from('profiles').update({ display_name: name.trim().slice(0, 40) }).eq('id', currentUser.id);
+  if (error) { alert('Errore: ' + error.message); return; }
+  myName = name.trim().slice(0, 40);
+  userNameEl.textContent = myName;
+  loadRides();
+});
+
+// --- Gruppi ---
+document.getElementById('group-create').addEventListener('click', async () => {
+  const name = prompt('Nome del gruppo (es. Comitiva del mare):');
+  if (!name || !name.trim()) return;
+  const { data, error } = await supabase.rpc('create_group', { p_name: name.trim().slice(0, 40) });
+  if (error) { alert('Errore: ' + error.message); return; }
+  await loadGroups();
+  selectGroup(data.id);
+});
+
+document.getElementById('group-join').addEventListener('click', async () => {
+  const code = prompt('Codice invito del gruppo:');
+  if (!code || !code.trim()) return;
+  const { data, error } = await supabase.rpc('join_group', { p_code: code.trim() });
+  if (error) { alert(error.message.includes('Codice') ? 'Codice non valido.' : 'Errore: ' + error.message); return; }
+  await loadGroups();
+  selectGroup(data.id);
+});
+
+async function loadGroups() {
+  const { data, error } = await supabase
+    .from('group_members')
+    .select('group:groups(id, name, code, owner_id)')
+    .eq('user_id', currentUser.id);
+  if (error) { console.error(error); return; }
+  myGroups = (data ?? []).map(r => r.group).filter(Boolean);
+  if (currentGroupId && !myGroups.some(g => g.id === currentGroupId)) currentGroupId = null;
+  renderGroupBar();
+}
+
+function renderGroupBar() {
+  groupPills.innerHTML = '';
+  const all = document.createElement('button');
+  all.className = 'tab' + (currentGroupId === null ? ' active' : '');
+  all.textContent = '🌍 Tutti';
+  all.addEventListener('click', () => selectGroup(null));
+  groupPills.appendChild(all);
+  for (const g of myGroups) {
+    const b = document.createElement('button');
+    b.className = 'tab' + (currentGroupId === g.id ? ' active' : '');
+    b.textContent = g.name;
+    b.addEventListener('click', () => selectGroup(g.id));
+    groupPills.appendChild(b);
+  }
+}
+
+function selectGroup(groupId) {
+  currentGroupId = groupId;
+  renderGroupBar();
+  renderGroupInfo();
+  loadRides();
+}
+
+function renderGroupInfo() {
+  const g = myGroups.find(x => x.id === currentGroupId);
+  groupInfo.classList.toggle('hidden', !g);
+  groupInfo.innerHTML = '';
+  if (!g) return;
+
+  const code = document.createElement('span');
+  code.className = 'group-code';
+  code.textContent = `Codice invito: ${g.code}`;
+  groupInfo.appendChild(code);
+
+  const copy = document.createElement('button');
+  copy.className = 'btn btn-ghost btn-small';
+  copy.textContent = 'Copia';
+  copy.addEventListener('click', async () => {
+    await navigator.clipboard.writeText(g.code);
+    copy.textContent = 'Copiato ✓';
+    setTimeout(() => (copy.textContent = 'Copia'), 1500);
+  });
+  groupInfo.appendChild(copy);
+
+  const wa = document.createElement('a');
+  wa.className = 'btn btn-ghost btn-small';
+  wa.textContent = 'Invita su WhatsApp';
+  wa.target = '_blank';
+  wa.rel = 'noopener';
+  wa.href = 'https://wa.me/?text=' + encodeURIComponent(
+    `Entra nel gruppo "${g.name}" su Posti 🚗 codice: ${g.code} → ${SITE_URL}`);
+  groupInfo.appendChild(wa);
+
+  const leave = document.createElement('button');
+  leave.className = 'btn btn-ghost btn-small btn-danger';
+  leave.textContent = 'Esci dal gruppo';
+  leave.addEventListener('click', async () => {
+    if (!confirm(`Uscire dal gruppo "${g.name}"?`)) return;
+    await supabase.from('group_members').delete().eq('group_id', g.id).eq('user_id', currentUser.id);
+    currentGroupId = null;
+    await loadGroups();
+    selectGroup(null);
+  });
+  groupInfo.appendChild(leave);
+}
+
 // --- Giorno ---
 dayToday.addEventListener('click', () => setDate(todayISO()));
 dayTomorrow.addEventListener('click', () => setDate(todayISO(1)));
@@ -111,6 +227,7 @@ rideForm.addEventListener('submit', async (e) => {
   const { error } = await supabase.from('rides').insert({
     driver_id: currentUser.id,
     ride_date: currentDate,
+    group_id: currentGroupId,
     depart_time: document.getElementById('ride-time').value || null,
     origin: document.getElementById('ride-origin').value.trim() || null,
     destination: document.getElementById('ride-destination').value.trim(),
@@ -123,31 +240,71 @@ rideForm.addEventListener('submit', async (e) => {
   loadRides();
 });
 
+// --- Realtime ---
+function subscribeRealtime() {
+  if (realtimeChannel) supabase.removeChannel(realtimeChannel);
+  realtimeChannel = supabase
+    .channel('posti-live')
+    .on('postgres_changes', { event: '*', schema: 'public', table: 'seat_claims' }, () => loadRides(true))
+    .on('postgres_changes', { event: '*', schema: 'public', table: 'rides' }, () => loadRides(true))
+    .subscribe();
+}
+
 // --- Caricamento passaggi ---
-async function loadRides() {
-  ridesList.innerHTML = '<div class="skeleton"></div><div class="skeleton"></div>';
-  emptyMessage.classList.add('hidden');
-  const { data, error } = await supabase
+let loadToken = 0;
+async function loadRides(silent = false) {
+  const token = ++loadToken;
+  if (!silent) {
+    ridesList.innerHTML = '<div class="skeleton"></div><div class="skeleton"></div>';
+    emptyMessage.classList.add('hidden');
+  }
+  let query = supabase
     .from('rides')
     .select('*, driver:profiles!rides_driver_id_fkey(display_name), seat_claims(seat_index, passenger_id, passenger:profiles!seat_claims_passenger_id_fkey(display_name))')
     .eq('ride_date', currentDate)
     .order('depart_time', { ascending: true, nullsFirst: false });
+  query = currentGroupId ? query.eq('group_id', currentGroupId) : query.is('group_id', null);
+  const { data, error } = await query;
+  if (token !== loadToken) return; // risposta vecchia, ignora
   if (error) { console.error(error); ridesList.innerHTML = ''; return; }
   renderRides(data);
+  renderWalkers(data);
+}
+
+// --- "A piedi" (solo nei gruppi) ---
+async function renderWalkers(rides) {
+  if (!currentGroupId) { walkersCard.classList.add('hidden'); return; }
+  const { data, error } = await supabase
+    .from('group_members')
+    .select('user_id, profile:profiles(display_name)')
+    .eq('group_id', currentGroupId);
+  if (error || !data) { walkersCard.classList.add('hidden'); return; }
+  const seated = new Set();
+  for (const r of rides) {
+    seated.add(r.driver_id);
+    for (const c of r.seat_claims) seated.add(c.passenger_id);
+  }
+  const walkers = data.filter(m => !seated.has(m.user_id));
+  walkersCard.classList.toggle('hidden', walkers.length === 0);
+  walkersList.innerHTML = '';
+  for (const w of walkers) {
+    const chip = document.createElement('span');
+    chip.className = 'walker-chip';
+    chip.textContent = w.profile.display_name + (w.user_id === currentUser.id ? ' (tu)' : '');
+    walkersList.appendChild(chip);
+  }
 }
 
 // --- Macchina SVG ---
-// Layout sedili (vista dall'alto, muso in alto). 0 = guidatore.
 const SEAT_POS = {
-  0: { x: 38, y: 92 },   // guidatore (davanti sx)
-  1: { x: 112, y: 92 },  // davanti dx
-  2: { x: 24, y: 176 },  // dietro sx
-  3: { x: 76, y: 176 },  // dietro centro
-  4: { x: 128, y: 176 }, // dietro dx
-  5: { x: 42, y: 252 },  // terza fila sx
-  6: { x: 110, y: 252 }, // terza fila dx
+  0: { x: 38, y: 92 },
+  1: { x: 112, y: 92 },
+  2: { x: 24, y: 176 },
+  3: { x: 76, y: 176 },
+  4: { x: 128, y: 176 },
+  5: { x: 42, y: 252 },
+  6: { x: 110, y: 252 },
 };
-// Quali sedili usare in base ai posti passeggero offerti
 const SEAT_SETS = {
   1: [1], 2: [1, 4], 3: [1, 2, 4], 4: [1, 2, 3, 4],
   5: [1, 2, 3, 4, 6], 6: [1, 2, 3, 4, 5, 6],
@@ -169,16 +326,12 @@ function buildCar(ride) {
   const svg = svgEl('svg', { viewBox: `0 0 190 ${H}`, class: 'car-svg', role: 'img' });
   svg.setAttribute('aria-label', `Macchina di ${ride.driver.display_name}`);
 
-  // Carrozzeria
   svg.appendChild(svgEl('rect', { x: 10, y: 10, width: 170, height: H - 20, rx: 46, class: 'car-body' }));
-  // Parabrezza + lunotto
   svg.appendChild(svgEl('rect', { x: 30, y: 44, width: 130, height: 16, rx: 8, class: 'car-glass' }));
   svg.appendChild(svgEl('rect', { x: 34, y: H - 42, width: 122, height: 12, rx: 6, class: 'car-glass' }));
-  // Ruote
   for (const [wx, wy] of [[2, 60], [180, 60], [2, H - 90], [180, H - 90]]) {
     svg.appendChild(svgEl('rect', { x: wx - 4, y: wy, width: 12, height: 34, rx: 5, class: 'car-wheel' }));
   }
-  // Specchietti
   svg.appendChild(svgEl('rect', { x: 0, y: 46, width: 14, height: 6, rx: 3, class: 'car-wheel' }));
   svg.appendChild(svgEl('rect', { x: 176, y: 46, width: 14, height: 6, rx: 3, class: 'car-wheel' }));
 
@@ -186,9 +339,7 @@ function buildCar(ride) {
   const myClaim = ride.seat_claims.find(c => c.passenger_id === currentUser.id);
   const isDriver = ride.driver_id === currentUser.id;
 
-  // Sedile guidatore
   drawSeat(svg, SEAT_POS[0], { kind: 'driver', label: initials(ride.driver.display_name), name: ride.driver.display_name });
-  // Volante
   const s0 = SEAT_POS[0];
   svg.appendChild(svgEl('circle', { cx: s0.x + 26, cy: s0.y - 4, r: 9, class: 'car-wheel-steer' }));
 
@@ -203,14 +354,10 @@ function buildCar(ride) {
         name: claim.passenger.display_name,
         clickable: mine || isDriver,
       });
-      if (mine || isDriver) {
-        seat.addEventListener('click', () => releaseSeat(ride, claim, mine));
-      }
+      if (mine || isDriver) seat.addEventListener('click', () => releaseSeat(ride, claim, mine));
     } else {
       const seat = drawSeat(svg, pos, { kind: 'free', label: '+', name: 'Posto libero', clickable: !isDriver && !myClaim });
-      if (!isDriver && !myClaim) {
-        seat.addEventListener('click', () => claimSeat(ride, idx));
-      }
+      if (!isDriver && !myClaim) seat.addEventListener('click', () => claimSeat(ride, idx));
     }
   }
   return svg;
@@ -221,7 +368,6 @@ function drawSeat(svg, pos, { kind, label, name, clickable = false }) {
   const title = svgEl('title', {});
   title.textContent = name;
   g.appendChild(title);
-  // Sedile: schienale + seduta
   g.appendChild(svgEl('rect', { x: pos.x - 20, y: pos.y - 26, width: 40, height: 14, rx: 7, class: 'seat-back' }));
   g.appendChild(svgEl('rect', { x: pos.x - 22, y: pos.y - 14, width: 44, height: 40, rx: 12, class: 'seat-base' }));
   const t = svgEl('text', { x: pos.x, y: pos.y + 12, class: 'seat-text' });
@@ -274,6 +420,23 @@ function renderRides(rides) {
     sub.textContent = `Guida ${ride.driver.display_name}${time}`;
     info.appendChild(sub);
     head.appendChild(info);
+
+    const actions = document.createElement('div');
+    actions.className = 'ride-actions';
+    const share = document.createElement('a');
+    share.className = 'place-delete';
+    share.textContent = '📤';
+    share.title = 'Condividi su WhatsApp';
+    share.target = '_blank';
+    share.rel = 'noopener';
+    const free = ride.seats - ride.seat_claims.length;
+    share.href = 'https://wa.me/?text=' + encodeURIComponent(
+      `🚗 ${ride.driver.display_name} guida verso ${ride.destination}` +
+      (ride.depart_time ? ` alle ${ride.depart_time.slice(0, 5)}` : '') +
+      ` (${currentDate.split('-').reverse().join('/')})` +
+      (free > 0 ? ` — ${free} posti liberi!` : ' — piena') +
+      ` Prenota il posto: ${SITE_URL}`);
+    actions.appendChild(share);
     if (ride.driver_id === currentUser.id) {
       const del = document.createElement('button');
       del.className = 'place-delete';
@@ -284,13 +447,13 @@ function renderRides(rides) {
         await supabase.from('rides').delete().eq('id', ride.id);
         loadRides();
       });
-      head.appendChild(del);
+      actions.appendChild(del);
     }
+    head.appendChild(actions);
     card.appendChild(head);
 
     card.appendChild(buildCar(ride));
 
-    const free = ride.seats - ride.seat_claims.length;
     const foot = document.createElement('div');
     foot.className = 'ride-foot';
     const count = document.createElement('span');
@@ -312,11 +475,18 @@ function renderRides(rides) {
 // --- Render root ---
 async function render() {
   const loggedIn = !!currentUser;
+  rendered = true;
   authView.classList.toggle('hidden', loggedIn);
   appShell.classList.toggle('hidden', !loggedIn);
   if (loggedIn) {
     await ensureProfile();
     userNameEl.textContent = myName;
+    await loadGroups();
+    renderGroupInfo();
+    subscribeRealtime();
     setDate(currentDate);
+  } else if (realtimeChannel) {
+    supabase.removeChannel(realtimeChannel);
+    realtimeChannel = null;
   }
 }

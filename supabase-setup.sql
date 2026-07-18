@@ -59,3 +59,66 @@ create policy "claims insert own" on public.seat_claims for insert with check (a
 create policy "claims delete own or driver" on public.seat_claims for delete
   using (auth.uid() = passenger_id
      or exists (select 1 from public.rides r where r.id = ride_id and r.driver_id = auth.uid()));
+
+-- ===== Gruppi (comitive private con codice invito) =====
+create table if not exists public.groups (
+  id uuid primary key default gen_random_uuid(),
+  name text not null check (char_length(name) between 1 and 40),
+  code text not null unique default upper(substr(md5(random()::text), 1, 6)),
+  owner_id uuid not null references public.profiles(id) on delete cascade,
+  created_at timestamptz not null default now()
+);
+create table if not exists public.group_members (
+  group_id uuid references public.groups(id) on delete cascade,
+  user_id uuid references public.profiles(id) on delete cascade,
+  created_at timestamptz not null default now(),
+  primary key (group_id, user_id)
+);
+
+-- Evita ricorsione RLS: membership check con security definer
+create or replace function public.is_member(g uuid) returns boolean
+language sql security definer set search_path = public as
+$$ select exists (select 1 from group_members where group_id = g and user_id = auth.uid()) $$;
+
+alter table public.groups enable row level security;
+alter table public.group_members enable row level security;
+create policy "groups read member" on public.groups for select to authenticated using (public.is_member(id));
+create policy "groups update owner" on public.groups for update using (auth.uid() = owner_id);
+create policy "groups delete owner" on public.groups for delete using (auth.uid() = owner_id);
+create policy "members read" on public.group_members for select to authenticated using (public.is_member(group_id));
+create policy "members leave" on public.group_members for delete using (auth.uid() = user_id);
+
+-- Creazione e ingresso via RPC (security definer: il codice resta segreto)
+create or replace function public.create_group(p_name text) returns public.groups
+language plpgsql security definer set search_path = public as $$
+declare g public.groups;
+begin
+  insert into groups (name, owner_id) values (p_name, auth.uid()) returning * into g;
+  insert into group_members (group_id, user_id) values (g.id, auth.uid());
+  return g;
+end; $$;
+
+create or replace function public.join_group(p_code text) returns public.groups
+language plpgsql security definer set search_path = public as $$
+declare g public.groups;
+begin
+  select * into g from groups where code = upper(trim(p_code));
+  if g.id is null then raise exception 'Codice non valido'; end if;
+  insert into group_members (group_id, user_id) values (g.id, auth.uid()) on conflict do nothing;
+  return g;
+end; $$;
+
+-- I passaggi possono appartenere a un gruppo
+alter table public.rides add column if not exists group_id uuid references public.groups(id) on delete cascade;
+drop policy if exists "rides read" on public.rides;
+create policy "rides read" on public.rides for select to authenticated
+  using (group_id is null or public.is_member(group_id));
+
+-- Le prenotazioni si vedono solo se si vede il passaggio
+drop policy if exists "claims read" on public.seat_claims;
+create policy "claims read" on public.seat_claims for select to authenticated
+  using (exists (select 1 from public.rides r where r.id = ride_id));
+
+-- Realtime su passaggi e prenotazioni
+alter publication supabase_realtime add table public.rides;
+alter publication supabase_realtime add table public.seat_claims;

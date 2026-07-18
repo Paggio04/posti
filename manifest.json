@@ -1,0 +1,12 @@
+{
+  "name": "Posti — chi guida oggi?",
+  "short_name": "Posti",
+  "description": "Organizza i passaggi in macchina della tua comitiva.",
+  "start_url": ".",
+  "display": "standalone",
+  "background_color": "#fafafa",
+  "theme_color": "#d94f2b",
+  "icons": [
+    { "src": "icon.svg", "sizes": "any", "type": "image/svg+xml", "purpose": "any" }
+  ]
+}

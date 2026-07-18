@@ -212,6 +212,75 @@ textarea { resize: vertical; margin-top: 0; }
 .tab:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
 .tab.active { background: var(--ink); border-color: var(--ink); color: var(--bg); }
 
+/* ---------- Group bar ---------- */
+
+.group-bar {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 12px;
+  flex-wrap: wrap;
+  margin-bottom: 14px;
+}
+
+.group-pills { display: flex; gap: 8px; flex-wrap: wrap; }
+.group-actions { display: flex; gap: 8px; }
+
+.group-info {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  flex-wrap: wrap;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  padding: 10px 14px;
+  margin-bottom: 18px;
+  font-size: 0.85rem;
+}
+
+.group-code { font-weight: 600; letter-spacing: 0.03em; }
+.btn-small { padding: 5px 11px; font-size: 0.8rem; }
+.btn-danger:hover { color: var(--danger); border-color: var(--danger); }
+
+.user-name-btn {
+  background: transparent;
+  border: none;
+  color: var(--ink-soft);
+  font: inherit;
+  font-size: 0.88rem;
+  font-weight: 600;
+  cursor: pointer;
+  padding: 4px 8px;
+  border-radius: 8px;
+}
+.user-name-btn:hover { color: var(--ink); background: var(--surface-2); }
+
+/* ---------- Walkers ---------- */
+
+.walkers-card {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  padding: 14px 18px;
+  margin-bottom: 20px;
+}
+
+.walkers-card h2 { font-size: 0.95rem; font-weight: 700; margin-bottom: 10px; }
+.walkers-list { display: flex; gap: 8px; flex-wrap: wrap; }
+
+.walker-chip {
+  background: var(--surface-2);
+  border: 1px solid var(--border);
+  border-radius: 999px;
+  padding: 4px 12px;
+  font-size: 0.83rem;
+  color: var(--ink-soft);
+}
+
+.ride-actions { display: flex; gap: 2px; align-items: center; }
+.ride-actions a { text-decoration: none; font-size: 0.85rem; }
+
 /* ---------- Day bar ---------- */
 
 .day-bar {
