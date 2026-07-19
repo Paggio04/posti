@@ -215,6 +215,34 @@ create policy "requests insert own" on public.ride_requests for insert with chec
 create policy "requests delete own" on public.ride_requests for delete using (auth.uid() = user_id);
 alter publication supabase_realtime add table public.ride_requests;
 
+-- ===== Ruolo amministratore =====
+alter table public.profiles add column if not exists is_admin boolean not null default false;
+create or replace function public.is_admin() returns boolean
+language sql security definer set search_path = public as
+$$ select exists (select 1 from profiles where id = auth.uid() and is_admin) $$;
+-- L'admin può tutto, su tutte le tabelle (policy permissive in OR con le altre)
+create policy "admin all" on public.rides for all to authenticated using (public.is_admin()) with check (public.is_admin());
+create policy "admin all" on public.seat_claims for all to authenticated using (public.is_admin()) with check (public.is_admin());
+create policy "admin all" on public.ride_requests for all to authenticated using (public.is_admin()) with check (public.is_admin());
+create policy "admin all" on public.ride_comments for all to authenticated using (public.is_admin()) with check (public.is_admin());
+create policy "admin all" on public.groups for all to authenticated using (public.is_admin()) with check (public.is_admin());
+create policy "admin all" on public.group_members for all to authenticated using (public.is_admin()) with check (public.is_admin());
+create policy "admin update profiles" on public.profiles for update using (public.is_admin());
+-- Nessuno può auto-promuoversi: il flag lo cambia solo un admin
+create or replace function public.protect_admin_flag() returns trigger
+language plpgsql as $$
+begin
+  if new.is_admin is distinct from old.is_admin and not public.is_admin() then
+    raise exception 'Non puoi modificare i permessi di amministratore.';
+  end if;
+  return new;
+end; $$;
+drop trigger if exists profiles_protect_admin on public.profiles;
+create trigger profiles_protect_admin before update on public.profiles
+  for each row execute function public.protect_admin_flag();
+-- Nomina del primo admin (da SQL editor):
+-- update public.profiles set is_admin = true where id = (select id from auth.users where email = 'TUA_EMAIL');
+
 -- ===== Commenti per auto =====
 create table if not exists public.ride_comments (
   id uuid primary key default gen_random_uuid(),

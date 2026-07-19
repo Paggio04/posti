@@ -25,6 +25,7 @@ const walkersList = document.getElementById('walkers-list');
 
 let currentUser = null;
 let myName = '';
+let isAdmin = false;
 let currentDate = todayISO();
 let myGroups = [];
 let currentGroupId = null; // null = Tutti
@@ -186,10 +187,11 @@ function showAuthMessage(msg, ok = false) {
 async function ensureProfile() {
   const fallback = currentUser.user_metadata?.display_name
     || currentUser.email.split('@')[0];
-  const { data } = await supabase.from('profiles').select('display_name').eq('id', currentUser.id).maybeSingle();
-  if (data) { myName = data.display_name; return; }
+  const { data } = await supabase.from('profiles').select('display_name, is_admin').eq('id', currentUser.id).maybeSingle();
+  if (data) { myName = data.display_name; isAdmin = !!data.is_admin; return; }
   await supabase.from('profiles').insert({ id: currentUser.id, display_name: fallback });
   myName = fallback;
+  isAdmin = false;
 }
 
 // --- Navigazione a schede ---
@@ -230,7 +232,7 @@ document.getElementById('profile-rename').addEventListener('click', async () => 
 
 function renderProfile() {
   document.getElementById('profile-avatar').textContent = initials(myName || '?');
-  document.getElementById('profile-name').textContent = myName;
+  document.getElementById('profile-name').textContent = myName + (isAdmin ? ' · Amministratore' : '');
   document.getElementById('profile-email').textContent = currentUser?.email ?? '';
 }
 
@@ -799,9 +801,9 @@ function buildCar(ride) {
         kind: mine ? 'mine' : 'taken',
         label: initials(claim.passenger.display_name),
         name: claim.passenger.display_name,
-        clickable: !past && (mine || isDriver),
+        clickable: !past && (mine || isDriver || isAdmin),
       });
-      if (!past && (mine || isDriver)) seat.addEventListener('click', () => releaseSeat(ride, claim, mine));
+      if (!past && (mine || isDriver || isAdmin)) seat.addEventListener('click', () => releaseSeat(ride, claim, mine));
     } else {
       const canClaim = !past && !isDriver && !myClaim;
       const seat = drawSeat(svg, pos, { kind: 'free', label: '+', name: 'Posto libero', clickable: canClaim });
@@ -911,7 +913,7 @@ function renderRides(rides) {
       }
     });
     actions.appendChild(share);
-    if (ride.driver_id === currentUser.id) {
+    if (ride.driver_id === currentUser.id || isAdmin) {
       const del = document.createElement('button');
       del.className = 'place-delete';
       del.innerHTML = '<svg width="16" height="16"><use href="#i-x"/></svg>';
@@ -1023,7 +1025,7 @@ async function loadComments(rideId, panel) {
     const body = document.createElement('span');
     body.textContent = c.body;
     row.appendChild(body);
-    if (c.user_id === currentUser.id) {
+    if (c.user_id === currentUser.id || isAdmin) {
       const del = document.createElement('button');
       del.className = 'comment-del';
       del.innerHTML = '<svg width="12" height="12"><use href="#i-x"/></svg>';
