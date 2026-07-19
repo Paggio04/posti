@@ -551,6 +551,8 @@ function setDate(date) {
   dayTomorrow.classList.toggle('active', date === todayISO(1));
   dayPicker.classList.toggle('active', date !== todayISO() && date !== todayISO(1));
   dayPicker.value = date;
+  // il canale realtime filtra sul giorno visualizzato: cambiato giorno, ci si riabbona
+  if (realtimeChannel) subscribeRealtime();
   loadRides();
 }
 
@@ -648,12 +650,12 @@ function subscribeRealtime() {
       maybeNotify('Movimenti sui sedili: qualcuno è salito o sceso.');
       loadRides(true);
     })
-    .on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'rides' }, () => {
+    .on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'rides', filter: `ride_date=eq.${currentDate}` }, () => {
       maybeNotify('Nuova auto pubblicata: corri a prenotare il posto.');
       loadRides(true);
     })
     .on('postgres_changes', { event: 'DELETE', schema: 'public', table: 'rides' }, () => loadRides(true))
-    .on('postgres_changes', { event: '*', schema: 'public', table: 'ride_requests' }, () => loadRides(true))
+    .on('postgres_changes', { event: '*', schema: 'public', table: 'ride_requests', filter: `ride_date=eq.${currentDate}` }, () => loadRides(true))
     .subscribe();
 }
 

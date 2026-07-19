@@ -49,3 +49,21 @@ jobs:
       - name: Nessun segreto committato
         run: |
           ! grep -rEn "sb_secret|service_role|SUPABASE_SERVICE" --include='*.js' --include='*.html' --include='*.toml' . || (echo "Trovata chiave segreta nel repo" && exit 1)
+
+  e2e:
+    runs-on: ubuntu-latest
+    # Smoke test sul sito live (dopo il deploy Netlify, che parte allo stesso push)
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+      - name: Attendi il deploy Netlify
+        run: sleep 60
+      - name: Installa Playwright
+        run: |
+          npm init -y > /dev/null
+          npm install --no-save @playwright/test > /dev/null
+          npx playwright install --with-deps chromium
+      - name: Smoke E2E sul sito live
+        run: npx playwright test tests/ --reporter=list
