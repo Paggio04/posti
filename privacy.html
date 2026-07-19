@@ -1,0 +1,47 @@
+<!DOCTYPE html>
+<html lang="it">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Privacy — Posti</title>
+  <link rel="stylesheet" href="style.css" />
+  <link rel="icon" href="icon.svg" type="image/svg+xml" />
+  <style>
+    .privacy { max-width: 68ch; margin: 0 auto; padding: 40px 20px 80px; }
+    .privacy h1 { margin-bottom: 8px; }
+    .privacy h2 { font-size: 1.05rem; margin: 24px 0 8px; }
+    .privacy p, .privacy li { color: var(--ink-soft); font-size: 0.95rem; }
+    .privacy ul { padding-left: 20px; }
+    .privacy a { color: var(--primary); }
+  </style>
+</head>
+<body>
+  <main class="privacy">
+    <h1>Informativa privacy</h1>
+    <p>Posti è un'app senza scopo di lucro per organizzare i passaggi in auto tra amici.</p>
+
+    <h2>Quali dati raccogliamo</h2>
+    <ul>
+      <li><strong>Email</strong> — solo per l'accesso; non è mai visibile agli altri utenti.</li>
+      <li><strong>Nome visibile</strong> — quello che scegli tu; lo vedono i membri dei tuoi gruppi.</li>
+      <li><strong>Attività</strong> — auto pubblicate, posti prenotati, richieste e commenti, con data e ora.</li>
+    </ul>
+    <p>Nessun tracciamento pubblicitario, nessuna analytics di terze parti, nessun cookie di profilazione.</p>
+
+    <h2>Dove sono i dati</h2>
+    <p>Su <a href="https://supabase.com">Supabase</a> (database e autenticazione) e serviti via
+    <a href="https://www.netlify.com">Netlify</a>. Le connessioni sono sempre cifrate (HTTPS/TLS).</p>
+
+    <h2>Chi vede cosa</h2>
+    <p>I dati dei gruppi sono visibili solo ai membri del gruppo. L'amministratore dell'app può
+    intervenire su qualsiasi contenuto per moderazione.</p>
+
+    <h2>Cancellazione</h2>
+    <p>Puoi lasciare un gruppo o cancellare posti, richieste e commenti in qualsiasi momento.
+    Per eliminare l'intero account (e con esso tutti i tuoi dati, a cascata) scrivi
+    all'amministratore: la cancellazione è definitiva.</p>
+
+    <p><a href="index.html">← Torna a Posti</a></p>
+  </main>
+</body>
+</html>

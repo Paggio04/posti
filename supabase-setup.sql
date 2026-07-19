@@ -87,6 +87,8 @@ create policy "groups update owner" on public.groups for update using (auth.uid(
 create policy "groups delete owner" on public.groups for delete using (auth.uid() = owner_id);
 create policy "members read" on public.group_members for select to authenticated using (public.is_member(group_id));
 create policy "members leave" on public.group_members for delete using (auth.uid() = user_id);
+create policy "members removed by owner" on public.group_members for delete
+  using (exists (select 1 from public.groups g where g.id = group_id and g.owner_id = auth.uid()));
 
 -- Creazione e ingresso via RPC (security definer: il codice resta segreto)
 create or replace function public.create_group(p_name text) returns public.groups

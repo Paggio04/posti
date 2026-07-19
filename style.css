@@ -946,6 +946,48 @@ input:focus-visible, select:focus-visible, textarea:focus-visible {
   .car-svg { width: min(220px, 80%); }
 }
 
+/* ---------- Dialog, benvenuto, kick ---------- */
+
+.app-dialog {
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  background: var(--surface);
+  color: var(--ink);
+  padding: 24px;
+  width: min(92vw, 380px);
+  box-shadow: var(--shadow-2);
+}
+.app-dialog::backdrop { background: oklch(0.1 0.02 260 / 0.55); }
+.app-dialog h3 { font-size: 1.1rem; font-weight: 700; margin-bottom: 4px; }
+.app-dialog .auth-subtitle { margin-bottom: 12px; }
+.app-dialog input { margin-top: 0; }
+.dialog-actions { display: flex; gap: 10px; margin-top: 16px; }
+.dialog-actions .btn { flex: 1; }
+
+.welcome {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  box-shadow: var(--shadow-1);
+  padding: 26px;
+  margin-bottom: 20px;
+  text-align: center;
+}
+.welcome h2 { font-size: 1.2rem; font-weight: 700; margin-bottom: 6px; }
+.welcome p { color: var(--ink-soft); font-size: 0.93rem; margin-bottom: 16px; }
+.welcome-actions { display: flex; gap: 10px; justify-content: center; flex-wrap: wrap; }
+
+.chip-kick {
+  background: none;
+  border: none;
+  color: var(--ink-soft);
+  cursor: pointer;
+  margin-left: 6px;
+  padding: 0 2px;
+  font-size: 0.78rem;
+}
+.chip-kick:hover { color: var(--danger); }
+
 /* ---------- Dark mode ---------- */
 
 @media (prefers-color-scheme: dark) {

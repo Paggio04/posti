@@ -56,11 +56,13 @@ function hasDeparted(ride) {
 // --- Auth ---
 supabase.auth.onAuthStateChange((event, session) => {
   if (event === 'PASSWORD_RECOVERY') {
-    const pw = prompt('Imposta la tua nuova password (minimo 6 caratteri):');
-    if (pw && pw.length >= 6) {
-      supabase.auth.updateUser({ password: pw })
-        .then(({ error }) => toast(error ? 'Errore: ' + error.message : 'Password aggiornata.'));
-    }
+    ask('Nuova password', { text: 'Minimo 6 caratteri.', type: 'password', placeholder: 'La tua nuova password' })
+      .then((pw) => {
+        if (!pw) return toast('Password non cambiata: riapri il link dalla mail per riprovare.');
+        if (pw.length < 6) return toast('Password troppo corta (minimo 6 caratteri).');
+        supabase.auth.updateUser({ password: pw })
+          .then(({ error }) => toast(error ? 'Errore: ' + error.message : 'Password aggiornata.'));
+      });
   }
   const wasUser = currentUser?.id;
   currentUser = session?.user ?? null;
@@ -110,7 +112,7 @@ document.getElementById('pw-toggle').addEventListener('click', () => {
 
 document.getElementById('forgot-btn').addEventListener('click', async () => {
   const email = document.getElementById('email').value.trim()
-    || prompt('Inserisci la tua email per reimpostare la password:');
+    || await ask('Reimposta password', { text: 'A quale email mandiamo il link?', type: 'email', placeholder: 'nome@esempio.it' });
   if (!email) return;
   const { error } = await supabase.auth.resetPasswordForEmail(email, { redirectTo: SITE_URL });
   if (error) showAuthMessage(error.message);
@@ -194,6 +196,36 @@ async function ensureProfile() {
   isAdmin = false;
 }
 
+// --- Dialog custom (sostituisce prompt(): funziona anche nei browser in-app) ---
+const appDialog = document.getElementById('app-dialog');
+const dialogInput = document.getElementById('dialog-input');
+let dialogResolve = null;
+
+function ask(title, { text = '', placeholder = '', value = '', type = 'text' } = {}) {
+  document.getElementById('dialog-title').textContent = title;
+  document.getElementById('dialog-text').textContent = text;
+  document.getElementById('dialog-text').style.display = text ? '' : 'none';
+  dialogInput.type = type;
+  dialogInput.placeholder = placeholder;
+  dialogInput.value = value;
+  appDialog.showModal();
+  dialogInput.focus();
+  return new Promise((resolve) => { dialogResolve = resolve; });
+}
+
+document.getElementById('dialog-form').addEventListener('submit', (e) => {
+  e.preventDefault();
+  appDialog.close();
+  dialogResolve?.(dialogInput.value.trim());
+  dialogResolve = null;
+});
+document.getElementById('dialog-cancel').addEventListener('click', () => {
+  appDialog.close();
+  dialogResolve?.(null);
+  dialogResolve = null;
+});
+appDialog.addEventListener('cancel', () => { dialogResolve?.(null); dialogResolve = null; });
+
 // --- Navigazione a schede ---
 const VIEWS = ['home', 'history', 'groups', 'stats', 'profile'];
 let currentView = 'home';
@@ -219,7 +251,7 @@ userNameEl.addEventListener('click', () => switchView('profile'));
 
 // --- Cambia nome ---
 document.getElementById('profile-rename').addEventListener('click', async () => {
-  const name = prompt('Il tuo nome (come appare sul sedile):', myName);
+  const name = await ask('Il tuo nome', { text: 'È quello che appare sul sedile.', value: myName });
   if (!name || !name.trim() || name.trim() === myName) return;
   const { error } = await supabase.from('profiles').update({ display_name: name.trim().slice(0, 40) }).eq('id', currentUser.id);
   if (error) { toast('Errore: ' + error.message); return; }
@@ -237,8 +269,8 @@ function renderProfile() {
 }
 
 // --- Gruppi ---
-document.getElementById('group-create').addEventListener('click', async () => {
-  const name = prompt('Nome del gruppo (es. Comitiva del mare):');
+async function createGroupFlow() {
+  const name = await ask('Nuovo gruppo', { text: 'Il nome che vedranno gli amici.', placeholder: 'es. Comitiva del mare' });
   if (!name || !name.trim()) return;
   const { data, error } = await supabase.rpc('create_group', { p_name: name.trim().slice(0, 40) });
   if (error) { toast('Errore: ' + error.message); return; }
@@ -246,10 +278,10 @@ document.getElementById('group-create').addEventListener('click', async () => {
   selectGroup(data.id);
   renderGroupsView();
   toast(`Gruppo creato. Condividi il codice ${data.code} con gli amici.`);
-});
+}
 
-document.getElementById('group-join').addEventListener('click', async () => {
-  const code = prompt('Codice invito del gruppo:');
+async function joinGroupFlow() {
+  const code = await ask('Entra in un gruppo', { text: 'Fatti mandare il codice da un amico.', placeholder: 'Codice invito (6 caratteri)' });
   if (!code || !code.trim()) return;
   const { data, error } = await supabase.rpc('join_group', { p_code: code.trim() });
   if (error) { toast(error.message.includes('Codice') ? 'Codice non valido, ricontrolla.' : 'Errore: ' + error.message); return; }
@@ -257,7 +289,12 @@ document.getElementById('group-join').addEventListener('click', async () => {
   selectGroup(data.id);
   renderGroupsView();
   toast(`Sei entrato nel gruppo "${data.name}".`);
-});
+}
+
+document.getElementById('group-create').addEventListener('click', createGroupFlow);
+document.getElementById('group-join').addEventListener('click', joinGroupFlow);
+document.getElementById('welcome-create').addEventListener('click', createGroupFlow);
+document.getElementById('welcome-join').addEventListener('click', joinGroupFlow);
 
 async function loadGroups() {
   const { data, error } = await supabase
@@ -267,6 +304,7 @@ async function loadGroups() {
   if (error) { console.error(error); return; }
   myGroups = (data ?? []).map(r => r.group).filter(Boolean);
   if (currentGroupId && !myGroups.some(g => g.id === currentGroupId)) currentGroupId = null;
+  document.getElementById('welcome').classList.toggle('hidden', myGroups.length > 0);
   renderGroupBar();
 }
 
@@ -317,12 +355,28 @@ async function renderGroupsView() {
     const membersWrap = document.createElement('div');
     membersWrap.className = 'group-card-members';
     card.appendChild(membersWrap);
+    const canKick = g.owner_id === currentUser.id || isAdmin;
     supabase.from('group_members').select('user_id, profile:profiles(display_name)').eq('group_id', g.id)
       .then(({ data }) => {
         for (const m of data ?? []) {
           const chip = document.createElement('span');
           chip.className = 'history-chip';
           chip.textContent = m.profile.display_name + (m.user_id === currentUser.id ? ' (tu)' : '');
+          if (canKick && m.user_id !== currentUser.id) {
+            const kick = document.createElement('button');
+            kick.className = 'chip-kick';
+            kick.textContent = '✕';
+            kick.title = `Rimuovi ${m.profile.display_name} dal gruppo`;
+            kick.addEventListener('click', async () => {
+              if (!confirm(`Rimuovere ${m.profile.display_name} dal gruppo "${g.name}"?`)) return;
+              const { error } = await supabase.from('group_members').delete()
+                .eq('group_id', g.id).eq('user_id', m.user_id);
+              if (error) { toast(friendlyError(error)); return; }
+              toast(`${m.profile.display_name} rimosso dal gruppo.`);
+              renderGroupsView();
+            });
+            chip.appendChild(kick);
+          }
           membersWrap.appendChild(chip);
         }
       });
@@ -373,8 +427,16 @@ async function renderGroupsView() {
 // --- Vista Storico ---
 const DAY_FMT = new Intl.DateTimeFormat('it-IT', { weekday: 'long', day: 'numeric', month: 'long' });
 
+function groupLabel() {
+  return currentGroupId
+    ? `Gruppo: ${myGroups.find(g => g.id === currentGroupId)?.name ?? ''}`
+    : 'Tutti i passaggi pubblici';
+}
+
 async function loadHistory() {
   const list = document.getElementById('history-list');
+  document.querySelector('#view-history .view-subtitle').textContent =
+    `Chi ha guidato e chi era a bordo · ${groupLabel()} (si cambia dalla Home)`;
   list.innerHTML = '<div class="skeleton"></div>';
   let hq = supabase
     .from('rides')
@@ -434,6 +496,8 @@ async function loadHistory() {
 // --- Vista Statistiche ---
 async function loadStats() {
   const box = document.getElementById('stats-content');
+  document.querySelector('#view-stats .view-subtitle').textContent =
+    `I turni parlano da soli · ${groupLabel()} (si cambia dalla Home)`;
   box.innerHTML = '<div class="skeleton"></div>';
   let sq = supabase
     .from('rides')
