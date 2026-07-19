@@ -248,6 +248,39 @@ svg { vertical-align: -0.15em; }
 }
 .auth-switch.signup .auth-switch-slider { transform: translateX(100%); }
 
+/* Accesso con Google / Apple */
+.oauth-buttons { display: grid; gap: 10px; margin-bottom: 4px; }
+
+.btn-oauth {
+  width: 100%;
+  background: var(--surface);
+  color: var(--ink);
+  border: 1.5px solid var(--border-strong);
+  padding: 13px 20px;
+  font-weight: 600;
+  justify-content: center;
+  gap: 10px;
+}
+.btn-oauth:hover:not(:disabled) { background: var(--surface-2); transform: translateY(-1px); }
+.btn-oauth svg { flex: 0 0 auto; }
+
+.oauth-divider {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  margin: 18px 0;
+  color: var(--ink-soft);
+  font-size: 0.82rem;
+  font-weight: 500;
+}
+.oauth-divider::before,
+.oauth-divider::after {
+  content: '';
+  flex: 1;
+  height: 1px;
+  background: var(--border);
+}
+
 label {
   display: block;
   font-size: 0.85rem;
