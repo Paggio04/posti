@@ -228,10 +228,8 @@ appDialog.addEventListener('cancel', () => { dialogResolve?.(null); dialogResolv
 
 // --- Navigazione a schede ---
 const VIEWS = ['home', 'history', 'groups', 'stats', 'profile'];
-let currentView = 'home';
 
 function switchView(view) {
-  currentView = view;
   for (const v of VIEWS) {
     document.getElementById('view-' + v).classList.toggle('hidden', v !== view);
   }
