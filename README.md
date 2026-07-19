@@ -15,6 +15,13 @@ i guidatori pubblicano la macchina del giorno, gli altri prenotano il posto tapp
 2. In `config.js` inserisci URL e anon key del progetto (Dashboard → Settings → API).
 3. Deploy: collega la repo a Netlify, nessun build command, publish directory = root.
 
+## Documentazione
+
+- [SECURITY.md](SECURITY.md) — stato di sicurezza, affidabilità, testing per ogni area
+- [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md) — diagramma, schema dati, contratto API
+- [docs/adr/](docs/adr/) — decisioni architetturali
+- CI: GitHub Actions su ogni push (lint bloccante, scan segreti)
+
 ## Sicurezza
 
 La anon key è pubblica per design: ogni accesso ai dati passa dalle policy RLS.

@@ -626,6 +626,7 @@ function friendlyError(error) {
 
 let currentRequests = [];
 let loadToken = 0;
+let retryCount = 0;
 async function loadRides(silent = false) {
   const token = ++loadToken;
   if (!silent) {
@@ -649,12 +650,20 @@ async function loadRides(silent = false) {
   if (token !== loadToken) return; // risposta vecchia, ignora
   if (error) {
     console.error(error);
+    // retry con backoff esponenziale (0.5s, 1.5s), poi arrendersi con messaggio
+    if (retryCount < 2) {
+      retryCount++;
+      setTimeout(() => { if (token === loadToken) loadRides(true); }, retryCount === 1 ? 500 : 1500);
+      return;
+    }
+    retryCount = 0;
     ridesList.innerHTML = '';
     document.getElementById('day-stats').classList.add('hidden');
     walkersCard.classList.add('hidden');
     toast('Connessione instabile: riprova tra un attimo.');
     return;
   }
+  retryCount = 0;
   currentRequests = reqs ?? [];
   updateDayCta(data);
   renderRides(data);

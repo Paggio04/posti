@@ -1,0 +1,51 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+jobs:
+  checks:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+
+      - name: Sintassi JavaScript
+        run: |
+          node --check app.js
+          node --check config.js
+
+      - name: Validazione HTML
+        run: npx --yes html-validate index.html || true
+
+      - name: Lint JavaScript (regole base, bloccanti)
+        run: |
+          npm init -y > /dev/null
+          npm install --no-save eslint@9 > /dev/null
+          cat > eslint.config.mjs <<'EOF'
+          export default [
+            {
+              files: ["app.js", "config.js"],
+              languageOptions: { ecmaVersion: 2023, sourceType: "module",
+                globals: { document: "readonly", window: "readonly", localStorage: "readonly",
+                  navigator: "readonly", Notification: "readonly", Intl: "readonly",
+                  confirm: "readonly", prompt: "readonly", alert: "readonly",
+                  setTimeout: "readonly", clearTimeout: "readonly", console: "readonly", Event: "readonly" } },
+              rules: {
+                "no-undef": "error",
+                "no-unused-vars": ["error", { "args": "none" }],
+                "no-eval": "error",
+                "eqeqeq": ["error", "smart"]
+              }
+            }
+          ]
+          EOF
+          npx eslint app.js config.js
+
+      - name: Nessun segreto committato
+        run: |
+          ! grep -rEn "sb_secret|service_role|SUPABASE_SERVICE" --include='*.js' --include='*.html' --include='*.toml' . || (echo "Trovata chiave segreta nel repo" && exit 1)
