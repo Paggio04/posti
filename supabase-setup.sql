@@ -245,6 +245,51 @@ create trigger profiles_protect_admin before update on public.profiles
 -- Nomina del primo admin (da SQL editor):
 -- update public.profiles set is_admin = true where id = (select id from auth.users where email = 'TUA_EMAIL');
 
+-- ===== Avatar (foto profilo da Google/Apple) =====
+alter table public.profiles add column if not exists avatar_url text;
+
+-- ===== Conti benzina: contributo a testa (in euro) =====
+alter table public.rides add column if not exists fuel_per_person numeric check (fuel_per_person >= 0 and fuel_per_person <= 100);
+
+-- ===== Lista d'attesa quando l'auto è piena =====
+create table if not exists public.ride_waitlist (
+  id uuid primary key default gen_random_uuid(),
+  ride_id uuid not null references public.rides(id) on delete cascade,
+  user_id uuid not null references public.profiles(id) on delete cascade,
+  created_at timestamptz not null default now(),
+  unique (ride_id, user_id)
+);
+alter table public.ride_waitlist enable row level security;
+create policy "waitlist read" on public.ride_waitlist for select to authenticated
+  using (exists (select 1 from public.rides r where r.id = ride_id));
+create policy "waitlist insert own" on public.ride_waitlist for insert with check (auth.uid() = user_id);
+create policy "waitlist delete own" on public.ride_waitlist for delete using (auth.uid() = user_id);
+alter publication supabase_realtime add table public.ride_waitlist;
+
+-- Quando un posto si libera, il primo in lista lo prende automaticamente
+create or replace function public.promote_waitlist() returns trigger
+language plpgsql security definer set search_path = public as $$
+declare w record;
+begin
+  for w in
+    select * from ride_waitlist where ride_id = old.ride_id order by created_at
+  loop
+    begin
+      insert into seat_claims (ride_id, seat_index, passenger_id)
+      values (old.ride_id, old.seat_index, w.user_id);
+      delete from ride_waitlist where id = w.id;
+      exit; -- promosso il primo idoneo, stop
+    exception when others then
+      -- non idoneo (es. già a bordo altrove quel giorno): prova il successivo
+      continue;
+    end;
+  end loop;
+  return old;
+end; $$;
+drop trigger if exists seat_freed_promote on public.seat_claims;
+create trigger seat_freed_promote after delete on public.seat_claims
+  for each row execute function public.promote_waitlist();
+
 -- ===== Commenti per auto =====
 create table if not exists public.ride_comments (
   id uuid primary key default gen_random_uuid(),

@@ -25,6 +25,7 @@ const walkersList = document.getElementById('walkers-list');
 
 let currentUser = null;
 let myName = '';
+let myAvatar = null;
 let isAdmin = false;
 let currentDate = todayISO();
 let myGroups = [];
@@ -202,10 +203,20 @@ async function ensureProfile() {
     || currentUser.user_metadata?.full_name // Google/Apple OAuth
     || currentUser.user_metadata?.name
     || currentUser.email.split('@')[0];
-  const { data } = await supabase.from('profiles').select('display_name, is_admin').eq('id', currentUser.id).maybeSingle();
-  if (data) { myName = data.display_name; isAdmin = !!data.is_admin; return; }
-  await supabase.from('profiles').insert({ id: currentUser.id, display_name: fallback });
+  const oauthAvatar = currentUser.user_metadata?.avatar_url || currentUser.user_metadata?.picture || null;
+  const { data } = await supabase.from('profiles').select('display_name, is_admin, avatar_url').eq('id', currentUser.id).maybeSingle();
+  if (data) {
+    myName = data.display_name; isAdmin = !!data.is_admin; myAvatar = data.avatar_url;
+    // La foto di Google/Apple si salva nel profilo, così la vedono anche gli altri
+    if (oauthAvatar && data.avatar_url !== oauthAvatar) {
+      myAvatar = oauthAvatar;
+      supabase.from('profiles').update({ avatar_url: oauthAvatar }).eq('id', currentUser.id).then(() => {});
+    }
+    return;
+  }
+  await supabase.from('profiles').insert({ id: currentUser.id, display_name: fallback, avatar_url: oauthAvatar });
   myName = fallback;
+  myAvatar = oauthAvatar;
   isAdmin = false;
 }
 
@@ -274,7 +285,13 @@ document.getElementById('profile-rename').addEventListener('click', async () => 
 });
 
 function renderProfile() {
-  document.getElementById('profile-avatar').textContent = initials(myName || '?');
+  const av = document.getElementById('profile-avatar');
+  if (myAvatar) {
+    av.textContent = '';
+    av.innerHTML = `<img src="${myAvatar}" alt="" referrerpolicy="no-referrer" />`;
+  } else {
+    av.textContent = initials(myName || '?');
+  }
   document.getElementById('profile-name').textContent = myName + (isAdmin ? ' · Amministratore' : '');
   document.getElementById('profile-email').textContent = currentUser?.email ?? '';
 }
@@ -512,19 +529,28 @@ async function loadStats() {
   box.innerHTML = '<div class="skeleton"></div>';
   let sq = supabase
     .from('rides')
-    .select('driver_id, driver:profiles!rides_driver_id_fkey(display_name), seat_claims(passenger_id, passenger:profiles!seat_claims_passenger_id_fkey(display_name))');
+    .select('driver_id, fuel_per_person, driver:profiles!rides_driver_id_fkey(display_name), seat_claims(passenger_id, passenger:profiles!seat_claims_passenger_id_fkey(display_name))');
   sq = currentGroupId ? sq.eq('group_id', currentGroupId) : sq;
   const { data, error } = await sq;
   if (error || !data) { box.innerHTML = '<p class="view-subtitle">Impossibile caricare le statistiche.</p>'; return; }
 
   const drives = new Map(); // id -> {name, n}
   const ridesTaken = new Map();
+  const fuelIn = new Map();  // guidatore -> {name, n: € raccolti}
+  const fuelOut = new Map(); // passeggero -> {name, n: € versati}
   for (const r of data) {
     const d = drives.get(r.driver_id) ?? { name: r.driver.display_name, n: 0 };
     d.n++; drives.set(r.driver_id, d);
+    const fuel = Number(r.fuel_per_person) || 0;
     for (const c of r.seat_claims) {
       const p = ridesTaken.get(c.passenger_id) ?? { name: c.passenger.display_name, n: 0 };
       p.n++; ridesTaken.set(c.passenger_id, p);
+      if (fuel > 0) {
+        const fi = fuelIn.get(r.driver_id) ?? { name: r.driver.display_name, n: 0 };
+        fi.n += fuel; fuelIn.set(r.driver_id, fi);
+        const fo = fuelOut.get(c.passenger_id) ?? { name: c.passenger.display_name, n: 0 };
+        fo.n += fuel; fuelOut.set(c.passenger_id, fo);
+      }
     }
   }
 
@@ -548,7 +574,14 @@ async function loadStats() {
       <div class="stat-box"><strong>${myRides}</strong><span>passaggi ricevuti</span></div>
     </div>
     <div class="stats-section"><h3>Chi guida di più</h3>${bars(drives, false)}</div>
-    <div class="stats-section"><h3>Chi sale più spesso</h3>${bars(ridesTaken, true)}</div>`;
+    <div class="stats-section"><h3>Chi sale più spesso</h3>${bars(ridesTaken, true)}</div>`
+    + (fuelIn.size === 0 ? '' :
+    `<div class="stats-section"><h3>⛽ Benzina: quanto spetta a chi guida</h3>
+      <p class="view-subtitle">Somma dei contributi "€ a testa" dei passeggeri saliti. I conti si regolano di persona.</p>
+      ${bars(new Map([...fuelIn].map(([k, v]) => [k, { name: v.name, n: Math.round(v.n * 100) / 100 }])), false)}
+      <h3 style="margin-top:14px">Quanto ha versato ogni passeggero</h3>
+      ${bars(new Map([...fuelOut].map(([k, v]) => [k, { name: v.name, n: Math.round(v.n * 100) / 100 }])), true)}
+    </div>`);
 }
 
 // --- Giorno ---
@@ -584,7 +617,7 @@ offerToggle.addEventListener('click', async () => {
   if (!dest.value) {
     const { data } = await supabase
       .from('rides')
-      .select('origin, destination, depart_time, seats, note')
+      .select('origin, destination, depart_time, seats, note, fuel_per_person')
       .eq('driver_id', currentUser.id)
       .order('created_at', { ascending: false })
       .limit(1)
@@ -594,6 +627,7 @@ offerToggle.addEventListener('click', async () => {
       dest.value = data.destination ?? '';
       document.getElementById('ride-time').value = data.depart_time?.slice(0, 5) ?? '';
       document.getElementById('ride-seats').value = String(data.seats);
+      document.getElementById('ride-fuel').value = data.fuel_per_person ?? '';
       document.getElementById('ride-note').value = data.note ?? '';
       toast('Modulo precompilato con il tuo ultimo viaggio: cambia quello che vuoi.');
     }
@@ -609,6 +643,7 @@ rideForm.addEventListener('submit', async (e) => {
     origin: document.getElementById('ride-origin').value.trim() || null,
     destination: document.getElementById('ride-destination').value.trim(),
     seats: Number(document.getElementById('ride-seats').value),
+    fuel_per_person: Number(document.getElementById('ride-fuel').value) || null,
     note: document.getElementById('ride-note').value.trim() || null,
   };
   const weeks = Number(document.getElementById('ride-repeat').value) || 1;
@@ -666,6 +701,7 @@ function subscribeRealtime() {
       loadRides(true);
     })
     .on('postgres_changes', { event: 'DELETE', schema: 'public', table: 'rides' }, () => loadRides(true))
+    .on('postgres_changes', { event: '*', schema: 'public', table: 'ride_waitlist' }, () => loadRides(true))
     .on('postgres_changes', { event: '*', schema: 'public', table: 'ride_requests', filter: `ride_date=eq.${currentDate}` }, () => loadRides(true))
     .subscribe();
 }
@@ -714,7 +750,7 @@ async function loadRides(silent = false) {
   }
   let query = supabase
     .from('rides')
-    .select('*, driver:profiles!rides_driver_id_fkey(display_name), seat_claims(seat_index, passenger_id, passenger:profiles!seat_claims_passenger_id_fkey(display_name)), ride_comments(count)')
+    .select('*, driver:profiles!rides_driver_id_fkey(display_name, avatar_url), seat_claims(seat_index, passenger_id, passenger:profiles!seat_claims_passenger_id_fkey(display_name, avatar_url)), ride_comments(count), ride_waitlist(user_id, created_at, profile:profiles(display_name))')
     .eq('ride_date', currentDate)
     .order('depart_time', { ascending: true, nullsFirst: false });
   query = currentGroupId ? query.eq('group_id', currentGroupId) : query.is('group_id', null);
@@ -747,6 +783,32 @@ async function loadRides(silent = false) {
   updateDayCta(data);
   renderRides(data);
   renderWalkers(data);
+  renderTurnHint();
+}
+
+// --- "Tocca a te guidare": chi ha guidato meno nelle ultime 4 settimane ---
+async function renderTurnHint() {
+  const el = document.getElementById('turn-hint');
+  el.classList.add('hidden');
+  if (!currentGroupId || isPastDay()) return;
+  const since = addDaysISO(todayISO(), -28);
+  const [{ data: members }, { data: drives }] = await Promise.all([
+    supabase.from('group_members').select('user_id, profile:profiles(display_name)').eq('group_id', currentGroupId),
+    supabase.from('rides').select('driver_id').eq('group_id', currentGroupId).gte('ride_date', since).lte('ride_date', todayISO()),
+  ]);
+  // Ha senso solo con un gruppo vivo: almeno 2 membri e 3 viaggi recenti
+  if (!members || members.length < 2 || !drives || drives.length < 3) return;
+  const counts = new Map(members.map(m => [m.user_id, 0]));
+  for (const d of drives) if (counts.has(d.driver_id)) counts.set(d.driver_id, counts.get(d.driver_id) + 1);
+  const sorted = [...counts.entries()].sort((a, b) => a[1] - b[1]);
+  const [lazyId, lazyN] = sorted[0];
+  const maxN = sorted[sorted.length - 1][1];
+  if (maxN - lazyN < 2) return; // turni già equi, niente frecciatine
+  const lazyName = members.find(m => m.user_id === lazyId)?.profile.display_name ?? '?';
+  el.innerHTML = lazyId === currentUser.id
+    ? `🚗 Nelle ultime 4 settimane hai guidato ${lazyN === 0 ? 'zero volte' : `solo ${lazyN} ${lazyN === 1 ? 'volta' : 'volte'}`}: tocca a te metterci l'auto 👀`
+    : `👀 ${lazyName.replace(/</g, '&lt;')} ha guidato ${lazyN === 0 ? 'zero volte' : `solo ${lazyN} ${lazyN === 1 ? 'volta' : 'volte'}`} nelle ultime 4 settimane… i turni parlano da soli`;
+  el.classList.remove('hidden');
 }
 
 // Bottoni del giorno: nascosti nei giorni passati; "Cerco un passaggio" contestuale
@@ -865,7 +927,7 @@ function buildCar(ride) {
   const isDriver = ride.driver_id === currentUser.id;
   const past = isPastDay() || hasDeparted(ride);
 
-  drawSeat(svg, DRIVER_POS, { kind: 'driver', label: initials(ride.driver.display_name), name: ride.driver.display_name });
+  drawSeat(svg, DRIVER_POS, { kind: 'driver', label: initials(ride.driver.display_name), name: ride.driver.display_name, avatar: ride.driver.avatar_url });
   svg.appendChild(svgEl('circle', { cx: DRIVER_POS.x, cy: DRIVER_POS.y - 32, r: 8, class: 'car-wheel-steer' }));
 
   const layout = SEAT_LAYOUTS[ride.seats];
@@ -878,6 +940,7 @@ function buildCar(ride) {
         kind: mine ? 'mine' : 'taken',
         label: initials(claim.passenger.display_name),
         name: claim.passenger.display_name,
+        avatar: claim.passenger.avatar_url,
         clickable: !past && (mine || isDriver || isAdmin),
       });
       if (!past && (mine || isDriver || isAdmin)) seat.addEventListener('click', () => releaseSeat(ride, claim, mine));
@@ -890,15 +953,31 @@ function buildCar(ride) {
   return svg;
 }
 
-function drawSeat(svg, pos, { kind, label, name, clickable = false }) {
+let avatarClipId = 0;
+function drawSeat(svg, pos, { kind, label, name, avatar = null, clickable = false }) {
   const g = svgEl('g', { class: `seat seat-${kind}${clickable ? ' seat-click' : ''}`, tabindex: clickable ? 0 : -1 });
   const title = svgEl('title', {});
   title.textContent = name;
   g.appendChild(title);
   g.appendChild(svgEl('rect', { x: pos.x - 20, y: pos.y - 26, width: 40, height: 14, rx: 7, class: 'seat-back' }));
   g.appendChild(svgEl('rect', { x: pos.x - 22, y: pos.y - 14, width: 44, height: 40, rx: 12, class: 'seat-base' }));
+  if (avatar) {
+    const clipId = 'seat-av-' + (++avatarClipId);
+    const clip = svgEl('clipPath', { id: clipId });
+    clip.appendChild(svgEl('circle', { cx: pos.x, cy: pos.y + 6, r: 16 }));
+    svg.appendChild(clip);
+    const img = svgEl('image', {
+      x: pos.x - 16, y: pos.y - 10, width: 32, height: 32,
+      'clip-path': `url(#${clipId})`, preserveAspectRatio: 'xMidYMid slice',
+    });
+    img.setAttribute('href', avatar);
+    // Se la foto non carica si torna alle iniziali
+    img.addEventListener('error', () => { img.remove(); g.querySelector('text')?.removeAttribute('opacity'); });
+    g.appendChild(img);
+  }
   const t = svgEl('text', { x: pos.x, y: pos.y + 12, class: 'seat-text' });
   t.textContent = label;
+  if (avatar) t.setAttribute('opacity', '0'); // iniziali sotto la foto, visibili solo se la foto fallisce
   g.appendChild(t);
   svg.appendChild(g);
   if (clickable) {
@@ -981,6 +1060,15 @@ function renderRides(rides) {
     route.className = 'ride-route';
     route.textContent = ride.origin ? `${ride.origin} → ${ride.destination}` : ride.destination;
     info.appendChild(route);
+    if (ride.origin) {
+      const maps = document.createElement('a');
+      maps.className = 'maps-link';
+      maps.href = 'https://www.google.com/maps/search/?api=1&query=' + encodeURIComponent(ride.origin);
+      maps.target = '_blank';
+      maps.rel = 'noopener';
+      maps.innerHTML = '<svg width="13" height="13"><use href="#i-pin"/></svg> Punto di ritrovo su Maps';
+      info.appendChild(maps);
+    }
     const sub = document.createElement('div');
     sub.className = 'ride-sub';
     const time = ride.depart_time ? ` · ore ${ride.depart_time.slice(0, 5)}` : '';
@@ -1073,6 +1161,12 @@ function renderRides(rides) {
         : `Parte tra ${Math.floor(mins / 60)} h ${mins % 60} min`;
       foot.appendChild(t);
     }
+    if (ride.fuel_per_person > 0) {
+      const fuel = document.createElement('span');
+      fuel.className = 'place-badge fuel';
+      fuel.innerHTML = `<svg width="12" height="12"><use href="#i-fuel"/></svg> ${ride.fuel_per_person} € a testa`;
+      foot.appendChild(fuel);
+    }
     if (ride.note) {
       const note = document.createElement('span');
       note.className = 'ride-note';
@@ -1080,6 +1174,37 @@ function renderRides(rides) {
       foot.appendChild(note);
     }
     card.appendChild(foot);
+
+    // Lista d'attesa: quando l'auto è piena ci si mette in coda,
+    // il primo in lista prende il posto appena qualcuno scende (trigger DB)
+    const waitlist = [...(ride.ride_waitlist ?? [])].sort((a, b) => a.created_at.localeCompare(b.created_at));
+    const ridePast = isPastDay() || hasDeparted(ride);
+    const imAboard = ride.seat_claims.some(c => c.passenger_id === currentUser.id);
+    const imWaiting = waitlist.some(w => w.user_id === currentUser.id);
+    if (waitlist.length > 0) {
+      const wl = document.createElement('div');
+      wl.className = 'ride-sub waitlist-row';
+      wl.textContent = '⏳ In attesa: ' + waitlist.map((w, i) =>
+        `${i + 1}. ${w.profile.display_name}${w.user_id === currentUser.id ? ' (tu)' : ''}`).join(' · ');
+      card.appendChild(wl);
+    }
+    if (!ridePast && ride.driver_id !== currentUser.id && !imAboard && (free === 0 || imWaiting)) {
+      const wBtn = document.createElement('button');
+      wBtn.className = 'btn btn-ghost btn-small';
+      wBtn.textContent = imWaiting ? 'Esci dalla lista d\'attesa' : 'Mettimi in lista d\'attesa';
+      wBtn.addEventListener('click', async () => {
+        if (imWaiting) {
+          await supabase.from('ride_waitlist').delete().eq('ride_id', ride.id).eq('user_id', currentUser.id);
+          toast('Tolto dalla lista d\'attesa.');
+        } else {
+          const { error } = await supabase.from('ride_waitlist').insert({ ride_id: ride.id, user_id: currentUser.id });
+          if (error && error.code !== '23505') { toast(friendlyError(error)); return; }
+          toast('Sei in lista: se un posto si libera, sali in automatico.');
+        }
+        loadRides(true);
+      });
+      card.appendChild(wBtn);
+    }
 
     // Commenti
     const nComments = ride.ride_comments?.[0]?.count ?? 0;
