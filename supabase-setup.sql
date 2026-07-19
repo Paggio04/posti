@@ -161,6 +161,11 @@ begin
   if r.ride_date < current_date then
     raise exception 'Questo viaggio è già passato.';
   end if;
+  if r.ride_date = (now() at time zone 'Europe/Rome')::date
+     and r.depart_time is not null
+     and r.depart_time <= (now() at time zone 'Europe/Rome')::time then
+    raise exception 'Auto già partita: non si può più prenotare.';
+  end if;
   if new.seat_index > r.seats then
     raise exception 'Posto non valido per questa auto.';
   end if;

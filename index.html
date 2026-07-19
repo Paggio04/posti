@@ -12,6 +12,7 @@
   <link rel="manifest" href="manifest.json" />
   <link rel="icon" href="icon.svg" type="image/svg+xml" />
   <meta name="theme-color" content="#14243d" />
+  <meta name="color-scheme" content="light dark" />
 </head>
 <body>
 
@@ -149,7 +150,14 @@
                   <option value="6">6</option>
                 </select>
               </label>
-              <input type="text" id="ride-note" maxlength="200" placeholder="Nota (facoltativa)" aria-label="Nota" class="note-input" />
+              <label class="rating-label" for="ride-repeat">Ripeti
+              <select id="ride-repeat">
+                <option value="1" selected>Solo questo giorno</option>
+                <option value="2">Anche settimana prossima</option>
+                <option value="4">Per 4 settimane</option>
+              </select>
+            </label>
+            <input type="text" id="ride-note" maxlength="200" placeholder="Nota (facoltativa)" aria-label="Nota" class="note-input" />
               <button type="submit" id="save-place-btn" class="btn btn-primary">Pubblica</button>
             </div>
           </form>

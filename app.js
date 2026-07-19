@@ -31,10 +31,25 @@ let currentGroupId = null; // null = Tutti
 let realtimeChannel = null;
 let rendered = false;
 
+// Data locale (non UTC: dopo mezzanotte toISOString darebbe il giorno sbagliato)
 function todayISO(offset = 0) {
   const d = new Date();
   d.setDate(d.getDate() + offset);
-  return d.toISOString().slice(0, 10);
+  return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
+}
+
+function addDaysISO(iso, days) {
+  const d = new Date(iso + 'T12:00:00');
+  d.setDate(d.getDate() + days);
+  return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
+}
+
+// L'auto di oggi è già partita?
+function hasDeparted(ride) {
+  if (ride.ride_date !== todayISO() || !ride.depart_time) return false;
+  const [h, m] = ride.depart_time.split(':').map(Number);
+  const now = new Date();
+  return h * 60 + m <= now.getHours() * 60 + now.getMinutes();
 }
 
 // --- Auth ---
@@ -508,36 +523,70 @@ offerToggle.addEventListener('click', async () => {
 
 rideForm.addEventListener('submit', async (e) => {
   e.preventDefault();
-  const { error } = await supabase.from('rides').insert({
+  const base = {
     driver_id: currentUser.id,
-    ride_date: currentDate,
     group_id: currentGroupId,
     depart_time: document.getElementById('ride-time').value || null,
     origin: document.getElementById('ride-origin').value.trim() || null,
     destination: document.getElementById('ride-destination').value.trim(),
     seats: Number(document.getElementById('ride-seats').value),
     note: document.getElementById('ride-note').value.trim() || null,
-  });
-  if (error) {
-    toast(error.code === '23505'
+  };
+  const weeks = Number(document.getElementById('ride-repeat').value) || 1;
+  let published = 0;
+  let firstError = null;
+  for (let w = 0; w < weeks; w++) {
+    const { error } = await supabase.from('rides').insert({
+      ...base,
+      ride_date: addDaysISO(currentDate, w * 7),
+    });
+    if (error) { firstError = firstError ?? error; } else { published++; }
+  }
+  if (published === 0) {
+    toast(firstError?.code === '23505'
       ? 'Hai già pubblicato la tua auto per questo giorno.'
-      : friendlyError(error));
+      : friendlyError(firstError));
     return;
   }
   rideForm.reset();
   offerCard.classList.add('hidden');
-  toast('Auto pubblicata: ora gli amici possono prenotare il posto.');
+  toast(published === 1
+    ? 'Auto pubblicata: ora gli amici possono prenotare il posto.'
+    : `Auto pubblicata per ${published} settimane.`);
   clearMyRequest();
   loadRides();
 });
+
+// --- Notifiche (quando la scheda è in background) ---
+let lastNotify = 0;
+function maybeNotify(text) {
+  if (!document.hidden || !('Notification' in window) || Notification.permission !== 'granted') return;
+  if (Date.now() - lastNotify < 30000) return; // non più di una ogni 30s
+  lastNotify = Date.now();
+  try { new Notification('Posti', { body: text, icon: 'icon.svg' }); } catch {}
+}
+
+function askNotifyPermission() {
+  if (!('Notification' in window) || Notification.permission !== 'default') return;
+  // la chiediamo al primo gesto dell'utente, non a freddo
+  const ask = () => { Notification.requestPermission(); document.removeEventListener('click', ask); };
+  document.addEventListener('click', ask, { once: true });
+}
 
 // --- Realtime ---
 function subscribeRealtime() {
   if (realtimeChannel) supabase.removeChannel(realtimeChannel);
   realtimeChannel = supabase
     .channel('posti-live')
-    .on('postgres_changes', { event: '*', schema: 'public', table: 'seat_claims' }, () => loadRides(true))
-    .on('postgres_changes', { event: '*', schema: 'public', table: 'rides' }, () => loadRides(true))
+    .on('postgres_changes', { event: '*', schema: 'public', table: 'seat_claims' }, () => {
+      maybeNotify('Movimenti sui sedili: qualcuno è salito o sceso.');
+      loadRides(true);
+    })
+    .on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'rides' }, () => {
+      maybeNotify('Nuova auto pubblicata: corri a prenotare il posto.');
+      loadRides(true);
+    })
+    .on('postgres_changes', { event: 'DELETE', schema: 'public', table: 'rides' }, () => loadRides(true))
     .on('postgres_changes', { event: '*', schema: 'public', table: 'ride_requests' }, () => loadRides(true))
     .subscribe();
 }
@@ -571,7 +620,7 @@ function isPastDay() { return currentDate < todayISO(); }
 // Messaggi d'errore: i trigger del DB parlano già italiano
 function friendlyError(error) {
   if (error.code === 'P0001') return error.message;
-  if (error.code === '23505') return null; // gestito dal chiamante
+  if (error.code === '23505') return 'Operazione già registrata.';
   return 'Errore: ' + error.message;
 }
 
@@ -598,7 +647,14 @@ async function loadRides(silent = false) {
 
   const [{ data, error }, { data: reqs }] = await Promise.all([query, reqQuery]);
   if (token !== loadToken) return; // risposta vecchia, ignora
-  if (error) { console.error(error); ridesList.innerHTML = ''; return; }
+  if (error) {
+    console.error(error);
+    ridesList.innerHTML = '';
+    document.getElementById('day-stats').classList.add('hidden');
+    walkersCard.classList.add('hidden');
+    toast('Connessione instabile: riprova tra un attimo.');
+    return;
+  }
   currentRequests = reqs ?? [];
   updateDayCta(data);
   renderRides(data);
@@ -705,7 +761,7 @@ function buildCar(ride) {
   const isLong = ride.seats >= 5;
   const H = isLong ? 330 : 250;
   const svg = svgEl('svg', { viewBox: `0 0 190 ${H}`, class: 'car-svg', role: 'img' });
-  svg.setAttribute('aria-label', `Macchina di ${ride.driver.display_name}`);
+  svg.setAttribute('aria-label', `Auto di ${ride.driver.display_name}`);
 
   svg.appendChild(svgEl('rect', { x: 10, y: 10, width: 170, height: H - 20, rx: 46, class: 'car-body' }));
   svg.appendChild(svgEl('rect', { x: 30, y: 44, width: 130, height: 16, rx: 8, class: 'car-glass' }));
@@ -719,7 +775,7 @@ function buildCar(ride) {
   const claims = new Map(ride.seat_claims.map(c => [c.seat_index, c]));
   const myClaim = ride.seat_claims.find(c => c.passenger_id === currentUser.id);
   const isDriver = ride.driver_id === currentUser.id;
-  const past = isPastDay();
+  const past = isPastDay() || hasDeparted(ride);
 
   drawSeat(svg, DRIVER_POS, { kind: 'driver', label: initials(ride.driver.display_name), name: ride.driver.display_name });
   svg.appendChild(svgEl('circle', { cx: DRIVER_POS.x, cy: DRIVER_POS.y - 32, r: 8, class: 'car-wheel-steer' }));
@@ -835,7 +891,7 @@ function renderRides(rides) {
     const shareText =
       `${ride.driver.display_name} guida verso ${ride.destination}` +
       (ride.depart_time ? ` alle ${ride.depart_time.slice(0, 5)}` : '') +
-      ` (${currentDate.split('-').reverse().join('/')})` +
+      ` (${ride.ride_date.split('-').reverse().join('/')})` +
       (free > 0 ? ` — ${free} posti disponibili.` : ' — auto al completo.') +
       ` Prenota su ${SITE_URL}`;
     share.addEventListener('click', async () => {
@@ -937,13 +993,14 @@ const TIME_FMT = new Intl.DateTimeFormat('it-IT', { hour: '2-digit', minute: '2-
 
 async function loadComments(rideId, panel) {
   panel.innerHTML = '<div class="skeleton" style="height:40px"></div>';
-  const { data } = await supabase
+  const { data, error } = await supabase
     .from('ride_comments')
     .select('id, user_id, body, created_at, author:profiles(display_name)')
     .eq('ride_id', rideId)
     .order('created_at', { ascending: true })
     .limit(50);
   panel.innerHTML = '';
+  if (error) { toast(friendlyError(error)); return; }
 
   const list = document.createElement('div');
   list.className = 'comments-list';
@@ -1007,6 +1064,7 @@ async function render() {
     userNameEl.textContent = myName;
     await loadGroups();
     renderProfile();
+    askNotifyPermission();
     subscribeRealtime();
     setDate(currentDate);
     switchView('home');
