@@ -813,8 +813,12 @@ function renderRides(rides) {
     const sub = document.createElement('div');
     sub.className = 'ride-sub';
     const time = ride.depart_time ? ` · ore ${ride.depart_time.slice(0, 5)}` : '';
-    sub.textContent = `Guida ${ride.driver.display_name}${time}`;
+    sub.textContent = DAY_FMT.format(new Date(ride.ride_date + 'T12:00:00')) + time;
     info.appendChild(sub);
+    const drv = document.createElement('div');
+    drv.className = 'ride-sub';
+    drv.textContent = `Guida ${ride.driver.display_name}`;
+    info.appendChild(drv);
     head.appendChild(info);
 
     const actions = document.createElement('div');
@@ -855,11 +859,26 @@ function renderRides(rides) {
 
     card.appendChild(buildCar(ride));
 
+    // Chi è a bordo, in chiaro
+    if (ride.seat_claims.length > 0) {
+      const aboard = document.createElement('div');
+      aboard.className = 'history-passengers';
+      for (const c of ride.seat_claims) {
+        const chip = document.createElement('span');
+        chip.className = 'history-chip' + (c.passenger_id === currentUser.id ? ' driver' : '');
+        chip.textContent = c.passenger.display_name;
+        aboard.appendChild(chip);
+      }
+      card.appendChild(aboard);
+    }
+
     const foot = document.createElement('div');
     foot.className = 'ride-foot';
     const count = document.createElement('span');
     count.className = 'place-badge' + (free > 0 ? ' public' : '');
-    count.textContent = free > 0 ? `${free} ${free === 1 ? 'posto libero' : 'posti liberi'}` : 'Al completo';
+    count.textContent = free > 0
+      ? `${ride.seat_claims.length}/${ride.seats} occupati · ${free} ${free === 1 ? 'libero' : 'liberi'}`
+      : 'Al completo';
     foot.appendChild(count);
     if (ride.driver_id === currentUser.id) {
       const meBadge = document.createElement('span');
@@ -871,6 +890,17 @@ function renderRides(rides) {
       meBadge.className = 'place-badge mine';
       meBadge.textContent = 'Sei a bordo';
       foot.appendChild(meBadge);
+    }
+    if (ride.depart_time && currentDate === todayISO()) {
+      const [h, m] = ride.depart_time.split(':').map(Number);
+      const now = new Date();
+      const mins = h * 60 + m - (now.getHours() * 60 + now.getMinutes());
+      const t = document.createElement('span');
+      t.className = 'place-badge' + (mins > 0 && mins <= 60 ? ' mine' : '');
+      t.textContent = mins <= 0 ? 'Partita'
+        : mins < 60 ? `Parte tra ${mins} min`
+        : `Parte tra ${Math.floor(mins / 60)} h ${mins % 60} min`;
+      foot.appendChild(t);
     }
     if (ride.note) {
       const note = document.createElement('span');

@@ -775,6 +775,8 @@ input:focus-visible, select:focus-visible, textarea:focus-visible {
 
 /* ---------- Viste ---------- */
 
+.view { animation: card-in 200ms var(--ease-out); }
+
 .view-title {
   display: flex;
   align-items: center;
