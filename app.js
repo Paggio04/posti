@@ -932,6 +932,29 @@ function renderRides(rides) {
       `<span class="stat-chip"><svg width="15" height="15"><use href="#i-car"/></svg><strong>${rides.length}</strong> ${rides.length === 1 ? 'auto' : 'auto'}</span>` +
       `<span class="stat-chip"><svg width="15" height="15"><use href="#i-plus"/></svg><strong>${totalFree}</strong> posti liberi</span>` +
       `<span class="stat-chip"><svg width="15" height="15"><use href="#i-users"/></svg><strong>${aboard}</strong> a bordo</span>`;
+
+    // Condividi il riepilogo dell'intera giornata (pronto per il gruppo WhatsApp)
+    const shareDay = document.createElement('button');
+    shareDay.className = 'btn btn-ghost btn-small';
+    shareDay.innerHTML = '<svg width="14" height="14"><use href="#i-share"/></svg> Condividi riepilogo';
+    shareDay.addEventListener('click', async () => {
+      const lines = [`Posti — ${DAY_FMT.format(new Date(currentDate + 'T12:00:00'))}`];
+      for (const r of rides) {
+        const freeN = r.seats - r.seat_claims.length;
+        lines.push('');
+        lines.push(`🚗 ${r.driver.display_name} → ${r.destination}`
+          + (r.depart_time ? ` (ore ${r.depart_time.slice(0, 5)})` : ''));
+        lines.push('A bordo: ' + (r.seat_claims.map(c => c.passenger.display_name).join(', ') || 'nessuno'));
+        lines.push(freeN > 0 ? `Liberi: ${freeN} → prenota su ${SITE_URL}` : 'Al completo');
+      }
+      const text = lines.join('\n');
+      if (navigator.share) {
+        try { await navigator.share({ title: 'Posti', text }); } catch {}
+      } else {
+        window.open('https://wa.me/?text=' + encodeURIComponent(text), '_blank', 'noopener');
+      }
+    });
+    statsEl.appendChild(shareDay);
   }
   for (const ride of rides) {
     const card = document.createElement('article');
