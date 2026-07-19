@@ -1,6 +1,6 @@
 {
-  "name": "Posti — chi guida oggi?",
-  "short_name": "Posti",
+  "name": "WeTransport — chi guida oggi?",
+  "short_name": "WeTransport",
   "description": "Organizza i passaggi in macchina della tua comitiva.",
   "start_url": ".",
   "display": "standalone",

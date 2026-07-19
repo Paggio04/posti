@@ -2,7 +2,7 @@ import { createClient } from 'https://cdn.jsdelivr.net/npm/@supabase/supabase-js
 import { SUPABASE_URL, SUPABASE_ANON_KEY } from './config.js';
 
 const supabase = createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
-const SITE_URL = 'https://posti-app.netlify.app';
+const SITE_URL = 'https://wetransport.netlify.app';
 
 // --- DOM ---
 const authView = document.getElementById('auth-view');
@@ -421,13 +421,13 @@ async function renderGroupsView() {
     });
     actions.appendChild(copy);
 
-    const inviteText = `Entra nel gruppo "${g.name}" su Posti con il codice ${g.code}: ${SITE_URL}`;
+    const inviteText = `Entra nel gruppo "${g.name}" su WeTransport con il codice ${g.code}: ${SITE_URL}`;
     const invite = document.createElement('button');
     invite.className = 'btn btn-ghost btn-small';
     invite.textContent = 'Invita amici';
     invite.addEventListener('click', async () => {
       if (navigator.share) {
-        try { await navigator.share({ title: 'Posti', text: inviteText, url: SITE_URL }); } catch {}
+        try { await navigator.share({ title: 'WeTransport', text: inviteText, url: SITE_URL }); } catch {}
       } else {
         window.open('https://wa.me/?text=' + encodeURIComponent(inviteText), '_blank', 'noopener');
       }
@@ -676,7 +676,7 @@ function maybeNotify(text) {
   if (!document.hidden || !('Notification' in window) || Notification.permission !== 'granted') return;
   if (Date.now() - lastNotify < 30000) return; // non più di una ogni 30s
   lastNotify = Date.now();
-  try { new Notification('Posti', { body: text, icon: 'icon.svg' }); } catch {}
+  try { new Notification('WeTransport', { body: text, icon: 'icon.svg' }); } catch {}
 }
 
 function askNotifyPermission() {
@@ -1029,7 +1029,7 @@ function renderRides(rides) {
     shareDay.className = 'btn btn-ghost btn-small';
     shareDay.innerHTML = '<svg width="14" height="14"><use href="#i-share"/></svg> Condividi riepilogo';
     shareDay.addEventListener('click', async () => {
-      const lines = [`Posti — ${DAY_FMT.format(new Date(currentDate + 'T12:00:00'))}`];
+      const lines = [`WeTransport — ${DAY_FMT.format(new Date(currentDate + 'T12:00:00'))}`];
       for (const r of rides) {
         const freeN = r.seats - r.seat_claims.length;
         lines.push('');
@@ -1040,7 +1040,7 @@ function renderRides(rides) {
       }
       const text = lines.join('\n');
       if (navigator.share) {
-        try { await navigator.share({ title: 'Posti', text }); } catch {}
+        try { await navigator.share({ title: 'WeTransport', text }); } catch {}
       } else {
         window.open('https://wa.me/?text=' + encodeURIComponent(text), '_blank', 'noopener');
       }
@@ -1095,7 +1095,7 @@ function renderRides(rides) {
       ` Prenota su ${SITE_URL}`;
     share.addEventListener('click', async () => {
       if (navigator.share) {
-        try { await navigator.share({ title: 'Posti', text: shareText, url: SITE_URL }); } catch {}
+        try { await navigator.share({ title: 'WeTransport', text: shareText, url: SITE_URL }); } catch {}
       } else {
         window.open('https://wa.me/?text=' + encodeURIComponent(shareText), '_blank', 'noopener');
       }

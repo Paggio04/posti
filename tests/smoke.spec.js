@@ -1,7 +1,7 @@
 // Smoke E2E sul sito live: pagina auth, switch registrazione, privacy.
 const { test, expect } = require('@playwright/test');
 
-const URL = 'https://posti-app.netlify.app';
+const URL = 'https://wetransport.netlify.app';
 
 test('la pagina di accesso si carica e funziona', async ({ page }) => {
   const errors = [];
