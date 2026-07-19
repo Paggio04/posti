@@ -99,6 +99,17 @@ function setAuthMode(mode) {
   showAuthMessage('');
 }
 
+// Login OAuth (Google / Apple)
+async function oauthLogin(provider) {
+  const { error } = await supabase.auth.signInWithOAuth({
+    provider,
+    options: { redirectTo: SITE_URL },
+  });
+  if (error) showAuthMessage('Accesso con ' + (provider === 'google' ? 'Google' : 'Apple') + ' non riuscito. Riprova.');
+}
+document.getElementById('oauth-google').addEventListener('click', () => oauthLogin('google'));
+document.getElementById('oauth-apple').addEventListener('click', () => oauthLogin('apple'));
+
 modeLogin.addEventListener('click', () => setAuthMode('login'));
 modeSignup.addEventListener('click', () => setAuthMode('signup'));
 
@@ -188,6 +199,8 @@ function showAuthMessage(msg, ok = false) {
 
 async function ensureProfile() {
   const fallback = currentUser.user_metadata?.display_name
+    || currentUser.user_metadata?.full_name // Google/Apple OAuth
+    || currentUser.user_metadata?.name
     || currentUser.email.split('@')[0];
   const { data } = await supabase.from('profiles').select('display_name, is_admin').eq('id', currentUser.id).maybeSingle();
   if (data) { myName = data.display_name; isAdmin = !!data.is_admin; return; }
