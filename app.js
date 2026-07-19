@@ -1048,10 +1048,11 @@ function renderRides(rides) {
     });
     statsEl.appendChild(shareDay);
   }
-  for (const ride of rides) {
+  for (const [idx, ride] of rides.entries()) {
     const card = document.createElement('article');
     card.className = 'ride-card';
     card.style.setProperty('--car-hue', hueFor(ride.driver_id));
+    card.style.setProperty('--i', idx); // stagger dell'entrata
 
     const head = document.createElement('div');
     head.className = 'ride-head';
