@@ -359,10 +359,12 @@ const DAY_FMT = new Intl.DateTimeFormat('it-IT', { weekday: 'long', day: 'numeri
 async function loadHistory() {
   const list = document.getElementById('history-list');
   list.innerHTML = '<div class="skeleton"></div>';
-  const { data, error } = await supabase
+  let hq = supabase
     .from('rides')
     .select('ride_date, origin, destination, depart_time, driver:profiles!rides_driver_id_fkey(display_name), seat_claims(passenger:profiles!seat_claims_passenger_id_fkey(display_name))')
-    .lt('ride_date', todayISO())
+    .lt('ride_date', todayISO());
+  hq = currentGroupId ? hq.eq('group_id', currentGroupId) : hq;
+  const { data, error } = await hq
     .order('ride_date', { ascending: false })
     .order('depart_time', { ascending: true, nullsFirst: false })
     .limit(120);
@@ -416,9 +418,11 @@ async function loadHistory() {
 async function loadStats() {
   const box = document.getElementById('stats-content');
   box.innerHTML = '<div class="skeleton"></div>';
-  const { data, error } = await supabase
+  let sq = supabase
     .from('rides')
     .select('driver_id, driver:profiles!rides_driver_id_fkey(display_name), seat_claims(passenger_id, passenger:profiles!seat_claims_passenger_id_fkey(display_name))');
+  sq = currentGroupId ? sq.eq('group_id', currentGroupId) : sq;
+  const { data, error } = await sq;
   if (error || !data) { box.innerHTML = '<p class="view-subtitle">Impossibile caricare le statistiche.</p>'; return; }
 
   const drives = new Map(); // id -> {name, n}
@@ -581,7 +585,7 @@ async function loadRides(silent = false) {
   }
   let query = supabase
     .from('rides')
-    .select('*, driver:profiles!rides_driver_id_fkey(display_name), seat_claims(seat_index, passenger_id, passenger:profiles!seat_claims_passenger_id_fkey(display_name))')
+    .select('*, driver:profiles!rides_driver_id_fkey(display_name), seat_claims(seat_index, passenger_id, passenger:profiles!seat_claims_passenger_id_fkey(display_name)), ride_comments(count)')
     .eq('ride_date', currentDate)
     .order('depart_time', { ascending: true, nullsFirst: false });
   query = currentGroupId ? query.eq('group_id', currentGroupId) : query.is('group_id', null);
@@ -910,8 +914,86 @@ function renderRides(rides) {
     }
     card.appendChild(foot);
 
+    // Commenti
+    const nComments = ride.ride_comments?.[0]?.count ?? 0;
+    const cBtn = document.createElement('button');
+    cBtn.className = 'btn btn-ghost btn-small comments-btn';
+    cBtn.textContent = nComments > 0 ? `Commenti (${nComments})` : 'Scrivi un commento';
+    const panel = document.createElement('div');
+    panel.className = 'comments-panel hidden';
+    cBtn.addEventListener('click', async () => {
+      panel.classList.toggle('hidden');
+      if (!panel.classList.contains('hidden')) await loadComments(ride.id, panel);
+    });
+    card.appendChild(cBtn);
+    card.appendChild(panel);
+
     ridesList.appendChild(card);
   }
+}
+
+// --- Commenti ---
+const TIME_FMT = new Intl.DateTimeFormat('it-IT', { hour: '2-digit', minute: '2-digit' });
+
+async function loadComments(rideId, panel) {
+  panel.innerHTML = '<div class="skeleton" style="height:40px"></div>';
+  const { data } = await supabase
+    .from('ride_comments')
+    .select('id, user_id, body, created_at, author:profiles(display_name)')
+    .eq('ride_id', rideId)
+    .order('created_at', { ascending: true })
+    .limit(50);
+  panel.innerHTML = '';
+
+  const list = document.createElement('div');
+  list.className = 'comments-list';
+  for (const c of data ?? []) {
+    const row = document.createElement('div');
+    row.className = 'comment';
+    const meta = document.createElement('span');
+    meta.className = 'comment-meta';
+    meta.textContent = `${c.author.display_name} · ${TIME_FMT.format(new Date(c.created_at))}`;
+    row.appendChild(meta);
+    const body = document.createElement('span');
+    body.textContent = c.body;
+    row.appendChild(body);
+    if (c.user_id === currentUser.id) {
+      const del = document.createElement('button');
+      del.className = 'comment-del';
+      del.innerHTML = '<svg width="12" height="12"><use href="#i-x"/></svg>';
+      del.title = 'Elimina commento';
+      del.addEventListener('click', async () => {
+        await supabase.from('ride_comments').delete().eq('id', c.id);
+        loadComments(rideId, panel);
+      });
+      row.appendChild(del);
+    }
+    list.appendChild(row);
+  }
+  panel.appendChild(list);
+
+  const form = document.createElement('form');
+  form.className = 'comment-form';
+  const input = document.createElement('input');
+  input.type = 'text';
+  input.maxLength = 300;
+  input.placeholder = 'Scrivi qualcosa (es. "passo alle 15 in piazza")';
+  form.appendChild(input);
+  const send = document.createElement('button');
+  send.className = 'btn btn-primary btn-small';
+  send.textContent = 'Invia';
+  form.appendChild(send);
+  form.addEventListener('submit', async (e) => {
+    e.preventDefault();
+    const body = input.value.trim();
+    if (!body) return;
+    const { error } = await supabase.from('ride_comments').insert({ ride_id: rideId, user_id: currentUser.id, body });
+    if (error) { toast(friendlyError(error)); return; }
+    input.value = '';
+    loadComments(rideId, panel);
+  });
+  panel.appendChild(form);
+  input.focus();
 }
 
 // --- Render root ---

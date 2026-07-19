@@ -665,6 +665,32 @@ input:focus-visible, select:focus-visible, textarea:focus-visible {
 .seat-click:focus-visible { outline: none; }
 .seat-click:focus-visible .seat-base { stroke: var(--ink); stroke-width: 2.5; }
 
+/* Commenti */
+.comments-btn { align-self: flex-start; }
+.comments-panel { display: grid; gap: 8px; border-top: 1px solid var(--border); padding-top: 10px; }
+.comments-list { display: grid; gap: 6px; }
+
+.comment {
+  display: flex;
+  align-items: baseline;
+  gap: 8px;
+  font-size: 0.86rem;
+  background: var(--surface-2);
+  border-radius: var(--radius-sm);
+  padding: 7px 11px;
+}
+.comment-meta { color: var(--ink-soft); font-size: 0.76rem; font-weight: 600; white-space: nowrap; }
+.comment-del {
+  margin-left: auto;
+  background: none; border: none;
+  color: var(--ink-soft); cursor: pointer;
+  padding: 2px 4px; border-radius: 5px;
+}
+.comment-del:hover { color: var(--danger); }
+
+.comment-form { display: flex; gap: 8px; }
+.comment-form input { margin: 0; flex: 1; padding: 8px 12px; font-size: 0.88rem; }
+
 /* ---------- Vuoto / skeleton / toast ---------- */
 
 .skeleton {
