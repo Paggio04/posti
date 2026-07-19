@@ -109,7 +109,6 @@ async function oauthLogin(provider) {
   if (error) showAuthMessage('Accesso con ' + (provider === 'google' ? 'Google' : 'Apple') + ' non riuscito. Riprova.');
 }
 document.getElementById('oauth-google').addEventListener('click', () => oauthLogin('google'));
-document.getElementById('oauth-apple').addEventListener('click', () => oauthLogin('apple'));
 
 modeLogin.addEventListener('click', () => setAuthMode('login'));
 modeSignup.addEventListener('click', () => setAuthMode('signup'));
