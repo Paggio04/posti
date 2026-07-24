@@ -76,13 +76,11 @@ tocca sicurezza e schema, cioè le cose dove sbagliare costa di più. Questa fas
     riga 338. Su un database vuoto si fermava lì.
   - Conseguenza: la policy `admin all` su `ride_comments` non è mai stata creata. **Un
     amministratore non ha mai potuto moderare i commenti.** Ora c'è.
-- **Resta da fare a mano, sul progetto Supabase vero:** applicare **tutti** i file di
-  `supabase/migrations/` in ordine. Sono ripetibili, quindi su quello che c'è già non fanno
-  niente; servono a creare la tabella `schema_migrations` e a colmare i buchi. Quanti siano quei
-  buchi non si sa: il vecchio file si fermava alla riga 234, quindi tutto il blocco
-  amministratore da lì in giù (policy su `groups`, `group_members`, `profiles`, trigger
-  `protect_admin_flag`) potrebbe non essere mai stato applicato. Dopo, `select * from
-  public.schema_migrations` dice cosa c'è, invece di farlo indovinare.
+- **Applicate in produzione il 24/07/2026**, tutte, in ordine. `schema_migrations` ne registra 11.
+- **Una deduzione da correggere:** avevo scritto che l'amministratore non aveva mai potuto moderare
+  i commenti. Falso sul database vivo: leggendo `pg_policies` prima di applicare, la policy
+  `admin all` su `ride_comments` c'era già — era stata incollata a parte, dopo la creazione della
+  tabella. Il difetto riguardava la ricostruzione da zero, non la produzione.
 
 ### C3 — Controlli locali accesi — *fatto*
 - **Obiettivo:** `pre-volo.py` smette di saltare metà dei controlli.
@@ -129,8 +127,15 @@ tocca sicurezza e schema, cioè le cose dove sbagliare costa di più. Questa fas
   - due persone sullo stesso sedile: ne passa una sola;
   - aggiornamento dal vecchio schema con dati orfani dentro: archivio pieno, dati del gruppo
     intatti, archivio invisibile al client.
+- **Applicata in produzione il 24/07/2026.** Stato prima: 4 utenti, 1 gruppo con 0 membri, 1 auto
+  senza comitiva. Dopo: quell'auto è nell'archivio, `group_id` è obbligatorio su `rides` e
+  `ride_requests`, le policy nuove sono attive. Nessun dato perso.
+- **Attenzione — codice e database ora sono disallineati:** il sito vivo serve ancora l'app vecchia,
+  quella con la pillola "Tutti", mentre il database non accetta più passaggi senza comitiva. Con 0
+  membri nei gruppi nessuno se ne accorge, ma finché questo ramo non è pubblicato la Home mostra
+  una lista vuota e pubblicare un'auto darebbe errore. **Va pubblicato.**
 - **Resta il collaudo a video**, che nessun test sostituisce: due account veri, due comitive, stesso
-  giorno. Serve il progetto Supabase con la 010 applicata.
+  giorno.
 
 ### C5 — Profili chiusi *(decisione D2)*
 - **Obiettivo:** smettere di mostrare nome e avatar di tutti a tutti.

@@ -43,10 +43,15 @@ Lo schema si spezza in file numerati in `supabase/migrations/`, applicati in ord
   push invece di una frase in un README.
 - Lo schema ricostruito dalle migrazioni è stato confrontato riga per riga con quello prodotto
   dal vecchio file: 8 tabelle, 43 colonne, 9 funzioni, 5 trigger, 14 indici identici, e **una
-  policy in più** — `admin all` su `ride_comments`, quella che il vecchio file non riusciva mai
-  a creare. Cioè: un amministratore non ha mai potuto moderare i commenti.
-- L'applicazione resta manuale, dal SQL editor: nessun automatismo che tocchi il database di
-  produzione senza che qualcuno prema un tasto. Automatizzarla è una decisione successiva, da
+  policy in più** — `admin all` su `ride_comments`, quella su cui il file si fermava.
+  In **produzione** quella policy c'era comunque: lo schema è cresciuto per pezzi e quel blocco
+  era stato applicato a parte, dopo la creazione della tabella. Il difetto colpiva quindi la
+  ricostruzione da zero, non il database vivo — verificato leggendo `pg_policies` sul progetto
+  il 24/07/2026, prima di applicare le migrazioni.
+- **Applicate in produzione il 24/07/2026**, tutte e undici, con `schema_migrations` a
+  confermarlo. Da quel momento lo stato dello schema è una query, non un ricordo.
+- L'applicazione resta un'azione decisa da una persona: nessun automatismo che tocchi il database
+  di produzione da solo. Automatizzarla è una decisione successiva, da
   prendere solo con un ambiente di prova davanti (roadmap, cantiere C9).
 - `supabase-setup.sql` resta come segnaposto che rimanda qui, così i link e le note già scritte
   altrove non si rompono.
