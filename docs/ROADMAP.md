@@ -140,15 +140,26 @@ tocca sicurezza e schema, cioè le cose dove sbagliare costa di più. Questa fas
 - **Resta il collaudo a video**, che nessun test sostituisce: due account veri, due comitive, stesso
   giorno.
 
-### C5 — Profili chiusi *(decisione D2)*
+### C5 — Profili chiusi *(decisione D2)* — *scritto e verificato sul database; da applicare in produzione dopo la pubblicazione*
 - **Obiettivo:** smettere di mostrare nome e avatar di tutti a tutti.
-- **Cosa:** sostituire `profiles read using (true)` con una regola basata sui gruppi in comune;
-  rivedere le query di `app.js` che oggi danno per scontato di poter leggere qualsiasi profilo
-  (storico, statistiche, lista d'attesa, commenti).
-- **Fatto quando:** un utente non vede il nome di nessuno con cui non condivide una comitiva, e
-  **nessuna schermata mostra un nome vuoto o un trattino** al posto di una persona.
-- **Collaudo a video:** account estraneo → home, storico, statistiche, commenti: tutti i nomi che
-  compaiono sono di gente del suo gruppo, nessun buco.
+- **Database** (`011_profili_chiusi.sql`): `profiles read using (true)` diventa "il mio profilo,
+  più chi condivide con me almeno una comitiva, più l'amministratore". Il confronto passa da
+  `condivide_gruppo()`, `security definer` per la stessa ragione di `is_member()`: senza, la policy
+  su `profiles` interrogherebbe `group_members`, che ha le sue policy, e si andrebbe in ricorsione.
+- **Un caso che prima non poteva esistere:** chi **lascia** una comitiva sparisce dai profili
+  leggibili, ma le sue auto e le sue prenotazioni restano nello storico. L'app faceva
+  `r.driver.display_name` in 14 punti senza rete: con il profilo nascosto l'incorporamento torna
+  nullo e **la schermata andava in errore**. Ora tutti passano da `nomeDi()`, che mostra
+  "Ex membro". Trovato leggendo il codice dopo aver scritto la policy, non da un test.
+- **Verificato su Postgres 16** (nel test di isolamento, quindi anche in CI): chi sta in un'altra
+  comitiva vede **un solo profilo, il proprio**; chi è nel gruppo vede sé, Ada e Dino, e **non**
+  vede Carla; nessuno perde di vista il proprio profilo, che servirebbe all'app per sapere come ci
+  si chiama.
+- **Ordine di applicazione, importante:** la 011 va applicata in produzione **dopo** aver pubblicato
+  questo ramo, non prima. Restringe letture che il codice vecchio non sa gestire: prima il codice
+  che regge i profili nascosti, poi la regola che li nasconde.
+- **Collaudo a video:** account estraneo → home, storico, statistiche, commenti: nessun nome di
+  gente fuori dalla propria comitiva, e nessun buco al posto di una persona.
 
 ---
 

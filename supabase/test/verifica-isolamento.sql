@@ -109,5 +109,28 @@ begin
     null; -- atteso: unique (ride_id, seat_index)
   end;
 
+  -- ===== 6. I profili si vedono solo dentro la propria comitiva =====
+  set local role authenticated;
+  perform set_config('test.uid', carla::text, true);
+  select count(*) into visti from public.profiles;
+  if visti <> 1 then
+    raise exception 'PRIVACY ROTTA: Carla vede % profili invece del solo suo', visti;
+  end if;
+  if not exists (select 1 from public.profiles where id = carla) then
+    raise exception 'Carla non vede nemmeno il proprio profilo: l''app non saprebbe come si chiama';
+  end if;
+  reset role;
+
+  set local role authenticated;
+  perform set_config('test.uid', bruno::text, true);
+  select count(*) into visti from public.profiles;
+  if visti <> 3 then
+    raise exception 'Bruno dovrebbe vedere 3 profili (se stesso, Ada, Dino), ne vede %', visti;
+  end if;
+  if exists (select 1 from public.profiles where id = carla) then
+    raise exception 'PRIVACY ROTTA: Bruno vede il profilo di Carla, che non e'' nelle sue comitive';
+  end if;
+  reset role;
+
   raise notice 'Isolamento fra comitive: tutti i controlli passati.';
 end $$;
