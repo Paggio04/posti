@@ -1345,7 +1345,10 @@ async function render() {
     askNotifyPermission();
     subscribeRealtime();
     setDate(currentDate);
-    switchView('home');
+    // Solo se nessuna scheda e' gia' aperta. render() finisce dopo una catena di attese
+    // (profilo, gruppi): chi tocca una scheda mentre l'app carica si vedeva riportare
+    // alla Home, con il tocco annullato. Su telefono lento quella finestra dura secondi.
+    if (!document.querySelector('#app-shell .view:not(.hidden)')) switchView('home');
   } else if (realtimeChannel) {
     supabase.removeChannel(realtimeChannel);
     realtimeChannel = null;

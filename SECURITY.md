@@ -38,8 +38,8 @@ ogni area, cosa è implementato, dove, e cosa è delegato o non applicabile.
 | Area | Stato | Dove / come |
 |---|---|---|
 | CI con soglie bloccanti | ✅ | GitHub Actions (`.github/workflows/ci.yml`): sintassi JS, ESLint (no-undef, no-unused-vars, no-eval bloccanti), scan segreti. Fallisce ⇒ niente merge sereno |
-| Integration / E2E testing | ⚠️ manuale | Verifica manuale su sito live a ogni deploy (auth, prenotazione, realtime). E2E automatizzato (Playwright) è il prossimo investimento sensato se il progetto cresce |
-| Regression testing | ⚠️ manuale | Coperto da lint + smoke test manuale; nessuna suite automatica (rapporto costo/beneficio a questa scala) |
+| Integration / E2E testing | ✅ | Playwright sull'**anteprima** della PR, prima del merge: smoke su accesso/privacy sempre, e il flusso completo a due utenti (crea comitiva → pubblica auto → entra col codice → prenota il sedile → realtime) quando ci sono i segreti degli account di prova. Più i controlli sullo schema e sull'isolamento fra comitive nel job `schema` |
+| Regression testing | ✅ (proporzionato) | Lint e validazione HTML bloccanti, migrazioni riapplicate da zero a ogni push, isolamento fra comitive verificato in CI, flusso completo a due utenti su anteprima. Nessun test unitario: a questa scala il valore sta nei percorsi interi |
 | Load / stress / chaos testing | ➖ N/A | Carico atteso: decine di utenti. Postgres/Netlify reggono ordini di grandezza in più; test di carico non giustificato |
 | Code review | ✅ (processo) | Sviluppo su `main` con commit atomici e messaggi descrittivi; per più contributor: branch + PR con CI verde obbligatoria |
 

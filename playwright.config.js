@@ -11,5 +11,7 @@ module.exports = defineConfig({
   use: {
     baseURL: process.env.BASE_URL || 'https://wetransport.netlify.app',
     screenshot: 'only-on-failure',
+    // Solo per ambienti che escono in rete da un proxy: in CI non serve e resta spento.
+    proxy: process.env.PW_PROXY ? { server: process.env.PW_PROXY, bypass: '127.0.0.1,localhost' } : undefined,
   },
 });

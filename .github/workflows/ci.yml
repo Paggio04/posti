@@ -158,9 +158,15 @@ jobs:
           npm ci
           npx playwright install --with-deps chromium
 
-      - name: Smoke E2E sull'anteprima
+      - name: E2E sull'anteprima
         env:
           BASE_URL: ${{ steps.anteprima.outputs.url }}
+          # I test sui flussi veri (tests/flussi.spec.js) girano solo se questi tre
+          # segreti esistono: servono due account di prova gia' confermati sul progetto
+          # Supabase. Senza, quei test si saltano e restano gli smoke.
+          WT_TEST_EMAIL_A: ${{ secrets.WT_TEST_EMAIL_A }}
+          WT_TEST_EMAIL_B: ${{ secrets.WT_TEST_EMAIL_B }}
+          WT_TEST_PASSWORD: ${{ secrets.WT_TEST_PASSWORD }}
         run: npx playwright test
 
   # Rete di sicurezza dopo la pubblicazione: verifica che il sito vivo stia in piedi.

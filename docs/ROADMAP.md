@@ -214,13 +214,27 @@ tre sarebbero andati in errore con un profilo nascosto — cioè proprio il caso
 pixel. Le correzioni sui percorsi con utenti veri (posto liberato, passaggio annullato, uscita dal
 gruppo) restano da vedere a video: sono esattamente i flussi che C8 deve coprire con i test.
 
-### C8 — Test end-to-end sui flussi veri
-- **Obiettivo:** gli smoke test coprono oggi solo la schermata di accesso. Il cuore dell'app —
-  pubblicare un'auto, prenotare un sedile, vedere l'aggiornamento in tempo reale — non è testato.
-- **Cosa:** utenti di prova su un progetto Supabase dedicato ai test; scenari: registrazione →
-  gruppo → pubblica auto → secondo utente prenota → il primo lo vede senza ricaricare → doppia
-  prenotazione dello stesso sedile → vince uno solo.
-- **Fatto quando:** i test girano sull'anteprima (C1) e falliscono davvero se rompo uno di quei flussi.
+### C8 — Test end-to-end sui flussi veri — *fatto*
+- **Obiettivo:** gli smoke coprivano solo la schermata di accesso. Il cuore dell'app — pubblicare,
+  prenotare, vedere l'aggiornamento in tempo reale — non era testato da niente.
+- **Fatto:** `tests/flussi.spec.js`, un viaggio completo con **due utenti in due schede separate**:
+  Ada crea la comitiva e pubblica l'auto → Bruno, che non è del gruppo, **non vede niente** →
+  Bruno entra col codice e la vede → prenota un sedile → **Ada lo vede senza ricaricare** (realtime)
+  → pulizia (passaggio annullato, entrambi escono dal gruppo). Zero errori in pagina, verificato.
+- **Girato per davvero**, con due account veri sul Supabase di produzione, creati per l'occasione e
+  **cancellati subito dopo**. È anche il collaudo a video che mancava a C4: l'isolamento fra comitive
+  visto con due utenti, non solo dedotto dalle policy.
+- **Ha trovato subito un bug vero, e non del test:** `render()` chiudeva con `switchView('home')`
+  dopo una catena di attese (profilo, gruppi). **Chi tocca una scheda mentre l'app carica si vedeva
+  annullare il tocco e riportare alla Home.** Su telefono lento quella finestra dura secondi. Ora la
+  Home si impone solo se nessuna scheda è già aperta.
+- **Verificata anche la verifica:** tolta la correzione, il test torna a fallire; rimessa, passa.
+  Un test che non fallisce quando il bug c'è non serve a niente.
+- **In CI** il flusso a due utenti gira sull'anteprima **solo se esistono i segreti**
+  `WT_TEST_EMAIL_A`, `WT_TEST_EMAIL_B`, `WT_TEST_PASSWORD` (due account di prova già confermati).
+  Senza, si salta e restano gli smoke: nessun falso rosso su chi clona il repo.
+- **Resta da fare a mano:** creare i due account di prova stabili e metterne le credenziali nei
+  segreti del repo, se si vuole quel test a ogni PR.
 
 ---
 
