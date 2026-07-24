@@ -46,7 +46,7 @@ Oggi ogni push su `main` è la pubblicazione, e gli smoke test girano **dopo**, 
 vivo: se rompo qualcosa, lo rompo davanti a chi sta usando l'app. Tutto il resto della roadmap
 tocca sicurezza e schema, cioè le cose dove sbagliare costa di più. Questa fase viene prima.
 
-### C1 — Anteprima per ogni modifica, test che bloccano — *scritto, da collaudare alla prima PR*
+### C1 — Anteprima per ogni modifica, test che bloccano — *fatto e collaudato sulla PR #1*
 - **Obiettivo:** poter provare una modifica a un indirizzo temporaneo prima che la vedano gli utenti.
 - **Fatto:** il job `e2e-anteprima` aspetta lo stato di deploy che Netlify scrive sul commit della
   PR, ricava da lì l'indirizzo dell'anteprima e ci lancia Playwright; niente più `sleep 60` alla
@@ -56,10 +56,15 @@ tocca sicurezza e schema, cioè le cose dove sbagliare costa di più. Questa fas
 - **Restano due cose da fare a mano, sul pannello:** i Deploy Preview vanno attivi su Netlify, e su
   GitHub `checks` + `e2e-anteprima` vanno messi come controlli obbligatori sul ramo `main`
   (Settings → Branches), altrimenti il merge resta possibile con la CI rossa.
-- **Fatto quando:** una PR con un bug evidente non è mergiabile, e `main` non si è mai rotto per provarlo.
-- **Collaudo:** apro una PR di prova che rompe un selettore → CI rossa, merge bloccato, sito live intatto.
-  Se il passo "Trova l'anteprima Netlify" stampa un avviso invece dell'indirizzo, l'integrazione
-  GitHub-Netlify non è attiva e va sistemata lì.
+- **Collaudato sulla PR #1** (24/07/2026): Netlify ha pubblicato l'anteprima, il job l'ha trovata
+  dallo stato del commit in pochi secondi (non dal ripiego, che avrebbe atteso dieci minuti) e ha
+  lanciato i tre smoke test contro `https://deploy-preview-1--wetransport.netlify.app`. Tutti verdi,
+  **prima** di qualsiasi merge. Il job sul sito vivo è stato saltato, come previsto sulle PR.
+- **Un difetto trovato dal primo giro di CI:** il workflow era fissato a Node 20, mentre
+  html-validate 11 usa `fs.globSync`, che esiste da Node 22. In locale passava (Node 22), in CI no.
+  Alzato a Node 24 e dichiarato `engines` in `package.json`.
+- **Resta da fare a mano:** `checks`, `schema` ed `e2e-anteprima` come controlli **obbligatori** sul
+  ramo `main` (Settings → Branches). Finché non lo sono, la CI rossa avvisa ma non impedisce il merge.
 
 ### C2 — Migrazioni numerate al posto del file unico — *fatto e verificato*
 - **Obiettivo:** sapere sempre quale schema è davvero applicato.
