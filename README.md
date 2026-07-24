@@ -28,3 +28,10 @@ La anon key è pubblica per design: ogni accesso ai dati passa dalle policy RLS.
 Tutti gli utenti autenticati vedono passaggi e prenotazioni; ognuno prenota/lascia
 solo il proprio posto (max 1 per macchina, vincolo unique), il guidatore gestisce
 la propria macchina e può liberare i sedili.
+
+## Strumenti di sviluppo (MCP)
+
+`.mcp.json` registra il server MCP di [21st.dev](https://21st.dev) (transport HTTP)
+utilizzabile da Claude Code. La chiave API **non** è committata nel repo: imposta la
+variabile d'ambiente `TWENTYFIRST_API_KEY` prima di avviare `claude` e approva il
+server al primo utilizzo.
