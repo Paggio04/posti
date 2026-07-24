@@ -81,12 +81,11 @@
           <label for="email">Email
             <input type="email" id="email" required autocomplete="email" placeholder="nome@esempio.it" />
           </label>
-          <label for="password">Password
-            <span class="pw-wrap">
-              <input type="password" id="password" required minlength="6" autocomplete="current-password" placeholder="Minimo 6 caratteri" />
-              <button type="button" id="pw-toggle" class="pw-toggle" aria-label="Mostra password"><svg width="18" height="18"><use href="#i-eye"/></svg></button>
-            </span>
-          </label>
+          <label for="password" class="field-label">Password</label>
+          <span class="pw-wrap">
+            <input type="password" id="password" required minlength="6" autocomplete="current-password" placeholder="Minimo 6 caratteri" />
+            <button type="button" id="pw-toggle" class="pw-toggle" aria-label="Mostra password"><svg width="18" height="18"><use href="#i-eye"/></svg></button>
+          </span>
           <button type="submit" id="auth-submit" class="btn btn-primary btn-big btn-full">Accedi</button>
           <button type="button" id="forgot-btn" class="link-btn">Hai dimenticato la password?</button>
         </form>
@@ -108,7 +107,7 @@
   <div id="app-shell" class="app-shell hidden">
     <header class="topbar">
       <div class="brand"><svg width="22" height="22"><use href="#i-car"/></svg> WeTransport</div>
-      <button id="user-name" class="user-name-btn" title="Vai al profilo"></button>
+      <button type="button" id="user-name" class="user-name-btn" title="Vai al profilo" aria-label="Il tuo profilo"></button>
     </header>
 
     <main class="app-view">
@@ -265,7 +264,7 @@
 
   <dialog id="app-dialog" class="app-dialog">
     <form method="dialog" id="dialog-form">
-      <h3 id="dialog-title"></h3>
+      <h3 id="dialog-title">Conferma</h3>
       <p id="dialog-text" class="auth-subtitle"></p>
       <input type="text" id="dialog-input" maxlength="60" />
       <div class="dialog-actions">

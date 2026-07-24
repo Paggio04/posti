@@ -14,38 +14,20 @@ jobs:
         with:
           node-version: 20
 
+      - name: Dipendenze di sviluppo
+        run: npm ci
+
       - name: Sintassi JavaScript
         run: |
           node --check app.js
           node --check config.js
           node --check playwright.config.js
 
-      - name: Validazione HTML
-        run: npx --yes html-validate index.html || true
+      - name: Lint JavaScript (bloccante)
+        run: npm run lint
 
-      - name: Lint JavaScript (regole base, bloccanti)
-        run: |
-          npm init -y > /dev/null
-          npm install --no-save eslint@9 > /dev/null
-          cat > eslint.config.mjs <<'EOF'
-          export default [
-            {
-              files: ["app.js", "config.js"],
-              languageOptions: { ecmaVersion: 2023, sourceType: "module",
-                globals: { document: "readonly", window: "readonly", localStorage: "readonly",
-                  navigator: "readonly", Notification: "readonly", Intl: "readonly",
-                  confirm: "readonly", prompt: "readonly", alert: "readonly",
-                  setTimeout: "readonly", clearTimeout: "readonly", console: "readonly", Event: "readonly" } },
-              rules: {
-                "no-undef": "error",
-                "no-unused-vars": ["error", { "args": "none" }],
-                "no-eval": "error",
-                "eqeqeq": ["error", "smart"]
-              }
-            }
-          ]
-          EOF
-          npx eslint app.js config.js
+      - name: Validazione HTML (bloccante)
+        run: npm run validate
 
       - name: Nessun segreto committato
         run: |
@@ -155,8 +137,7 @@ jobs:
 
       - name: Installa Playwright
         run: |
-          npm init -y > /dev/null
-          npm install --no-save @playwright/test > /dev/null
+          npm ci
           npx playwright install --with-deps chromium
 
       - name: Smoke E2E sull'anteprima
@@ -179,8 +160,7 @@ jobs:
         run: sleep 60
       - name: Installa Playwright
         run: |
-          npm init -y > /dev/null
-          npm install --no-save @playwright/test > /dev/null
+          npm ci
           npx playwright install --with-deps chromium
       - name: Smoke E2E sul sito vivo
         env:

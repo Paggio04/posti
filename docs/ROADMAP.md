@@ -84,13 +84,23 @@ tocca sicurezza e schema, cioè le cose dove sbagliare costa di più. Questa fas
   `protect_admin_flag`) potrebbe non essere mai stato applicato. Dopo, `select * from
   public.schema_migrations` dice cosa c'è, invece di farlo indovinare.
 
-### C3 — Controlli locali accesi
+### C3 — Controlli locali accesi — *fatto*
 - **Obiettivo:** `pre-volo.py` smette di saltare metà dei controlli.
-- **Cosa:** `package.json` con ESLint e html-validate come dipendenze di sviluppo, configurazione
-  allineata a quella della CI (oggi la CI se la scrive al volo in `ci.yml`: una sola fonte).
-- **Fatto quando:** `python C:\WEB\Strumenti\pre-volo.py C:\Progetti\posti` esce 0 e non dice più
-  "saltato".
-- **Collaudo:** comando in locale, uscita 0.
+- **Fatto:** `package.json` con ESLint e html-validate come dipendenze **di sviluppo** (il sito
+  resta senza build: servono agli strumenti, non all'app). Le regole ESLint non sono più scritte
+  dentro `ci.yml` e rigenerate a ogni build: stanno in `eslint.config.mjs`, versionate, stessa
+  fonte in locale e in CI. Regole html-validate in `.htmlvalidate.json`.
+- **`npm run check`** fa lint + validazione in un colpo; la CI ora chiama gli stessi comandi.
+- **Validazione HTML ora bloccante** invece che informativa (`|| true`), perché è a zero errori.
+  Le regole di puro stile sono spente (`void-style`, `no-inline-style`, `no-redundant-for`) e
+  `no-implicit-button-type` resta come avviso: 20 bottoni senza `type` esplicito, roba da C7.
+- **Tre difetti di accessibilità corretti** per arrivarci: la `<label>` della password teneva
+  dentro anche il bottone dell'occhio (una etichetta per due controlli), il bottone del nome
+  utente non aveva testo accessibile finché il JS non lo riempiva, il titolo del dialogo era un
+  `<h3>` vuoto.
+- **Collaudo fatto:** schermata di accesso resa in locale e confrontata pixel per pixel prima e
+  dopo la modifica: **identica**. Alla prima passata non lo era — il campo password aveva perso il
+  peso del carattere che ereditava dalla `<label>` — ed è stato sistemato.
 
 ---
 
