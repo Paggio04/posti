@@ -74,8 +74,8 @@ tocca sicurezza e schema, cioè le cose dove sbagliare costa di più. Questa fas
   - `supabase-setup.sql` **non ricreava il backend da zero**, contrariamente a quanto dicevano
     README e ADR 001: alla riga 234 creava una policy su `ride_comments`, tabella definita alla
     riga 338. Su un database vuoto si fermava lì.
-  - Conseguenza: la policy `admin all` su `ride_comments` non è mai stata creata. **Un
-    amministratore non ha mai potuto moderare i commenti.** Ora c'è.
+  - Conseguenza sulla ricostruzione da zero: la policy `admin all` su `ride_comments` non veniva
+    mai creata. Ora c'è. (In produzione invece c'era: vedi la correzione qui sotto.)
 - **Applicate in produzione il 24/07/2026**, tutte, in ordine. `schema_migrations` ne registra 11.
 - **Una deduzione da correggere:** avevo scritto che l'amministratore non aveva mai potuto moderare
   i commenti. Falso sul database vivo: leggendo `pg_policies` prima di applicare, la policy
