@@ -165,12 +165,17 @@ tocca sicurezza e schema, cioè le cose dove sbagliare costa di più. Questa fas
 
 ## Fase 2 — Rinforzare quello che c'è (T1)
 
-### C6 — Bug noti da chiudere
-| Bug | Dove | Effetto |
+### C6 — Bug noti da chiudere — *fatto*
+| Bug | Dove | Stato |
 |---|---|---|
-| Avatar Google bloccati dalla CSP | `netlify.toml`, `img-src 'self' data:` | Chi entra con Google ha un avatar che punta a `lh3.googleusercontent.com`: il browser lo blocca, restano le iniziali. La funzione è scritta ma non si vede mai. |
-| `ride_waitlist` definita due volte | `supabase-setup.sql:260` e `:303` | Riapplicare il file dà errore a metà (chiuso da C2) |
-| `meta description` mancante | `privacy.html` | Controllo di consegna rosso; correzione già fatta in locale e mai committata |
+| Avatar Google bloccati dalla CSP | `netlify.toml`, `img-src 'self' data:` | **Chiuso.** Chi entrava con Google aveva un avatar che punta a `lh3.googleusercontent.com` e il browser lo bloccava: la funzione era scritta dal 21/07 e non si è mai vista. Aggiunto `https://*.googleusercontent.com` alla sola direttiva `img-src`. |
+| `ride_waitlist` definita due volte | `supabase-setup.sql:260` e `:303` | **Chiuso da C2**: nelle migrazioni la lista d'attesa è definita una volta sola. |
+| `meta description` mancante | `privacy.html` | **Chiusa.** |
+
+**Collaudo della CSP, fatto col browser e non a occhio:** pagina servita in locale con
+*esattamente* l'intestazione di `netlify.toml`, poi due immagini iniettate nel documento. Quella su
+`lh3.googleusercontent.com` **non viene più bloccata**; quella su un dominio qualsiasi **continua a
+esserlo**. La regola si è aperta quanto serviva e non un dito di più.
 
 ### C7 — Revisione integrale di `app.js`
 - **Obiettivo:** trovare tutti i bug, non i primi che saltano fuori.
