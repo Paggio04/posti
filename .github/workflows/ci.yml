@@ -18,6 +18,7 @@ jobs:
         run: |
           node --check app.js
           node --check config.js
+          node --check playwright.config.js
 
       - name: Validazione HTML
         run: npx --yes html-validate index.html || true
@@ -50,9 +51,80 @@ jobs:
         run: |
           ! grep -rEn "sb_secret|service_role|SUPABASE_SERVICE" --include='*.js' --include='*.html' --include='*.toml' . || (echo "Trovata chiave segreta nel repo" && exit 1)
 
-  e2e:
+  # Smoke test sull'ANTEPRIMA della pull request, non sul sito vivo: se e' rosso,
+  # il merge (e quindi il deploy) non avviene. Vedi docs/ROADMAP.md, cantiere C1.
+  e2e-anteprima:
+    if: github.event_name == 'pull_request'
+    needs: checks
     runs-on: ubuntu-latest
-    # Smoke test sul sito live (dopo il deploy Netlify, che parte allo stesso push)
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+
+      - name: Trova l'anteprima Netlify di questo commit
+        id: anteprima
+        uses: actions/github-script@v7
+        with:
+          script: |
+            // Netlify pubblica lo stato del deploy come commit status sul SHA della PR.
+            // Aspettiamo quello: cosi' i test girano sulla build giusta, non su una vecchia.
+            const sha = context.payload.pull_request.head.sha;
+            const scadenza = Date.now() + 10 * 60 * 1000;
+            const attesa = (ms) => new Promise((r) => setTimeout(r, ms));
+
+            while (Date.now() < scadenza) {
+              const { data } = await github.rest.repos.getCombinedStatusForRef({
+                owner: context.repo.owner, repo: context.repo.repo, ref: sha,
+              });
+              const st = data.statuses.find((s) => s.context.includes('netlify'));
+              if (st && st.state === 'success' && (st.target_url || '').includes('netlify.app')) {
+                core.info('Anteprima pronta: ' + st.target_url);
+                core.setOutput('url', st.target_url);
+                return;
+              }
+              if (st && (st.state === 'failure' || st.state === 'error')) {
+                core.setFailed('Deploy Netlify fallito: ' + (st.target_url || 'nessun dettaglio'));
+                return;
+              }
+              await attesa(15000);
+            }
+
+            // Nessuno stato da Netlify entro 10 minuti: puo' voler dire che l'integrazione
+            // con GitHub non e' attiva. Si prova l'indirizzo prevedibile, e lo si dice.
+            const url = `https://deploy-preview-${context.payload.pull_request.number}--wetransport.netlify.app`;
+            core.warning('Nessuno stato Netlify sul commit; provo ' + url);
+            core.setOutput('url', url);
+
+      - name: Attendi che l'anteprima risponda
+        run: |
+          for i in $(seq 1 40); do
+            codice=$(curl -s -o /dev/null -w '%{http_code}' "${{ steps.anteprima.outputs.url }}")
+            [ "$codice" = "200" ] && echo "Anteprima raggiungibile" && exit 0
+            echo "tentativo $i: HTTP $codice"
+            sleep 15
+          done
+          echo "Anteprima irraggiungibile: ${{ steps.anteprima.outputs.url }}"
+          exit 1
+
+      - name: Installa Playwright
+        run: |
+          npm init -y > /dev/null
+          npm install --no-save @playwright/test > /dev/null
+          npx playwright install --with-deps chromium
+
+      - name: Smoke E2E sull'anteprima
+        env:
+          BASE_URL: ${{ steps.anteprima.outputs.url }}
+        run: npx playwright test
+
+  # Rete di sicurezza dopo la pubblicazione: verifica che il sito vivo stia in piedi.
+  # Non protegge dal deploy rotto (gira dopo): quel compito e' di e2e-anteprima.
+  e2e-produzione:
+    if: github.event_name == 'push'
+    needs: checks
+    runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-node@v4
@@ -65,5 +137,7 @@ jobs:
           npm init -y > /dev/null
           npm install --no-save @playwright/test > /dev/null
           npx playwright install --with-deps chromium
-      - name: Smoke E2E sul sito live
-        run: npx playwright test tests/ --reporter=list
+      - name: Smoke E2E sul sito vivo
+        env:
+          BASE_URL: https://wetransport.netlify.app
+        run: npx playwright test

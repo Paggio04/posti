@@ -46,12 +46,20 @@ Oggi ogni push su `main` è la pubblicazione, e gli smoke test girano **dopo**, 
 vivo: se rompo qualcosa, lo rompo davanti a chi sta usando l'app. Tutto il resto della roadmap
 tocca sicurezza e schema, cioè le cose dove sbagliare costa di più. Questa fase viene prima.
 
-### C1 — Anteprima per ogni modifica, test che bloccano
+### C1 — Anteprima per ogni modifica, test che bloccano — *scritto, da collaudare alla prima PR*
 - **Obiettivo:** poter provare una modifica a un indirizzo temporaneo prima che la vedano gli utenti.
-- **Cosa:** attivare i Deploy Preview di Netlify sulle pull request; spostare il job `e2e` dal sito
-  vivo all'URL dell'anteprima; renderlo bloccante sul merge; togliere il `sleep 60`.
+- **Fatto:** il job `e2e-anteprima` aspetta lo stato di deploy che Netlify scrive sul commit della
+  PR, ricava da lì l'indirizzo dell'anteprima e ci lancia Playwright; niente più `sleep 60` alla
+  cieca. I test leggono l'indirizzo da `BASE_URL` (`playwright.config.js`) invece di averlo scritto
+  dentro. Il vecchio job sul sito vivo resta come rete di sicurezza dopo la pubblicazione
+  (`e2e-produzione`), ma non è più l'unica difesa.
+- **Restano due cose da fare a mano, sul pannello:** i Deploy Preview vanno attivi su Netlify, e su
+  GitHub `checks` + `e2e-anteprima` vanno messi come controlli obbligatori sul ramo `main`
+  (Settings → Branches), altrimenti il merge resta possibile con la CI rossa.
 - **Fatto quando:** una PR con un bug evidente non è mergiabile, e `main` non si è mai rotto per provarlo.
 - **Collaudo:** apro una PR di prova che rompe un selettore → CI rossa, merge bloccato, sito live intatto.
+  Se il passo "Trova l'anteprima Netlify" stampa un avviso invece dell'indirizzo, l'integrazione
+  GitHub-Netlify non è attiva e va sistemata lì.
 
 ### C2 — Migrazioni numerate al posto del file unico
 - **Obiettivo:** sapere sempre quale schema è davvero applicato.
@@ -165,23 +173,61 @@ apre offline. Serve anche l'icona in PNG 192 e 512 (oggi solo SVG, che alcuni si
 una schermata sensata quando la rete non c'è. *Fatto quando:* installata dal telefono, si apre
 senza barra del browser e mostra qualcosa di utile anche offline.
 
-### C13 — Notifiche
-Oggi le notifiche esistono solo con la scheda aperta in secondo piano (`maybeNotify`). Servono
-notifiche vere a scheda chiusa: "hanno prenotato un posto nella tua auto", "la tua auto parte fra
-un'ora", "si è liberato un posto". Richiede service worker (C12) e una decisione sul come.
+### C13 — Notifiche a scheda chiusa
+Oggi le notifiche esistono solo con la scheda aperta in secondo piano (`maybeNotify`).
+
+**Deciso — tre eventi soli, quelli che cambiano i piani di chi li riceve:**
+
+| Evento | A chi | Perché vale una vibrazione |
+|---|---|---|
+| Qualcuno prenota un posto nella tua auto | guidatore | Devi sapere chi carichi |
+| Si libera un posto dove sei in lista d'attesa | in attesa | È l'unico modo per non perderlo |
+| La tua auto parte fra un'ora | guidatore e passeggeri | Il promemoria che evita il buco |
+
+**Esclusi di proposito**: commenti e auto pubblicate. Sono la maggior parte del traffico e
+diventerebbero rumore: un'app che notifica troppo viene silenziata, e a quel punto non notifica
+più niente. Se serviranno, saranno da attivare a mano, spente di default.
+
+**Come:** Web Push standard (VAPID) sul service worker di C12, tabella delle iscrizioni, Edge
+Function Supabase innescata dal database per i primi due eventi, `pg_cron` per il promemoria orario.
+Nessun servizio di terzi. *Dipende da:* C12.
 
 ### C14 — Servizi esterni
-Navigazione verso il punto di ritrovo, invito al gruppo condiviso su WhatsApp, passaggio aggiunto
-al calendario. **Da confermare quali servono davvero**: ognuno è codice da mantenere e voci nella CSP.
+**Deciso — solo cose che il browser sa già fare, nessun SDK, nessuna voce nuova nella CSP:**
+
+| Cosa | Come | Perché così |
+|---|---|---|
+| Invita al gruppo | Web Share API nativa (che sul telefono offre WhatsApp da sola) + copia del codice come ripiego | Zero dipendenze, funziona con tutte le app di messaggistica, non solo WhatsApp |
+| Passaggio nel calendario | File `.ics` generato dall'app | Nessun servizio esterno, funziona con Google, Apple e Outlook allo stesso modo |
+| Navigazione al ritrovo | Link Maps, con coordinate vere al posto del testo libero | Rimandato dentro C9, che è il cantiere dove nascono i luoghi veri |
+
+**Esclusi**: SDK di terzi, analytics, login social oltre a Google. Ogni SDK è codice altrui in
+esecuzione dentro la mia pagina e una riga in più nella CSP.
 
 ---
 
 ## Fase 5 — Abbellire e ottimizzare
 
-### C15 — Rifinitura dell'interfaccia
-Il redesign del 21/07 ha già dato forme tonde, nav a pillola, aurora sull'accesso e animazioni a
-molla. **Da confermare cosa manca ancora**: prima schermata per chi arriva senza gruppo, stati
-vuoti, transizioni fra schede, tema scuro rivisto, illustrazione dell'auto.
+### C15 — Togliere l'aria di cosa generata
+**Il problema non è che sia brutta: è che sembra generata.** Aurora animata sull'accesso, nav
+flottante a pillola, tutto arrotondato, animazioni a molla, gradienti morbidi: è l'estetica
+predefinita delle interfacce fatte dall'AI in questi mesi. Nessun dettaglio è sbagliato, e proprio
+per questo nessuno è *suo*. Chi la apre non ricorda niente.
+
+**Cosa si fa:**
+1. **Togliere gli effetti che non dicono niente**: aurora, bagliori, gradienti decorativi. Sono
+   costati righe di CSS e non distinguono l'app da altre mille.
+2. **Scegliere un carattere tipografico vero** e portarne il peso: la tipografia è il modo più
+   economico di avere un'identità, e oggi è quella di sistema.
+3. **Fare dell'auto la protagonista.** L'SVG dei sedili è l'unica cosa qui dentro che nessun altro
+   ha: è disegnata su misura per questo problema. Oggi è un elemento fra tanti dentro una scheda.
+4. **Un accento solo, deciso**, al posto della palette morbida buona per qualsiasi cosa.
+5. **Testi con una voce.** "Bentornato", "Accedi per vedere chi guida oggi" sono corretti e
+   anonimi: è il registro predefinito. Questa è un'app per una comitiva di amici, può parlare come loro.
+6. **Stati vuoti disegnati**, non icona grigia centrata con frase gentile.
+
+**Fatto quando:** copro il logo e il nome con un dito, mostro uno screenshot a qualcuno, e si
+capisce lo stesso che è questa app e non un'altra. Prima e dopo affiancati.
 
 ### C16 — Peso e velocità sul telefono
 1200 righe di CSS e 1311 di JS senza build, più supabase-js da CDN. Misurare prima di ottimizzare:
@@ -209,16 +255,23 @@ progetto che punta qui invece di duplicare.
 
 ### C20 — Un nome solo
 Oggi sono tre: repo `posti`, cartella `C:\Progetti\posti`, dominio `wetransport.netlify.app`.
-Cercare "wetransport" su GitHub non trova niente. **Da confermare**: rinominare il repo in
-`wetransport`, e se prendere un dominio proprio.
+Cercare "wetransport" su GitHub non trova niente.
+
+**Deciso:**
+- **Repo rinominato in `wetransport`.** GitHub tiene attivi i vecchi indirizzi, ma vanno comunque
+  aggiornati a mano: il collegamento Netlify, il remoto del clone locale, la nota del vault, i
+  percorsi negli script di `Strumenti/`. Da fare in un momento in cui non c'è altro a metà.
+- **Dominio proprio: sì, ma a T2.** Finché lo usa la comitiva, `.netlify.app` va benissimo. Quando
+  si apre al pubblico serve un dominio vero: è anche il biglietto da visita dello studio, e un
+  `.netlify.app` in vetrina dice "esperimento". Costo ~10-15 € l'anno.
 
 ---
 
-## Da confermare
+## Decisioni prese dopo la prima stesura
 
-Punti aperti, da chiudere prima dei cantieri che li riguardano:
-
-1. **C14** — quali servizi esterni servono davvero (Maps, WhatsApp, calendario, altro).
-2. **C15** — cosa vuol dire "abbellire" adesso, dopo il redesign del 21/07: cosa ti dà fastidio guardandola.
-3. **C20** — rinominare il repo in `wetransport`? Dominio proprio al posto di `.netlify.app`?
-4. **C13** — notifiche a scheda chiusa: quali eventi valgono davvero un avviso sul telefono.
+| # | Punto | Scelta |
+|---|---|---|
+| **D5** | Notifiche (C13) | Tre eventi soli: posto prenotato nella tua auto, posto liberato in lista d'attesa, partenza fra un'ora. Commenti e nuove auto **no**: sarebbero rumore. Web Push standard, nessun servizio di terzi. |
+| **D6** | Servizi esterni (C14) | Solo API native del browser: Web Share per l'invito, `.ics` per il calendario, link Maps con coordinate vere (dentro C9). Nessun SDK di terzi, nessuna analytics. |
+| **D7** | Estetica (C15) | Il difetto è che sembra generata dall'AI, non che sia brutta. Si tolgono gli effetti generici, si sceglie una tipografia vera, l'auto SVG diventa protagonista. Prova del nove: coperto il logo, si riconosce lo stesso. |
+| **D8** | Nome e dominio (C20) | Repo rinominato in `wetransport`; dominio proprio al momento dell'apertura al pubblico, non prima. |

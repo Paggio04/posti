@@ -1,12 +1,12 @@
-// Smoke E2E sul sito live: pagina auth, switch registrazione, privacy.
+// Smoke E2E: pagina auth, switch registrazione, privacy.
+// L'indirizzo arriva da playwright.config.js (BASE_URL): l'anteprima della PR in CI,
+// il sito vivo se non specificato.
 const { test, expect } = require('@playwright/test');
-
-const URL = 'https://wetransport.netlify.app';
 
 test('la pagina di accesso si carica e funziona', async ({ page }) => {
   const errors = [];
   page.on('pageerror', (e) => errors.push(e.message));
-  await page.goto(URL);
+  await page.goto('/');
   await expect(page.locator('#auth-card')).toBeVisible();
   await expect(page.locator('#auth-title')).toHaveText('Bentornato');
 
@@ -20,7 +20,7 @@ test('la pagina di accesso si carica e funziona', async ({ page }) => {
 });
 
 test('login con credenziali sbagliate mostra errore chiaro', async ({ page }) => {
-  await page.goto(URL);
+  await page.goto('/');
   await page.locator('#email').fill('nessuno@esempio.it');
   await page.locator('#password').fill('password-sbagliata');
   await page.locator('#auth-submit').click();
@@ -28,6 +28,6 @@ test('login con credenziali sbagliate mostra errore chiaro', async ({ page }) =>
 });
 
 test('la pagina privacy esiste', async ({ page }) => {
-  await page.goto(URL + '/privacy.html');
+  await page.goto('/privacy.html');
   await expect(page.locator('h1')).toHaveText('Informativa privacy');
 });
