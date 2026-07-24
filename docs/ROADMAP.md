@@ -177,14 +177,42 @@ tocca sicurezza e schema, cioè le cose dove sbagliare costa di più. Questa fas
 `lh3.googleusercontent.com` **non viene più bloccata**; quella su un dominio qualsiasi **continua a
 esserlo**. La regola si è aperta quanto serviva e non un dito di più.
 
-### C7 — Revisione integrale di `app.js`
+### C7 — Revisione integrale di `app.js` — *fatto*
 - **Obiettivo:** trovare tutti i bug, non i primi che saltano fuori.
-- **Cosa:** lettura riga per riga delle 1311 righe in **una sola passata esaustiva**, con tutte le
-  classi di controllo insieme (errori non gestiti, stato che resta sporco, casi limite di data e
-  fuso, doppi tap, realtime che cade, sessione scaduta). Metodo imposto da `Regole.md`: le passate
-  incrementali hanno già lasciato passare bug gravi.
-- **Fatto quando:** esiste l'elenco completo dei difetti trovati, ognuno o corretto o scritto qui
-  con il motivo per cui resta.
+- **Fatto:** lettura riga per riga di tutte le 1334 righe in **una sola passata**, con tutte le
+  classi di controllo insieme. Metodo imposto da `Regole.md`, e ha ripagato subito.
+
+**La prima cosa trovata è stato un mio errore.** La passata di C5, fatta cercando i punti con
+`grep`, ne aveva mancati **tre**: `Guida ${ride.driver.display_name}` sulla scheda dell'auto, il
+testo di condivisione del singolo passaggio, e l'elenco "A bordo" del riepilogo di giornata. Tutti e
+tre sarebbero andati in errore con un profilo nascosto — cioè proprio il caso che C5 introduceva.
+È l'esempio di manuale del perché `Regole.md` vieta le passate incrementali.
+
+**Difetti corretti**
+
+| Cosa | Dove | Perché contava |
+|---|---|---|
+| Tre letture di profilo senza rete | scheda auto, condivisione, riepilogo | Errore in pagina con un profilo nascosto (regressione di C5) |
+| `innerHTML` con l'indirizzo dell'avatar | `renderProfile` | `SECURITY.md` dichiara "nessun `innerHTML` con input utente": non era vero. L'indirizzo arriva dai metadati OAuth o dal profilo, modificabile via API; in una stringa HTML basta una virgoletta per uscire dall'attributo. Ora si costruisce col DOM |
+| Sei operazioni che fallivano in silenzio | libera posto, annulla passaggio, esci dal gruppo, esci dalla lista, elimina commento | L'app diceva "fatto" anche quando il database rifiutava. Ora ognuna controlla l'errore e lo mostra |
+| `clearMyRequest()` non attesa, due volte | pubblicazione auto, prenotazione posto | La cancellazione poteva arrivare **dopo** il ricaricamento: restavi fra chi "cerca un passaggio" pur essendo a bordo, fino al refresh dopo |
+| Escape dei nomi solo su `<` | statistiche, "tocca a te guidare" | Una `&` nel nome rompeva il testo. Ora un solo `escapeHtml()` per entrambi |
+| Codice morto di C4 | `renderWalkers`, `clearMyRequest`, riepilogo | Ramo "senza gruppo" irraggiungibile, e un ternario con i due rami identici |
+
+**Trovati e lasciati stare, con motivo**
+- La notifica "movimenti sui sedili" scatta anche per una propria azione, se la scheda è in
+  secondo piano. Fastidio minimo, e la logica per distinguere costa più di quanto renda: se dà
+  noia si risolve in C13, dove le notifiche vengono ripensate.
+- Il conto alla rovescia "parte tra N minuti" è calcolato al disegno e non si aggiorna da solo.
+  Un timer per tenerlo vivo è lavoro da C15, non un difetto di correttezza.
+- La chiave `posti-howto-done` in `localStorage` porta ancora il vecchio nome del progetto.
+  Rinominarla farebbe ricomparire il banner a chi l'aveva già chiuso: non vale il cambio.
+- Il conteggio sul bottone dei commenti non si aggiorna dopo averne scritto uno, fino al
+  ricaricamento successivo. Cosmetico.
+
+**Collaudo:** lint e validazione verdi, schermata di accesso identica al riferimento pixel per
+pixel. Le correzioni sui percorsi con utenti veri (posto liberato, passaggio annullato, uscita dal
+gruppo) restano da vedere a video: sono esattamente i flussi che C8 deve coprire con i test.
 
 ### C8 — Test end-to-end sui flussi veri
 - **Obiettivo:** gli smoke test coprono oggi solo la schermata di accesso. Il cuore dell'app —

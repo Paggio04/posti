@@ -292,8 +292,15 @@ document.getElementById('profile-rename').addEventListener('click', async () => 
 function renderProfile() {
   const av = document.getElementById('profile-avatar');
   if (myAvatar) {
+    // Costruito con il DOM e non con innerHTML: l'indirizzo dell'avatar arriva da
+    // fuori (metadati OAuth, o profilo modificabile via API) e in una stringa HTML
+    // basterebbe una virgoletta per uscire dall'attributo.
     av.textContent = '';
-    av.innerHTML = `<img src="${myAvatar}" alt="" referrerpolicy="no-referrer" />`;
+    const img = document.createElement('img');
+    img.src = myAvatar;
+    img.alt = '';
+    img.referrerPolicy = 'no-referrer';
+    av.appendChild(img);
   } else {
     av.textContent = initials(myName || '?');
   }
@@ -409,18 +416,18 @@ async function renderGroupsView() {
         for (const m of data ?? []) {
           const chip = document.createElement('span');
           chip.className = 'history-chip';
-          chip.textContent = m.profile.display_name + (m.user_id === currentUser.id ? ' (tu)' : '');
+          chip.textContent = nomeDi(m.profile) + (m.user_id === currentUser.id ? ' (tu)' : '');
           if (canKick && m.user_id !== currentUser.id) {
             const kick = document.createElement('button');
             kick.className = 'chip-kick';
             kick.textContent = '✕';
-            kick.title = `Rimuovi ${m.profile.display_name} dal gruppo`;
+            kick.title = `Rimuovi ${nomeDi(m.profile)} dal gruppo`;
             kick.addEventListener('click', async () => {
-              if (!confirm(`Rimuovere ${m.profile.display_name} dal gruppo "${g.name}"?`)) return;
+              if (!confirm(`Rimuovere ${nomeDi(m.profile)} dal gruppo "${g.name}"?`)) return;
               const { error } = await supabase.from('group_members').delete()
                 .eq('group_id', g.id).eq('user_id', m.user_id);
               if (error) { toast(friendlyError(error)); return; }
-              toast(`${m.profile.display_name} rimosso dal gruppo.`);
+              toast(`${nomeDi(m.profile)} rimosso dal gruppo.`);
               renderGroupsView();
             });
             chip.appendChild(kick);
@@ -460,7 +467,9 @@ async function renderGroupsView() {
     leave.textContent = 'Esci dal gruppo';
     leave.addEventListener('click', async () => {
       if (!confirm(`Vuoi uscire dal gruppo "${g.name}"?`)) return;
-      await supabase.from('group_members').delete().eq('group_id', g.id).eq('user_id', currentUser.id);
+      const { error } = await supabase.from('group_members').delete()
+        .eq('group_id', g.id).eq('user_id', currentUser.id);
+      if (error) { toast(friendlyError(error)); return; }
       await loadGroups();
       renderGroupsView();
       loadRides();
@@ -583,7 +592,7 @@ async function loadStats() {
     const max = rows[0]?.n || 1;
     return rows.map(r =>
       `<div class="stats-row${alt ? ' alt' : ''}">
-        <span class="stats-row-name">${r.name.replace(/</g, '&lt;')}</span>
+        <span class="stats-row-name">${escapeHtml(r.name)}</span>
         <span class="stats-row-bar-wrap"><span class="stats-row-bar" style="width:${(r.n / max) * 100}%"></span></span>
         <span class="stats-row-count">${r.n}</span>
       </div>`).join('') || '<p class="view-subtitle">Ancora nessun dato.</p>';
@@ -623,8 +632,8 @@ function setDate(date) {
 
 // Prenotando o pubblicando, la richiesta "cerco un passaggio" si toglie da sola
 async function clearMyRequest() {
-  let q = supabase.from('ride_requests').delete().eq('user_id', currentUser.id).eq('ride_date', currentDate);
-  await q.eq('group_id', currentGroupId);
+  await supabase.from('ride_requests').delete()
+    .eq('user_id', currentUser.id).eq('ride_date', currentDate).eq('group_id', currentGroupId);
 }
 
 // --- Offri passaggio ---
@@ -687,7 +696,7 @@ rideForm.addEventListener('submit', async (e) => {
   toast(published === 1
     ? 'Auto pubblicata: ora gli amici possono prenotare il posto.'
     : `Auto pubblicata per ${published} settimane.`);
-  clearMyRequest();
+  await clearMyRequest();
   loadRides();
 });
 
@@ -743,6 +752,13 @@ document.getElementById('howto-close').addEventListener('click', () => {
   howto.classList.add('hidden');
   localStorage.setItem('posti-howto-done', '1');
 });
+
+// I nomi finiscono dentro stringhe HTML in due punti (statistiche e "tocca a te
+// guidare"). Prima si sostituiva solo "<": bastava una & per rompere il testo.
+function escapeHtml(s) {
+  return String(s).replace(/[&<>"']/g, (c) =>
+    ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
+}
 
 function hueFor(id) {
   let h = 0;
@@ -826,10 +842,10 @@ async function renderTurnHint() {
   const [lazyId, lazyN] = sorted[0];
   const maxN = sorted[sorted.length - 1][1];
   if (maxN - lazyN < 2) return; // turni già equi, niente frecciatine
-  const lazyName = members.find(m => m.user_id === lazyId)?.profile.display_name ?? '?';
+  const lazyName = nomeDi(members.find(m => m.user_id === lazyId)?.profile);
   el.innerHTML = lazyId === currentUser.id
     ? `🚗 Nelle ultime 4 settimane hai guidato ${lazyN === 0 ? 'zero volte' : `solo ${lazyN} ${lazyN === 1 ? 'volta' : 'volte'}`}: tocca a te metterci l'auto 👀`
-    : `👀 ${lazyName.replace(/</g, '&lt;')} ha guidato ${lazyN === 0 ? 'zero volte' : `solo ${lazyN} ${lazyN === 1 ? 'volta' : 'volte'}`} nelle ultime 4 settimane… i turni parlano da soli`;
+    : `👀 ${escapeHtml(lazyName)} ha guidato ${lazyN === 0 ? 'zero volte' : `solo ${lazyN} ${lazyN === 1 ? 'volta' : 'volte'}`} nelle ultime 4 settimane… i turni parlano da soli`;
   el.classList.remove('hidden');
 }
 
@@ -873,16 +889,13 @@ async function renderWalkers(rides) {
   }
   const requesters = new Set(currentRequests.map(r => r.user_id));
 
-  let members = [];
-  if (currentGroupId) {
-    const { data } = await supabase
-      .from('group_members')
-      .select('user_id, profile:profiles(display_name)')
-      .eq('group_id', currentGroupId);
-    members = data ?? [];
-  } else {
-    members = currentRequests.map(r => ({ user_id: r.user_id, profile: r.profile }));
-  }
+  // Si arriva qui solo con una comitiva scelta (loadRides esce prima, altrimenti):
+  // il ramo "senza gruppo" e' sparito con C4.
+  const { data } = await supabase
+    .from('group_members')
+    .select('user_id, profile:profiles(display_name)')
+    .eq('group_id', currentGroupId);
+  const members = data ?? [];
 
   const walkers = members.filter(m => !seated.has(m.user_id));
   // chi cerca un passaggio prima di tutti
@@ -1017,7 +1030,7 @@ async function claimSeat(ride, seatIndex) {
     else toast(friendlyError(error));
   } else {
     toast('Posto prenotato: sei a bordo.');
-    clearMyRequest();
+    await clearMyRequest();
   }
   loadRides();
 }
@@ -1025,7 +1038,9 @@ async function claimSeat(ride, seatIndex) {
 async function releaseSeat(ride, claim, mine) {
   const who = mine ? 'Vuoi scendere da questa auto?' : `Vuoi liberare il posto di ${nomeDi(claim.passenger)}?`;
   if (!confirm(who)) return;
-  await supabase.from('seat_claims').delete().eq('ride_id', ride.id).eq('seat_index', claim.seat_index);
+  const { error } = await supabase.from('seat_claims').delete()
+    .eq('ride_id', ride.id).eq('seat_index', claim.seat_index);
+  if (error) { toast(friendlyError(error)); return; }
   toast(mine ? 'Sei sceso dall\'auto.' : 'Posto liberato.');
   loadRides();
 }
@@ -1042,7 +1057,7 @@ function renderRides(rides) {
     const totalFree = rides.reduce((n, r) => n + r.seats - r.seat_claims.length, 0);
     const aboard = rides.reduce((n, r) => n + 1 + r.seat_claims.length, 0);
     statsEl.innerHTML =
-      `<span class="stat-chip"><svg width="15" height="15"><use href="#i-car"/></svg><strong>${rides.length}</strong> ${rides.length === 1 ? 'auto' : 'auto'}</span>` +
+      `<span class="stat-chip"><svg width="15" height="15"><use href="#i-car"/></svg><strong>${rides.length}</strong> auto</span>` +
       `<span class="stat-chip"><svg width="15" height="15"><use href="#i-plus"/></svg><strong>${totalFree}</strong> posti liberi</span>` +
       `<span class="stat-chip"><svg width="15" height="15"><use href="#i-users"/></svg><strong>${aboard}</strong> a bordo</span>`;
 
@@ -1057,7 +1072,7 @@ function renderRides(rides) {
         lines.push('');
         lines.push(`🚗 ${nomeDi(r.driver)} → ${r.destination}`
           + (r.depart_time ? ` (ore ${r.depart_time.slice(0, 5)})` : ''));
-        lines.push('A bordo: ' + (r.seat_claims.map(c => c.passenger.display_name).join(', ') || 'nessuno'));
+        lines.push('A bordo: ' + (r.seat_claims.map(c => nomeDi(c.passenger)).join(', ') || 'nessuno'));
         lines.push(freeN > 0 ? `Liberi: ${freeN} → prenota su ${SITE_URL}` : 'Al completo');
       }
       const text = lines.join('\n');
@@ -1098,7 +1113,7 @@ function renderRides(rides) {
     info.appendChild(sub);
     const drv = document.createElement('div');
     drv.className = 'ride-sub';
-    drv.textContent = `Guida ${ride.driver.display_name}`;
+    drv.textContent = `Guida ${nomeDi(ride.driver)}`;
     info.appendChild(drv);
     head.appendChild(info);
 
@@ -1110,7 +1125,7 @@ function renderRides(rides) {
     share.title = 'Condividi';
     const free = ride.seats - ride.seat_claims.length;
     const shareText =
-      `${ride.driver.display_name} guida verso ${ride.destination}` +
+      `${nomeDi(ride.driver)} guida verso ${ride.destination}` +
       (ride.depart_time ? ` alle ${ride.depart_time.slice(0, 5)}` : '') +
       ` (${ride.ride_date.split('-').reverse().join('/')})` +
       (free > 0 ? ` — ${free} posti disponibili.` : ' — auto al completo.') +
@@ -1130,7 +1145,9 @@ function renderRides(rides) {
       del.title = 'Annulla passaggio';
       del.addEventListener('click', async () => {
         if (!confirm('Annullare il passaggio? I passeggeri perderanno il posto.')) return;
-        await supabase.from('rides').delete().eq('id', ride.id);
+        const { error } = await supabase.from('rides').delete().eq('id', ride.id);
+        if (error) { toast(friendlyError(error)); return; }
+        toast('Passaggio annullato.');
         loadRides();
       });
       actions.appendChild(del);
@@ -1216,7 +1233,9 @@ function renderRides(rides) {
       wBtn.textContent = imWaiting ? 'Esci dalla lista d\'attesa' : 'Mettimi in lista d\'attesa';
       wBtn.addEventListener('click', async () => {
         if (imWaiting) {
-          await supabase.from('ride_waitlist').delete().eq('ride_id', ride.id).eq('user_id', currentUser.id);
+          const { error } = await supabase.from('ride_waitlist').delete()
+            .eq('ride_id', ride.id).eq('user_id', currentUser.id);
+          if (error) { toast(friendlyError(error)); return; }
           toast('Tolto dalla lista d\'attesa.');
         } else {
           const { error } = await supabase.from('ride_waitlist').insert({ ride_id: ride.id, user_id: currentUser.id });
@@ -1278,7 +1297,8 @@ async function loadComments(rideId, panel) {
       del.innerHTML = '<svg width="12" height="12"><use href="#i-x"/></svg>';
       del.title = 'Elimina commento';
       del.addEventListener('click', async () => {
-        await supabase.from('ride_comments').delete().eq('id', c.id);
+        const { error } = await supabase.from('ride_comments').delete().eq('id', c.id);
+        if (error) { toast(friendlyError(error)); return; }
         loadComments(rideId, panel);
       });
       row.appendChild(del);
