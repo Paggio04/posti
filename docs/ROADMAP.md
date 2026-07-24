@@ -106,15 +106,31 @@ tocca sicurezza e schema, cioè le cose dove sbagliare costa di più. Questa fas
 
 ## Fase 1 — Chiudere i due buchi (T1)
 
-### C4 — Tutto dentro un gruppo *(decisione D1)*
+### C4 — Tutto dentro un gruppo *(decisione D1)* — *scritto e verificato sul database; resta il collaudo a video*
 - **Obiettivo:** nessuna riga di dati senza una comitiva che la possiede.
-- **Cosa:** `group_id` diventa obbligatorio su `rides` e `ride_requests`; policy e trigger perdono
-  i rami `group_id is null` e i `coalesce(..., '000...')` che li accompagnano; l'app obbliga a
-  creare o entrare in un gruppo al primo accesso; i dati esistenti senza gruppo vengono archiviati.
-- **Fatto quando:** un utente di un gruppo non vede **nessun** dato di un altro gruppo, verificato
-  con due account veri in due comitive diverse.
-- **Collaudo a video:** due account, due gruppi, stesso giorno: nessuno dei due vede l'auto dell'altro,
-  né nello storico né nelle statistiche.
+- **Database** (`010_gruppo_obbligatorio.sql`): `group_id` obbligatorio su `rides` e
+  `ride_requests`; policy e trigger senza i rami `is null` e senza i `coalesce(..., '000...')`;
+  le righe orfane finiscono nelle tabelle `*_archivio_senza_gruppo` (RLS attiva, nessuna policy:
+  restano nel database, invisibili dal client) e poi spariscono da quelle vive. **Niente si cancella
+  senza essere prima copiato.**
+- **Falla in più trovata e chiusa:** per pubblicare bastava dichiararsi guidatore. Chi conosceva
+  l'id di un gruppo poteva pubblicarci dentro un'auto **senza esserne membro**. Ora la policy di
+  scrittura richiede l'appartenenza — su auto, richieste, commenti e lista d'attesa.
+- **App:** sparisce la pillola "Tutti"; al primo accesso o crei un gruppo o entri con un codice;
+  la comitiva scelta si ricorda fra una sessione e l'altra; senza comitiva la Home mostra solo il
+  benvenuto invece di una schermata vuota e inerte.
+- **Incoerenza sanata:** con "Tutti" attivo, la Home mostrava solo i passaggi *senza gruppo*, mentre
+  Storico e Statistiche mostravano *tutto il visibile*. Stessa pillola, tre significati diversi.
+- **Verificato su Postgres 16** (`supabase/test/`, e ora in CI a ogni push):
+  - Carla, che sta in un'altra comitiva, vede 0 auto, 0 prenotazioni e 1 solo gruppo (il suo);
+  - Bruno, che è del gruppo, vede l'auto;
+  - Carla **non riesce** a pubblicare nel gruppo di Ada;
+  - un'auto senza comitiva **non si inserisce più**;
+  - due persone sullo stesso sedile: ne passa una sola;
+  - aggiornamento dal vecchio schema con dati orfani dentro: archivio pieno, dati del gruppo
+    intatti, archivio invisibile al client.
+- **Resta il collaudo a video**, che nessun test sostituisce: due account veri, due comitive, stesso
+  giorno. Serve il progetto Supabase con la 010 applicata.
 
 ### C5 — Profili chiusi *(decisione D2)*
 - **Obiettivo:** smettere di mostrare nome e avatar di tutti a tutti.

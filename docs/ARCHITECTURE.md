@@ -24,9 +24,9 @@ Principi:
 | `profiles` | Nome visibile per utente | PK = `auth.users.id`, auto-creato da trigger alla registrazione |
 | `groups` | Comitive | `code` invito unico (6 char), owner |
 | `group_members` | Appartenenza | PK (group_id, user_id) |
-| `rides` | Auto pubblicate per un giorno | unique (driver, giorno, gruppo); trigger `check_ride` |
+| `rides` | Auto pubblicate per un giorno | `group_id` obbligatorio; unique (driver, giorno, gruppo); trigger `check_ride` |
 | `seat_claims` | Prenotazioni sedile | unique (ride, seat) e (ride, passenger); trigger `check_claim` |
-| `ride_requests` | "Cerco un passaggio" | unique (user, giorno, gruppo) |
+| `ride_requests` | "Cerco un passaggio" | `group_id` obbligatorio; unique (user, giorno, gruppo) |
 | `ride_comments` | Thread per auto | check lunghezza 1..300 |
 
 Trigger (fonte: `supabase/migrations/`):
@@ -40,7 +40,7 @@ Trigger (fonte: `supabase/migrations/`):
 | Registrazione/login/reset | `auth.signUp/signInWithPassword/resetPasswordForEmail` | pubblica (rate-limited) |
 | Crea gruppo | `rpc('create_group', {p_name})` → riga `groups` | utente autenticato |
 | Entra in gruppo | `rpc('join_group', {p_code})` → riga `groups` | utente autenticato, codice valido |
-| Leggi auto del giorno | `from('rides').select(...embed...)` | membro del gruppo o auto pubbliche |
+| Leggi auto del giorno | `from('rides').select(...embed...)` | membro del gruppo (unica strada: non esistono auto senza gruppo) |
 | Pubblica auto | `from('rides').insert` | `driver_id = auth.uid()` + trigger |
 | Prenota/lascia sedile | `from('seat_claims').insert/delete` | `passenger_id = auth.uid()` (+ guidatore può liberare) + trigger |
 | Richiesta passaggio | `from('ride_requests').insert/delete` | proprie righe |

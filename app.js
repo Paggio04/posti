@@ -29,7 +29,8 @@ let myAvatar = null;
 let isAdmin = false;
 let currentDate = todayISO();
 let myGroups = [];
-let currentGroupId = null; // null = Tutti
+let currentGroupId = null; // sempre un gruppo vero quando l'utente ne ha almeno uno
+const ULTIMO_GRUPPO = 'wt_ultimo_gruppo'; // quale comitiva stavo guardando
 let realtimeChannel = null;
 let rendered = false;
 
@@ -330,18 +331,32 @@ async function loadGroups() {
     .eq('user_id', currentUser.id);
   if (error) { console.error(error); return; }
   myGroups = (data ?? []).map(r => r.group).filter(Boolean);
-  if (currentGroupId && !myGroups.some(g => g.id === currentGroupId)) currentGroupId = null;
-  document.getElementById('welcome').classList.toggle('hidden', myGroups.length > 0);
+
+  // Ogni passaggio appartiene a una comitiva: senza comitiva non c'e' niente da mostrare.
+  // Si riprende quella che si stava guardando; se non c'e' piu', la prima disponibile.
+  const valido = (id) => id && myGroups.some(g => g.id === id);
+  if (!valido(currentGroupId)) {
+    const ricordato = localStorage.getItem(ULTIMO_GRUPPO);
+    currentGroupId = valido(ricordato) ? ricordato : (myGroups[0]?.id ?? null);
+  }
+
+  const senzaGruppi = myGroups.length === 0;
+  document.getElementById('welcome').classList.toggle('hidden', !senzaGruppi);
+  document.getElementById('group-bar').classList.toggle('hidden', senzaGruppi);
+  document.getElementById('day-bar').classList.toggle('hidden', senzaGruppi);
+  if (senzaGruppi) {
+    ridesList.innerHTML = '';
+    emptyMessage.classList.add('hidden');
+    document.getElementById('day-stats').classList.add('hidden');
+    document.getElementById('turn-hint').classList.add('hidden');
+    walkersCard.classList.add('hidden');
+    offerCard.classList.add('hidden');
+  }
   renderGroupBar();
 }
 
 function renderGroupBar() {
   groupPills.innerHTML = '';
-  const all = document.createElement('button');
-  all.className = 'tab' + (currentGroupId === null ? ' active' : '');
-  all.textContent = 'Tutti';
-  all.addEventListener('click', () => selectGroup(null));
-  groupPills.appendChild(all);
   for (const g of myGroups) {
     const b = document.createElement('button');
     b.className = 'tab' + (currentGroupId === g.id ? ' active' : '');
@@ -353,6 +368,7 @@ function renderGroupBar() {
 
 function selectGroup(groupId) {
   currentGroupId = groupId;
+  if (groupId) localStorage.setItem(ULTIMO_GRUPPO, groupId);
   renderGroupBar();
   loadRides();
 }
@@ -455,12 +471,12 @@ async function renderGroupsView() {
 const DAY_FMT = new Intl.DateTimeFormat('it-IT', { weekday: 'long', day: 'numeric', month: 'long' });
 
 function groupLabel() {
-  return currentGroupId
-    ? `Gruppo: ${myGroups.find(g => g.id === currentGroupId)?.name ?? ''}`
-    : 'Tutti i passaggi pubblici';
+  const g = myGroups.find(x => x.id === currentGroupId);
+  return g ? `Gruppo: ${g.name}` : 'Nessuna comitiva';
 }
 
 async function loadHistory() {
+  if (!currentGroupId) return;
   const list = document.getElementById('history-list');
   document.querySelector('#view-history .view-subtitle').textContent =
     `Chi ha guidato e chi era a bordo · ${groupLabel()} (si cambia dalla Home)`;
@@ -469,7 +485,7 @@ async function loadHistory() {
     .from('rides')
     .select('ride_date, origin, destination, depart_time, driver:profiles!rides_driver_id_fkey(display_name), seat_claims(passenger:profiles!seat_claims_passenger_id_fkey(display_name))')
     .lt('ride_date', todayISO());
-  hq = currentGroupId ? hq.eq('group_id', currentGroupId) : hq;
+  hq = hq.eq('group_id', currentGroupId);
   const { data, error } = await hq
     .order('ride_date', { ascending: false })
     .order('depart_time', { ascending: true, nullsFirst: false })
@@ -522,6 +538,7 @@ async function loadHistory() {
 
 // --- Vista Statistiche ---
 async function loadStats() {
+  if (!currentGroupId) return;
   const box = document.getElementById('stats-content');
   document.querySelector('#view-stats .view-subtitle').textContent =
     `I turni parlano da soli · ${groupLabel()} (si cambia dalla Home)`;
@@ -529,7 +546,7 @@ async function loadStats() {
   let sq = supabase
     .from('rides')
     .select('driver_id, fuel_per_person, driver:profiles!rides_driver_id_fkey(display_name), seat_claims(passenger_id, passenger:profiles!seat_claims_passenger_id_fkey(display_name))');
-  sq = currentGroupId ? sq.eq('group_id', currentGroupId) : sq;
+  sq = sq.eq('group_id', currentGroupId);
   const { data, error } = await sq;
   if (error || !data) { box.innerHTML = '<p class="view-subtitle">Impossibile caricare le statistiche.</p>'; return; }
 
@@ -602,8 +619,7 @@ function setDate(date) {
 // Prenotando o pubblicando, la richiesta "cerco un passaggio" si toglie da sola
 async function clearMyRequest() {
   let q = supabase.from('ride_requests').delete().eq('user_id', currentUser.id).eq('ride_date', currentDate);
-  q = currentGroupId ? q.eq('group_id', currentGroupId) : q.is('group_id', null);
-  await q;
+  await q.eq('group_id', currentGroupId);
 }
 
 // --- Offri passaggio ---
@@ -742,6 +758,8 @@ let currentRequests = [];
 let loadToken = 0;
 let retryCount = 0;
 async function loadRides(silent = false) {
+  // Senza comitiva non c'e' niente da caricare: la Home mostra il benvenuto (vedi loadGroups).
+  if (!currentGroupId) return;
   const token = ++loadToken;
   if (!silent) {
     ridesList.innerHTML = '<div class="skeleton"></div><div class="skeleton"></div>';
@@ -752,13 +770,13 @@ async function loadRides(silent = false) {
     .select('*, driver:profiles!rides_driver_id_fkey(display_name, avatar_url), seat_claims(seat_index, passenger_id, passenger:profiles!seat_claims_passenger_id_fkey(display_name, avatar_url)), ride_comments(count), ride_waitlist(user_id, created_at, profile:profiles(display_name))')
     .eq('ride_date', currentDate)
     .order('depart_time', { ascending: true, nullsFirst: false });
-  query = currentGroupId ? query.eq('group_id', currentGroupId) : query.is('group_id', null);
+  query = query.eq('group_id', currentGroupId);
 
   let reqQuery = supabase
     .from('ride_requests')
     .select('user_id, profile:profiles(display_name)')
     .eq('ride_date', currentDate);
-  reqQuery = currentGroupId ? reqQuery.eq('group_id', currentGroupId) : reqQuery.is('group_id', null);
+  reqQuery = reqQuery.eq('group_id', currentGroupId);
 
   const [{ data, error }, { data: reqs }] = await Promise.all([query, reqQuery]);
   if (token !== loadToken) return; // risposta vecchia, ignora
@@ -828,9 +846,8 @@ function updateDayCta(rides) {
 document.getElementById('request-toggle').addEventListener('click', async () => {
   const myReq = currentRequests.some(r => r.user_id === currentUser.id);
   if (myReq) {
-    let q = supabase.from('ride_requests').delete().eq('user_id', currentUser.id).eq('ride_date', currentDate);
-    q = currentGroupId ? q.eq('group_id', currentGroupId) : q.is('group_id', null);
-    await q;
+    await supabase.from('ride_requests').delete()
+      .eq('user_id', currentUser.id).eq('ride_date', currentDate).eq('group_id', currentGroupId);
     toast('Richiesta rimossa.');
   } else {
     const { error } = await supabase.from('ride_requests').insert({
