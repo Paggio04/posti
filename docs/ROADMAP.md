@@ -53,9 +53,7 @@ tocca sicurezza e schema, cioè le cose dove sbagliare costa di più. Questa fas
   cieca. I test leggono l'indirizzo da `BASE_URL` (`playwright.config.js`) invece di averlo scritto
   dentro. Il vecchio job sul sito vivo resta come rete di sicurezza dopo la pubblicazione
   (`e2e-produzione`), ma non è più l'unica difesa.
-- **Restano due cose da fare a mano, sul pannello:** i Deploy Preview vanno attivi su Netlify, e su
-  GitHub `checks` + `e2e-anteprima` vanno messi come controlli obbligatori sul ramo `main`
-  (Settings → Branches), altrimenti il merge resta possibile con la CI rossa.
+- **I Deploy Preview su Netlify erano già attivi**: verificato sulla PR #1, che ne ha avuto uno.
 - **Collaudato sulla PR #1** (24/07/2026): Netlify ha pubblicato l'anteprima, il job l'ha trovata
   dallo stato del commit in pochi secondi (non dal ripiego, che avrebbe atteso dieci minuti) e ha
   lanciato i tre smoke test contro `https://deploy-preview-1--wetransport.netlify.app`. Tutti verdi,
