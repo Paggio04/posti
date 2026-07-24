@@ -31,7 +31,7 @@ ogni area, cosa è implementato, dove, e cosa è delegato o non applicabile.
 | Circuit breaker / fallback | ✅ (proporzionato) | `loadToken` scarta risposte fuori ordine; realtime che cade ⇒ l'app resta funzionante con refresh manuale (fallback implicito); toast "connessione instabile" |
 | Race condition / concorrenza | ✅ | Risolte nel DB, non nel client: unique `(ride_id, seat_index)` ⇒ due tap sullo stesso sedile, uno solo vince; trigger transazionali per i vincoli incrociati |
 | Caching / invalidation | ✅ (semplice by design) | Nessuna cache applicativa: la verità è sempre il DB, invalidazione via realtime. Asset statici: cache CDN Netlify invalidata a ogni deploy |
-| Disaster recovery | ✅ (delegato) | Codice: Git/GitHub. DB: backup giornalieri Supabase (piano free: 7 giorni). Schema ricreabile da zero con `supabase-setup.sql`. Hosting ricreabile in minuti (repo → Netlify) |
+| Disaster recovery | ✅ (delegato) | Codice: Git/GitHub. DB: backup giornalieri Supabase (piano free: 7 giorni). Schema ricreabile da zero applicando `supabase/migrations/` in ordine (verificato dalla CI a ogni push, job `schema`). Hosting ricreabile in minuti (repo → Netlify) |
 
 ## Testing e processo
 

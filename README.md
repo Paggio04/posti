@@ -11,7 +11,7 @@ i guidatori pubblicano la macchina del giorno, gli altri prenotano il posto tapp
 
 ## Setup
 
-1. Esegui `supabase-setup.sql` nel SQL Editor di Supabase (tabelle `profiles`, `rides`, `seat_claims` + RLS + trigger profilo).
+1. Applica le migrazioni di `supabase/migrations/` in ordine crescente nel SQL Editor di Supabase (tabelle, RLS, trigger). Istruzioni: [supabase/README.md](supabase/README.md).
 2. In `config.js` inserisci URL e anon key del progetto (Dashboard → Settings → API).
 3. Deploy: collega la repo a Netlify, nessun build command, publish directory = root.
 

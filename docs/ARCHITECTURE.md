@@ -29,7 +29,7 @@ Principi:
 | `ride_requests` | "Cerco un passaggio" | unique (user, giorno, gruppo) |
 | `ride_comments` | Thread per auto | check lunghezza 1..300 |
 
-Trigger (fonte: `supabase-setup.sql`):
+Trigger (fonte: `supabase/migrations/`):
 - `check_ride`: no giorni passati; no auto se sei già passeggero quel giorno.
 - `check_claim`: no auto partita/passata; sedile esistente; non sei il guidatore; un solo posto per giorno/gruppo; se guidi quel giorno non prenoti altrove.
 

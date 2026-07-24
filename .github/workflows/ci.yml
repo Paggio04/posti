@@ -51,6 +51,51 @@ jobs:
         run: |
           ! grep -rEn "sb_secret|service_role|SUPABASE_SERVICE" --include='*.js' --include='*.html' --include='*.toml' . || (echo "Trovata chiave segreta nel repo" && exit 1)
 
+  # Le migrazioni devono ricreare il backend da zero, e devono poter essere rilanciate
+  # senza rompersi. Il vecchio supabase-setup.sql non faceva ne' l'una ne' l'altra cosa.
+  # Vedi docs/ROADMAP.md, cantiere C2.
+  schema:
+    runs-on: ubuntu-latest
+    services:
+      postgres:
+        image: postgres:16
+        env:
+          POSTGRES_PASSWORD: postgres
+        options: >-
+          --health-cmd pg_isready --health-interval 5s --health-timeout 5s --health-retries 10
+        ports:
+          - 5432:5432
+    env:
+      PGHOST: localhost
+      PGUSER: postgres
+      PGPASSWORD: postgres
+      PGDATABASE: postgres
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Parti da un database vuoto
+        run: psql -v ON_ERROR_STOP=1 -q -f supabase/test/stub-supabase.sql
+
+      - name: Applica le migrazioni in ordine
+        run: |
+          for f in supabase/migrations/*.sql; do
+            echo "-> $f"
+            psql -v ON_ERROR_STOP=1 -q -f "$f"
+          done
+
+      - name: Riapplicale (devono essere ripetibili)
+        run: |
+          for f in supabase/migrations/*.sql; do
+            psql -v ON_ERROR_STOP=1 -q -f "$f"
+          done
+
+      - name: Ogni migrazione si e' registrata
+        run: |
+          attese=$(ls supabase/migrations/*.sql | wc -l)
+          registrate=$(psql -tAc "select count(*) from public.schema_migrations")
+          echo "file: $attese, registrate: $registrate"
+          [ "$attese" = "$registrate" ] || (echo "Una migrazione non si registra in schema_migrations" && exit 1)
+
   # Smoke test sull'ANTEPRIMA della pull request, non sul sito vivo: se e' rosso,
   # il merge (e quindi il deploy) non avviene. Vedi docs/ROADMAP.md, cantiere C1.
   e2e-anteprima:

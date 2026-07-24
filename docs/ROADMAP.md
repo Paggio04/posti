@@ -61,14 +61,28 @@ tocca sicurezza e schema, cioè le cose dove sbagliare costa di più. Questa fas
   Se il passo "Trova l'anteprima Netlify" stampa un avviso invece dell'indirizzo, l'integrazione
   GitHub-Netlify non è attiva e va sistemata lì.
 
-### C2 — Migrazioni numerate al posto del file unico
+### C2 — Migrazioni numerate al posto del file unico — *fatto e verificato*
 - **Obiettivo:** sapere sempre quale schema è davvero applicato.
-- **Cosa:** spezzare `supabase-setup.sql` in file numerati applicati una volta e in ordine, con
-  traccia di cosa è già stato eseguito. Sistemare il doppione già presente: il blocco
-  `ride_waitlist` è definito due volte (righe 260 e 303), riapplicare il file oggi darebbe errore.
-- **Fatto quando:** ricreo il backend da zero su un progetto vuoto applicando le migrazioni in
-  ordine, senza un solo errore, e ottengo lo schema identico a quello in produzione.
-- **Collaudo:** progetto Supabase di prova, migrazioni in ordine, confronto delle tabelle.
+- **Fatto:** schema spezzato in 10 file in `supabase/migrations/`, ognuno ripetibile e registrato
+  in `public.schema_migrations`. La CI (job `schema`) parte da un Postgres vuoto, applica tutto in
+  ordine e poi riapplica tutto: se una delle due passate fallisce è rossa. Il perché in
+  `docs/adr/002-migrazioni-numerate.md`.
+- **Verificato su Postgres 16 vuoto:** le migrazioni ricreano il backend da zero e si possono
+  rilanciare. Confronto con lo schema del vecchio file: 8 tabelle, 43 colonne, 9 funzioni, 5
+  trigger, 14 indici **identici**, più una policy recuperata.
+- **Due difetti trovati facendolo**, peggiori del doppione che cercavo:
+  - `supabase-setup.sql` **non ricreava il backend da zero**, contrariamente a quanto dicevano
+    README e ADR 001: alla riga 234 creava una policy su `ride_comments`, tabella definita alla
+    riga 338. Su un database vuoto si fermava lì.
+  - Conseguenza: la policy `admin all` su `ride_comments` non è mai stata creata. **Un
+    amministratore non ha mai potuto moderare i commenti.** Ora c'è.
+- **Resta da fare a mano, sul progetto Supabase vero:** applicare **tutti** i file di
+  `supabase/migrations/` in ordine. Sono ripetibili, quindi su quello che c'è già non fanno
+  niente; servono a creare la tabella `schema_migrations` e a colmare i buchi. Quanti siano quei
+  buchi non si sa: il vecchio file si fermava alla riga 234, quindi tutto il blocco
+  amministratore da lì in giù (policy su `groups`, `group_members`, `profiles`, trigger
+  `protect_admin_flag`) potrebbe non essere mai stato applicato. Dopo, `select * from
+  public.schema_migrations` dice cosa c'è, invece di farlo indovinare.
 
 ### C3 — Controlli locali accesi
 - **Obiettivo:** `pre-volo.py` smette di saltare metà dei controlli.
