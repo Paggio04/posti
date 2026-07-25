@@ -65,9 +65,14 @@ Prima di pubblicare la Fase 3, quattro cose che il repo non può fare da solo:
 
 **Prima le migrazioni 012, 013 e 014 in produzione, poi il codice.** Verificato sul progetto vivo il
 25/07/2026: `profiles.sospeso`, `profiles.zona_lat`, `rides.visibilita` e la tabella `user_reports`
-**non esistono ancora**. Il codice nuovo le legge al primo caricamento — `ensureProfile` chiede
-`sospeso`, `loadBlocked` interroga `user_blocks` — quindi pubblicarlo prima vuol dire un'app rotta
-per chiunque la apra, non un degrado elegante.
+**non esistono ancora**. Il codice nuovo le legge al primo caricamento: `ensureProfile` chiede
+`sospeso`, `loadBlocked` interroga `user_blocks`, la pubblicazione scrive `visibilita`.
+
+Cosa succede davvero se si pubblica il codice prima (tracciato, non supposto): la pagina **si apre**
+— supabase-js restituisce l'errore invece di sollevarlo — ma `ensureProfile` non trova il profilo,
+ricade sul ripiego e **il nome di tutti torna a essere il prefisso dell'email**; soprattutto,
+**pubblicare un'auto fallisce**, perche' l'insert contiene una colonna che non esiste. Non e' una
+schermata bianca, e' di peggio: sembra funzionare e non fa la cosa per cui esiste.
 
 Con la 011 la regola era il contrario, e non è una contraddizione: quella **restringeva** letture che
 il codice vecchio non sapeva gestire, quindi andava dopo. Queste tre **aggiungono** cose che il
