@@ -45,6 +45,20 @@
   --luce-interna-scura: inset 0 1px 0 oklch(1 0 0 / 0.06);
 
   /* Motion system */
+  /* Geometria della navigazione. Il centro dell'icona e la posizione dei tondi si
+     calcolano da qui: cambiando una misura restano allineati da soli. */
+  --nav-pad: 8px;          /* padding verticale della barra */
+  --nav-item-pad: 7px;     /* padding sopra l'icona nella scheda */
+  --nav-icona: 21px;       /* lato dell'icona */
+  --nav-salita: 26px;      /* di quanto sale l'icona attiva */
+  --nav-salita-sopra: 6px; /* di quanto si alza al passaggio */
+  --nav-tondo: 50px;
+  --nav-tondo-sopra: 42px;
+  /* Centro verticale dell'icona attiva, misurato dal bordo alto della barra. */
+  --nav-centro: calc(var(--nav-pad) + var(--nav-item-pad) + var(--nav-icona) / 2 - var(--nav-salita));
+  /* E al passaggio, misurato dal bordo alto della scheda. */
+  --nav-centro-sopra: calc(var(--nav-item-pad) + var(--nav-icona) / 2 - var(--nav-salita-sopra));
+
   --ease-out: cubic-bezier(0.22, 1, 0.36, 1);
   --spring: cubic-bezier(0.34, 1.4, 0.44, 1);
   --t-fast: 160ms;
@@ -492,7 +506,7 @@ input:focus-visible, select:focus-visible, textarea:focus-visible {
   width: 100%;
   max-width: 920px;
   margin: 0 auto;
-  padding: 26px 20px 130px;
+  padding: 26px 20px 148px;
 }
 
 /* Transizione tra viste */
@@ -1066,8 +1080,7 @@ input:focus-visible, select:focus-visible, textarea:focus-visible {
   width: min(94vw, 520px);
   display: grid;
   grid-template-columns: repeat(5, 1fr);
-  background: oklch(1 0 0 / 0.85);
-  backdrop-filter: blur(16px);
+  background: var(--surface);
   border: 1px solid var(--border);
   border-radius: var(--pill);
   box-shadow: var(--shadow-2);
@@ -1082,10 +1095,10 @@ input:focus-visible, select:focus-visible, textarea:focus-visible {
 .bottom-nav::before {
   content: '';
   position: absolute;
-  top: -26px;
+  top: calc(var(--nav-centro) - var(--nav-tondo) / 2);
   left: calc((var(--nav-i, 2) + 0.5) * 20%);
-  width: 50px; height: 50px;
-  margin-left: -25px;
+  width: var(--nav-tondo); height: var(--nav-tondo);
+  margin-left: calc(var(--nav-tondo) / -2);
   border-radius: 50%;
   background: linear-gradient(150deg, var(--primary-bright), var(--primary));
   border: 4px solid var(--bg);
@@ -1118,7 +1131,7 @@ input:focus-visible, select:focus-visible, textarea:focus-visible {
   z-index: 1;
   transition: transform 420ms var(--spring), color var(--t-fast) var(--ease-out);
 }
-.nav-item.active svg { transform: translateY(-26px); color: #fff; }
+.nav-item.active svg { transform: translateY(calc(-1 * var(--nav-salita))); color: #fff; }
 /* L'etichetta non si muove: alzandola finiva sotto il tondo. Al posto dell'icona
    che e' salita resta un vuoto, ed e' giusto che si veda -- e' quel vuoto a dire
    che l'icona e' quella dentro il tondo. */
@@ -1265,7 +1278,7 @@ input:focus-visible, select:focus-visible, textarea:focus-visible {
   .car-wheel-steer { stroke: oklch(0.55 0.01 260); }
   .howto { border-color: var(--border-strong); }
   .toast { background: var(--surface-2); color: var(--ink); }
-  .bottom-nav { background: oklch(0.22 0.025 260 / 0.85); }
+  .bottom-nav { background: var(--surface); }
   .topbar { background: oklch(0.14 0.03 262 / 0.88); }
 }
 
@@ -1398,9 +1411,10 @@ input:focus-visible, select:focus-visible, textarea:focus-visible {
   .nav-item:not(.active)::after {
     content: '';
     position: absolute;
-    top: -14px; left: 50%;
-    width: 42px; height: 42px;
-    margin-left: -21px;
+    top: calc(var(--nav-centro-sopra) - var(--nav-tondo-sopra) / 2);
+    left: 50%;
+    width: var(--nav-tondo-sopra); height: var(--nav-tondo-sopra);
+    margin-left: calc(var(--nav-tondo-sopra) / -2);
     border-radius: 50%;
     background: var(--primary-soft);
     opacity: 0;
@@ -1409,7 +1423,7 @@ input:focus-visible, select:focus-visible, textarea:focus-visible {
     pointer-events: none;
   }
   .nav-item:not(.active):hover::after { opacity: 1; transform: scale(1); }
-  .nav-item:not(.active):hover svg { transform: translateY(-6px); color: var(--primary); }
+  .nav-item:not(.active):hover svg { transform: translateY(calc(-1 * var(--nav-salita-sopra))); color: var(--primary); }
   .nav-item:not(.active):hover span { color: var(--ink); }
 
   /* Le schede dei passaggi: si alzano un po' di piu' e l'ombra si approfondisce,
