@@ -69,6 +69,17 @@ language sql security definer stable set search_path = public as $$
   select public.bloccati_fra(auth.uid(), altro)
 $$;
 
+-- Sul solo nome il blocco NON e' simmetrico, ed e' voluto: chi blocca deve continuare a
+-- leggere il profilo di chi ha bloccato, altrimenti la lista dei bloccati diventa un
+-- elenco di sconosciuti e non si puo' piu' sbloccare nessuno. Sparisce quello che l'altro
+-- fa — auto, commenti, richieste — non chi e'.
+create or replace function public.mi_ha_bloccato(altro uuid) returns boolean
+language sql security definer stable set search_path = public as $$
+  select exists (
+    select 1 from user_blocks where blocker_id = altro and blocked_id = auth.uid()
+  )
+$$;
+
 create or replace function public.sospeso(u uuid) returns boolean
 language sql security definer stable set search_path = public as $$
   select coalesce((select p.sospeso from profiles p where p.id = u), false)
@@ -130,14 +141,17 @@ create policy "rides read" on public.rides for select to authenticated
     and (not public.si_bloccano(driver_id) or public.ho_un_posto(id))
   );
 
--- Il profilo di chi e' bloccato non si legge piu'. L'app lo regge: ogni lettura di nome
--- passa da nomeDi(), che ha il suo ripiego (era la lezione di C5).
+-- Il profilo di chi mi ha bloccato non si legge piu'; quello di chi ho bloccato io si',
+-- per la ragione scritta sopra a mi_ha_bloccato(). Resta il vincolo di 011: comunque solo
+-- dentro le comitive che condividiamo, quindi bloccare qualcuno non e' un modo per
+-- tenerselo leggibile dopo essere usciti dal gruppo. L'app regge entrambi i casi: ogni
+-- lettura di nome passa da nomeDi(), che ha il suo ripiego (era la lezione di C5).
 drop policy if exists "profiles read" on public.profiles;
 create policy "profiles read" on public.profiles for select to authenticated
   using (
     id = auth.uid()
     or public.is_admin()
-    or (public.condivide_gruppo(id) and not public.si_bloccano(id))
+    or (public.condivide_gruppo(id) and not public.mi_ha_bloccato(id))
   );
 
 -- Commenti e richieste di chi e' bloccato: spariscono anche quando il passaggio resta

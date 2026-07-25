@@ -27,6 +27,9 @@ let currentUser = null;
 let myName = '';
 let myAvatar = null;
 let isAdmin = false;
+let sospeso = false;          // account sospeso: legge tutto, non scrive piu' niente
+let sospesoMotivo = null;
+let bloccati = new Set();     // chi ho bloccato io; chi ha bloccato me non e' conoscibile
 let currentDate = todayISO();
 let myGroups = [];
 let currentGroupId = null; // sempre un gruppo vero quando l'utente ne ha almeno uno
@@ -209,9 +212,11 @@ async function ensureProfile() {
     || currentUser.user_metadata?.name
     || currentUser.email.split('@')[0];
   const oauthAvatar = currentUser.user_metadata?.avatar_url || currentUser.user_metadata?.picture || null;
-  const { data } = await supabase.from('profiles').select('display_name, is_admin, avatar_url').eq('id', currentUser.id).maybeSingle();
+  const { data } = await supabase.from('profiles')
+    .select('display_name, is_admin, avatar_url, sospeso, sospeso_motivo').eq('id', currentUser.id).maybeSingle();
   if (data) {
     myName = data.display_name; isAdmin = !!data.is_admin; myAvatar = data.avatar_url;
+    sospeso = !!data.sospeso; sospesoMotivo = data.sospeso_motivo;
     // La foto di Google/Apple si salva nel profilo, così la vedono anche gli altri
     if (oauthAvatar && data.avatar_url !== oauthAvatar) {
       myAvatar = oauthAvatar;
@@ -223,6 +228,222 @@ async function ensureProfile() {
   myName = fallback;
   myAvatar = oauthAvatar;
   isAdmin = false;
+  sospeso = false;
+  sospesoMotivo = null;
+}
+
+// --- Segnalazione, blocco, sospensione (cantiere C10) ---
+// Qui c'e' solo l'interfaccia: chi puo' fare cosa lo decidono le policy della migrazione
+// 012, e questa meta' non e' fidata (ADR 001, punto 2). Le guardie qui sotto servono a
+// dare un messaggio sensato invece di un errore del database, non a proteggere niente.
+
+async function loadBlocked() {
+  const { data } = await supabase.from('user_blocks').select('blocked_id');
+  bloccati = new Set((data ?? []).map(b => b.blocked_id));
+}
+
+// Un solo posto dove chiedersi "posso scrivere?", cosi' la risposta non diverge.
+function bloccaSeSospeso(azione = 'farlo') {
+  if (!sospeso) return false;
+  toast(`Account sospeso: non puoi ${azione}.`);
+  return true;
+}
+
+function applicaSospensione() {
+  const banner = document.getElementById('sospeso-banner');
+  banner.classList.toggle('hidden', !sospeso);
+  document.getElementById('sospeso-motivo').textContent = sospesoMotivo ? `Motivo: ${sospesoMotivo}.` : '';
+  // Il pulsante per pubblicare sparisce: proporre un'azione che il database rifiutera'
+  // e' peggio che non proporla.
+  offerToggle.classList.toggle('hidden', sospeso);
+  if (sospeso) offerCard.classList.add('hidden');
+}
+
+// --- Dialogo "segnala o blocca" ---
+const personaDialog = document.getElementById('persona-dialog');
+let personaCorrente = null; // { id, nome, rideId }
+
+function apriPersona(id, nome, rideId = null) {
+  if (id === currentUser.id) return;
+  personaCorrente = { id, nome, rideId };
+  document.getElementById('persona-title').textContent = `${nome}: segnala o blocca`;
+  document.getElementById('persona-motivo').value = 'guida-pericolosa';
+  document.getElementById('persona-dettagli').value = '';
+  const blocca = document.getElementById('persona-blocca');
+  const giaBloccato = bloccati.has(id);
+  blocca.textContent = giaBloccato ? 'Sblocca' : 'Blocca';
+  blocca.classList.toggle('btn-danger-full', !giaBloccato);
+  document.getElementById('persona-segnala').disabled = sospeso;
+  personaDialog.showModal();
+}
+
+function bottonePersona(id, nome, rideId = null) {
+  const b = document.createElement('button');
+  b.type = 'button';
+  b.className = 'chip-report';
+  b.textContent = '⋯';
+  b.title = `Segnala o blocca ${nome}`;
+  b.setAttribute('aria-label', `Segnala o blocca ${nome}`);
+  b.addEventListener('click', (e) => { e.stopPropagation(); apriPersona(id, nome, rideId); });
+  return b;
+}
+
+document.getElementById('persona-cancel').addEventListener('click', () => personaDialog.close());
+
+document.getElementById('persona-form').addEventListener('submit', async (e) => {
+  e.preventDefault();
+  const p = personaCorrente;
+  personaDialog.close();
+  if (!p || bloccaSeSospeso('segnalare')) return;
+  const { error } = await supabase.from('user_reports').insert({
+    reporter_id: currentUser.id,
+    reported_id: p.id,
+    ride_id: p.rideId,
+    motivo: document.getElementById('persona-motivo').value,
+    dettagli: document.getElementById('persona-dettagli').value.trim() || null,
+  });
+  if (error) {
+    // 23505 = c'e' gia' una segnalazione aperta su questa persona, per scelta di 012
+    toast(error.code === '23505'
+      ? 'Hai già una segnalazione aperta su questa persona: è in mano all\'amministratore.'
+      : friendlyError(error));
+    return;
+  }
+  toast('Segnalazione inviata. Non saprà di essere stata segnalata.');
+});
+
+document.getElementById('persona-blocca').addEventListener('click', async () => {
+  const p = personaCorrente;
+  personaDialog.close();
+  if (!p) return;
+  if (bloccati.has(p.id)) {
+    const { error } = await supabase.from('user_blocks').delete()
+      .eq('blocker_id', currentUser.id).eq('blocked_id', p.id);
+    if (error) { toast(friendlyError(error)); return; }
+    toast(`${p.nome} è di nuovo visibile.`);
+  } else {
+    if (!confirm(`Bloccare ${p.nome}? Non vedrete più i passaggi l'uno dell'altra, e non potrete salire in macchina insieme. I posti già presi restano.`)) return;
+    if (bloccaSeSospeso('bloccare')) return;
+    const { error } = await supabase.from('user_blocks')
+      .insert({ blocker_id: currentUser.id, blocked_id: p.id });
+    if (error) { toast(friendlyError(error)); return; }
+    toast(`${p.nome} bloccato.`);
+  }
+  await loadBlocked();
+  renderProfile();
+  loadRides();
+});
+
+async function renderBlocked() {
+  const card = document.getElementById('blocked-card');
+  const list = document.getElementById('blocked-list');
+  list.innerHTML = '';
+  card.classList.toggle('hidden', bloccati.size === 0);
+  if (bloccati.size === 0) return;
+  // Il nome c'e' finche' si condivide una comitiva: fuori da quella, il blocco non tiene
+  // aperta nessuna lettura (vincolo di 011), e resta l'etichetta generica.
+  const { data } = await supabase.from('profiles').select('id, display_name').in('id', [...bloccati]);
+  const nomi = new Map((data ?? []).map(p => [p.id, p.display_name]));
+  for (const id of bloccati) {
+    const chip = document.createElement('span');
+    chip.className = 'history-chip';
+    chip.textContent = nomi.get(id) ?? 'Persona bloccata';
+    const sblocca = document.createElement('button');
+    sblocca.type = 'button';
+    sblocca.className = 'chip-kick';
+    sblocca.textContent = '✕';
+    sblocca.title = 'Sblocca';
+    sblocca.addEventListener('click', async () => {
+      const { error } = await supabase.from('user_blocks').delete()
+        .eq('blocker_id', currentUser.id).eq('blocked_id', id);
+      if (error) { toast(friendlyError(error)); return; }
+      await loadBlocked();
+      renderProfile();
+      loadRides();
+      toast('Persona sbloccata.');
+    });
+    chip.appendChild(sblocca);
+    list.appendChild(chip);
+  }
+}
+
+const MOTIVI = {
+  'guida-pericolosa': 'Guida pericolosa',
+  'molestie': 'Molestie o offese',
+  'non-si-e-presentato': 'Non si è presentato',
+  'profilo-falso': 'Profilo falso',
+  'altro': 'Altro',
+};
+
+async function renderReports() {
+  const card = document.getElementById('admin-card');
+  card.classList.toggle('hidden', !isAdmin);
+  if (!isAdmin) return;
+  const list = document.getElementById('reports-list');
+  list.innerHTML = '';
+  const { data, error } = await supabase.from('user_reports')
+    .select('id, motivo, dettagli, stato, created_at, reported_id, reporter:profiles!user_reports_reporter_id_fkey(display_name), segnalato:profiles!user_reports_reported_id_fkey(display_name, sospeso)')
+    .neq('stato', 'chiusa').order('created_at');
+  if (error) { list.textContent = friendlyError(error); return; }
+  if (!data.length) {
+    list.innerHTML = '<p class="card-sub">Nessuna segnalazione aperta.</p>';
+    return;
+  }
+  for (const r of data) {
+    const box = document.createElement('div');
+    box.className = 'report-row';
+
+    const testa = document.createElement('div');
+    testa.className = 'report-head';
+    testa.textContent = `${nomeDi(r.reporter)} → ${nomeDi(r.segnalato)}: ${MOTIVI[r.motivo] ?? r.motivo}`;
+    box.appendChild(testa);
+
+    if (r.dettagli) {
+      const det = document.createElement('p');
+      det.className = 'report-body';
+      det.textContent = r.dettagli;
+      box.appendChild(det);
+    }
+
+    const azioni = document.createElement('div');
+    azioni.className = 'group-card-actions';
+
+    const eraSospeso = !!r.segnalato?.sospeso;
+    const sosp = document.createElement('button');
+    sosp.type = 'button';
+    sosp.className = 'btn btn-ghost btn-small' + (eraSospeso ? '' : ' btn-danger');
+    sosp.textContent = eraSospeso ? 'Riabilita' : 'Sospendi';
+    sosp.addEventListener('click', async () => {
+      const motivo = eraSospeso ? null
+        : await ask(`Sospendere ${nomeDi(r.segnalato)}?`, { text: 'Il motivo lo legge la persona sospesa.', placeholder: 'Motivo' });
+      if (!eraSospeso && motivo === null) return;
+      const { error: e2 } = await supabase.from('profiles')
+        .update({ sospeso: !eraSospeso, sospeso_il: eraSospeso ? null : new Date().toISOString(), sospeso_motivo: motivo || null })
+        .eq('id', r.reported_id);
+      if (e2) { toast(friendlyError(e2)); return; }
+      toast(eraSospeso ? 'Account riabilitato.' : 'Account sospeso.');
+      renderReports();
+    });
+    azioni.appendChild(sosp);
+
+    const chiudi = document.createElement('button');
+    chiudi.type = 'button';
+    chiudi.className = 'btn btn-ghost btn-small';
+    chiudi.textContent = 'Chiudi segnalazione';
+    chiudi.addEventListener('click', async () => {
+      const esito = await ask('Come si è chiusa?', { text: 'Resta scritto, ma non lo legge nessun altro.', placeholder: 'Esito' });
+      if (esito === null) return;
+      const { error: e2 } = await supabase.from('user_reports')
+        .update({ stato: 'chiusa', esito: esito || null, gestita_da: currentUser.id, gestita_il: new Date().toISOString() })
+        .eq('id', r.id);
+      if (e2) { toast(friendlyError(e2)); return; }
+      renderReports();
+    });
+    azioni.appendChild(chiudi);
+
+    box.appendChild(azioni);
+    list.appendChild(box);
+  }
 }
 
 // --- Dialog custom (sostituisce prompt(): funziona anche nei browser in-app) ---
@@ -304,8 +525,12 @@ function renderProfile() {
   } else {
     av.textContent = initials(myName || '?');
   }
-  document.getElementById('profile-name').textContent = myName + (isAdmin ? ' · Amministratore' : '');
+  document.getElementById('profile-name').textContent = myName
+    + (isAdmin ? ' · Amministratore' : '')
+    + (sospeso ? ' · Sospeso' : '');
   document.getElementById('profile-email').textContent = currentUser?.email ?? '';
+  renderBlocked();
+  renderReports();
 }
 
 // --- Gruppi ---
@@ -414,20 +639,29 @@ async function renderGroupsView() {
     supabase.from('group_members').select('user_id, profile:profiles(display_name)').eq('group_id', g.id)
       .then(({ data }) => {
         for (const m of data ?? []) {
+          // Il nome di chi ho bloccato lo leggo ancora (policy di 012): serve a sapere chi
+          // sbloccare. Qui si dice pero' che e' bloccato, altrimenti non si capisce perche'
+          // le sue auto non compaiano mai.
+          const nome = nomeDi(m.profile);
           const chip = document.createElement('span');
           chip.className = 'history-chip';
-          chip.textContent = nomeDi(m.profile) + (m.user_id === currentUser.id ? ' (tu)' : '');
+          chip.textContent = nome
+            + (m.user_id === currentUser.id ? ' (tu)' : '')
+            + (bloccati.has(m.user_id) ? ' · bloccato' : '');
+          if (m.user_id !== currentUser.id) {
+            chip.appendChild(bottonePersona(m.user_id, nome));
+          }
           if (canKick && m.user_id !== currentUser.id) {
             const kick = document.createElement('button');
             kick.className = 'chip-kick';
             kick.textContent = '✕';
-            kick.title = `Rimuovi ${nomeDi(m.profile)} dal gruppo`;
+            kick.title = `Rimuovi ${nome} dal gruppo`;
             kick.addEventListener('click', async () => {
-              if (!confirm(`Rimuovere ${nomeDi(m.profile)} dal gruppo "${g.name}"?`)) return;
+              if (!confirm(`Rimuovere ${nome} dal gruppo "${g.name}"?`)) return;
               const { error } = await supabase.from('group_members').delete()
                 .eq('group_id', g.id).eq('user_id', m.user_id);
               if (error) { toast(friendlyError(error)); return; }
-              toast(`${nomeDi(m.profile)} rimosso dal gruppo.`);
+              toast(`${nome} rimosso dal gruppo.`);
               renderGroupsView();
             });
             chip.appendChild(kick);
@@ -665,6 +899,7 @@ offerToggle.addEventListener('click', async () => {
 
 rideForm.addEventListener('submit', async (e) => {
   e.preventDefault();
+  if (bloccaSeSospeso('pubblicare un\'auto')) return;
   const base = {
     driver_id: currentUser.id,
     group_id: currentGroupId,
@@ -871,6 +1106,7 @@ document.getElementById('request-toggle').addEventListener('click', async () => 
       .eq('user_id', currentUser.id).eq('ride_date', currentDate).eq('group_id', currentGroupId);
     toast('Richiesta rimossa.');
   } else {
+    if (bloccaSeSospeso('chiedere un passaggio')) return;
     const { error } = await supabase.from('ride_requests').insert({
       user_id: currentUser.id, ride_date: currentDate, group_id: currentGroupId,
     });
@@ -1022,6 +1258,7 @@ function drawSeat(svg, pos, { kind, label, name, avatar = null, clickable = fals
 
 // --- Azioni sedili ---
 async function claimSeat(ride, seatIndex) {
+  if (bloccaSeSospeso('prenotare un posto')) return;
   const { error } = await supabase.from('seat_claims').insert({
     ride_id: ride.id, seat_index: seatIndex, passenger_id: currentUser.id,
   });
@@ -1114,6 +1351,11 @@ function renderRides(rides) {
     const drv = document.createElement('div');
     drv.className = 'ride-sub';
     drv.textContent = `Guida ${nomeDi(ride.driver)}`;
+    if (ride.driver_id !== currentUser.id) {
+      // Il guidatore qui puo' essere una persona bloccata: la sua auto resta visibile solo
+      // finche' ci sono sopra, ed e' anche il punto da cui si sblocca.
+      drv.appendChild(bottonePersona(ride.driver_id, nomeDi(ride.driver), ride.id));
+    }
     info.appendChild(drv);
     head.appendChild(info);
 
@@ -1238,6 +1480,7 @@ function renderRides(rides) {
           if (error) { toast(friendlyError(error)); return; }
           toast('Tolto dalla lista d\'attesa.');
         } else {
+          if (bloccaSeSospeso('metterti in lista d\'attesa')) return;
           const { error } = await supabase.from('ride_waitlist').insert({ ride_id: ride.id, user_id: currentUser.id });
           if (error && error.code !== '23505') { toast(friendlyError(error)); return; }
           toast('Sei in lista: se un posto si libera, sali in automatico.');
@@ -1322,6 +1565,7 @@ async function loadComments(rideId, panel) {
     e.preventDefault();
     const body = input.value.trim();
     if (!body) return;
+    if (bloccaSeSospeso('commentare')) return;
     const { error } = await supabase.from('ride_comments').insert({ ride_id: rideId, user_id: currentUser.id, body });
     if (error) { toast(friendlyError(error)); return; }
     input.value = '';
@@ -1340,6 +1584,8 @@ async function render() {
   if (loggedIn) {
     await ensureProfile();
     userNameEl.textContent = myName;
+    await loadBlocked();
+    applicaSospensione();
     await loadGroups();
     renderProfile();
     askNotifyPermission();

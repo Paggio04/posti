@@ -113,14 +113,17 @@ begin
   if visti <> 2 then
     raise exception 'Bruno vede % auto invece delle 2 che gli restano (la sua e quella di Carla)', visti;
   end if;
-  if exists (select 1 from public.profiles where id = ada) then
-    raise exception 'BLOCCO ROTTO: Bruno legge ancora il profilo di Ada';
+  -- Il nome di chi si blocca resta leggibile a CHI blocca, e deve: senza, la lista dei
+  -- bloccati sarebbe un elenco di sconosciuti e non si potrebbe piu' sbloccare nessuno.
+  if not exists (select 1 from public.profiles where id = ada) then
+    raise exception 'Bruno non legge piu'' il nome di chi ha bloccato: non potra'' sbloccarla';
   end if;
   if not exists (select 1 from public.profiles where id = bruno) then
     raise exception 'Bruno ha perso di vista il proprio profilo';
   end if;
 
   -- ===== 5. Il blocco vale nei due sensi, anche se l'ha deciso Bruno =====
+  -- Sul nome invece e' asimmetrico: Ada, che ha subito il blocco, perde di vista Bruno.
   perform set_config('test.uid', ada::text, true);
   if exists (select 1 from public.profiles where id = bruno) then
     raise exception 'BLOCCO ROTTO: Ada legge ancora il profilo di chi l''ha bloccata';
@@ -187,6 +190,17 @@ begin
   if exists (select 1 from public.rides where id = auto_ada) then
     raise exception 'BLOCCO ROTTO: senza piu'' il posto, l''auto della persona bloccata resta visibile';
   end if;
+  -- ===== 7-bis. Bloccare non e' un modo per tenersi leggibile una persona =====
+  -- Il nome di chi si blocca resta visibile, ma resta dentro il vincolo di 011: uscito
+  -- dalla comitiva, Dino non deve leggere piu' niente di Ada. Il blocco su Ada e' ancora
+  -- quello messo qui sopra.
+  delete from public.group_members where user_id = dino;
+  if exists (select 1 from public.profiles where id = ada) then
+    raise exception 'FALLA: bloccare qualcuno lo rende leggibile anche fuori dalla comitiva';
+  end if;
+  reset role;
+  perform public.join_group((select code from public.groups where id = g));
+  set local role authenticated;
   delete from public.user_blocks where blocker_id = dino;
 
   -- ===== 8. Un commento di una persona bloccata sparisce =====

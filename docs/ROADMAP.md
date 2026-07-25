@@ -235,6 +235,11 @@ tre sarebbero andati in errore con un profilo nascosto — cioè proprio il caso
   Rinominarla farebbe ricomparire il banner a chi l'aveva già chiuso: non vale il cambio.
 - Il conteggio sul bottone dei commenti non si aggiorna dopo averne scritto uno, fino al
   ricaricamento successivo. Cosmetico.
+- *(trovate durante C10, con un confronto fra le classi usate dal JS e quelle definite nel
+  CSS)* Tre classi non esistono in `style.css`: `maps-link` sul link al ritrovo, che quindi
+  resta un'ancora senza stile, e i due modificatori `fuel` e `waitlist-row`, che non
+  cambiano niente rispetto alla classe di base. Nessuna rompe la pagina; darle uno stile e'
+  lavoro di C15, dove l'aspetto si decide tutto insieme invece che un pezzo per volta.
 
 **Collaudo:** lint e validazione verdi, schermata di accesso identica al riferimento pixel per
 pixel. Le correzioni sui percorsi con utenti veri (posto liberato, passaggio annullato, uscita dal
@@ -280,13 +285,50 @@ la Fase 1 sia chiusa.
   niente dei gruppi a cui non appartengo.
 - **Dipende da:** C4, C5, C10.
 
-### C10 — Sicurezza delle persone
+### C10 — Sicurezza delle persone — *fatto, da collaudare a video*
 - **Obiettivo:** un'app dove sconosciuti salgono in macchina insieme e non c'è modo di segnalare
   nessuno non è pronta per il pubblico. Vale più di qualsiasi funzione.
-- **Cosa:** segnalare un utente, bloccarlo (non ci vediamo più i passaggi a vicenda), una coda di
-  segnalazioni per me, sospensione di un account.
-- **Fatto quando:** posso segnalare, bloccare, e vedere le segnalazioni; un utente sospeso non
-  entra più.
+- **Fatto** (`012_sicurezza_persone.sql` + interfaccia): tre cose distinte, che si confondono
+  facilmente.
+  - **Segnalazione**: motivo fra cinque, dettagli facoltativi, e la vedono solo chi la scrive e
+    l'amministratore. Il segnalato **non sa di esserlo**: se lo sapesse, segnalare diventerebbe un
+    modo per litigare invece che per farsi aiutare. Una sola aperta per coppia, altrimenti chi vuole
+    molestare qualcuno lo fa riempiendo la coda dell'amministratore.
+  - **Blocco**: decisione propria, immediata, senza passare da nessuno. Vale **nei due sensi** anche
+    se lo decide uno solo: spariscono auto, commenti e richieste dell'altro, e non si sale in
+    macchina insieme.
+  - **Sospensione**: decisione dell'amministratore. Toglie la parola, non la vista — si legge tutto
+    e si può ancora annullare quello che si era preso, perché liberare un posto toglie ingombro
+    agli altri.
+- **Due scelte non ovvie**, entrambe prese guardando cosa succede il giorno dopo:
+  - **Il blocco non cancella niente.** L'auto di una persona bloccata sparisce *tranne* se ci sei
+    già sopra: nasconderla lascerebbe una prenotazione invisibile e impossibile da annullare. Per la
+    stessa ragione al contrario, i sedili occupati restano visibili — un posto preso che risultasse
+    libero verrebbe prenotato e poi rifiutato dall'indice unico, con un errore senza spiegazione.
+    Sparisce il nome, resta l'ingombro.
+  - **Sul nome il blocco è asimmetrico.** Chi blocca continua a leggere il profilo di chi ha
+    bloccato; chi subisce il blocco no. Senza, la lista dei bloccati sarebbe un elenco di
+    sconosciuti e non si potrebbe più sbloccare nessuno. Resta dentro il vincolo di 011: fuori dalla
+    comitiva condivisa non si legge comunque niente, quindi bloccare non è un modo per tenersi
+    leggibile una persona.
+- **Il punto meno ovvio è la lista d'attesa:** `promote_waitlist()` è `security definer`, quindi non
+  passa da nessuna policy e avrebbe fatto salire un bloccato sull'auto di chi l'ha bloccato. La
+  ferma un trigger che guarda **le righe**, non `auth.uid()`, perché lì chi scrive non è chi sale.
+- **Difetto trovato scrivendo il test, ed è di C2/008:** *il primo amministratore non si poteva
+  nominare.* L'update dal SQL editor lo rifiutava il trigger stesso — lì `auth.uid()` è nullo,
+  quindi `is_admin()` è falso, quindi "non sei amministratore, non puoi nominarne uno". Non se n'era
+  accorto nessuno perché un amministratore non è mai esistito: la coda delle segnalazioni sarebbe
+  rimasta senza nessuno che la legge. Corretto in 012.
+- **Verificato:** `supabase/test/verifica-sicurezza.sql`, in CI a ogni push, e **provato al
+  contrario**: tolta una protezione alla volta, ogni mutazione fa diventare rosso il test. Le due
+  che restano verdi sono cinture ridondanti, e nel file c'è scritto quali.
+- **Fatto quando** *(criterio originale)*: posso segnalare, bloccare, e vedere le segnalazioni; un
+  utente sospeso non entra più. **Con una precisazione presa qui:** sospeso *entra* ma non scrive.
+  Il ban vero su `auth.users` richiederebbe una Edge Function con `service_role`, cioè una chiave
+  che apre tutto messa in un servizio nuovo: superficie in più per una differenza che l'utente
+  vede uguale.
+- **Resta il collaudo a video**, che nessun test sostituisce: due account veri, segnalazione,
+  blocco, e la coda vista da un amministratore.
 
 ### C11 — GDPR completo
 - **Obiettivo:** oggi `SECURITY.md` segna la conformità come parziale, e va bene finché siamo fra
