@@ -74,6 +74,9 @@ jobs:
       - name: Le comitive sono davvero separate
         run: psql -v ON_ERROR_STOP=1 -q -f supabase/test/verifica-isolamento.sql
 
+      - name: Segnalazione, blocco e sospensione reggono
+        run: psql -v ON_ERROR_STOP=1 -q -f supabase/test/verifica-sicurezza.sql
+
       - name: Aggiornamento dal vecchio schema, senza perdere dati
         run: |
           psql -v ON_ERROR_STOP=1 -q -c "create database aggiornamento"
