@@ -1,41 +1,100 @@
+/* I caratteri stanno nel repo, non su un CDN di terzi. Tre ragioni, in
+   quest'ordine: l'informativa dichiara Supabase e Netlify come responsabili e
+   nessun altro (un font di Google significa il browser che chiama Google e gli
+   dice l'indirizzo IP di chi apre l'app), la CSP perde due voci invece di
+   guadagnarne, e la prima schermata non aspetta piu' una richiesta esterna.
+   IBM Plex: disegnato per gli schermi, riconoscibile senza essere strano, e
+   non e' Inter, che e' il carattere predefinito di tutto. */
+@font-face {
+  font-family: 'IBM Plex Sans';
+  src: url('fonts/ibm-plex-sans-latin-400-normal.woff2') format('woff2');
+  font-weight: 400; font-style: normal; font-display: swap;
+}
+@font-face {
+  font-family: 'IBM Plex Sans';
+  src: url('fonts/ibm-plex-sans-latin-600-normal.woff2') format('woff2');
+  font-weight: 600; font-style: normal; font-display: swap;
+}
+@font-face {
+  font-family: 'IBM Plex Sans';
+  src: url('fonts/ibm-plex-sans-latin-700-normal.woff2') format('woff2');
+  font-weight: 700; font-style: normal; font-display: swap;
+}
+/* Il mono non e' un vezzo: ore, posti e codici del gruppo sono i numeri per cui
+   questa app esiste, e in tabellare stanno in colonna invece di ballare. */
+@font-face {
+  font-family: 'IBM Plex Mono';
+  src: url('fonts/ibm-plex-mono-latin-500-normal.woff2') format('woff2');
+  font-weight: 500; font-style: normal; font-display: swap;
+}
+
+/* --- Sistema visivo (cantiere C15) -----------------------------------------
+   Il riferimento e' la carta stampata: un tabellone degli orari, un biglietto,
+   un cartello. La tipografia fa il lavoro, l'informazione si legge in tre
+   secondi, e non c'e' profondita' finta perche' la carta non ne ha.
+
+   Inchiostro, carta, e **un accento solo**. I nomi dei token restano quelli di
+   prima: cambiano i valori, non l'anagrafica, perche' rinominarne cinquanta in
+   milletrecento righe non e' il lavoro di questo cantiere.
+
+   Ogni rapporto di contrasto qui sotto e' calcolato, non stimato: la soglia e'
+   quella di chi legge in piedi, al buio, davanti a un portone.              */
 :root {
-  /* Palette navy — OKLCH */
-  --bg: oklch(0.965 0.008 250);
+  --bg: oklch(0.975 0.004 250);              /* carta        #f5f7f9 */
   --surface: oklch(1 0 0);
-  --surface-2: oklch(0.94 0.01 250);
-  --border: oklch(0.9 0.012 250);
-  --border-strong: oklch(0.8 0.018 250);
-  --ink: oklch(0.24 0.03 260);
-  --ink-soft: oklch(0.46 0.025 260);
-  --primary: oklch(0.42 0.11 258);
-  --primary-bright: oklch(0.52 0.13 255);
-  --primary-hover: oklch(0.36 0.11 258);
-  --primary-soft: oklch(0.93 0.025 258);
-  --navy-deep: oklch(0.26 0.06 260);
-  --navy-deeper: oklch(0.18 0.05 262);
-  --danger: oklch(0.5 0.17 25);
+  --surface-2: oklch(0.945 0.006 250);       /*              #eaedf1 */
+  --border: oklch(0.84 0.012 250);
+  --border-strong: oklch(0.22 0.025 262);    /* la riga di penna */
+  --ink: oklch(0.22 0.025 262);              /* 16.1:1 su carta */
+  --ink-soft: oklch(0.44 0.022 262);         /* 7.2:1 — non un grigio slavato */
+
+  /* Il colore principale resta il navy, e ora e' UNO invece di una famiglia di
+     azzurri sfumati: un valore solo, piatto, che fa sia il riempimento sia il
+     testo. Bianco sopra 10.1:1, e lui su carta 9.4:1 — quindi non serve una
+     seconda variante per i link, come servirebbe a un colore chiaro. */
+  --primary: oklch(0.38 0.09 258);           /*              #224271 */
+  --primary-bright: oklch(0.38 0.09 258);    /* uguale: i gradienti sono via */
+  --primary-hover: oklch(0.32 0.09 258);
+  --primary-soft: oklch(0.93 0.022 258);
+  --su-primary: oklch(1 0 0);                /* sul navy va il bianco: 10.1:1 */
+  --primary-testo: oklch(0.38 0.09 258);     /* lo stesso navy: 9.4:1 su carta */
+
+  --navy-deep: oklch(0.22 0.025 262);        /* l'inchiostro fa anche da fondo */
+  --navy-deeper: oklch(0.17 0.022 262);
+  --danger: oklch(0.46 0.17 25);
   --danger-soft: oklch(0.95 0.025 25);
-  --ok: oklch(0.52 0.11 165);
-  --ok-deep: oklch(0.42 0.1 165);
-  --ok-soft: oklch(0.94 0.03 165);
+  --ok: oklch(0.45 0.11 160);
+  --ok-deep: oklch(0.38 0.1 160);
+  --ok-soft: oklch(0.94 0.03 160);
 
-  /* Forme: tutto tondo */
-  --radius-xl: 28px;
-  --radius: 22px;
-  --radius-sm: 16px;
-  --pill: 999px;
+  /* Forme. Prima erano 16, 22 e 28px su ogni cosa: "tutto arrotondato allo
+     stesso raggio" e' scritto in D7 fra i difetti. Ora un cartoncino tagliato. */
+  --radius-xl: 14px;
+  --radius: 10px;
+  --radius-sm: 7px;
+  --pill: 10px;                               /* la pillola non esiste piu' */
 
-  --shadow-1: 0 2px 8px oklch(0.3 0.05 258 / 0.07), 0 8px 24px oklch(0.3 0.05 258 / 0.07);
-  --shadow-2: 0 4px 14px oklch(0.3 0.05 258 / 0.1), 0 18px 44px oklch(0.3 0.05 258 / 0.14);
-  --glow: 0 6px 22px oklch(0.42 0.11 258 / 0.38);
+  /* Ritmo. Prima gli spazi erano quasi tutti 12-20px, e senza variazione non
+     esiste gerarchia: tutto sembra importante uguale. */
+  --sp-1: 4px; --sp-2: 8px; --sp-3: 14px; --sp-4: 22px; --sp-5: 34px; --sp-6: 52px;
 
-  /* Motion system */
+  /* Una colonna sola per tutta l'app: contenuto, barra e navigazione. */
+  --colonna: 920px;
+  --gutter: max(var(--sp-4), (100% - var(--colonna)) / 2);
+
+  /* Una sola ombra, e solo per cio' che sta davvero sopra il resto (avviso,
+     finestra). Le schede non galleggiano: hanno un bordo. */
+  --shadow-1: none;
+  --shadow-2: 0 8px 24px oklch(0.22 0.025 262 / 0.16);
+  --glow: none;
+
   --ease-out: cubic-bezier(0.22, 1, 0.36, 1);
-  --spring: cubic-bezier(0.34, 1.4, 0.44, 1);
-  --t-fast: 160ms;
-  --t-med: 280ms;
+  --spring: cubic-bezier(0.22, 1, 0.36, 1);  /* era una molla: le molle sono via */
+  --t-fast: 120ms;
+  --t-med: 200ms;
 
-  font-family: 'Inter', system-ui, sans-serif;
+  --font-numeri: 'IBM Plex Mono', ui-monospace, monospace;
+  font-family: 'IBM Plex Sans', system-ui, sans-serif;
 }
 
 * { box-sizing: border-box; margin: 0; }
@@ -43,19 +102,23 @@
 html, body { height: 100%; }
 
 body {
-  background:
-    radial-gradient(1200px 600px at 85% -10%, oklch(0.93 0.03 258 / 0.7), transparent 60%),
-    radial-gradient(900px 500px at -10% 110%, oklch(0.93 0.025 200 / 0.55), transparent 60%),
-    var(--bg);
-  background-attachment: fixed;
+  background: var(--bg);
   color: var(--ink);
-  font-size: 0.95rem;
-  line-height: 1.55;
+  font-size: 1rem;
+  line-height: 1.5;
+  -webkit-font-smoothing: antialiased;
 }
+
+/* Un passo di 1.2, fisso: in un'app le misure fluide fanno ballare i titoli
+   dentro i pannelli invece di aiutare. */
+h1 { font-size: 2rem; font-weight: 700; letter-spacing: -0.03em; line-height: 1.1; }
+h2 { font-size: 1.5rem; font-weight: 700; letter-spacing: -0.02em; line-height: 1.2; }
+h3 { font-size: 1.15rem; font-weight: 600; letter-spacing: -0.01em; }
 
 .hidden { display: none !important; }
 
-h1, h2, h3 { text-wrap: balance; letter-spacing: -0.015em; }
+h1, h2, h3 { text-wrap: balance; }
+p { text-wrap: pretty; }
 
 svg { vertical-align: -0.15em; }
 
@@ -67,11 +130,11 @@ svg { vertical-align: -0.15em; }
   grid-template-columns: 1fr 1.1fr;
 }
 
-/* Pannello brand: aurora animata */
+/* Pannello di sinistra: inchiostro pieno, niente aurora (C15) */
 .auth-brand-panel {
   position: relative;
   overflow: hidden;
-  background: linear-gradient(165deg, var(--navy-deep), var(--navy-deeper));
+  background: var(--navy-deep);
   color: oklch(0.97 0.005 250);
   display: flex;
   align-items: center;
@@ -79,58 +142,22 @@ svg { vertical-align: -0.15em; }
   padding: 48px;
 }
 
-.auth-brand-panel::before,
-.auth-brand-panel::after {
-  content: '';
-  position: absolute;
-  width: 520px; height: 520px;
-  border-radius: 50%;
-  filter: blur(70px);
-  opacity: 0.5;
-  pointer-events: none;
-}
-.auth-brand-panel::before {
-  background: oklch(0.5 0.14 255);
-  top: -180px; left: -140px;
-  animation: aurora-a 16s ease-in-out infinite alternate;
-}
-.auth-brand-panel::after {
-  background: oklch(0.55 0.12 210);
-  bottom: -220px; right: -160px;
-  animation: aurora-b 20s ease-in-out infinite alternate;
-}
-
-@keyframes aurora-a {
-  from { transform: translate(0, 0) scale(1); }
-  to { transform: translate(120px, 90px) scale(1.25); }
-}
-@keyframes aurora-b {
-  from { transform: translate(0, 0) scale(1.15); }
-  to { transform: translate(-110px, -70px) scale(0.9); }
-}
-
 .auth-brand-inner { position: relative; max-width: 380px; }
 
 .auth-logo {
-  width: 72px; height: 72px;
-  border-radius: 24px;
-  background: oklch(1 0 0 / 0.12);
-  backdrop-filter: blur(8px);
-  border: 1px solid oklch(1 0 0 / 0.18);
+  width: 60px; height: 60px;
+  border-radius: var(--radius);
+  background: oklch(1 0 0 / 0.10);
+  border: 1px solid oklch(1 0 0 / 0.16);
   display: grid;
   place-items: center;
   margin-bottom: 22px;
-  animation: float 5s ease-in-out infinite;
 }
 
-@keyframes float {
-  0%, 100% { transform: translateY(0); }
-  50% { transform: translateY(-9px); }
-}
 
 .auth-brand-panel h1 {
   font-size: 2.8rem;
-  font-weight: 800;
+  font-weight: 700;
   margin-bottom: 12px;
   animation: rise 600ms var(--spring) both;
 }
@@ -143,37 +170,26 @@ svg { vertical-align: -0.15em; }
   animation: rise 600ms var(--spring) 80ms both;
 }
 
-.auth-steps { list-style: none; padding: 0; display: grid; gap: 12px; }
+.auth-steps { list-style: none; padding: 0; margin-top: var(--sp-4); }
 
 .auth-steps li {
-  display: flex;
-  align-items: center;
-  gap: 12px;
-  background: oklch(1 0 0 / 0.08);
-  border: 1px solid oklch(1 0 0 / 0.12);
-  backdrop-filter: blur(6px);
-  border-radius: var(--radius-sm);
-  padding: 13px 17px;
-  font-weight: 500;
-  font-size: 0.92rem;
-  animation: rise 600ms var(--spring) both;
-  transition: transform var(--t-med) var(--spring), background var(--t-fast) var(--ease-out);
+  display: grid;
+  grid-template-columns: 2.1rem 1fr;
+  align-items: baseline;
+  gap: var(--sp-3);
+  padding: var(--sp-3) 0;
+  border-top: 1px solid oklch(1 0 0 / 0.14);
+  font-size: 1rem;
+  line-height: 1.45;
 }
-.auth-steps li:nth-child(1) { animation-delay: 160ms; }
-.auth-steps li:nth-child(2) { animation-delay: 240ms; }
-.auth-steps li:nth-child(3) { animation-delay: 320ms; }
-.auth-steps li:hover { transform: translateX(6px); background: oklch(1 0 0 / 0.13); }
+.auth-steps li:last-child { border-bottom: 1px solid oklch(1 0 0 / 0.14); }
 
 .auth-steps li span {
-  background: oklch(1 0 0 / 0.16);
-  color: #fff;
-  width: 28px; height: 28px;
-  border-radius: 50%;
-  display: grid;
-  place-items: center;
-  font-weight: 700;
-  font-size: 0.85rem;
-  flex: 0 0 auto;
+  font-family: var(--font-numeri);
+  font-weight: 500;
+  font-size: 1.35rem;
+  color: oklch(1 0 0 / 0.55);
+  font-variant-numeric: tabular-nums;
 }
 
 @keyframes rise {
@@ -233,7 +249,7 @@ svg { vertical-align: -0.15em; }
   touch-action: manipulation;
   transition: color var(--t-med) var(--ease-out);
 }
-.auth-switch-btn.active { color: #fff; }
+.auth-switch-btn.active { color: var(--su-primary); }
 .auth-switch-btn:focus-visible { outline: 2px solid var(--primary); outline-offset: 2px; }
 
 .auth-switch-slider {
@@ -241,7 +257,7 @@ svg { vertical-align: -0.15em; }
   top: 5px; bottom: 5px;
   left: 5px;
   width: calc(50% - 5px);
-  background: linear-gradient(135deg, var(--primary-bright), var(--primary));
+  background: var(--primary);
   border-radius: var(--pill);
   box-shadow: 0 3px 10px oklch(0.42 0.11 258 / 0.35);
   transition: transform 380ms var(--spring);
@@ -344,28 +360,26 @@ input:focus-visible, select:focus-visible, textarea:focus-visible {
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  gap: 8px;
-  padding: 12px 22px;
-  border: none;
-  border-radius: var(--pill);
+  gap: var(--sp-2);
+  padding: 13px 20px;
+  border: 1px solid transparent;
+  border-radius: var(--radius);
   font: inherit;
   font-weight: 600;
-  font-size: 0.92rem;
+  font-size: 0.95rem;
   cursor: pointer;
   touch-action: manipulation;
-  transition: transform var(--t-med) var(--spring), box-shadow var(--t-med) var(--ease-out),
-              background var(--t-fast) var(--ease-out), border-color var(--t-fast) var(--ease-out),
-              color var(--t-fast) var(--ease-out);
+  transition: background var(--t-fast) var(--ease-out), border-color var(--t-fast) var(--ease-out);
 }
+.btn:disabled { opacity: 0.45; cursor: not-allowed; }
 
 .btn:focus-visible { outline: 2px solid var(--primary); outline-offset: 2px; }
 .btn:disabled { opacity: 0.5; cursor: default; }
 .btn:active:not(:disabled) { transform: scale(0.95); }
 
 .btn-primary {
-  background: linear-gradient(135deg, var(--primary-bright), var(--primary));
-  color: #fff;
-  box-shadow: var(--glow);
+  background: var(--primary);
+  color: var(--su-primary);
 }
 .btn-primary:hover:not(:disabled) { transform: translateY(-2px); box-shadow: 0 10px 28px oklch(0.42 0.11 258 / 0.45); }
 .btn-primary:active:not(:disabled) { transform: scale(0.95); }
@@ -387,7 +401,7 @@ input:focus-visible, select:focus-visible, textarea:focus-visible {
   margin: 12px auto 0;
   background: none;
   border: none;
-  color: var(--primary);
+  color: var(--primary-testo);
   font: inherit;
   font-size: 0.87rem;
   font-weight: 500;
@@ -426,7 +440,7 @@ input:focus-visible, select:focus-visible, textarea:focus-visible {
   margin: 0 auto 16px;
   border-radius: 50%;
   background: var(--primary-soft);
-  color: var(--primary);
+  color: var(--primary-testo);
   display: grid;
   place-items: center;
   animation: pop-bounce 600ms var(--spring) both;
@@ -444,19 +458,20 @@ input:focus-visible, select:focus-visible, textarea:focus-visible {
 .app-shell { min-height: 100vh; display: flex; flex-direction: column; }
 
 .topbar {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  padding: 13px 22px;
-  background: oklch(0.26 0.06 260 / 0.88);
-  backdrop-filter: blur(14px);
-  color: #fff;
   position: sticky;
   top: 0;
-  z-index: 10;
+  z-index: 40;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--sp-3);
+  padding: var(--sp-3) var(--gutter);
+  background: var(--navy-deep);
+  color: oklch(0.97 0.005 250);
+  border-bottom: 1px solid oklch(1 0 0 / 0.10);
 }
 
-.brand { font-weight: 700; font-size: 1.1rem; display: flex; align-items: center; gap: 9px; }
+.brand { font-weight: 700; font-size: 1.05rem; letter-spacing: -0.02em; display: flex; align-items: center; gap: var(--sp-2); }
 
 .user-name-btn {
   background: oklch(1 0 0 / 0.12);
@@ -475,9 +490,11 @@ input:focus-visible, select:focus-visible, textarea:focus-visible {
 .app-view {
   flex: 1;
   width: 100%;
-  max-width: 920px;
+  max-width: var(--colonna);
   margin: 0 auto;
-  padding: 26px 20px 130px;
+  /* In basso lo spazio serve solo a non finire sotto la navigazione, che ora e'
+     una barra bassa e non una pillola alta che galleggia. */
+  padding: var(--sp-5) var(--sp-4) 104px;
 }
 
 /* Transizione tra viste */
@@ -495,52 +512,49 @@ input:focus-visible, select:focus-visible, textarea:focus-visible {
   font-weight: 700;
   margin-bottom: 4px;
 }
-.view-title svg { color: var(--primary); }
+.view-title svg { color: var(--primary-testo); }
 .view-subtitle { color: var(--ink-soft); font-size: 0.92rem; margin-bottom: 20px; }
 
 /* ================= COME FUNZIONA / BENVENUTO ================= */
 
 .howto {
   position: relative;
-  display: grid;
-  gap: 10px;
-  background: var(--primary-soft);
-  border: 1px solid oklch(0.85 0.03 258);
-  border-radius: var(--radius);
-  padding: 18px 46px 18px 18px;
-  margin-bottom: 20px;
-  animation: view-in 320ms var(--spring) both;
+  background: transparent;
+  border-top: 1px solid var(--border-strong);
+  border-bottom: 1px solid var(--border-strong);
+  border-radius: 0;
+  padding: var(--sp-2) 46px var(--sp-2) 0;
+  margin-bottom: var(--sp-4);
 }
 
-.howto-step { display: flex; align-items: center; gap: 12px; font-weight: 500; font-size: 0.9rem; color: var(--ink); }
-.howto-icon {
-  color: var(--primary);
-  background: var(--surface);
-  width: 40px; height: 40px;
-  border-radius: 14px;
+.howto-step {
   display: grid;
-  place-items: center;
-  flex: 0 0 auto;
-  box-shadow: var(--shadow-1);
+  grid-template-columns: 1.6rem 1fr;
+  align-items: center;
+  gap: var(--sp-3);
+  padding: var(--sp-3) 0;
+  font-size: 0.95rem;
+  color: var(--ink);
 }
+.howto-step + .howto-step { border-top: 1px solid var(--border); }
+.howto-icon { color: var(--primary-testo); display: grid; place-items: center; }
 
 .howto-close {
   position: absolute;
-  top: 12px; right: 12px;
-  background: var(--surface);
-  border: 1px solid var(--border);
-  border-radius: 50%;
+  top: var(--sp-3); right: 0;
   width: 30px; height: 30px;
+  display: grid; place-items: center;
+  background: none;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
   color: var(--ink-soft);
   cursor: pointer;
-  display: grid;
-  place-items: center;
-  transition: transform var(--t-med) var(--spring), color var(--t-fast) var(--ease-out);
+  transition: color var(--t-fast) var(--ease-out), border-color var(--t-fast) var(--ease-out);
 }
-.howto-close:hover { color: var(--ink); transform: rotate(90deg); }
+.howto-close:hover { color: var(--ink); border-color: var(--border-strong); }
 
 .welcome {
-  background: linear-gradient(150deg, var(--navy-deep), var(--navy-deeper));
+  background: var(--navy-deep);
   color: #fff;
   border-radius: var(--radius-xl);
   box-shadow: var(--shadow-2);
@@ -559,9 +573,8 @@ input:focus-visible, select:focus-visible, textarea:focus-visible {
   filter: blur(70px);
   opacity: 0.45;
   top: -160px; right: -120px;
-  animation: aurora-a 14s ease-in-out infinite alternate;
 }
-.welcome h2 { position: relative; font-size: 1.35rem; font-weight: 800; margin-bottom: 6px; }
+.welcome h2 { position: relative; font-size: 1.35rem; font-weight: 700; margin-bottom: 6px; }
 .welcome p { position: relative; color: oklch(0.85 0.02 255); font-size: 0.93rem; margin-bottom: 18px; }
 .welcome-actions { position: relative; display: flex; gap: 10px; justify-content: center; flex-wrap: wrap; }
 .welcome .btn-secondary { background: oklch(1 0 0 / 0.12); color: #fff; border-color: oklch(1 0 0 / 0.25); }
@@ -602,9 +615,9 @@ input:focus-visible, select:focus-visible, textarea:focus-visible {
 .tab:focus-visible { outline: 2px solid var(--primary); outline-offset: 2px; }
 .tab:active { transform: scale(0.95); }
 .tab.active {
-  background: linear-gradient(135deg, var(--primary-bright), var(--primary));
+  background: var(--primary);
   border-color: transparent;
-  color: #fff;
+  color: var(--su-primary);
   box-shadow: 0 4px 14px oklch(0.42 0.11 258 / 0.3);
 }
 
@@ -616,7 +629,12 @@ input:focus-visible, select:focus-visible, textarea:focus-visible {
   font-size: 0.87rem;
   color: var(--ink-soft);
 }
-.day-picker.active { border-color: var(--primary); color: var(--ink); }
+.day-picker.active {
+  background: var(--primary);
+  border-color: var(--border-strong);
+  color: var(--su-primary);
+  font-weight: 600;
+}
 
 .group-info {
   display: flex;
@@ -632,9 +650,10 @@ input:focus-visible, select:focus-visible, textarea:focus-visible {
 }
 
 .group-code {
-  font-weight: 700;
+  font-family: var(--font-numeri);
+  font-weight: 500;
   letter-spacing: 0.08em;
-  color: var(--primary);
+  color: var(--primary-testo);
   background: var(--primary-soft);
   padding: 5px 12px;
   border-radius: var(--pill);
@@ -658,7 +677,7 @@ input:focus-visible, select:focus-visible, textarea:focus-visible {
   color: var(--ink-soft);
   animation: view-in 320ms var(--spring) both;
 }
-.stat-chip svg { color: var(--primary); }
+.stat-chip svg { color: var(--primary-testo); }
 .stat-chip strong { color: var(--ink); font-weight: 700; }
 
 /* ================= FORM AUTO ================= */
@@ -715,7 +734,7 @@ input:focus-visible, select:focus-visible, textarea:focus-visible {
 }
 .walker-chip.request {
   background: var(--primary-soft);
-  color: var(--primary);
+  color: var(--primary-testo);
   font-weight: 600;
   animation: pulse-soft 2.4s ease-in-out infinite;
 }
@@ -752,7 +771,7 @@ input:focus-visible, select:focus-visible, textarea:focus-visible {
 
 .ride-head { display: flex; justify-content: space-between; align-items: start; gap: 8px; }
 .ride-route { font-weight: 700; font-size: 1rem; }
-.ride-sub { color: var(--ink-soft); font-size: 0.85rem; margin-top: 2px; }
+.ride-sub { color: var(--ink-soft); font-size: 0.85rem; margin-top: 2px; font-variant-numeric: tabular-nums; }
 /* Il link al ritrovo era senza regola da quando esiste: ereditava lo stile dei link e
    dentro la scheda sembrava un errore. Riga sua, allineata all'icona del pin. */
 .maps-link {
@@ -778,7 +797,7 @@ input:focus-visible, select:focus-visible, textarea:focus-visible {
   transition: all var(--t-med) var(--spring);
 }
 .place-delete:hover { color: var(--danger); background: var(--danger-soft); transform: scale(1.12); }
-.place-delete.share:hover { color: var(--primary); background: var(--primary-soft); }
+.place-delete.share:hover { color: var(--primary-testo); background: var(--primary-soft); }
 .place-delete:focus-visible { outline: 2px solid var(--primary); outline-offset: 1px; }
 
 .place-badge {
@@ -790,10 +809,10 @@ input:focus-visible, select:focus-visible, textarea:focus-visible {
   border-radius: var(--pill);
 }
 .place-badge.public { color: var(--ok-deep); background: var(--ok-soft); }
-.place-badge.mine { color: var(--primary); background: var(--primary-soft); }
+.place-badge.mine { color: var(--primary-testo); background: var(--primary-soft); }
 
 /* Auto SVG */
-.car-svg { width: min(200px, 72%); margin: 4px auto; display: block; }
+.car-svg { width: min(268px, 92%); margin: 10px auto 6px; display: block; }
 .car-body {
   fill: oklch(0.93 0.02 var(--car-hue));
   stroke: oklch(0.72 0.06 var(--car-hue));
@@ -902,7 +921,7 @@ input:focus-visible, select:focus-visible, textarea:focus-visible {
   font-weight: 500;
   color: var(--ink-soft);
 }
-.history-chip.driver { background: var(--primary-soft); color: var(--primary); font-weight: 600; }
+.history-chip.driver { background: var(--primary-soft); color: var(--primary-testo); font-weight: 600; }
 
 .chip-kick {
   background: none;
@@ -956,7 +975,11 @@ input:focus-visible, select:focus-visible, textarea:focus-visible {
   transition: transform var(--t-med) var(--spring), box-shadow var(--t-med) var(--ease-out);
 }
 .stat-box:hover { transform: translateY(-3px); box-shadow: var(--shadow-1); }
-.stat-box strong { display: block; font-size: 1.7rem; font-weight: 800; color: var(--primary); }
+.stat-box strong {
+  display: block; font-size: 1.7rem; font-weight: 500;
+  font-family: var(--font-numeri); font-variant-numeric: tabular-nums;
+  color: var(--ink); letter-spacing: -0.02em;
+}
 .stat-box span { font-size: 0.82rem; color: var(--ink-soft); font-weight: 500; }
 
 .stats-row { display: flex; align-items: center; gap: 10px; margin-bottom: 8px; }
@@ -964,14 +987,14 @@ input:focus-visible, select:focus-visible, textarea:focus-visible {
 .stats-row-bar-wrap { flex: 1; background: var(--surface-2); border-radius: var(--pill); height: 24px; overflow: hidden; }
 .stats-row-bar {
   height: 100%;
-  background: linear-gradient(90deg, var(--primary), var(--primary-bright));
+  background: var(--primary);
   border-radius: var(--pill);
   min-width: 10px;
   animation: bar-grow 700ms var(--spring) both;
   transform-origin: left;
 }
 @keyframes bar-grow { from { transform: scaleX(0); } to { transform: scaleX(1); } }
-.stats-row.alt .stats-row-bar { background: linear-gradient(90deg, var(--ok-deep), var(--ok)); }
+.stats-row.alt .stats-row-bar { background: var(--ok); }
 .stats-row-count { flex: 0 0 26px; text-align: right; font-size: 0.88rem; font-weight: 700; }
 
 /* ================= PROFILO ================= */
@@ -991,14 +1014,13 @@ input:focus-visible, select:focus-visible, textarea:focus-visible {
 .profile-avatar {
   width: 62px; height: 62px;
   border-radius: 50%;
-  background: linear-gradient(135deg, var(--primary-bright), var(--primary));
-  color: #fff;
+  background: var(--primary);
+  color: var(--su-primary);
   display: grid;
   place-items: center;
-  font-weight: 800;
+  font-weight: 700;
   font-size: 1.3rem;
   flex: 0 0 auto;
-  box-shadow: var(--glow);
 }
 .profile-name { font-weight: 700; font-size: 1.1rem; }
 .profile-email { color: var(--ink-soft); font-size: 0.88rem; }
@@ -1006,76 +1028,64 @@ input:focus-visible, select:focus-visible, textarea:focus-visible {
 .btn-danger-full { color: var(--danger); border-color: oklch(0.85 0.06 25); }
 .btn-danger-full:hover { background: var(--danger-soft); }
 .profile-hint { color: var(--ink-soft); font-size: 0.85rem; margin-top: 20px; max-width: 55ch; }
-.profile-hint a { color: var(--primary); }
+.profile-hint a { color: var(--primary-testo); }
 
 /* ================= BOTTOM NAV — pillola flottante ================= */
 
+/* La navigazione era una pillola che galleggiava sopra il contenuto, con il tondo
+   di mezzo rialzato e un anello che pulsava: tre elementi che dicevano "guardami"
+   invece di "sei qui". Ora e' una barra appoggiata al bordo, con una riga sopra
+   come la piega di un foglio, e un segno solo che si SPOSTA sulla scheda attiva.
+   Quello e' movimento che dice lo stato, ed e' l'unico che vale la pena tenere. */
 .bottom-nav {
   position: fixed;
-  left: 50%;
-  transform: translateX(-50%);
-  bottom: calc(12px + env(safe-area-inset-bottom));
-  width: min(94vw, 520px);
+  left: 0; right: 0;
+  bottom: 0;
   display: grid;
   grid-template-columns: repeat(5, 1fr);
-  background: oklch(1 0 0 / 0.85);
-  backdrop-filter: blur(16px);
-  border: 1px solid var(--border);
-  border-radius: var(--pill);
-  box-shadow: var(--shadow-2);
-  padding: 8px 10px;
+  background: var(--surface);
+  border-top: 1px solid var(--border-strong);
+  /* Le stesse spalle del contenuto: le cinque schede stanno nella colonna, non
+     spalmate su un desktop da 1440. */
+  padding-inline: max(0px, (100% - var(--colonna)) / 2);
+  padding-bottom: env(safe-area-inset-bottom);
   z-index: 50;
+}
+
+/* Il segno. Largo come una colonna, si sposta di una colonna per volta. */
+.bottom-nav::before {
+  content: '';
+  position: absolute;
+  top: -1px;
+  left: max(0px, (100% - var(--colonna)) / 2);
+  width: min(20%, calc(var(--colonna) / 5));
+  height: 3px;
+  background: var(--primary);
+  transform: translateX(calc(var(--nav-i, 2) * 100%));
+  transition: transform var(--t-med) var(--ease-out);
 }
 
 .nav-item {
   display: flex;
   flex-direction: column;
   align-items: center;
-  gap: 3px;
+  gap: 4px;
   background: none;
   border: none;
   font: inherit;
-  font-size: 0.66rem;
+  font-size: 0.68rem;
   font-weight: 600;
   color: var(--ink-soft);
-  padding: 7px 2px 4px;
-  border-radius: var(--radius-sm);
+  padding: 11px 2px 9px;
   cursor: pointer;
   touch-action: manipulation;
-  transition: color var(--t-fast) var(--ease-out), transform var(--t-med) var(--spring);
+  transition: color var(--t-fast) var(--ease-out), background var(--t-fast) var(--ease-out);
 }
-.nav-item:hover { color: var(--ink); transform: translateY(-2px); }
-.nav-item.active { color: var(--primary); }
-.nav-item:active { transform: scale(0.92); }
-.nav-item:focus-visible { outline: 2px solid var(--primary); outline-offset: -2px; }
-
-.nav-home { margin-top: -30px; }
-.nav-home-circle {
-  width: 58px; height: 58px;
-  border-radius: 50%;
-  background: linear-gradient(135deg, var(--primary-bright), var(--primary));
-  color: #fff;
-  display: grid;
-  place-items: center;
-  box-shadow: var(--glow);
-  border: 4px solid var(--bg);
-  transition: transform var(--t-med) var(--spring), box-shadow var(--t-med) var(--ease-out);
-  position: relative;
-}
-.nav-home.active .nav-home-circle::after {
-  content: '';
-  position: absolute;
-  inset: -7px;
-  border-radius: 50%;
-  border: 2px solid oklch(0.42 0.11 258 / 0.35);
-  animation: ring 2.2s var(--ease-out) infinite;
-}
-@keyframes ring {
-  0% { transform: scale(0.85); opacity: 1; }
-  100% { transform: scale(1.25); opacity: 0; }
-}
-.nav-home:hover .nav-home-circle { transform: translateY(-3px) scale(1.05); }
-.nav-home:active .nav-home-circle { transform: scale(0.92); }
+.nav-item:hover { color: var(--ink); background: var(--surface-2); }
+/* Lo stato attivo non sta nel colore da solo: colore, peso e la posizione del
+   segno sopra. Chi non distingue l'arancio legge comunque dove si trova. */
+.nav-item.active { color: var(--ink); font-weight: 700; }
+.nav-item:focus-visible { outline: 2px solid var(--primary); outline-offset: -3px; }
 
 /* ================= DIALOG / TOAST / VUOTI ================= */
 
@@ -1089,7 +1099,7 @@ input:focus-visible, select:focus-visible, textarea:focus-visible {
   box-shadow: var(--shadow-2);
 }
 .app-dialog[open] { animation: card-pop 340ms var(--spring) both; }
-.app-dialog::backdrop { background: oklch(0.1 0.02 260 / 0.55); backdrop-filter: blur(3px); }
+.app-dialog::backdrop { background: oklch(0.17 0.022 262 / 0.72); }
 .app-dialog h3 { font-size: 1.1rem; font-weight: 700; margin-bottom: 4px; }
 .app-dialog .auth-subtitle { margin-bottom: 12px; }
 .app-dialog input { margin-top: 0; }
@@ -1099,27 +1109,23 @@ input:focus-visible, select:focus-visible, textarea:focus-visible {
 .skeleton {
   height: 150px;
   border-radius: var(--radius-xl);
-  background: linear-gradient(100deg, var(--surface-2) 40%, oklch(0.97 0.004 250) 50%, var(--surface-2) 60%);
+  background: var(--surface-2);
   background-size: 200% 100%;
   animation: shimmer 1.2s infinite linear;
 }
-@keyframes shimmer { to { background-position: -200% 0; } }
-
-.empty { text-align: center; padding: 48px 20px; animation: view-in 320ms var(--spring) both; }
-.empty-icon {
-  width: 80px; height: 80px;
-  margin: 0 auto 14px;
-  border-radius: 50%;
-  background: var(--surface);
-  border: 1px solid var(--border);
-  color: var(--ink-soft);
-  display: grid;
-  place-items: center;
-  box-shadow: var(--shadow-1);
-  animation: float 5s ease-in-out infinite;
+/* Stato vuoto: un posto libero, non un'icona grigia centrata. Il tratteggio e'
+   il perimetro di quello che manca; il testo dice cosa fare, non "nessun dato". */
+.empty {
+  border: 1px dashed var(--border-strong);
+  border-radius: var(--radius);
+  padding: var(--sp-4);
+  display: block;
 }
-.empty-title { font-weight: 700; font-size: 1.08rem; margin-bottom: 8px; }
-.empty-hint { color: var(--ink-soft); font-size: 0.92rem; max-width: 46ch; margin: 0 auto; line-height: 1.6; }
+.empty-icon { color: var(--ink-soft); line-height: 1; margin-bottom: var(--sp-3); }
+.empty-icon svg { width: 22px; height: 22px; }
+.empty-title { font-weight: 700; font-size: 1.1rem; margin-bottom: var(--sp-2); }
+.empty-hint { color: var(--ink-soft); font-size: 0.95rem; line-height: 1.5; max-width: 52ch; }
+
 
 /* Avviso di rete (C12). Da quando c'e' il service worker l'app si apre anche offline, e
    proprio per questo va detto: una schermata che si apre e non si aggiorna, senza avviso,
@@ -1158,7 +1164,7 @@ input:focus-visible, select:focus-visible, textarea:focus-visible {
 
 /* ================= RESPONSIVE ================= */
 
-@media (max-width: 760px) {
+@media (max-width: 900px) {
   .auth-view { grid-template-columns: 1fr; }
   .auth-brand-panel { padding: 38px 28px 30px; }
   .auth-brand-panel h1 { font-size: 2.1rem; }
@@ -1168,41 +1174,38 @@ input:focus-visible, select:focus-visible, textarea:focus-visible {
   .day-bar, .group-bar { flex-direction: column; align-items: stretch; }
   .day-tabs, .group-pills, .group-actions { justify-content: center; }
   .rides-grid { grid-template-columns: 1fr; }
-  .car-svg { width: min(220px, 80%); }
+  .car-svg { width: min(300px, 96%); }
 }
 
 /* ================= DARK MODE ================= */
 
 @media (prefers-color-scheme: dark) {
   :root {
-    --bg: oklch(0.16 0.02 260);
-    --surface: oklch(0.22 0.025 260);
-    --surface-2: oklch(0.27 0.025 260);
-    --border: oklch(0.32 0.02 260);
-    --border-strong: oklch(0.42 0.02 260);
-    --ink: oklch(0.93 0.01 250);
-    --ink-soft: oklch(0.72 0.015 250);
-    --primary: oklch(0.6 0.12 258);
-    --primary-bright: oklch(0.68 0.13 255);
-    --primary-hover: oklch(0.67 0.12 258);
-    --primary-soft: oklch(0.3 0.05 258);
-    --navy-deep: oklch(0.2 0.04 260);
-    --navy-deeper: oklch(0.14 0.03 262);
-    --danger: oklch(0.68 0.15 25);
+    --bg: oklch(0.17 0.015 262);
+    --surface: oklch(0.215 0.016 262);
+    --surface-2: oklch(0.265 0.016 262);
+    --border: oklch(0.34 0.014 262);
+    --border-strong: oklch(0.74 0.01 250);
+    --ink: oklch(0.95 0.005 250);
+    --ink-soft: oklch(0.745 0.012 250);
+    /* Di notte il navy si schiarisce, altrimenti sparisce nel fondo: qui il
+       riempimento porta inchiostro scuro sopra, non bianco. */
+    --primary: oklch(0.70 0.11 255);
+    --primary-bright: oklch(0.70 0.11 255);
+    --primary-hover: oklch(0.76 0.11 255);
+    --primary-soft: oklch(0.30 0.05 258);
+    --su-primary: oklch(0.15 0.014 262);
+    --primary-testo: oklch(0.80 0.09 255);
+    --navy-deep: oklch(0.215 0.016 262);
+    --navy-deeper: oklch(0.15 0.014 262);
+    --danger: oklch(0.70 0.15 25);
     --danger-soft: oklch(0.27 0.06 25);
-    --ok: oklch(0.6 0.11 165);
-    --ok-deep: oklch(0.72 0.1 165);
-    --ok-soft: oklch(0.26 0.05 165);
-    --shadow-1: 0 2px 8px oklch(0 0 0 / 0.35), 0 8px 24px oklch(0 0 0 / 0.35);
-    --shadow-2: 0 4px 14px oklch(0 0 0 / 0.4), 0 18px 44px oklch(0 0 0 / 0.45);
-    --glow: 0 6px 22px oklch(0.6 0.12 258 / 0.4);
-  }
-  body {
-    background:
-      radial-gradient(1200px 600px at 85% -10%, oklch(0.24 0.05 258 / 0.8), transparent 60%),
-      radial-gradient(900px 500px at -10% 110%, oklch(0.22 0.04 210 / 0.7), transparent 60%),
-      var(--bg);
-    background-attachment: fixed;
+    --ok: oklch(0.66 0.11 160);
+    --ok-deep: oklch(0.78 0.1 160);
+    --ok-soft: oklch(0.26 0.05 160);
+    --shadow-1: none;
+    --shadow-2: 0 8px 24px oklch(0 0 0 / 0.5);
+    --glow: none;
   }
   .auth-message { border-color: oklch(0.4 0.08 25); }
   .auth-message.ok { border-color: oklch(0.4 0.06 165); }
@@ -1215,9 +1218,7 @@ input:focus-visible, select:focus-visible, textarea:focus-visible {
   .car-wheel-steer { stroke: oklch(0.55 0.01 260); }
   .howto { border-color: var(--border-strong); }
   .toast { background: var(--surface-2); color: var(--ink); }
-  .bottom-nav { background: oklch(0.22 0.025 260 / 0.85); }
-  .nav-home-circle { border-color: var(--bg); }
-  .topbar { background: oklch(0.14 0.03 262 / 0.88); }
+  .topbar { background: var(--navy-deeper); }
 }
 
 /* ================= SICUREZZA DELLE PERSONE (C10) ================= */
@@ -1320,3 +1321,8 @@ input:focus-visible, select:focus-visible, textarea:focus-visible {
 @media (prefers-reduced-motion: reduce) {
   *, *::before, *::after { animation: none !important; transition: none !important; }
 }
+
+/* Le due azioni della giornata: stessa larghezza, una sotto l'altra. Prima ognuna
+   era larga quanto la sua etichetta, e due bottoni scalinati sembrano un caso. */
+.day-cta { display: grid; gap: var(--sp-2); margin-bottom: var(--sp-4); }
+.day-cta .btn { width: 100%; }

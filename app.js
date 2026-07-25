@@ -624,8 +624,22 @@ function switchView(view) {
   for (const v of VIEWS) {
     document.getElementById('view-' + v).classList.toggle('hidden', v !== view);
   }
-  document.querySelectorAll('.nav-item').forEach(b =>
-    b.classList.toggle('active', b.dataset.view === view));
+  // L'indicatore della navigazione si sposta sulla scheda attiva (C15): la sua
+  // posizione la passa il codice al CSS, letta dall'ordine vero dei pulsanti, per
+  // non tenere l'elenco delle viste scritto in due posti che possono divergere.
+  // Con prefers-reduced-motion il segno salta invece di scorrere: lo stato resta,
+  // il movimento no. E aria-current lo dice a chi non vede il segno.
+  const schede = [...document.querySelectorAll('.nav-item')];
+  schede.forEach((b, i) => {
+    const attiva = b.dataset.view === view;
+    b.classList.toggle('active', attiva);
+    if (attiva) {
+      b.setAttribute('aria-current', 'page');
+      document.querySelector('.bottom-nav')?.style.setProperty('--nav-i', i);
+    } else {
+      b.removeAttribute('aria-current');
+    }
+  });
   window.scrollTo({ top: 0 });
   if (view === 'history') loadHistory();
   if (view === 'stats') loadStats();

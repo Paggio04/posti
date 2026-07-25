@@ -527,26 +527,59 @@ riceve il passaggio senza le coordinate.
 
 ## Fase 5 — Abbellire e ottimizzare
 
-### C15 — Togliere l'aria di cosa generata
-**Il problema non è che sia brutta: è che sembra generata.** Aurora animata sull'accesso, nav
-flottante a pillola, tutto arrotondato, animazioni a molla, gradienti morbidi: è l'estetica
-predefinita delle interfacce fatte dall'AI in questi mesi. Nessun dettaglio è sbagliato, e proprio
-per questo nessuno è *suo*. Chi la apre non ricorda niente.
+### C15 — Togliere l'aria di cosa generata — *fatto; resta il giudizio a occhio su un telefono vero*
 
-**Cosa si fa:**
-1. **Togliere gli effetti che non dicono niente**: aurora, bagliori, gradienti decorativi. Sono
-   costati righe di CSS e non distinguono l'app da altre mille.
-2. **Scegliere un carattere tipografico vero** e portarne il peso: la tipografia è il modo più
-   economico di avere un'identità, e oggi è quella di sistema.
-3. **Fare dell'auto la protagonista.** L'SVG dei sedili è l'unica cosa qui dentro che nessun altro
-   ha: è disegnata su misura per questo problema. Oggi è un elemento fra tanti dentro una scheda.
-4. **Un accento solo, deciso**, al posto della palette morbida buona per qualsiasi cosa.
-5. **Testi con una voce.** "Bentornato", "Accedi per vedere chi guida oggi" sono corretti e
-   anonimi: è il registro predefinito. Questa è un'app per una comitiva di amici, può parlare come loro.
-6. **Stati vuoti disegnati**, non icona grigia centrata con frase gentile.
+**Vincoli dati dal proprietario:** il colore principale resta un **blu navy**, e i bordi degli
+elementi restano **leggermente tondeggianti**. Tutto il resto rifatto.
 
-**Fatto quando:** copro il logo e il nome con un dito, mostro uno screenshot a qualcuno, e si
-capisce lo stesso che è questa app e non un'altra. Prima e dopo affiancati.
+Cosa è cambiato, e perché ognuna era un tell:
+
+1. **Aurora, gradienti e vetro: via.** Due macchie radiali animate sull'accesso, due sul fondo
+   pagina (anche di notte), dieci `linear-gradient`, cinque `backdrop-filter`, un `--glow` e una
+   `--spring`. Contati e portati a zero. Il pannello dell'accesso è inchiostro pieno.
+2. **Tipografia vera, e nostra.** IBM Plex Sans (400/600/700) e Plex Mono (500) **nel repo**, non
+   da un CDN. Tre ragioni in quest'ordine: l'informativa dichiara Supabase e Netlify come
+   responsabili e nessun altro, mentre un font di Google significa il browser che chiama Google e
+   gli dice l'IP di chi apre l'app; la CSP **perde** due voci (`fonts.googleapis.com`,
+   `fonts.gstatic.com`) invece di guadagnarne; e la prima schermata non aspetta una richiesta
+   esterna. Il mono non è un vezzo: ore, posti e codici del gruppo sono i numeri per cui l'app
+   esiste, e in tabellare stanno in colonna.
+3. **Un colore principale solo.** Prima erano `--primary`, `--primary-bright`, `--primary-hover`,
+   `--primary-soft` più due navy, mescolati in gradienti. Ora un navy: `#224271`, bianco sopra a
+   **10.1:1**, e lo stesso valore come testo su carta a **9.4:1** — quindi non serve una seconda
+   variante per i link.
+4. **Contrasti calcolati, non stimati.** Inchiostro su carta **16.1:1**, secondario **7.2:1**.
+   Trovato così un difetto che a occhio non si vede su un buon schermo: dieci punti usavano
+   l'accento pieno come *colore del testo*, che sul fondo chiaro fa **2.66:1**. Regola del sistema,
+   ora scritta: **l'accento si riempie, non si scrive.**
+5. **L'auto è la protagonista**: da `min(200px, 72%)` a `min(268px, 92%)`, e `min(300px, 96%)` sul
+   telefono.
+6. **La navigazione dice dove sei, non "guardami".** Era una pillola che galleggiava, con il tondo
+   di mezzo rialzato e un anello che pulsava. Ora è una barra appoggiata al bordo, con un segno che
+   **si sposta** sulla scheda attiva — la posizione la passa il codice al CSS leggendo l'ordine vero
+   dei pulsanti, così l'elenco delle viste non vive in due posti. Lo stato non sta nel colore da
+   solo: posizione del segno, peso del testo, `aria-current`.
+7. **Stati vuoti disegnati.** Non più icona grigia centrata con frase gentile: un perimetro
+   tratteggiato — il posto che manca — con il segno piccolo in cima e il testo allineato a sinistra,
+   come un avviso stampato.
+8. **Elenchi invece di schede.** I tre passi dell'accesso e il pannello "come funziona" erano
+   griglie di schede con pallini numerati: ora sono elenchi stampati, righe sottili, numeri in mono.
+9. **Ritmo e scala.** Una scala di spazi (`--sp-1`…`--sp-6`) al posto dei 12-20px su tutto, e una
+   scala tipografica fissa a passo 1.2. I pesi 800 sono diventati 700, che è il peso che il font
+   ha davvero: un 800 lo faceva ingrassare al browser.
+10. **Una colonna sola.** Barra in alto, contenuto e navigazione condividono `--colonna: 920px`.
+    Prima il marchio stava al bordo dello schermo e le schede al centro, cioè due griglie nella
+    stessa pagina.
+
+**Simmetria misurata, non guardata**, a tre larghezze: telefono 390, tablet 820, desktop 1440. Il
+contenuto ha lo stesso margine a sinistra e a destra (260/260 sul desktop), marchio e prima voce
+della navigazione partono dallo stesso punto del contenuto, l'indicatore è esattamente un quinto
+della colonna, e **nessuna vista ha scroll orizzontale**. La soglia del tablet è salita da 760 a
+900px: a 820 l'accesso restava a due colonne da 400px con dentro una scheda da 424.
+
+**Fatto quando:** coperto il logo e il nome con un dito, si capisce che è questa app. **Prima e dopo
+sono in `docs/prima-dopo/`.** Quello che da qui non si può fare è il giudizio finale: se somigli
+davvero alla comitiva lo dici tu, guardandola su un telefono in mano.
 
 ### C16 — Peso e velocità sul telefono
 1200 righe di CSS e 1311 di JS senza build, più supabase-js da CDN. Misurare prima di ottimizzare:

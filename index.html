@@ -5,13 +5,10 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>WeTransport — organizza i passaggi della tua comitiva</title>
   <meta name="description" content="Chi guida pubblica la propria auto, gli altri prenotano il posto. I passaggi del tuo gruppo, senza caos." />
-  <link rel="preconnect" href="https://fonts.googleapis.com" />
-  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
-  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet" />
   <link rel="stylesheet" href="style.css" />
   <link rel="manifest" href="manifest.json" />
   <link rel="icon" href="icon.svg" type="image/svg+xml" />
-  <meta name="theme-color" content="#14243d" />
+  <meta name="theme-color" content="#141b26" />
   <meta name="color-scheme" content="light dark" />
 
   <!-- Netlify serve l'informativa sia come /privacy sia come /privacy.html, entrambe con
@@ -84,11 +81,11 @@
       <div class="auth-brand-inner">
         <div class="auth-logo"><svg width="44" height="44"><use href="#i-car"/></svg></div>
         <h1>WeTransport</h1>
-        <p class="auth-tagline">I passaggi del tuo gruppo, senza caos. Chi guida pubblica la propria auto, gli altri scelgono il posto.</p>
+        <p class="auth-tagline">Nessuno deve più chiedere &#171;allora chi passa a prendermi?&#187;. Chi guida mette l’auto, gli altri si prendono un sedile.</p>
         <ul class="auth-steps">
-          <li><span>1</span> Crea il gruppo e invita gli amici</li>
-          <li><span>2</span> Chi guida pubblica la propria auto</li>
-          <li><span>3</span> Gli altri toccano un sedile e salgono</li>
+          <li><span>1</span> Fai la comitiva e passi il codice agli amici</li>
+          <li><span>2</span> Chi guida mette l’auto e dice quanti posti ha</li>
+          <li><span>3</span> Gli altri toccano il sedile che vogliono</li>
         </ul>
       </div>
     </div>
@@ -101,8 +98,8 @@
           <span class="auth-switch-slider" aria-hidden="true"></span>
         </div>
 
-        <h2 id="auth-title">Bentornato</h2>
-        <p id="auth-subtitle" class="auth-subtitle">Accedi per vedere chi guida oggi.</p>
+        <h2 id="auth-title">Chi guida oggi</h2>
+        <p id="auth-subtitle" class="auth-subtitle">Entra e vedi che auto ci sono, e se c’è posto per te.</p>
 
         <div class="oauth-buttons">
           <button type="button" id="oauth-google" class="btn btn-oauth">
@@ -337,7 +334,7 @@
     <nav class="bottom-nav" aria-label="Navigazione principale">
       <button class="nav-item" data-view="history" aria-label="Storico"><svg width="21" height="21"><use href="#i-history"/></svg><span>Storico</span></button>
       <button class="nav-item" data-view="groups" aria-label="Gruppi"><svg width="21" height="21"><use href="#i-users"/></svg><span>Gruppi</span></button>
-      <button class="nav-item nav-home active" data-view="home" aria-label="Home"><span class="nav-home-circle"><svg width="24" height="24"><use href="#i-car"/></svg></span><span>Home</span></button>
+      <button class="nav-item active" data-view="home" aria-label="Home" aria-current="page"><svg width="21" height="21"><use href="#i-car"/></svg><span>Oggi</span></button>
       <button class="nav-item" data-view="stats" aria-label="Statistiche"><svg width="21" height="21"><use href="#i-chart"/></svg><span>Statistiche</span></button>
       <button class="nav-item" data-view="profile" aria-label="Profilo"><svg width="21" height="21"><use href="#i-user"/></svg><span>Profilo</span></button>
     </nav>
