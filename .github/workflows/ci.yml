@@ -12,58 +12,181 @@ jobs:
       - uses: actions/checkout@v4
       - uses: actions/setup-node@v4
         with:
-          node-version: 20
+          node-version: 24
+
+      - name: Dipendenze di sviluppo
+        run: npm ci
 
       - name: Sintassi JavaScript
         run: |
           node --check app.js
           node --check config.js
+          node --check playwright.config.js
 
-      - name: Validazione HTML
-        run: npx --yes html-validate index.html || true
+      - name: Lint JavaScript (bloccante)
+        run: npm run lint
 
-      - name: Lint JavaScript (regole base, bloccanti)
-        run: |
-          npm init -y > /dev/null
-          npm install --no-save eslint@9 > /dev/null
-          cat > eslint.config.mjs <<'EOF'
-          export default [
-            {
-              files: ["app.js", "config.js"],
-              languageOptions: { ecmaVersion: 2023, sourceType: "module",
-                globals: { document: "readonly", window: "readonly", localStorage: "readonly",
-                  navigator: "readonly", Notification: "readonly", Intl: "readonly",
-                  confirm: "readonly", prompt: "readonly", alert: "readonly",
-                  setTimeout: "readonly", clearTimeout: "readonly", console: "readonly", Event: "readonly" } },
-              rules: {
-                "no-undef": "error",
-                "no-unused-vars": ["error", { "args": "none" }],
-                "no-eval": "error",
-                "eqeqeq": ["error", "smart"]
-              }
-            }
-          ]
-          EOF
-          npx eslint app.js config.js
+      - name: Validazione HTML (bloccante)
+        run: npm run validate
 
       - name: Nessun segreto committato
         run: |
           ! grep -rEn "sb_secret|service_role|SUPABASE_SERVICE" --include='*.js' --include='*.html' --include='*.toml' . || (echo "Trovata chiave segreta nel repo" && exit 1)
 
-  e2e:
+  # Le migrazioni devono ricreare il backend da zero, e devono poter essere rilanciate
+  # senza rompersi. Il vecchio supabase-setup.sql non faceva ne' l'una ne' l'altra cosa.
+  # Vedi docs/ROADMAP.md, cantiere C2.
+  schema:
     runs-on: ubuntu-latest
-    # Smoke test sul sito live (dopo il deploy Netlify, che parte allo stesso push)
+    services:
+      postgres:
+        image: postgres:16
+        env:
+          POSTGRES_PASSWORD: postgres
+        options: >-
+          --health-cmd pg_isready --health-interval 5s --health-timeout 5s --health-retries 10
+        ports:
+          - 5432:5432
+    env:
+      PGHOST: localhost
+      PGUSER: postgres
+      PGPASSWORD: postgres
+      PGDATABASE: postgres
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Parti da un database vuoto
+        run: psql -v ON_ERROR_STOP=1 -q -f supabase/test/stub-supabase.sql
+
+      - name: Applica le migrazioni in ordine
+        run: |
+          for f in supabase/migrations/*.sql; do
+            echo "-> $f"
+            psql -v ON_ERROR_STOP=1 -q -f "$f"
+          done
+
+      - name: Riapplicale (devono essere ripetibili)
+        run: |
+          for f in supabase/migrations/*.sql; do
+            psql -v ON_ERROR_STOP=1 -q -f "$f"
+          done
+
+      - name: Le comitive sono davvero separate
+        run: psql -v ON_ERROR_STOP=1 -q -f supabase/test/verifica-isolamento.sql
+
+      - name: Aggiornamento dal vecchio schema, senza perdere dati
+        run: |
+          psql -v ON_ERROR_STOP=1 -q -c "create database aggiornamento"
+          export PGDATABASE=aggiornamento
+          psql -v ON_ERROR_STOP=1 -q -f supabase/test/stub-supabase.sql
+          for f in supabase/migrations/*.sql; do
+            case "$f" in *010_*) continue;; esac
+            psql -v ON_ERROR_STOP=1 -q -f "$f"
+          done
+          psql -v ON_ERROR_STOP=1 -q -c "grant usage on schema public to authenticated; grant all on all tables in schema public to authenticated"
+          psql -v ON_ERROR_STOP=1 -q -f supabase/test/dati-prima-di-010.sql
+          psql -v ON_ERROR_STOP=1 -q -f supabase/migrations/010_gruppo_obbligatorio.sql
+          psql -v ON_ERROR_STOP=1 -q -c "grant all on all tables in schema public to authenticated"
+          psql -v ON_ERROR_STOP=1 -q -f supabase/test/verifica-archivio-010.sql
+
+      - name: Ogni migrazione si e' registrata
+        run: |
+          attese=$(ls supabase/migrations/*.sql | wc -l)
+          registrate=$(psql -tAc "select count(*) from public.schema_migrations")
+          echo "file: $attese, registrate: $registrate"
+          [ "$attese" = "$registrate" ] || (echo "Una migrazione non si registra in schema_migrations" && exit 1)
+
+  # Smoke test sull'ANTEPRIMA della pull request, non sul sito vivo: se e' rosso,
+  # il merge (e quindi il deploy) non avviene. Vedi docs/ROADMAP.md, cantiere C1.
+  e2e-anteprima:
+    if: github.event_name == 'pull_request'
+    needs: checks
+    runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-node@v4
         with:
-          node-version: 20
+          node-version: 24
+
+      - name: Trova l'anteprima Netlify di questo commit
+        id: anteprima
+        uses: actions/github-script@v7
+        with:
+          script: |
+            // Netlify pubblica lo stato del deploy come commit status sul SHA della PR.
+            // Aspettiamo quello: cosi' i test girano sulla build giusta, non su una vecchia.
+            const sha = context.payload.pull_request.head.sha;
+            const scadenza = Date.now() + 10 * 60 * 1000;
+            const attesa = (ms) => new Promise((r) => setTimeout(r, ms));
+
+            while (Date.now() < scadenza) {
+              const { data } = await github.rest.repos.getCombinedStatusForRef({
+                owner: context.repo.owner, repo: context.repo.repo, ref: sha,
+              });
+              const st = data.statuses.find((s) => s.context.includes('netlify'));
+              if (st && st.state === 'success' && (st.target_url || '').includes('netlify.app')) {
+                core.info('Anteprima pronta: ' + st.target_url);
+                core.setOutput('url', st.target_url);
+                return;
+              }
+              if (st && (st.state === 'failure' || st.state === 'error')) {
+                core.setFailed('Deploy Netlify fallito: ' + (st.target_url || 'nessun dettaglio'));
+                return;
+              }
+              await attesa(15000);
+            }
+
+            // Nessuno stato da Netlify entro 10 minuti: puo' voler dire che l'integrazione
+            // con GitHub non e' attiva. Si prova l'indirizzo prevedibile, e lo si dice.
+            const url = `https://deploy-preview-${context.payload.pull_request.number}--wetransport.netlify.app`;
+            core.warning('Nessuno stato Netlify sul commit; provo ' + url);
+            core.setOutput('url', url);
+
+      - name: Attendi che l'anteprima risponda
+        run: |
+          for i in $(seq 1 40); do
+            codice=$(curl -s -o /dev/null -w '%{http_code}' "${{ steps.anteprima.outputs.url }}")
+            [ "$codice" = "200" ] && echo "Anteprima raggiungibile" && exit 0
+            echo "tentativo $i: HTTP $codice"
+            sleep 15
+          done
+          echo "Anteprima irraggiungibile: ${{ steps.anteprima.outputs.url }}"
+          exit 1
+
+      - name: Installa Playwright
+        run: |
+          npm ci
+          npx playwright install --with-deps chromium
+
+      - name: E2E sull'anteprima
+        env:
+          BASE_URL: ${{ steps.anteprima.outputs.url }}
+          # I test sui flussi veri (tests/flussi.spec.js) girano solo se questi tre
+          # segreti esistono: servono due account di prova gia' confermati sul progetto
+          # Supabase. Senza, quei test si saltano e restano gli smoke.
+          WT_TEST_EMAIL_A: ${{ secrets.WT_TEST_EMAIL_A }}
+          WT_TEST_EMAIL_B: ${{ secrets.WT_TEST_EMAIL_B }}
+          WT_TEST_PASSWORD: ${{ secrets.WT_TEST_PASSWORD }}
+        run: npx playwright test
+
+  # Rete di sicurezza dopo la pubblicazione: verifica che il sito vivo stia in piedi.
+  # Non protegge dal deploy rotto (gira dopo): quel compito e' di e2e-anteprima.
+  e2e-produzione:
+    if: github.event_name == 'push'
+    needs: checks
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 24
       - name: Attendi il deploy Netlify
         run: sleep 60
       - name: Installa Playwright
         run: |
-          npm init -y > /dev/null
-          npm install --no-save @playwright/test > /dev/null
+          npm ci
           npx playwright install --with-deps chromium
-      - name: Smoke E2E sul sito live
-        run: npx playwright test tests/ --reporter=list
+      - name: Smoke E2E sul sito vivo
+        env:
+          BASE_URL: https://wetransport.netlify.app
+        run: npx playwright test

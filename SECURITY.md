@@ -16,8 +16,8 @@ ogni area, cosa è implementato, dove, e cosa è delegato o non applicabile.
 | HTTPS / TLS / certificati | ✅ (delegato) | Netlify: TLS automatico (Let's Encrypt), redirect HTTPS. HSTS 1 anno + `upgrade-insecure-requests` via `netlify.toml` |
 | Rate limiting / abuse prevention | ✅ (delegato) + vincoli | Supabase Auth ha rate limit integrati (signup, login, email). Abusi sui dati limitati dai vincoli DB: unique su posti/auto/richieste, trigger che rifiutano operazioni non valide |
 | Dependency scanning / patching | ✅ (minimale by design) | Zero dipendenze npm; unica dipendenza runtime è supabase-js v2 da CDN (major pinnata, patch automatiche). CSP limita le sorgenti script a jsdelivr |
-| Multi-tenancy / data isolation | ✅ | I gruppi sono i tenant: RLS `is_member()` isola passaggi, membri e richieste per gruppo; i codici invito non sono enumerabili (join solo via RPC) |
-| PII handling | ✅ | PII minima: email (solo in `auth.users`, mai esposta ad altri utenti) e nome visibile scelto dall'utente. Nessun tracker/analytics di terze parti |
+| Multi-tenancy / data isolation | ✅ | I gruppi sono i tenant: RLS `is_member()` isola passaggi, membri e richieste per gruppo; nessuna riga puo' esistere fuori da un gruppo (`group_id` non nullo); scrivere in un gruppo richiede di esserne membro; i codici invito non sono enumerabili (join solo via RPC). Verificato in CI da `supabase/test/verifica-isolamento.sql` |
+| PII handling | ✅ | PII minima: email (solo in `auth.users`, mai esposta ad altri utenti) e nome visibile scelto dall'utente, leggibile **solo** da chi condivide una comitiva (policy `profiles read`, migrazione 011). Nessun tracker/analytics di terze parti |
 | Data retention / cancellazione | ✅ | Eliminando l'account (`auth.users`) tutto cascata via FK `on delete cascade`: profilo, auto, posti, richieste, commenti, gruppi posseduti |
 | Compliance (GDPR) | ⚠️ parziale | Dati EU-hostabili (regione progetto Supabase), diritto all'oblio via cascade. Mancano: privacy policy pubblicata e processo formale di export dati — da fare prima di uso oltre la cerchia di amici |
 | Audit trail / log tamper-evident | ✅ (delegato) | Log auth e API nella dashboard Supabase (non modificabili dal client); ogni riga ha `created_at`; Postgres WAL. Nessun log applicativo custom: non necessario a questa scala |
@@ -31,15 +31,15 @@ ogni area, cosa è implementato, dove, e cosa è delegato o non applicabile.
 | Circuit breaker / fallback | ✅ (proporzionato) | `loadToken` scarta risposte fuori ordine; realtime che cade ⇒ l'app resta funzionante con refresh manuale (fallback implicito); toast "connessione instabile" |
 | Race condition / concorrenza | ✅ | Risolte nel DB, non nel client: unique `(ride_id, seat_index)` ⇒ due tap sullo stesso sedile, uno solo vince; trigger transazionali per i vincoli incrociati |
 | Caching / invalidation | ✅ (semplice by design) | Nessuna cache applicativa: la verità è sempre il DB, invalidazione via realtime. Asset statici: cache CDN Netlify invalidata a ogni deploy |
-| Disaster recovery | ✅ (delegato) | Codice: Git/GitHub. DB: backup giornalieri Supabase (piano free: 7 giorni). Schema ricreabile da zero con `supabase-setup.sql`. Hosting ricreabile in minuti (repo → Netlify) |
+| Disaster recovery | ✅ (delegato) | Codice: Git/GitHub. DB: backup giornalieri Supabase (piano free: 7 giorni). Schema ricreabile da zero applicando `supabase/migrations/` in ordine (verificato dalla CI a ogni push, job `schema`). Hosting ricreabile in minuti (repo → Netlify) |
 
 ## Testing e processo
 
 | Area | Stato | Dove / come |
 |---|---|---|
 | CI con soglie bloccanti | ✅ | GitHub Actions (`.github/workflows/ci.yml`): sintassi JS, ESLint (no-undef, no-unused-vars, no-eval bloccanti), scan segreti. Fallisce ⇒ niente merge sereno |
-| Integration / E2E testing | ⚠️ manuale | Verifica manuale su sito live a ogni deploy (auth, prenotazione, realtime). E2E automatizzato (Playwright) è il prossimo investimento sensato se il progetto cresce |
-| Regression testing | ⚠️ manuale | Coperto da lint + smoke test manuale; nessuna suite automatica (rapporto costo/beneficio a questa scala) |
+| Integration / E2E testing | ✅ | Playwright sull'**anteprima** della PR, prima del merge: smoke su accesso/privacy sempre, e il flusso completo a due utenti (crea comitiva → pubblica auto → entra col codice → prenota il sedile → realtime) quando ci sono i segreti degli account di prova. Più i controlli sullo schema e sull'isolamento fra comitive nel job `schema` |
+| Regression testing | ✅ (proporzionato) | Lint e validazione HTML bloccanti, migrazioni riapplicate da zero a ogni push, isolamento fra comitive verificato in CI, flusso completo a due utenti su anteprima. Nessun test unitario: a questa scala il valore sta nei percorsi interi |
 | Load / stress / chaos testing | ➖ N/A | Carico atteso: decine di utenti. Postgres/Netlify reggono ordini di grandezza in più; test di carico non giustificato |
 | Code review | ✅ (processo) | Sviluppo su `main` con commit atomici e messaggi descrittivi; per più contributor: branch + PR con CI verde obbligatoria |
 

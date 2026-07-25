@@ -1,0 +1,20 @@
+{
+  "name": "wetransport",
+  "version": "1.0.0",
+  "private": true,
+  "description": "Organizza i passaggi in macchina della comitiva. Sito statico: queste dipendenze sono solo strumenti di sviluppo, non servono per servire l'app.",
+  "scripts": {
+    "lint": "eslint app.js config.js",
+    "validate": "html-validate index.html privacy.html",
+    "test:e2e": "playwright test",
+    "check": "npm run lint && npm run validate"
+  },
+  "devDependencies": {
+    "@playwright/test": "^1.62.0",
+    "eslint": "^10.8.0",
+    "html-validate": "^11.5.6"
+  },
+  "engines": {
+    "node": ">=22"
+  }
+}

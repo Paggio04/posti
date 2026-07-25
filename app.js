@@ -29,7 +29,8 @@ let myAvatar = null;
 let isAdmin = false;
 let currentDate = todayISO();
 let myGroups = [];
-let currentGroupId = null; // null = Tutti
+let currentGroupId = null; // sempre un gruppo vero quando l'utente ne ha almeno uno
+const ULTIMO_GRUPPO = 'wt_ultimo_gruppo'; // quale comitiva stavo guardando
 let realtimeChannel = null;
 let rendered = false;
 
@@ -47,6 +48,11 @@ function addDaysISO(iso, days) {
 }
 
 // L'auto di oggi è già partita?
+// Un profilo puo' non essere leggibile: da 011 si vedono solo le persone con cui si
+// condivide una comitiva, ma le auto e le prenotazioni di chi se n'e' andato restano
+// nello storico. Senza questa rete, l'incorporamento nullo mandava in errore la pagina.
+function nomeDi(profilo) { return profilo?.display_name ?? 'Ex membro'; }
+
 function hasDeparted(ride) {
   if (ride.ride_date !== todayISO() || !ride.depart_time) return false;
   const [h, m] = ride.depart_time.split(':').map(Number);
@@ -286,8 +292,15 @@ document.getElementById('profile-rename').addEventListener('click', async () => 
 function renderProfile() {
   const av = document.getElementById('profile-avatar');
   if (myAvatar) {
+    // Costruito con il DOM e non con innerHTML: l'indirizzo dell'avatar arriva da
+    // fuori (metadati OAuth, o profilo modificabile via API) e in una stringa HTML
+    // basterebbe una virgoletta per uscire dall'attributo.
     av.textContent = '';
-    av.innerHTML = `<img src="${myAvatar}" alt="" referrerpolicy="no-referrer" />`;
+    const img = document.createElement('img');
+    img.src = myAvatar;
+    img.alt = '';
+    img.referrerPolicy = 'no-referrer';
+    av.appendChild(img);
   } else {
     av.textContent = initials(myName || '?');
   }
@@ -330,18 +343,32 @@ async function loadGroups() {
     .eq('user_id', currentUser.id);
   if (error) { console.error(error); return; }
   myGroups = (data ?? []).map(r => r.group).filter(Boolean);
-  if (currentGroupId && !myGroups.some(g => g.id === currentGroupId)) currentGroupId = null;
-  document.getElementById('welcome').classList.toggle('hidden', myGroups.length > 0);
+
+  // Ogni passaggio appartiene a una comitiva: senza comitiva non c'e' niente da mostrare.
+  // Si riprende quella che si stava guardando; se non c'e' piu', la prima disponibile.
+  const valido = (id) => id && myGroups.some(g => g.id === id);
+  if (!valido(currentGroupId)) {
+    const ricordato = localStorage.getItem(ULTIMO_GRUPPO);
+    currentGroupId = valido(ricordato) ? ricordato : (myGroups[0]?.id ?? null);
+  }
+
+  const senzaGruppi = myGroups.length === 0;
+  document.getElementById('welcome').classList.toggle('hidden', !senzaGruppi);
+  document.getElementById('group-bar').classList.toggle('hidden', senzaGruppi);
+  document.getElementById('day-bar').classList.toggle('hidden', senzaGruppi);
+  if (senzaGruppi) {
+    ridesList.innerHTML = '';
+    emptyMessage.classList.add('hidden');
+    document.getElementById('day-stats').classList.add('hidden');
+    document.getElementById('turn-hint').classList.add('hidden');
+    walkersCard.classList.add('hidden');
+    offerCard.classList.add('hidden');
+  }
   renderGroupBar();
 }
 
 function renderGroupBar() {
   groupPills.innerHTML = '';
-  const all = document.createElement('button');
-  all.className = 'tab' + (currentGroupId === null ? ' active' : '');
-  all.textContent = 'Tutti';
-  all.addEventListener('click', () => selectGroup(null));
-  groupPills.appendChild(all);
   for (const g of myGroups) {
     const b = document.createElement('button');
     b.className = 'tab' + (currentGroupId === g.id ? ' active' : '');
@@ -353,6 +380,7 @@ function renderGroupBar() {
 
 function selectGroup(groupId) {
   currentGroupId = groupId;
+  if (groupId) localStorage.setItem(ULTIMO_GRUPPO, groupId);
   renderGroupBar();
   loadRides();
 }
@@ -388,18 +416,18 @@ async function renderGroupsView() {
         for (const m of data ?? []) {
           const chip = document.createElement('span');
           chip.className = 'history-chip';
-          chip.textContent = m.profile.display_name + (m.user_id === currentUser.id ? ' (tu)' : '');
+          chip.textContent = nomeDi(m.profile) + (m.user_id === currentUser.id ? ' (tu)' : '');
           if (canKick && m.user_id !== currentUser.id) {
             const kick = document.createElement('button');
             kick.className = 'chip-kick';
             kick.textContent = '✕';
-            kick.title = `Rimuovi ${m.profile.display_name} dal gruppo`;
+            kick.title = `Rimuovi ${nomeDi(m.profile)} dal gruppo`;
             kick.addEventListener('click', async () => {
-              if (!confirm(`Rimuovere ${m.profile.display_name} dal gruppo "${g.name}"?`)) return;
+              if (!confirm(`Rimuovere ${nomeDi(m.profile)} dal gruppo "${g.name}"?`)) return;
               const { error } = await supabase.from('group_members').delete()
                 .eq('group_id', g.id).eq('user_id', m.user_id);
               if (error) { toast(friendlyError(error)); return; }
-              toast(`${m.profile.display_name} rimosso dal gruppo.`);
+              toast(`${nomeDi(m.profile)} rimosso dal gruppo.`);
               renderGroupsView();
             });
             chip.appendChild(kick);
@@ -439,7 +467,9 @@ async function renderGroupsView() {
     leave.textContent = 'Esci dal gruppo';
     leave.addEventListener('click', async () => {
       if (!confirm(`Vuoi uscire dal gruppo "${g.name}"?`)) return;
-      await supabase.from('group_members').delete().eq('group_id', g.id).eq('user_id', currentUser.id);
+      const { error } = await supabase.from('group_members').delete()
+        .eq('group_id', g.id).eq('user_id', currentUser.id);
+      if (error) { toast(friendlyError(error)); return; }
       await loadGroups();
       renderGroupsView();
       loadRides();
@@ -455,12 +485,12 @@ async function renderGroupsView() {
 const DAY_FMT = new Intl.DateTimeFormat('it-IT', { weekday: 'long', day: 'numeric', month: 'long' });
 
 function groupLabel() {
-  return currentGroupId
-    ? `Gruppo: ${myGroups.find(g => g.id === currentGroupId)?.name ?? ''}`
-    : 'Tutti i passaggi pubblici';
+  const g = myGroups.find(x => x.id === currentGroupId);
+  return g ? `Gruppo: ${g.name}` : 'Nessuna comitiva';
 }
 
 async function loadHistory() {
+  if (!currentGroupId) return;
   const list = document.getElementById('history-list');
   document.querySelector('#view-history .view-subtitle').textContent =
     `Chi ha guidato e chi era a bordo · ${groupLabel()} (si cambia dalla Home)`;
@@ -469,7 +499,7 @@ async function loadHistory() {
     .from('rides')
     .select('ride_date, origin, destination, depart_time, driver:profiles!rides_driver_id_fkey(display_name), seat_claims(passenger:profiles!seat_claims_passenger_id_fkey(display_name))')
     .lt('ride_date', todayISO());
-  hq = currentGroupId ? hq.eq('group_id', currentGroupId) : hq;
+  hq = hq.eq('group_id', currentGroupId);
   const { data, error } = await hq
     .order('ride_date', { ascending: false })
     .order('depart_time', { ascending: true, nullsFirst: false })
@@ -501,7 +531,7 @@ async function loadHistory() {
     people.className = 'history-passengers';
     const drv = document.createElement('span');
     drv.className = 'history-chip driver';
-    drv.textContent = `${r.driver.display_name} (guidava)`;
+    drv.textContent = `${nomeDi(r.driver)} (guidava)`;
     people.appendChild(drv);
     if (r.seat_claims.length === 0) {
       const none = document.createElement('span');
@@ -512,7 +542,7 @@ async function loadHistory() {
     for (const c of r.seat_claims) {
       const chip = document.createElement('span');
       chip.className = 'history-chip';
-      chip.textContent = c.passenger.display_name;
+      chip.textContent = nomeDi(c.passenger);
       people.appendChild(chip);
     }
     item.appendChild(people);
@@ -522,6 +552,7 @@ async function loadHistory() {
 
 // --- Vista Statistiche ---
 async function loadStats() {
+  if (!currentGroupId) return;
   const box = document.getElementById('stats-content');
   document.querySelector('#view-stats .view-subtitle').textContent =
     `I turni parlano da soli · ${groupLabel()} (si cambia dalla Home)`;
@@ -529,7 +560,7 @@ async function loadStats() {
   let sq = supabase
     .from('rides')
     .select('driver_id, fuel_per_person, driver:profiles!rides_driver_id_fkey(display_name), seat_claims(passenger_id, passenger:profiles!seat_claims_passenger_id_fkey(display_name))');
-  sq = currentGroupId ? sq.eq('group_id', currentGroupId) : sq;
+  sq = sq.eq('group_id', currentGroupId);
   const { data, error } = await sq;
   if (error || !data) { box.innerHTML = '<p class="view-subtitle">Impossibile caricare le statistiche.</p>'; return; }
 
@@ -538,16 +569,16 @@ async function loadStats() {
   const fuelIn = new Map();  // guidatore -> {name, n: € raccolti}
   const fuelOut = new Map(); // passeggero -> {name, n: € versati}
   for (const r of data) {
-    const d = drives.get(r.driver_id) ?? { name: r.driver.display_name, n: 0 };
+    const d = drives.get(r.driver_id) ?? { name: nomeDi(r.driver), n: 0 };
     d.n++; drives.set(r.driver_id, d);
     const fuel = Number(r.fuel_per_person) || 0;
     for (const c of r.seat_claims) {
-      const p = ridesTaken.get(c.passenger_id) ?? { name: c.passenger.display_name, n: 0 };
+      const p = ridesTaken.get(c.passenger_id) ?? { name: nomeDi(c.passenger), n: 0 };
       p.n++; ridesTaken.set(c.passenger_id, p);
       if (fuel > 0) {
-        const fi = fuelIn.get(r.driver_id) ?? { name: r.driver.display_name, n: 0 };
+        const fi = fuelIn.get(r.driver_id) ?? { name: nomeDi(r.driver), n: 0 };
         fi.n += fuel; fuelIn.set(r.driver_id, fi);
-        const fo = fuelOut.get(c.passenger_id) ?? { name: c.passenger.display_name, n: 0 };
+        const fo = fuelOut.get(c.passenger_id) ?? { name: nomeDi(c.passenger), n: 0 };
         fo.n += fuel; fuelOut.set(c.passenger_id, fo);
       }
     }
@@ -561,7 +592,7 @@ async function loadStats() {
     const max = rows[0]?.n || 1;
     return rows.map(r =>
       `<div class="stats-row${alt ? ' alt' : ''}">
-        <span class="stats-row-name">${r.name.replace(/</g, '&lt;')}</span>
+        <span class="stats-row-name">${escapeHtml(r.name)}</span>
         <span class="stats-row-bar-wrap"><span class="stats-row-bar" style="width:${(r.n / max) * 100}%"></span></span>
         <span class="stats-row-count">${r.n}</span>
       </div>`).join('') || '<p class="view-subtitle">Ancora nessun dato.</p>';
@@ -601,9 +632,8 @@ function setDate(date) {
 
 // Prenotando o pubblicando, la richiesta "cerco un passaggio" si toglie da sola
 async function clearMyRequest() {
-  let q = supabase.from('ride_requests').delete().eq('user_id', currentUser.id).eq('ride_date', currentDate);
-  q = currentGroupId ? q.eq('group_id', currentGroupId) : q.is('group_id', null);
-  await q;
+  await supabase.from('ride_requests').delete()
+    .eq('user_id', currentUser.id).eq('ride_date', currentDate).eq('group_id', currentGroupId);
 }
 
 // --- Offri passaggio ---
@@ -666,7 +696,7 @@ rideForm.addEventListener('submit', async (e) => {
   toast(published === 1
     ? 'Auto pubblicata: ora gli amici possono prenotare il posto.'
     : `Auto pubblicata per ${published} settimane.`);
-  clearMyRequest();
+  await clearMyRequest();
   loadRides();
 });
 
@@ -723,6 +753,13 @@ document.getElementById('howto-close').addEventListener('click', () => {
   localStorage.setItem('posti-howto-done', '1');
 });
 
+// I nomi finiscono dentro stringhe HTML in due punti (statistiche e "tocca a te
+// guidare"). Prima si sostituiva solo "<": bastava una & per rompere il testo.
+function escapeHtml(s) {
+  return String(s).replace(/[&<>"']/g, (c) =>
+    ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
+}
+
 function hueFor(id) {
   let h = 0;
   for (const c of id) h = (h * 31 + c.charCodeAt(0)) % 360;
@@ -742,6 +779,8 @@ let currentRequests = [];
 let loadToken = 0;
 let retryCount = 0;
 async function loadRides(silent = false) {
+  // Senza comitiva non c'e' niente da caricare: la Home mostra il benvenuto (vedi loadGroups).
+  if (!currentGroupId) return;
   const token = ++loadToken;
   if (!silent) {
     ridesList.innerHTML = '<div class="skeleton"></div><div class="skeleton"></div>';
@@ -752,13 +791,13 @@ async function loadRides(silent = false) {
     .select('*, driver:profiles!rides_driver_id_fkey(display_name, avatar_url), seat_claims(seat_index, passenger_id, passenger:profiles!seat_claims_passenger_id_fkey(display_name, avatar_url)), ride_comments(count), ride_waitlist(user_id, created_at, profile:profiles(display_name))')
     .eq('ride_date', currentDate)
     .order('depart_time', { ascending: true, nullsFirst: false });
-  query = currentGroupId ? query.eq('group_id', currentGroupId) : query.is('group_id', null);
+  query = query.eq('group_id', currentGroupId);
 
   let reqQuery = supabase
     .from('ride_requests')
     .select('user_id, profile:profiles(display_name)')
     .eq('ride_date', currentDate);
-  reqQuery = currentGroupId ? reqQuery.eq('group_id', currentGroupId) : reqQuery.is('group_id', null);
+  reqQuery = reqQuery.eq('group_id', currentGroupId);
 
   const [{ data, error }, { data: reqs }] = await Promise.all([query, reqQuery]);
   if (token !== loadToken) return; // risposta vecchia, ignora
@@ -803,10 +842,10 @@ async function renderTurnHint() {
   const [lazyId, lazyN] = sorted[0];
   const maxN = sorted[sorted.length - 1][1];
   if (maxN - lazyN < 2) return; // turni già equi, niente frecciatine
-  const lazyName = members.find(m => m.user_id === lazyId)?.profile.display_name ?? '?';
+  const lazyName = nomeDi(members.find(m => m.user_id === lazyId)?.profile);
   el.innerHTML = lazyId === currentUser.id
     ? `🚗 Nelle ultime 4 settimane hai guidato ${lazyN === 0 ? 'zero volte' : `solo ${lazyN} ${lazyN === 1 ? 'volta' : 'volte'}`}: tocca a te metterci l'auto 👀`
-    : `👀 ${lazyName.replace(/</g, '&lt;')} ha guidato ${lazyN === 0 ? 'zero volte' : `solo ${lazyN} ${lazyN === 1 ? 'volta' : 'volte'}`} nelle ultime 4 settimane… i turni parlano da soli`;
+    : `👀 ${escapeHtml(lazyName)} ha guidato ${lazyN === 0 ? 'zero volte' : `solo ${lazyN} ${lazyN === 1 ? 'volta' : 'volte'}`} nelle ultime 4 settimane… i turni parlano da soli`;
   el.classList.remove('hidden');
 }
 
@@ -828,9 +867,8 @@ function updateDayCta(rides) {
 document.getElementById('request-toggle').addEventListener('click', async () => {
   const myReq = currentRequests.some(r => r.user_id === currentUser.id);
   if (myReq) {
-    let q = supabase.from('ride_requests').delete().eq('user_id', currentUser.id).eq('ride_date', currentDate);
-    q = currentGroupId ? q.eq('group_id', currentGroupId) : q.is('group_id', null);
-    await q;
+    await supabase.from('ride_requests').delete()
+      .eq('user_id', currentUser.id).eq('ride_date', currentDate).eq('group_id', currentGroupId);
     toast('Richiesta rimossa.');
   } else {
     const { error } = await supabase.from('ride_requests').insert({
@@ -851,16 +889,13 @@ async function renderWalkers(rides) {
   }
   const requesters = new Set(currentRequests.map(r => r.user_id));
 
-  let members = [];
-  if (currentGroupId) {
-    const { data } = await supabase
-      .from('group_members')
-      .select('user_id, profile:profiles(display_name)')
-      .eq('group_id', currentGroupId);
-    members = data ?? [];
-  } else {
-    members = currentRequests.map(r => ({ user_id: r.user_id, profile: r.profile }));
-  }
+  // Si arriva qui solo con una comitiva scelta (loadRides esce prima, altrimenti):
+  // il ramo "senza gruppo" e' sparito con C4.
+  const { data } = await supabase
+    .from('group_members')
+    .select('user_id, profile:profiles(display_name)')
+    .eq('group_id', currentGroupId);
+  const members = data ?? [];
 
   const walkers = members.filter(m => !seated.has(m.user_id));
   // chi cerca un passaggio prima di tutti
@@ -874,7 +909,7 @@ async function renderWalkers(rides) {
     const chip = document.createElement('span');
     const wants = requesters.has(w.user_id);
     chip.className = 'walker-chip' + (wants ? ' request' : '');
-    chip.textContent = w.profile.display_name
+    chip.textContent = nomeDi(w.profile)
       + (w.user_id === currentUser.id ? ' (tu)' : '')
       + (wants ? ' · cerca un passaggio' : '');
     walkersList.appendChild(chip);
@@ -910,7 +945,7 @@ function buildCar(ride) {
   const isLong = ride.seats >= 5;
   const H = isLong ? 330 : 250;
   const svg = svgEl('svg', { viewBox: `0 0 190 ${H}`, class: 'car-svg', role: 'img' });
-  svg.setAttribute('aria-label', `Auto di ${ride.driver.display_name}`);
+  svg.setAttribute('aria-label', `Auto di ${nomeDi(ride.driver)}`);
 
   svg.appendChild(svgEl('rect', { x: 10, y: 10, width: 170, height: H - 20, rx: 46, class: 'car-body' }));
   svg.appendChild(svgEl('rect', { x: 30, y: 44, width: 130, height: 16, rx: 8, class: 'car-glass' }));
@@ -926,7 +961,7 @@ function buildCar(ride) {
   const isDriver = ride.driver_id === currentUser.id;
   const past = isPastDay() || hasDeparted(ride);
 
-  drawSeat(svg, DRIVER_POS, { kind: 'driver', label: initials(ride.driver.display_name), name: ride.driver.display_name, avatar: ride.driver.avatar_url });
+  drawSeat(svg, DRIVER_POS, { kind: 'driver', label: initials(nomeDi(ride.driver)), name: nomeDi(ride.driver), avatar: ride.driver?.avatar_url ?? null });
   svg.appendChild(svgEl('circle', { cx: DRIVER_POS.x, cy: DRIVER_POS.y - 32, r: 8, class: 'car-wheel-steer' }));
 
   const layout = SEAT_LAYOUTS[ride.seats];
@@ -937,9 +972,9 @@ function buildCar(ride) {
       const mine = claim.passenger_id === currentUser.id;
       const seat = drawSeat(svg, pos, {
         kind: mine ? 'mine' : 'taken',
-        label: initials(claim.passenger.display_name),
-        name: claim.passenger.display_name,
-        avatar: claim.passenger.avatar_url,
+        label: initials(nomeDi(claim.passenger)),
+        name: nomeDi(claim.passenger),
+        avatar: claim.passenger?.avatar_url ?? null,
         clickable: !past && (mine || isDriver || isAdmin),
       });
       if (!past && (mine || isDriver || isAdmin)) seat.addEventListener('click', () => releaseSeat(ride, claim, mine));
@@ -995,15 +1030,17 @@ async function claimSeat(ride, seatIndex) {
     else toast(friendlyError(error));
   } else {
     toast('Posto prenotato: sei a bordo.');
-    clearMyRequest();
+    await clearMyRequest();
   }
   loadRides();
 }
 
 async function releaseSeat(ride, claim, mine) {
-  const who = mine ? 'Vuoi scendere da questa auto?' : `Vuoi liberare il posto di ${claim.passenger.display_name}?`;
+  const who = mine ? 'Vuoi scendere da questa auto?' : `Vuoi liberare il posto di ${nomeDi(claim.passenger)}?`;
   if (!confirm(who)) return;
-  await supabase.from('seat_claims').delete().eq('ride_id', ride.id).eq('seat_index', claim.seat_index);
+  const { error } = await supabase.from('seat_claims').delete()
+    .eq('ride_id', ride.id).eq('seat_index', claim.seat_index);
+  if (error) { toast(friendlyError(error)); return; }
   toast(mine ? 'Sei sceso dall\'auto.' : 'Posto liberato.');
   loadRides();
 }
@@ -1020,7 +1057,7 @@ function renderRides(rides) {
     const totalFree = rides.reduce((n, r) => n + r.seats - r.seat_claims.length, 0);
     const aboard = rides.reduce((n, r) => n + 1 + r.seat_claims.length, 0);
     statsEl.innerHTML =
-      `<span class="stat-chip"><svg width="15" height="15"><use href="#i-car"/></svg><strong>${rides.length}</strong> ${rides.length === 1 ? 'auto' : 'auto'}</span>` +
+      `<span class="stat-chip"><svg width="15" height="15"><use href="#i-car"/></svg><strong>${rides.length}</strong> auto</span>` +
       `<span class="stat-chip"><svg width="15" height="15"><use href="#i-plus"/></svg><strong>${totalFree}</strong> posti liberi</span>` +
       `<span class="stat-chip"><svg width="15" height="15"><use href="#i-users"/></svg><strong>${aboard}</strong> a bordo</span>`;
 
@@ -1033,9 +1070,9 @@ function renderRides(rides) {
       for (const r of rides) {
         const freeN = r.seats - r.seat_claims.length;
         lines.push('');
-        lines.push(`🚗 ${r.driver.display_name} → ${r.destination}`
+        lines.push(`🚗 ${nomeDi(r.driver)} → ${r.destination}`
           + (r.depart_time ? ` (ore ${r.depart_time.slice(0, 5)})` : ''));
-        lines.push('A bordo: ' + (r.seat_claims.map(c => c.passenger.display_name).join(', ') || 'nessuno'));
+        lines.push('A bordo: ' + (r.seat_claims.map(c => nomeDi(c.passenger)).join(', ') || 'nessuno'));
         lines.push(freeN > 0 ? `Liberi: ${freeN} → prenota su ${SITE_URL}` : 'Al completo');
       }
       const text = lines.join('\n');
@@ -1076,7 +1113,7 @@ function renderRides(rides) {
     info.appendChild(sub);
     const drv = document.createElement('div');
     drv.className = 'ride-sub';
-    drv.textContent = `Guida ${ride.driver.display_name}`;
+    drv.textContent = `Guida ${nomeDi(ride.driver)}`;
     info.appendChild(drv);
     head.appendChild(info);
 
@@ -1088,7 +1125,7 @@ function renderRides(rides) {
     share.title = 'Condividi';
     const free = ride.seats - ride.seat_claims.length;
     const shareText =
-      `${ride.driver.display_name} guida verso ${ride.destination}` +
+      `${nomeDi(ride.driver)} guida verso ${ride.destination}` +
       (ride.depart_time ? ` alle ${ride.depart_time.slice(0, 5)}` : '') +
       ` (${ride.ride_date.split('-').reverse().join('/')})` +
       (free > 0 ? ` — ${free} posti disponibili.` : ' — auto al completo.') +
@@ -1108,7 +1145,9 @@ function renderRides(rides) {
       del.title = 'Annulla passaggio';
       del.addEventListener('click', async () => {
         if (!confirm('Annullare il passaggio? I passeggeri perderanno il posto.')) return;
-        await supabase.from('rides').delete().eq('id', ride.id);
+        const { error } = await supabase.from('rides').delete().eq('id', ride.id);
+        if (error) { toast(friendlyError(error)); return; }
+        toast('Passaggio annullato.');
         loadRides();
       });
       actions.appendChild(del);
@@ -1125,7 +1164,7 @@ function renderRides(rides) {
       for (const c of ride.seat_claims) {
         const chip = document.createElement('span');
         chip.className = 'history-chip' + (c.passenger_id === currentUser.id ? ' driver' : '');
-        chip.textContent = c.passenger.display_name;
+        chip.textContent = nomeDi(c.passenger);
         aboard.appendChild(chip);
       }
       card.appendChild(aboard);
@@ -1185,7 +1224,7 @@ function renderRides(rides) {
       const wl = document.createElement('div');
       wl.className = 'ride-sub waitlist-row';
       wl.textContent = '⏳ In attesa: ' + waitlist.map((w, i) =>
-        `${i + 1}. ${w.profile.display_name}${w.user_id === currentUser.id ? ' (tu)' : ''}`).join(' · ');
+        `${i + 1}. ${nomeDi(w.profile)}${w.user_id === currentUser.id ? ' (tu)' : ''}`).join(' · ');
       card.appendChild(wl);
     }
     if (!ridePast && ride.driver_id !== currentUser.id && !imAboard && (free === 0 || imWaiting)) {
@@ -1194,7 +1233,9 @@ function renderRides(rides) {
       wBtn.textContent = imWaiting ? 'Esci dalla lista d\'attesa' : 'Mettimi in lista d\'attesa';
       wBtn.addEventListener('click', async () => {
         if (imWaiting) {
-          await supabase.from('ride_waitlist').delete().eq('ride_id', ride.id).eq('user_id', currentUser.id);
+          const { error } = await supabase.from('ride_waitlist').delete()
+            .eq('ride_id', ride.id).eq('user_id', currentUser.id);
+          if (error) { toast(friendlyError(error)); return; }
           toast('Tolto dalla lista d\'attesa.');
         } else {
           const { error } = await supabase.from('ride_waitlist').insert({ ride_id: ride.id, user_id: currentUser.id });
@@ -1245,7 +1286,7 @@ async function loadComments(rideId, panel) {
     row.className = 'comment';
     const meta = document.createElement('span');
     meta.className = 'comment-meta';
-    meta.textContent = `${c.author.display_name} · ${TIME_FMT.format(new Date(c.created_at))}`;
+    meta.textContent = `${nomeDi(c.author)} · ${TIME_FMT.format(new Date(c.created_at))}`;
     row.appendChild(meta);
     const body = document.createElement('span');
     body.textContent = c.body;
@@ -1256,7 +1297,8 @@ async function loadComments(rideId, panel) {
       del.innerHTML = '<svg width="12" height="12"><use href="#i-x"/></svg>';
       del.title = 'Elimina commento';
       del.addEventListener('click', async () => {
-        await supabase.from('ride_comments').delete().eq('id', c.id);
+        const { error } = await supabase.from('ride_comments').delete().eq('id', c.id);
+        if (error) { toast(friendlyError(error)); return; }
         loadComments(rideId, panel);
       });
       row.appendChild(del);
@@ -1303,7 +1345,10 @@ async function render() {
     askNotifyPermission();
     subscribeRealtime();
     setDate(currentDate);
-    switchView('home');
+    // Solo se nessuna scheda e' gia' aperta. render() finisce dopo una catena di attese
+    // (profilo, gruppi): chi tocca una scheda mentre l'app carica si vedeva riportare
+    // alla Home, con il tocco annullato. Su telefono lento quella finestra dura secondi.
+    if (!document.querySelector('#app-shell .view:not(.hidden)')) switchView('home');
   } else if (realtimeChannel) {
     supabase.removeChannel(realtimeChannel);
     realtimeChannel = null;

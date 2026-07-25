@@ -1,0 +1,383 @@
+# Roadmap — da app della comitiva a prodotto aperto
+
+Questo file è il piano di lavoro di WeTransport: cosa vogliamo che diventi, in che ordine, e
+quando ogni pezzo si può dire finito. Nasce dall'intervista del 24/07/2026.
+
+Regola d'uso: un cantiere alla volta, su un branch, con il suo collaudo. Si aggiorna man mano.
+Il *perché* delle scelte architetturali sta in `docs/adr/`; qui sta il *cosa manca*.
+
+---
+
+## Obiettivo
+
+Portare WeTransport da **app privata di una comitiva** (oggi: online, funzionante, usata da
+nessuno) a **prodotto utilizzabile da chiunque**, senza mai lasciare l'app esposta nel frattempo.
+
+Due traguardi distinti, in quest'ordine:
+
+| | Traguardo | Vuol dire |
+|---|---|---|
+| **T1** | **Pronta per la comitiva** | I miei amici si registrano e la usano per i passaggi veri, senza che io spieghi niente. Niente dati visibili a chi non c'entra. Posso pubblicare senza paura di rompere. |
+| **T2** | **Aperta a chiunque** | Chiunque si registra, crea o entra in una comitiva, e può trovare passaggi anche fuori dal proprio gruppo. Con gli strumenti che servono quando si sale in macchina con sconosciuti. |
+
+Non c'è scadenza. C'è un vincolo: **T1 completo prima di iniziare T2**, perché T2 apre l'app a
+persone che non conosco e ogni buco aperto in quel momento è un problema reale, non teorico.
+
+---
+
+## Decisioni prese (intervista 24/07/2026)
+
+| # | Decisione | Scelta | Alternative scartate |
+|---|---|---|---|
+| **D1** | Passaggi senza gruppo | **Spariscono.** Ogni passaggio, richiesta e commento appartiene a una comitiva. La ricerca "fuori dal mio gruppo" torna dopo, come funzione progettata (C9), non come effetto collaterale. | Bacheca pubblica subito; schema nuovo da zero |
+| **D2** | Visibilità profili | **Solo chi condivide almeno un gruppo con me.** Quando arriverà C9, si estende a "…o chi guida un passaggio che posso vedere" — senza quella estensione l'app mostrerebbe passaggi senza nome. | Solo stessa auto (rompe la lista membri); lasciare aperto |
+| **D3** | Catena di deploy | **Anteprima + test bloccanti + migrazioni numerate.** `main` resta il deploy, ma ci arriva solo roba già verificata su un'anteprima. Lo schema smette di essere un file copiato a mano. | Lasciare com'è; secondo progetto Supabase di staging (rimandato a C9, quando i dati sono di sconosciuti) |
+| **D4** | Dove vive il piano | **Questo file.** Approvato una volta, eseguito cantiere per cantiere. | Issue GitHub; nessun piano |
+
+Il database **non** viene riscritto: l'isolamento fra comitive esiste già (`groups`,
+`group_members`, `is_member()`). Quello che manca è togliere le righe orfane e stringere due
+policy troppo larghe.
+
+---
+
+## Fase 0 — Rete di sicurezza (prima di toccare qualsiasi altra cosa)
+
+Oggi ogni push su `main` è la pubblicazione, e gli smoke test girano **dopo**, contro il sito
+vivo: se rompo qualcosa, lo rompo davanti a chi sta usando l'app. Tutto il resto della roadmap
+tocca sicurezza e schema, cioè le cose dove sbagliare costa di più. Questa fase viene prima.
+
+### C1 — Anteprima per ogni modifica, test che bloccano — *fatto e collaudato sulla PR #1*
+- **Obiettivo:** poter provare una modifica a un indirizzo temporaneo prima che la vedano gli utenti.
+- **Fatto:** il job `e2e-anteprima` aspetta lo stato di deploy che Netlify scrive sul commit della
+  PR, ricava da lì l'indirizzo dell'anteprima e ci lancia Playwright; niente più `sleep 60` alla
+  cieca. I test leggono l'indirizzo da `BASE_URL` (`playwright.config.js`) invece di averlo scritto
+  dentro. Il vecchio job sul sito vivo resta come rete di sicurezza dopo la pubblicazione
+  (`e2e-produzione`), ma non è più l'unica difesa.
+- **I Deploy Preview su Netlify erano già attivi**: verificato sulla PR #1, che ne ha avuto uno.
+- **Collaudato sulla PR #1** (24/07/2026): Netlify ha pubblicato l'anteprima, il job l'ha trovata
+  dallo stato del commit in pochi secondi (non dal ripiego, che avrebbe atteso dieci minuti) e ha
+  lanciato i tre smoke test contro `https://deploy-preview-1--wetransport.netlify.app`. Tutti verdi,
+  **prima** di qualsiasi merge. Il job sul sito vivo è stato saltato, come previsto sulle PR.
+- **Un difetto trovato dal primo giro di CI:** il workflow era fissato a Node 20, mentre
+  html-validate 11 usa `fs.globSync`, che esiste da Node 22. In locale passava (Node 22), in CI no.
+  Alzato a Node 24 e dichiarato `engines` in `package.json`.
+- **Resta da fare a mano:** `checks`, `schema` ed `e2e-anteprima` come controlli **obbligatori** sul
+  ramo `main` (Settings → Branches). Finché non lo sono, la CI rossa avvisa ma non impedisce il merge.
+
+### C2 — Migrazioni numerate al posto del file unico — *fatto e verificato*
+- **Obiettivo:** sapere sempre quale schema è davvero applicato.
+- **Fatto:** schema spezzato in 10 file in `supabase/migrations/`, ognuno ripetibile e registrato
+  in `public.schema_migrations`. La CI (job `schema`) parte da un Postgres vuoto, applica tutto in
+  ordine e poi riapplica tutto: se una delle due passate fallisce è rossa. Il perché in
+  `docs/adr/002-migrazioni-numerate.md`.
+- **Verificato su Postgres 16 vuoto:** le migrazioni ricreano il backend da zero e si possono
+  rilanciare. Confronto con lo schema del vecchio file: 8 tabelle, 43 colonne, 9 funzioni, 5
+  trigger, 14 indici **identici**, più una policy recuperata.
+- **Due difetti trovati facendolo**, peggiori del doppione che cercavo:
+  - `supabase-setup.sql` **non ricreava il backend da zero**, contrariamente a quanto dicevano
+    README e ADR 001: alla riga 234 creava una policy su `ride_comments`, tabella definita alla
+    riga 338. Su un database vuoto si fermava lì.
+  - Conseguenza sulla ricostruzione da zero: la policy `admin all` su `ride_comments` non veniva
+    mai creata. Ora c'è. (In produzione invece c'era: vedi la correzione qui sotto.)
+- **Applicate in produzione il 24/07/2026**, tutte, in ordine. `schema_migrations` ne registra 11.
+- **Una deduzione da correggere:** avevo scritto che l'amministratore non aveva mai potuto moderare
+  i commenti. Falso sul database vivo: leggendo `pg_policies` prima di applicare, la policy
+  `admin all` su `ride_comments` c'era già — era stata incollata a parte, dopo la creazione della
+  tabella. Il difetto riguardava la ricostruzione da zero, non la produzione.
+
+### C3 — Controlli locali accesi — *fatto*
+- **Obiettivo:** `pre-volo.py` smette di saltare metà dei controlli.
+- **Fatto:** `package.json` con ESLint e html-validate come dipendenze **di sviluppo** (il sito
+  resta senza build: servono agli strumenti, non all'app). Le regole ESLint non sono più scritte
+  dentro `ci.yml` e rigenerate a ogni build: stanno in `eslint.config.mjs`, versionate, stessa
+  fonte in locale e in CI. Regole html-validate in `.htmlvalidate.json`.
+- **`npm run check`** fa lint + validazione in un colpo; la CI ora chiama gli stessi comandi.
+- **Validazione HTML ora bloccante** invece che informativa (`|| true`), perché è a zero errori.
+  Le regole di puro stile sono spente (`void-style`, `no-inline-style`, `no-redundant-for`) e
+  `no-implicit-button-type` resta come avviso: 20 bottoni senza `type` esplicito, roba da C7.
+- **Tre difetti di accessibilità corretti** per arrivarci: la `<label>` della password teneva
+  dentro anche il bottone dell'occhio (una etichetta per due controlli), il bottone del nome
+  utente non aveva testo accessibile finché il JS non lo riempiva, il titolo del dialogo era un
+  `<h3>` vuoto.
+- **Collaudo fatto:** schermata di accesso resa in locale e confrontata pixel per pixel prima e
+  dopo la modifica: **identica**. Alla prima passata non lo era — il campo password aveva perso il
+  peso del carattere che ereditava dalla `<label>` — ed è stato sistemato.
+
+---
+
+## Fase 1 — Chiudere i due buchi (T1)
+
+### C4 — Tutto dentro un gruppo *(decisione D1)* — *scritto e verificato sul database; resta il collaudo a video*
+- **Obiettivo:** nessuna riga di dati senza una comitiva che la possiede.
+- **Database** (`010_gruppo_obbligatorio.sql`): `group_id` obbligatorio su `rides` e
+  `ride_requests`; policy e trigger senza i rami `is null` e senza i `coalesce(..., '000...')`;
+  le righe orfane finiscono nelle tabelle `*_archivio_senza_gruppo` (RLS attiva, nessuna policy:
+  restano nel database, invisibili dal client) e poi spariscono da quelle vive. **Niente si cancella
+  senza essere prima copiato.**
+- **Falla in più trovata e chiusa:** per pubblicare bastava dichiararsi guidatore. Chi conosceva
+  l'id di un gruppo poteva pubblicarci dentro un'auto **senza esserne membro**. Ora la policy di
+  scrittura richiede l'appartenenza — su auto, richieste, commenti e lista d'attesa.
+- **App:** sparisce la pillola "Tutti"; al primo accesso o crei un gruppo o entri con un codice;
+  la comitiva scelta si ricorda fra una sessione e l'altra; senza comitiva la Home mostra solo il
+  benvenuto invece di una schermata vuota e inerte.
+- **Incoerenza sanata:** con "Tutti" attivo, la Home mostrava solo i passaggi *senza gruppo*, mentre
+  Storico e Statistiche mostravano *tutto il visibile*. Stessa pillola, tre significati diversi.
+- **Verificato su Postgres 16** (`supabase/test/`, e ora in CI a ogni push):
+  - Carla, che sta in un'altra comitiva, vede 0 auto, 0 prenotazioni e 1 solo gruppo (il suo);
+  - Bruno, che è del gruppo, vede l'auto;
+  - Carla **non riesce** a pubblicare nel gruppo di Ada;
+  - un'auto senza comitiva **non si inserisce più**;
+  - due persone sullo stesso sedile: ne passa una sola;
+  - aggiornamento dal vecchio schema con dati orfani dentro: archivio pieno, dati del gruppo
+    intatti, archivio invisibile al client.
+- **Applicata in produzione il 24/07/2026.** Stato prima: 4 utenti, 1 gruppo con 0 membri, 1 auto
+  senza comitiva. Dopo: quell'auto è nell'archivio, `group_id` è obbligatorio su `rides` e
+  `ride_requests`, le policy nuove sono attive. Nessun dato perso.
+- **Attenzione — codice e database ora sono disallineati:** il sito vivo serve ancora l'app vecchia,
+  quella con la pillola "Tutti", mentre il database non accetta più passaggi senza comitiva. Con 0
+  membri nei gruppi nessuno se ne accorge, ma finché questo ramo non è pubblicato la Home mostra
+  una lista vuota e pubblicare un'auto darebbe errore. **Va pubblicato.**
+- **Resta il collaudo a video**, che nessun test sostituisce: due account veri, due comitive, stesso
+  giorno.
+
+### C5 — Profili chiusi *(decisione D2)* — *scritto e verificato sul database; da applicare in produzione dopo la pubblicazione*
+- **Obiettivo:** smettere di mostrare nome e avatar di tutti a tutti.
+- **Database** (`011_profili_chiusi.sql`): `profiles read using (true)` diventa "il mio profilo,
+  più chi condivide con me almeno una comitiva, più l'amministratore". Il confronto passa da
+  `condivide_gruppo()`, `security definer` per la stessa ragione di `is_member()`: senza, la policy
+  su `profiles` interrogherebbe `group_members`, che ha le sue policy, e si andrebbe in ricorsione.
+- **Un caso che prima non poteva esistere:** chi **lascia** una comitiva sparisce dai profili
+  leggibili, ma le sue auto e le sue prenotazioni restano nello storico. L'app faceva
+  `r.driver.display_name` in 14 punti senza rete: con il profilo nascosto l'incorporamento torna
+  nullo e **la schermata andava in errore**. Ora tutti passano da `nomeDi()`, che mostra
+  "Ex membro". Trovato leggendo il codice dopo aver scritto la policy, non da un test.
+- **Verificato su Postgres 16** (nel test di isolamento, quindi anche in CI): chi sta in un'altra
+  comitiva vede **un solo profilo, il proprio**; chi è nel gruppo vede sé, Ada e Dino, e **non**
+  vede Carla; nessuno perde di vista il proprio profilo, che servirebbe all'app per sapere come ci
+  si chiama.
+- **Ordine di applicazione, importante:** la 011 va applicata in produzione **dopo** aver pubblicato
+  questo ramo, non prima. Restringe letture che il codice vecchio non sa gestire: prima il codice
+  che regge i profili nascosti, poi la regola che li nasconde.
+- **Collaudo a video:** account estraneo → home, storico, statistiche, commenti: nessun nome di
+  gente fuori dalla propria comitiva, e nessun buco al posto di una persona.
+
+---
+
+## Fase 2 — Rinforzare quello che c'è (T1)
+
+### C6 — Bug noti da chiudere — *fatto*
+| Bug | Dove | Stato |
+|---|---|---|
+| Avatar Google bloccati dalla CSP | `netlify.toml`, `img-src 'self' data:` | **Chiuso.** Chi entrava con Google aveva un avatar che punta a `lh3.googleusercontent.com` e il browser lo bloccava: la funzione era scritta dal 21/07 e non si è mai vista. Aggiunto `https://*.googleusercontent.com` alla sola direttiva `img-src`. |
+| `ride_waitlist` definita due volte | `supabase-setup.sql:260` e `:303` | **Chiuso da C2**: nelle migrazioni la lista d'attesa è definita una volta sola. |
+| `meta description` mancante | `privacy.html` | **Chiusa.** |
+
+**Collaudo della CSP, fatto col browser e non a occhio:** pagina servita in locale con
+*esattamente* l'intestazione di `netlify.toml`, poi due immagini iniettate nel documento. Quella su
+`lh3.googleusercontent.com` **non viene più bloccata**; quella su un dominio qualsiasi **continua a
+esserlo**. La regola si è aperta quanto serviva e non un dito di più.
+
+### C7 — Revisione integrale di `app.js` — *fatto*
+- **Obiettivo:** trovare tutti i bug, non i primi che saltano fuori.
+- **Fatto:** lettura riga per riga di tutte le 1334 righe in **una sola passata**, con tutte le
+  classi di controllo insieme. Metodo imposto da `Regole.md`, e ha ripagato subito.
+
+**La prima cosa trovata è stato un mio errore.** La passata di C5, fatta cercando i punti con
+`grep`, ne aveva mancati **tre**: `Guida ${ride.driver.display_name}` sulla scheda dell'auto, il
+testo di condivisione del singolo passaggio, e l'elenco "A bordo" del riepilogo di giornata. Tutti e
+tre sarebbero andati in errore con un profilo nascosto — cioè proprio il caso che C5 introduceva.
+È l'esempio di manuale del perché `Regole.md` vieta le passate incrementali.
+
+**Difetti corretti**
+
+| Cosa | Dove | Perché contava |
+|---|---|---|
+| Tre letture di profilo senza rete | scheda auto, condivisione, riepilogo | Errore in pagina con un profilo nascosto (regressione di C5) |
+| `innerHTML` con l'indirizzo dell'avatar | `renderProfile` | `SECURITY.md` dichiara "nessun `innerHTML` con input utente": non era vero. L'indirizzo arriva dai metadati OAuth o dal profilo, modificabile via API; in una stringa HTML basta una virgoletta per uscire dall'attributo. Ora si costruisce col DOM |
+| Sei operazioni che fallivano in silenzio | libera posto, annulla passaggio, esci dal gruppo, esci dalla lista, elimina commento | L'app diceva "fatto" anche quando il database rifiutava. Ora ognuna controlla l'errore e lo mostra |
+| `clearMyRequest()` non attesa, due volte | pubblicazione auto, prenotazione posto | La cancellazione poteva arrivare **dopo** il ricaricamento: restavi fra chi "cerca un passaggio" pur essendo a bordo, fino al refresh dopo |
+| Escape dei nomi solo su `<` | statistiche, "tocca a te guidare" | Una `&` nel nome rompeva il testo. Ora un solo `escapeHtml()` per entrambi |
+| Codice morto di C4 | `renderWalkers`, `clearMyRequest`, riepilogo | Ramo "senza gruppo" irraggiungibile, e un ternario con i due rami identici |
+
+**Trovati e lasciati stare, con motivo**
+- La notifica "movimenti sui sedili" scatta anche per una propria azione, se la scheda è in
+  secondo piano. Fastidio minimo, e la logica per distinguere costa più di quanto renda: se dà
+  noia si risolve in C13, dove le notifiche vengono ripensate.
+- Il conto alla rovescia "parte tra N minuti" è calcolato al disegno e non si aggiorna da solo.
+  Un timer per tenerlo vivo è lavoro da C15, non un difetto di correttezza.
+- La chiave `posti-howto-done` in `localStorage` porta ancora il vecchio nome del progetto.
+  Rinominarla farebbe ricomparire il banner a chi l'aveva già chiuso: non vale il cambio.
+- Il conteggio sul bottone dei commenti non si aggiorna dopo averne scritto uno, fino al
+  ricaricamento successivo. Cosmetico.
+
+**Collaudo:** lint e validazione verdi, schermata di accesso identica al riferimento pixel per
+pixel. Le correzioni sui percorsi con utenti veri (posto liberato, passaggio annullato, uscita dal
+gruppo) restano da vedere a video: sono esattamente i flussi che C8 deve coprire con i test.
+
+### C8 — Test end-to-end sui flussi veri — *fatto*
+- **Obiettivo:** gli smoke coprivano solo la schermata di accesso. Il cuore dell'app — pubblicare,
+  prenotare, vedere l'aggiornamento in tempo reale — non era testato da niente.
+- **Fatto:** `tests/flussi.spec.js`, un viaggio completo con **due utenti in due schede separate**:
+  Ada crea la comitiva e pubblica l'auto → Bruno, che non è del gruppo, **non vede niente** →
+  Bruno entra col codice e la vede → prenota un sedile → **Ada lo vede senza ricaricare** (realtime)
+  → pulizia (passaggio annullato, entrambi escono dal gruppo). Zero errori in pagina, verificato.
+- **Girato per davvero**, con due account veri sul Supabase di produzione, creati per l'occasione e
+  **cancellati subito dopo**. È anche il collaudo a video che mancava a C4: l'isolamento fra comitive
+  visto con due utenti, non solo dedotto dalle policy.
+- **Ha trovato subito un bug vero, e non del test:** `render()` chiudeva con `switchView('home')`
+  dopo una catena di attese (profilo, gruppi). **Chi tocca una scheda mentre l'app carica si vedeva
+  annullare il tocco e riportare alla Home.** Su telefono lento quella finestra dura secondi. Ora la
+  Home si impone solo se nessuna scheda è già aperta.
+- **Verificata anche la verifica:** tolta la correzione, il test torna a fallire; rimessa, passa.
+  Un test che non fallisce quando il bug c'è non serve a niente.
+- **In CI** il flusso a due utenti gira sull'anteprima **solo se esistono i segreti**
+  `WT_TEST_EMAIL_A`, `WT_TEST_EMAIL_B`, `WT_TEST_PASSWORD` (due account di prova già confermati).
+  Senza, si salta e restano gli smoke: nessun falso rosso su chi clona il repo.
+- **Resta da fare a mano:** creare i due account di prova stabili e metterne le credenziali nei
+  segreti del repo, se si vuole quel test a ogni PR.
+
+---
+
+## Fase 3 — Aprire al pubblico (T2)
+
+Da qui in poi l'app la usano persone che non conosco. Nessuno di questi cantieri parte prima che
+la Fase 1 sia chiusa.
+
+### C9 — Passaggi in zona *(la D dell'intervista)*
+- **Obiettivo:** trovare un passaggio da qualcuno che sta in zona ma non è della mia comitiva.
+- **Cosa:** luogo di partenza e arrivo veri sul passaggio (oggi c'è solo un link Maps testuale);
+  zona sul profilo; campo `visibilità` (`gruppo` / `zona` / `pubblico`); regole di lettura che
+  seguono; **estensione della regola D2**: vedo il nome di chi guida un passaggio che posso vedere.
+- **Fatto quando:** cerco un passaggio fuori dal mio gruppo, lo trovo, e continuo a non vedere
+  niente dei gruppi a cui non appartengo.
+- **Dipende da:** C4, C5, C10.
+
+### C10 — Sicurezza delle persone
+- **Obiettivo:** un'app dove sconosciuti salgono in macchina insieme e non c'è modo di segnalare
+  nessuno non è pronta per il pubblico. Vale più di qualsiasi funzione.
+- **Cosa:** segnalare un utente, bloccarlo (non ci vediamo più i passaggi a vicenda), una coda di
+  segnalazioni per me, sospensione di un account.
+- **Fatto quando:** posso segnalare, bloccare, e vedere le segnalazioni; un utente sospeso non
+  entra più.
+
+### C11 — GDPR completo
+- **Obiettivo:** oggi `SECURITY.md` segna la conformità come parziale, e va bene finché siamo fra
+  amici. Con iscritti sconosciuti diventa un obbligo.
+- **Cosa:** informativa privacy pubblicata e aggiornata (titolare, base giuridica, conservazione,
+  Supabase come responsabile, regione dei dati); esportazione dei propri dati; cancellazione
+  dell'account dall'app, non dalla dashboard.
+- **Fatto quando:** un utente esporta e cancella tutto da solo, e la cancellazione porta via anche
+  auto, prenotazioni, richieste e commenti.
+
+---
+
+## Fase 4 — Integrare
+
+### C12 — PWA vera
+Il `manifest.json` c'è ma **manca il service worker**: l'app non è installabile come si deve e non
+apre offline. Serve anche l'icona in PNG 192 e 512 (oggi solo SVG, che alcuni sistemi ignorano) e
+una schermata sensata quando la rete non c'è. *Fatto quando:* installata dal telefono, si apre
+senza barra del browser e mostra qualcosa di utile anche offline.
+
+### C13 — Notifiche a scheda chiusa
+Oggi le notifiche esistono solo con la scheda aperta in secondo piano (`maybeNotify`).
+
+**Deciso — tre eventi soli, quelli che cambiano i piani di chi li riceve:**
+
+| Evento | A chi | Perché vale una vibrazione |
+|---|---|---|
+| Qualcuno prenota un posto nella tua auto | guidatore | Devi sapere chi carichi |
+| Si libera un posto dove sei in lista d'attesa | in attesa | È l'unico modo per non perderlo |
+| La tua auto parte fra un'ora | guidatore e passeggeri | Il promemoria che evita il buco |
+
+**Esclusi di proposito**: commenti e auto pubblicate. Sono la maggior parte del traffico e
+diventerebbero rumore: un'app che notifica troppo viene silenziata, e a quel punto non notifica
+più niente. Se serviranno, saranno da attivare a mano, spente di default.
+
+**Come:** Web Push standard (VAPID) sul service worker di C12, tabella delle iscrizioni, Edge
+Function Supabase innescata dal database per i primi due eventi, `pg_cron` per il promemoria orario.
+Nessun servizio di terzi. *Dipende da:* C12.
+
+### C14 — Servizi esterni
+**Deciso — solo cose che il browser sa già fare, nessun SDK, nessuna voce nuova nella CSP:**
+
+| Cosa | Come | Perché così |
+|---|---|---|
+| Invita al gruppo | Web Share API nativa (che sul telefono offre WhatsApp da sola) + copia del codice come ripiego | Zero dipendenze, funziona con tutte le app di messaggistica, non solo WhatsApp |
+| Passaggio nel calendario | File `.ics` generato dall'app | Nessun servizio esterno, funziona con Google, Apple e Outlook allo stesso modo |
+| Navigazione al ritrovo | Link Maps, con coordinate vere al posto del testo libero | Rimandato dentro C9, che è il cantiere dove nascono i luoghi veri |
+
+**Esclusi**: SDK di terzi, analytics, login social oltre a Google. Ogni SDK è codice altrui in
+esecuzione dentro la mia pagina e una riga in più nella CSP.
+
+---
+
+## Fase 5 — Abbellire e ottimizzare
+
+### C15 — Togliere l'aria di cosa generata
+**Il problema non è che sia brutta: è che sembra generata.** Aurora animata sull'accesso, nav
+flottante a pillola, tutto arrotondato, animazioni a molla, gradienti morbidi: è l'estetica
+predefinita delle interfacce fatte dall'AI in questi mesi. Nessun dettaglio è sbagliato, e proprio
+per questo nessuno è *suo*. Chi la apre non ricorda niente.
+
+**Cosa si fa:**
+1. **Togliere gli effetti che non dicono niente**: aurora, bagliori, gradienti decorativi. Sono
+   costati righe di CSS e non distinguono l'app da altre mille.
+2. **Scegliere un carattere tipografico vero** e portarne il peso: la tipografia è il modo più
+   economico di avere un'identità, e oggi è quella di sistema.
+3. **Fare dell'auto la protagonista.** L'SVG dei sedili è l'unica cosa qui dentro che nessun altro
+   ha: è disegnata su misura per questo problema. Oggi è un elemento fra tanti dentro una scheda.
+4. **Un accento solo, deciso**, al posto della palette morbida buona per qualsiasi cosa.
+5. **Testi con una voce.** "Bentornato", "Accedi per vedere chi guida oggi" sono corretti e
+   anonimi: è il registro predefinito. Questa è un'app per una comitiva di amici, può parlare come loro.
+6. **Stati vuoti disegnati**, non icona grigia centrata con frase gentile.
+
+**Fatto quando:** copro il logo e il nome con un dito, mostro uno screenshot a qualcuno, e si
+capisce lo stesso che è questa app e non un'altra. Prima e dopo affiancati.
+
+### C16 — Peso e velocità sul telefono
+1200 righe di CSS e 1311 di JS senza build, più supabase-js da CDN. Misurare prima di ottimizzare:
+tempo alla prima schermata utile su rete lenta, dimensione totale, quante query fa la home.
+*Fatto quando:* c'è un numero di partenza e uno di arrivo, non un'impressione.
+
+### C17 — Spezzare `app.js`
+L'ADR 001 dice di rivedere la scelta "un file solo" oltre le 2-3k righe di JS: oggi siamo a 1311 e
+le Fasi 3 e 4 aggiungono roba. Quando si supera la soglia: moduli ES separati (auth, gruppi,
+passaggi, render), sempre senza build. **Non prima**: dividere presto costa e non rende.
+
+---
+
+## Fase 6 — Allineare al resto dello studio
+
+### C18 — Standard dello Starter
+Portare qui quello che la base dei siti ha già e questo repo no: SEO completa (`robots.txt`,
+`sitemap.xml`, dati strutturati), `404.html`, pagina cookie se serviranno cookie di profilazione,
+`eslint.config.js` versionato. Al contrario, quello che WeTransport ha imparato e lo Starter non
+sa ancora torna indietro nello Starter.
+
+### C19 — Vault e codice allineati
+Mappa Graphify rigenerata, memoria tecnica aggiornata con le decisioni di questo file, nota
+progetto che punta qui invece di duplicare.
+
+### C20 — Un nome solo
+Oggi sono tre: repo `posti`, cartella `C:\Progetti\posti`, dominio `wetransport.netlify.app`.
+Cercare "wetransport" su GitHub non trova niente.
+
+**Deciso:**
+- **Repo rinominato in `wetransport`.** GitHub tiene attivi i vecchi indirizzi, ma vanno comunque
+  aggiornati a mano: il collegamento Netlify, il remoto del clone locale, la nota del vault, i
+  percorsi negli script di `Strumenti/`. Da fare in un momento in cui non c'è altro a metà.
+- **Dominio proprio: sì, ma a T2.** Finché lo usa la comitiva, `.netlify.app` va benissimo. Quando
+  si apre al pubblico serve un dominio vero: è anche il biglietto da visita dello studio, e un
+  `.netlify.app` in vetrina dice "esperimento". Costo ~10-15 € l'anno.
+
+---
+
+## Decisioni prese dopo la prima stesura
+
+| # | Punto | Scelta |
+|---|---|---|
+| **D5** | Notifiche (C13) | Tre eventi soli: posto prenotato nella tua auto, posto liberato in lista d'attesa, partenza fra un'ora. Commenti e nuove auto **no**: sarebbero rumore. Web Push standard, nessun servizio di terzi. |
+| **D6** | Servizi esterni (C14) | Solo API native del browser: Web Share per l'invito, `.ics` per il calendario, link Maps con coordinate vere (dentro C9). Nessun SDK di terzi, nessuna analytics. |
+| **D7** | Estetica (C15) | Il difetto è che sembra generata dall'AI, non che sia brutta. Si tolgono gli effetti generici, si sceglie una tipografia vera, l'auto SVG diventa protagonista. Prova del nove: coperto il logo, si riconosce lo stesso. |
+| **D8** | Nome e dominio (C20) | Repo rinominato in `wetransport`; dominio proprio al momento dell'apertura al pubblico, non prima. |

@@ -20,5 +20,6 @@ Decisione: due utenti che tappano lo stesso sedile ⇒ unique `(ride_id, seat_in
 Conseguenze: nessuna race possibile indipendentemente dal client; retry sicuri (idempotenza per vincolo).
 
 ## 5. Hosting Netlify da GitHub, migrazioni SQL manuali versionate
-Decisione: deploy automatico su push a `main`; lo schema DB vive in `supabase-setup.sql` (idempotente dove possibile) applicato via SQL editor.
+Decisione: deploy automatico su push a `main`; lo schema DB vive in un file SQL applicato via SQL editor.
+Superata in parte dall'[ADR 002](002-migrazioni-numerate.md): il file unico e' diventato migrazioni numerate (il file non ricreava davvero il backend da zero). Il deploy automatico da `main` resta, con l'aggiunta dei test sull'anteprima della PR.
 Conseguenze: un solo file ricrea il backend da zero; il file è la fonte di verità dello schema.

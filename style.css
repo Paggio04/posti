@@ -312,8 +312,14 @@ input:focus-visible, select:focus-visible, textarea:focus-visible {
   transform: translateY(-1px);
 }
 
-/* Password con occhio */
-.pw-wrap { position: relative; display: block; }
+/* Password con occhio.
+   L'etichetta sta fuori da .pw-wrap: dentro, avrebbe associato a se' anche il bottone
+   dell'occhio (una <label> per due controlli). Le due misure qui sotto ricostruiscono
+   la stessa spaziatura di quando erano annidati. */
+.field-label { margin-bottom: 0; }
+/* font-weight: il campo prima stava dentro la <label> e ne ereditava il peso;
+   fuori lo perderebbe, e la password si vedrebbe piu' leggera dell'email. */
+.pw-wrap { position: relative; display: block; margin-bottom: 14px; font-weight: 600; }
 .pw-wrap input { padding-right: 48px; }
 .pw-toggle {
   position: absolute;
