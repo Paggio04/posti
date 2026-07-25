@@ -42,24 +42,29 @@ policy troppo larghe.
 
 ## Dove siamo (25/07/2026)
 
-**Fasi 0, 1 e 2 chiuse e pubblicate.** `main` è al merge della PR #1, il sito vivo serve l'app
-nuova, le migrazioni 000-011 sono applicate in produzione, e il ramo che pubblica è protetto da
-controlli obbligatori. **T1 è raggiunto sul piano tecnico**; quello che manca per dire "pronta per
-la comitiva" è gente vera che la usa.
+**Fasi 0, 1, 2 e 3 chiuse e pubblicate.** `main` è al merge della PR #2, il sito vivo serve l'app
+nuova, **le migrazioni 000-014 sono applicate in produzione** e il ramo che pubblica è protetto da
+controlli obbligatori. C10 sicurezza delle persone (012), C11 GDPR (013), C9 passaggi in zona (014):
+ogni cantiere ha il suo file di test in CI, e ogni test è stato provato al contrario — tolta una
+protezione alla volta, per vedere se diventa rosso davvero.
 
-**Fase 3 scritta e verificata sul ramo, non ancora pubblicata**: C10 sicurezza delle persone
-(migrazione 012), C11 GDPR (013), C9 passaggi in zona (014). Ogni cantiere ha il suo file di test in
-CI, e ogni test è stato provato al contrario — tolta una protezione alla volta, per vedere se
-diventa rosso davvero.
+**T1 è raggiunto sul piano tecnico**; quello che manca per dire "pronta per la comitiva" è gente
+vera che la usa — e l'interfaccia della Fase 3 **non è mai stata eseguita in un browser**.
 
-Prima di pubblicare la Fase 3, quattro cose che il repo non può fare da solo:
+Come è andata la pubblicazione, perché vale più di un ricordo: **il codice è stato pubblicato prima
+delle migrazioni**, cioè nell'ordine sbagliato, quello che questo stesso file avverte di non usare.
+Il sito è rimasto rotto — nome di tutti come prefisso dell'email, pubblicazione di un'auto in errore
+— finché le 012-014 non sono state applicate a mano dal SQL editor. Danno piccolo perché nessuno la
+stava usando; la regola dell'ordine, però, non è teorica: è già costata due volte.
+
+Le quattro cose che il repo non può fare da solo:
 
 | Cosa | Dove | Perché | Stato |
 |---|---|---|---|
-| Titolare del trattamento nell'informativa | `privacy.html` | Dato legale obbligatorio; pubblicare un'email personale è una decisione di chi la possiede | Riquadro rosso in pagina |
-| Regione del progetto Supabase | Supabase → Settings → General | L'API non la espone, si legge solo dalla dashboard | Riquadro rosso in pagina |
-| Revocare il token Supabase della sessione del 24/07 | Supabase → Account → Access Tokens | Era servito per applicare le migrazioni; un token che non serve più non deve esistere | Da fare |
-| Due account di prova + segreti `WT_TEST_*` | Supabase + GitHub → Settings → Secrets | Sbloccano `tests/flussi.spec.js` a ogni PR; senza, restano i soli smoke (C8) | Assenti all'ultima PR |
+| Titolare del trattamento nell'informativa | `privacy.html` | Dato legale obbligatorio; pubblicare un'email personale è una decisione di chi la possiede | **fatto** — Elia Paggetti, con un indirizzo di contatto che non è quello personale |
+| Regione del progetto Supabase | Supabase → Settings → General | L'API non la espone, si legge solo dalla dashboard | **fatto** — `eu-west-2`, cioè **Londra**: fuori dall'Unione, e l'informativa ora lo dice e cita l'adeguatezza |
+| Revocare il token Supabase della sessione del 24/07 | Supabase → Account → Access Tokens | Era servito per applicare le migrazioni; un token che non serve più non deve esistere | **da fare** |
+| Due account di prova + segreti `WT_TEST_*` | Supabase + GitHub → Settings → Secrets | Sbloccano `tests/flussi.spec.js` a ogni PR; senza, restano i soli smoke (C8) | assenti |
 
 ### L'ordine di pubblicazione, che qui è l'opposto di quello della 011
 
@@ -395,7 +400,7 @@ la Fase 1 sia chiusa.
 - **Resta il collaudo a video**, che nessun test sostituisce: due account veri, segnalazione,
   blocco, e la coda vista da un amministratore.
 
-### C11 — GDPR completo — *fatto nel codice; due dati mancano e li può mettere solo una persona*
+### C11 — GDPR completo — *fatto, informativa compresa*
 - **Obiettivo:** oggi `SECURITY.md` segna la conformità come parziale, e va bene finché siamo fra
   amici. Con iscritti sconosciuti diventa un obbligo.
 - **Esportazione** — "Scarica i miei dati" nel Profilo: un JSON con profilo, comitive, auto, posti,
@@ -418,15 +423,19 @@ la Fase 1 sia chiusa.
 - **Informativa** riscritta: tabella dato → perché → base giuridica, chi vede cosa, responsabili
   (Supabase e Netlify), tempi di conservazione, i tre diritti che si esercitano da soli dall'app,
   reclamo al Garante, soglia dei 14 anni.
-- **Due cose non le può mettere il codice**, e nella pagina sono riquadri rossi bene in vista
-  invece che frasi plausibili inventate:
-  - **il titolare del trattamento** — nome e contatto di chi gestisce l'app. È un dato legale, e
-    pubblicare un'email personale su un sito pubblico è una decisione di chi la possiede;
-  - **la regione del progetto Supabase**, che si legge solo dalla dashboard (Settings → General) e
-    che l'API non espone.
-  Finché ci sono quei riquadri, l'informativa **non** è completa e l'app non è pronta per T2.
+- **Le due cose che il codice non poteva mettere sono state messe**, e per un po' sono state
+  riquadri rossi bene in vista invece che frasi plausibili inventate:
+  - **il titolare del trattamento** — Elia Paggetti, a titolo personale, con un indirizzo di
+    contatto dedicato: la casella personale non finisce su una pagina pubblica;
+  - **la regione del progetto**, che l'API davvero non espone — provato, gli header danno solo
+    `sb-project-ref`. Ed è la cosa che ha cambiato il paragrafo: `eu-west-2` è **Londra**, non
+    Francoforte come dava per scontato l'esempio. I dati escono dall'Unione. È lecito senza nessuno
+    strumento aggiuntivo perché il Regno Unito è un paese adeguato — decisione rinnovata il
+    19/12/2025, valida fino al 27/12/2031 — ma tacerlo sarebbe stata l'omissione più grossa
+    dell'informativa. Ora è scritto, con la fonte.
 - **Fatto quando:** un utente esporta e cancella tutto da solo, e la cancellazione porta via anche
-  auto, prenotazioni, richieste e commenti. **Raggiunto**, meno i due dati qui sopra.
+  auto, prenotazioni, richieste e commenti. **Raggiunto.** `SECURITY.md` segna la conformità GDPR
+  come piena, e la prossima scadenza da guardare è il 27/12/2031, non prima.
 
 ---
 
