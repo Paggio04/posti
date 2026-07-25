@@ -562,11 +562,33 @@ passaggi, render), sempre senza build. **Non prima**: dividere presto costa e no
 
 ## Fase 6 — Allineare al resto dello studio
 
-### C18 — Standard dello Starter
-Portare qui quello che la base dei siti ha già e questo repo no: SEO completa (`robots.txt`,
-`sitemap.xml`, dati strutturati), `404.html`, pagina cookie se serviranno cookie di profilazione,
-`eslint.config.js` versionato. Al contrario, quello che WeTransport ha imparato e lo Starter non
-sa ancora torna indietro nello Starter.
+### C18 — Standard dello Starter — *fatto nel repo; resta il ritorno verso lo Starter*
+Portare qui quello che la base dei siti ha già e questo repo no. Fatti: `robots.txt`,
+`sitemap.xml`, dati strutturati (JSON-LD `WebApplication` in `index.html`), `404.html`, più i
+`canonical` e i campi Open Graph che non c'erano.
+
+Tre cose scoperte facendo, che non erano nell'elenco:
+
+- **L'informativa risponde a due indirizzi.** `/privacy` e `/privacy.html` danno **entrambe 200**
+  — è la riscrittura di Netlify — quindi per un motore di ricerca sono due pagine identiche e
+  sceglie lui quale contare. Ora il canonico è dichiarato, ed è uno solo: quello nel sitemap e
+  quello che l'app usa nei link.
+- **`offline.html` non va indicizzata.** Trovata da una ricerca sembrerebbe un'app rotta.
+- **Open Graph serviva e non era nell'elenco.** Da C14 l'app si condivide da dentro — invito,
+  passaggio, giornata — e senza quei campi il link incollato in chat arriva come indirizzo nudo.
+
+**La pagina cookie non serve, e non è una dimenticanza:** non ci sono cookie di profilazione da
+dichiarare. Nessuna analytics, nessun SDK di terzi (D6), e la sessione di Supabase non è
+profilazione. Se un giorno entrasse un servizio che profila, quella pagina nasce con lui.
+`eslint.config.mjs` era già versionato dalla Fase 0 — quella riga dell'elenco era vecchia.
+
+Nel sitemap ogni indirizzo elencato viene interrogato dal test: un sitemap con un 404 dentro è
+peggio che non averlo, perché dice al motore di ricerca una cosa falsa.
+
+**Resta il verso opposto**, che è l'altra metà di questo cantiere e non si può fare da questo
+repo: quello che WeTransport ha imparato e lo Starter non sa ancora — l'ordine fra migrazioni e
+codice, le migrazioni numerate che si registrano da sole, i test provati al contrario, e la
+Permissions-Policy che spegne una funzione se l'allowlist è vuota.
 
 ### C19 — Vault e codice allineati
 Mappa Graphify rigenerata, memoria tecnica aggiornata con le decisioni di questo file, nota

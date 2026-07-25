@@ -51,6 +51,32 @@ test('l\'app si apre anche senza rete', async ({ page, context }) => {
   await context.setOffline(false);
 });
 
+// C18: file che esistono o non esistono, e quando non esistono nessuno se ne accorge
+// guardando l'app — si vede solo da fuori, mesi dopo, in una ricerca.
+test('robots.txt e sitemap.xml ci sono e si parlano', async ({ request }) => {
+  const robots = await request.get('/robots.txt');
+  expect(robots.status()).toBe(200);
+  const testo = await robots.text();
+  expect(testo).toContain('Sitemap: https://wetransport.netlify.app/sitemap.xml');
+  // La pagina "senza rete" indicizzata sembrerebbe un'app rotta a chi la trova cercando.
+  expect(testo).toContain('Disallow: /offline.html');
+
+  const sitemap = await request.get('/sitemap.xml');
+  expect(sitemap.status()).toBe(200);
+  const xml = await sitemap.text();
+  // Ogni indirizzo elencato deve rispondere davvero: un sitemap con un 404 dentro e' peggio
+  // che non averlo, perche' dice al motore di ricerca una cosa falsa.
+  for (const loc of [...xml.matchAll(/<loc>([^<]+)<\/loc>/g)].map((m) => m[1])) {
+    expect((await request.get(loc)).status(), loc).toBe(200);
+  }
+});
+
+test('la pagina 404 risponde 404 e non si fa indicizzare', async ({ request }) => {
+  const r = await request.get('/questo-indirizzo-non-esiste');
+  expect(r.status()).toBe(404);
+  expect(await r.text()).toContain('Questa pagina non c\'è');
+});
+
 test('il manifest dichiara le icone PNG che servono a installarla', async ({ request }) => {
   const manifest = await (await request.get('/manifest.json')).json();
   const misure = manifest.icons.map((i) => i.sizes);

@@ -13,6 +13,39 @@
   <link rel="icon" href="icon.svg" type="image/svg+xml" />
   <meta name="theme-color" content="#14243d" />
   <meta name="color-scheme" content="light dark" />
+
+  <!-- Netlify serve l'informativa sia come /privacy sia come /privacy.html, entrambe con
+       200: senza canonical un motore di ricerca vede due pagine identiche e sceglie lui. -->
+  <link rel="canonical" href="https://wetransport.netlify.app/" />
+
+  <!-- L'app si condivide da dentro (C14: invito al gruppo, passaggio, giornata). Senza
+       questi campi il link incollato in chat arriva come indirizzo nudo. -->
+  <meta property="og:type" content="website" />
+  <meta property="og:site_name" content="WeTransport" />
+  <meta property="og:locale" content="it_IT" />
+  <meta property="og:title" content="WeTransport — chi guida oggi?" />
+  <meta property="og:description" content="Chi guida pubblica la propria auto, gli altri prenotano il posto. I passaggi del tuo gruppo, senza caos." />
+  <meta property="og:url" content="https://wetransport.netlify.app/" />
+  <meta property="og:image" content="https://wetransport.netlify.app/icona-512.png" />
+  <meta name="twitter:card" content="summary" />
+
+  <!-- Dati strutturati. Nessun autore e nessun editore qui dentro: il titolare sta
+       nell'informativa, dove serve, e non c'e' motivo di moltiplicare il nome di una
+       persona su ogni pagina solo perche' lo schema lo permette. -->
+  <script type="application/ld+json">
+  {
+    "@context": "https://schema.org",
+    "@type": "WebApplication",
+    "name": "WeTransport",
+    "url": "https://wetransport.netlify.app/",
+    "description": "App per organizzare i passaggi in auto di una comitiva: chi guida pubblica la propria auto, gli altri prenotano il posto.",
+    "applicationCategory": "TravelApplication",
+    "operatingSystem": "Web",
+    "inLanguage": "it",
+    "isAccessibleForFree": true,
+    "offers": { "@type": "Offer", "price": "0", "priceCurrency": "EUR" }
+  }
+  </script>
 </head>
 <body>
 
