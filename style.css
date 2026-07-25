@@ -1275,6 +1275,29 @@ input:focus-visible, select:focus-visible, textarea:focus-visible {
   margin-bottom: 5px;
 }
 
+/* ================= PASSAGGI IN ZONA (C9) ================= */
+
+/* Un passaggio che arriva da fuori la propria comitiva deve dirlo: senza, sembrerebbe
+   della comitiva e non si capirebbe chi e' chi guida. */
+.badge-fuori {
+  display: inline-block;
+  margin-left: 8px;
+  padding: 1px 8px;
+  border-radius: var(--pill);
+  background: var(--surface-2);
+  border: 1px solid var(--border);
+  color: var(--ink-soft);
+  font-size: 0.72rem;
+  font-weight: 600;
+  vertical-align: middle;
+}
+
+.form-hint {
+  color: var(--ink-soft);
+  font-size: 0.8rem;
+  align-self: center;
+}
+
 @media (prefers-reduced-motion: reduce) {
   *, *::before, *::after { animation: none !important; transition: none !important; }
 }

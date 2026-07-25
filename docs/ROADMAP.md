@@ -42,18 +42,28 @@ policy troppo larghe.
 
 ## Dove siamo (25/07/2026)
 
-**Fasi 0, 1 e 2 chiuse, tutte e tre per intero.** `main` è al merge della PR #1, il sito vivo serve
-l'app nuova, le migrazioni 000-011 sono applicate in produzione, e il ramo che pubblica è protetto
-da controlli obbligatori. Codice, database e regole di pubblicazione sono allineati: **T1 è
-raggiunto sul piano tecnico**; quello che manca per dire "pronta per la comitiva" è gente vera che
-la usa.
+**Fasi 0, 1 e 2 chiuse e pubblicate.** `main` è al merge della PR #1, il sito vivo serve l'app
+nuova, le migrazioni 000-011 sono applicate in produzione, e il ramo che pubblica è protetto da
+controlli obbligatori. **T1 è raggiunto sul piano tecnico**; quello che manca per dire "pronta per
+la comitiva" è gente vera che la usa.
 
-Restano due cose, entrambe fuori dal repo e nessuna bloccante per la Fase 3:
+**Fase 3 scritta e verificata sul ramo, non ancora pubblicata**: C10 sicurezza delle persone
+(migrazione 012), C11 GDPR (013), C9 passaggi in zona (014). Ogni cantiere ha il suo file di test in
+CI, e ogni test è stato provato al contrario — tolta una protezione alla volta, per vedere se
+diventa rosso davvero.
+
+Prima di pubblicare la Fase 3, quattro cose che il repo non può fare da solo:
 
 | Cosa | Dove | Perché | Stato |
 |---|---|---|---|
-| Revocare il token Supabase della sessione del 24/07 | Supabase → Account → Access Tokens | Era servito per applicare le migrazioni; un token che non serve più non deve esistere | Da fare, non verificabile dal repo |
-| Due account di prova + segreti `WT_TEST_*` | Supabase + GitHub → Settings → Secrets | Sbloccano `tests/flussi.spec.js` a ogni PR; senza, restano i soli smoke (C8) | Assenti all'ultima PR; la prossima PR lo dirà |
+| Titolare del trattamento nell'informativa | `privacy.html` | Dato legale obbligatorio; pubblicare un'email personale è una decisione di chi la possiede | Riquadro rosso in pagina |
+| Regione del progetto Supabase | Supabase → Settings → General | L'API non la espone, si legge solo dalla dashboard | Riquadro rosso in pagina |
+| Revocare il token Supabase della sessione del 24/07 | Supabase → Account → Access Tokens | Era servito per applicare le migrazioni; un token che non serve più non deve esistere | Da fare |
+| Due account di prova + segreti `WT_TEST_*` | Supabase + GitHub → Settings → Secrets | Sbloccano `tests/flussi.spec.js` a ogni PR; senza, restano i soli smoke (C8) | Assenti all'ultima PR |
+
+**Le migrazioni 012, 013 e 014 vanno applicate in produzione dopo la pubblicazione del codice**, non
+prima: la 014 cambia la lettura dei passaggi, e l'app vecchia non sa cosa farsene di `visibilita`.
+È la stessa regola imparata con la 011.
 
 ---
 
@@ -276,14 +286,48 @@ gruppo) restano da vedere a video: sono esattamente i flussi che C8 deve coprire
 Da qui in poi l'app la usano persone che non conosco. Nessuno di questi cantieri parte prima che
 la Fase 1 sia chiusa.
 
-### C9 — Passaggi in zona *(la D dell'intervista)*
+### C9 — Passaggi in zona *(la D dell'intervista)* — *fatto, da collaudare a video*
 - **Obiettivo:** trovare un passaggio da qualcuno che sta in zona ma non è della mia comitiva.
-- **Cosa:** luogo di partenza e arrivo veri sul passaggio (oggi c'è solo un link Maps testuale);
-  zona sul profilo; campo `visibilità` (`gruppo` / `zona` / `pubblico`); regole di lettura che
-  seguono; **estensione della regola D2**: vedo il nome di chi guida un passaggio che posso vedere.
+- **Fatto** (`014_passaggi_in_zona.sql` + interfaccia): campo `visibilita` sul passaggio
+  (`gruppo` / `zona` / `pubblico`), coordinate di partenza e arrivo, zona sul profilo, e
+  l'estensione di D2 — si legge il nome di chi guida un passaggio che si vede, e di chi ci è
+  a bordo.
+- **Il default non cambia niente.** Un passaggio nasce `gruppo`, cioè esattamente com'era prima:
+  chi vuole uscire dalla comitiva lo deve dire. È l'unico modo di aggiungere un'apertura senza
+  aprire retroattivamente quello che c'è già.
+- **Tre scelte, nessuna obbligata:**
+  - **Niente geocodifica di terzi.** D6 dice API native del browser: le coordinate vengono da
+    `navigator.geolocation`, cioè dal telefono di chi pubblica, e il nome del luogo resta il testo
+    libero di prima. Un geocoder sarebbe una voce in più nella CSP e un terzo che vede dove vanno
+    gli utenti.
+  - **La zona è un punto più un raggio (25 km)**, non un comune: i confini amministrativi non
+    dicono niente su quanto è comodo un passaggio, e servirebbe un elenco da mantenere. Il raggio
+    sta in `raggio_zona_km()`, una riga sola da cambiare.
+  - **Il gruppo resta obbligatorio anche per i passaggi pubblici** (D1). Un passaggio pubblico è di
+    una comitiva che si lascia guardare da fuori, non un passaggio senza padrone: archiviazione e
+    regole di scrittura restano quelle. Si può aprire il proprio passaggio, non pubblicarne uno in
+    casa d'altri.
+- **La regola di visibilità sta in una funzione sola**, `passaggio_visibile()`, e non
+  nell'espressione della policy: serve anche alla policy dei profili, che altrimenti dovrebbe
+  riscriverla e prima o poi divergere. Le due sottoquery di `profiles read` leggono `rides` e
+  `seat_claims` con le loro policy attive, quindi vedono esattamente il visibile: se la regola
+  cambia, cambiano anche loro da sole.
+- **Il blocco viene prima di tutto**, anche di `pubblico`: una persona bloccata non ricompare
+  perché qualcuno ha aperto il proprio passaggio a chiunque.
+- **Storico e Statistiche restano dentro la comitiva**, di proposito: servono a sapere di chi è il
+  turno, e un passaggio preso fuori falserebbe la rotazione. Il sottotitolo di quelle viste lo dice
+  già ("Gruppo: …").
+- **Difetto trovato facendolo, e non era mio:** aggiungere una colonna a `rides` **rompeva la
+  ripetibilità della 010**, che copia nell'archivio con `insert … select *`. Alla seconda passata
+  l'insert trovava più colonne della destinazione e il job `schema` diventava rosso. Ora 014
+  allinea anche l'archivio, e la regola è scritta lì: chi tocca `rides` tocca anche l'archivio.
+- **Verificato:** `supabase/test/verifica-zona.sql`, in CI. Provato al contrario, sei mutazioni su
+  sei fanno diventare rosso il test — compresa "raggio a 1000 km" e "il blocco non vince più su
+  pubblico".
 - **Fatto quando:** cerco un passaggio fuori dal mio gruppo, lo trovo, e continuo a non vedere
-  niente dei gruppi a cui non appartengo.
-- **Dipende da:** C4, C5, C10.
+  niente dei gruppi a cui non appartengo. **Raggiunto**, ed è il controllo 6 del test.
+- **Resta il collaudo a video:** due account veri in due comitive diverse, con la posizione vera del
+  telefono. `navigator.geolocation` non si può collaudare da un test di database.
 
 ### C10 — Sicurezza delle persone — *fatto, da collaudare a video*
 - **Obiettivo:** un'app dove sconosciuti salgono in macchina insieme e non c'è modo di segnalare

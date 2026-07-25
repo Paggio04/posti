@@ -213,10 +213,12 @@ async function ensureProfile() {
     || currentUser.email.split('@')[0];
   const oauthAvatar = currentUser.user_metadata?.avatar_url || currentUser.user_metadata?.picture || null;
   const { data } = await supabase.from('profiles')
-    .select('display_name, is_admin, avatar_url, sospeso, sospeso_motivo').eq('id', currentUser.id).maybeSingle();
+    .select('display_name, is_admin, avatar_url, sospeso, sospeso_motivo, zona_lat, zona_lon, zona_nome')
+    .eq('id', currentUser.id).maybeSingle();
   if (data) {
     myName = data.display_name; isAdmin = !!data.is_admin; myAvatar = data.avatar_url;
     sospeso = !!data.sospeso; sospesoMotivo = data.sospeso_motivo;
+    miaZona = data.zona_lat === null ? null : { lat: data.zona_lat, lon: data.zona_lon, nome: data.zona_nome };
     // La foto di Google/Apple si salva nel profilo, così la vedono anche gli altri
     if (oauthAvatar && data.avatar_url !== oauthAvatar) {
       myAvatar = oauthAvatar;
@@ -230,6 +232,7 @@ async function ensureProfile() {
   isAdmin = false;
   sospeso = false;
   sospesoMotivo = null;
+  miaZona = null;
 }
 
 // --- Segnalazione, blocco, sospensione (cantiere C10) ---
@@ -446,6 +449,80 @@ async function renderReports() {
   }
 }
 
+// --- Passaggi in zona (cantiere C9) ---
+// Le coordinate arrivano solo da navigator.geolocation: niente servizio di geocodifica,
+// che sarebbe un terzo a cui si dice dove vanno gli utenti (decisione D6). Il nome del
+// luogo resta il testo libero che c'era gia'.
+
+let partenza = null;   // { lat, lon } del passaggio che si sta pubblicando
+let miaZona = null;    // { lat, lon, nome } dal profilo
+
+function posizione() {
+  return new Promise((resolve, reject) => {
+    if (!navigator.geolocation) { reject(new Error('Questo browser non sa dire dove sei.')); return; }
+    navigator.geolocation.getCurrentPosition(
+      (p) => resolve({ lat: p.coords.latitude, lon: p.coords.longitude }),
+      () => reject(new Error('Non hai dato il permesso di leggere la posizione.')),
+      { enableHighAccuracy: false, timeout: 10000, maximumAge: 300000 },
+    );
+  });
+}
+
+document.getElementById('ride-qui').addEventListener('click', async () => {
+  const esito = document.getElementById('ride-posizione');
+  esito.textContent = 'Cerco…';
+  try {
+    partenza = await posizione();
+    esito.textContent = 'Partenza segnata su questa posizione.';
+  } catch (e) {
+    partenza = null;
+    esito.textContent = e.message;
+  }
+});
+
+function renderZona() {
+  const stato = document.getElementById('zona-stato');
+  stato.textContent = miaZona
+    ? `Impostata${miaZona.nome ? ` su ${miaZona.nome}` : ''}: vedi i passaggi che partono entro ${RAGGIO_ZONA_KM} km.`
+    : 'Non impostata: non ricevi passaggi da fuori la tua comitiva, a parte quelli aperti a chiunque.';
+  document.getElementById('zona-togli').classList.toggle('hidden', !miaZona);
+}
+
+const RAGGIO_ZONA_KM = 25; // deve restare uguale a raggio_zona_km() nella migrazione 014
+
+document.getElementById('zona-imposta').addEventListener('click', async () => {
+  if (bloccaSeSospeso('cambiare la tua zona')) return;
+  const stato = document.getElementById('zona-stato');
+  stato.textContent = 'Cerco…';
+  let punto;
+  try {
+    punto = await posizione();
+  } catch (e) { stato.textContent = e.message; return; }
+  const nome = await ask('Come si chiama questa zona?', {
+    text: 'Solo per te: serve a ricordarti quale punto hai segnato.',
+    placeholder: 'Es. Sesto San Giovanni',
+  });
+  if (nome === null) { renderZona(); return; }
+  const { error } = await supabase.from('profiles')
+    .update({ zona_lat: punto.lat, zona_lon: punto.lon, zona_nome: nome || null })
+    .eq('id', currentUser.id);
+  if (error) { toast(friendlyError(error)); renderZona(); return; }
+  miaZona = { ...punto, nome: nome || null };
+  renderZona();
+  toast('Zona impostata.');
+  loadRides();
+});
+
+document.getElementById('zona-togli').addEventListener('click', async () => {
+  const { error } = await supabase.from('profiles')
+    .update({ zona_lat: null, zona_lon: null, zona_nome: null }).eq('id', currentUser.id);
+  if (error) { toast(friendlyError(error)); return; }
+  miaZona = null;
+  renderZona();
+  toast('Zona rimossa.');
+  loadRides();
+});
+
 // --- I propri dati: portarli via, o cancellarli (cantiere C11) ---
 // L'esportazione si fa dal client, con le stesse query di tutti i giorni: le policy
 // decidono cosa esce, quindi non serve nessun permesso nuovo per una cosa che deve solo
@@ -593,6 +670,7 @@ function renderProfile() {
     + (isAdmin ? ' · Amministratore' : '')
     + (sospeso ? ' · Sospeso' : '');
   document.getElementById('profile-email').textContent = currentUser?.email ?? '';
+  renderZona();
   renderBlocked();
   renderReports();
 }
@@ -969,11 +1047,18 @@ rideForm.addEventListener('submit', async (e) => {
     group_id: currentGroupId,
     depart_time: document.getElementById('ride-time').value || null,
     origin: document.getElementById('ride-origin').value.trim() || null,
+    visibilita: document.getElementById('ride-visibilita').value,
+    origin_lat: partenza ? partenza.lat : null,
+    origin_lon: partenza ? partenza.lon : null,
     destination: document.getElementById('ride-destination').value.trim(),
     seats: Number(document.getElementById('ride-seats').value),
     fuel_per_person: Number(document.getElementById('ride-fuel').value) || null,
     note: document.getElementById('ride-note').value.trim() || null,
   };
+  if (base.visibilita === 'zona' && base.origin_lat === null) {
+    toast('Per aprire il passaggio a chi è in zona serve "Parto da qui": senza, non lo vedrebbe nessuno.');
+    return;
+  }
   const weeks = Number(document.getElementById('ride-repeat').value) || 1;
   let published = 0;
   let firstError = null;
@@ -991,6 +1076,10 @@ rideForm.addEventListener('submit', async (e) => {
     return;
   }
   rideForm.reset();
+  // reset() non tocca le variabili: senza questo, la posizione segnata resterebbe
+  // appiccicata alla pubblicazione successiva, che magari parte da un'altra parte.
+  partenza = null;
+  document.getElementById('ride-posizione').textContent = '';
   offerCard.classList.add('hidden');
   toast(published === 1
     ? 'Auto pubblicata: ora gli amici possono prenotare il posto.'
@@ -1090,7 +1179,9 @@ async function loadRides(silent = false) {
     .select('*, driver:profiles!rides_driver_id_fkey(display_name, avatar_url), seat_claims(seat_index, passenger_id, passenger:profiles!seat_claims_passenger_id_fkey(display_name, avatar_url)), ride_comments(count), ride_waitlist(user_id, created_at, profile:profiles(display_name))')
     .eq('ride_date', currentDate)
     .order('depart_time', { ascending: true, nullsFirst: false });
-  query = query.eq('group_id', currentGroupId);
+  // Niente piu' filtro sul gruppo qui: da C9 la policy fa uscire anche i passaggi aperti
+  // alla zona o a chiunque, e filtrarli di nuovo nel client li rimetterebbe dentro la
+  // comitiva. Quali siano "di fuori" lo dice group_id al momento di disegnarli.
 
   let reqQuery = supabase
     .from('ride_requests')
@@ -1151,8 +1242,11 @@ async function renderTurnHint() {
 // Bottoni del giorno: nascosti nei giorni passati; "Cerco un passaggio" contestuale
 function updateDayCta(rides) {
   const past = isPastDay();
-  offerToggle.classList.toggle('hidden', past);
-  if (past) offerCard.classList.add('hidden');
+  // `sospeso` va rimesso qui e non solo in applicaSospensione(): questa riga gira a ogni
+  // caricamento dei passaggi e senza il controllo rimetterebbe il pulsante "pubblica" a
+  // chi e' sospeso, che poi si prenderebbe un errore dal database.
+  offerToggle.classList.toggle('hidden', past || sospeso);
+  if (past || sospeso) offerCard.classList.add('hidden');
   const reqBtn = document.getElementById('request-toggle');
   const iDrive = rides.some(r => r.driver_id === currentUser.id);
   const iSit = rides.some(r => r.seat_claims.some(c => c.passenger_id === currentUser.id));
@@ -1415,6 +1509,15 @@ function renderRides(rides) {
     const drv = document.createElement('div');
     drv.className = 'ride-sub';
     drv.textContent = `Guida ${nomeDi(ride.driver)}`;
+    // Da C9 in Home arrivano anche passaggi di comitive a cui non appartengo: senza
+    // dirlo, sembrerebbero della propria e non si capirebbe chi sia chi guida.
+    if (ride.group_id !== currentGroupId) {
+      const fuori = document.createElement('span');
+      fuori.className = 'badge-fuori';
+      fuori.textContent = ride.visibilita === 'pubblico' ? 'fuori comitiva' : 'in zona';
+      fuori.title = 'Questo passaggio è di un\'altra comitiva, aperto a chi sta fuori.';
+      drv.appendChild(fuori);
+    }
     if (ride.driver_id !== currentUser.id) {
       // Il guidatore qui puo' essere una persona bloccata: la sua auto resta visibile solo
       // finche' ci sono sopra, ed e' anche il punto da cui si sblocca.
