@@ -28,10 +28,19 @@ Principi:
 | `seat_claims` | Prenotazioni sedile | unique (ride, seat) e (ride, passenger); trigger `check_claim` |
 | `ride_requests` | "Cerco un passaggio" | `group_id` obbligatorio; unique (user, giorno, gruppo) |
 | `ride_comments` | Thread per auto | check lunghezza 1..300 |
+| `ride_waitlist` | Coda quando l'auto è piena | unique (ride, user); promozione automatica alla liberazione di un posto |
+| `user_reports` | Segnalazioni verso l'amministratore | motivo fra cinque; una sola aperta per coppia (indice unico parziale) |
+| `user_blocks` | "Non ci vediamo più" | PK (blocker, blocked); nessuno può bloccare se stesso |
+
+`profiles` porta anche `is_admin` e `sospeso`: nessuno dei due si cambia da soli, ci sono due
+trigger apposta.
 
 Trigger (fonte: `supabase/migrations/`):
 - `check_ride`: no giorni passati; no auto se sei già passeggero quel giorno.
 - `check_claim`: no auto partita/passata; sedile esistente; non sei il guidatore; un solo posto per giorno/gruppo; se guidi quel giorno non prenoti altrove.
+- `controlla_persone` (sedili, lista d'attesa): non si sale in macchina fra persone bloccate, e un sospeso non prenota. Guarda **la riga** e non `auth.uid()`, perché la promozione dalla lista d'attesa scrive per conto di un altro.
+- `controlla_sospeso` (gruppi, membri): un sospeso non crea comitive né ci entra. Serve perché `create_group`/`join_group` sono `security definer` e non passano dalle policy.
+- `protect_admin_flag`, `protect_sospeso`: nessuno si promuove amministratore né si toglie la sospensione. Fanno eccezione solo le chiamate con `auth.uid()` nullo (SQL editor, `service_role`), che è l'unico modo per nominare il primo amministratore.
 
 ## Contratto API (via supabase-js, tutte soggette a RLS)
 
@@ -44,6 +53,10 @@ Trigger (fonte: `supabase/migrations/`):
 | Pubblica auto | `from('rides').insert` | `driver_id = auth.uid()` + trigger |
 | Prenota/lascia sedile | `from('seat_claims').insert/delete` | `passenger_id = auth.uid()` (+ guidatore può liberare) + trigger |
 | Richiesta passaggio | `from('ride_requests').insert/delete` | proprie righe |
-| Commenti | `from('ride_comments').select/insert/delete` | visibilità = visibilità dell'auto; scrittura propria |
+| Commenti | `from('ride_comments').select/insert/delete` | visibilità = visibilità dell'auto, meno quelli di chi è bloccato; scrittura propria |
+| Segnala una persona | `from('user_reports').insert` | `reporter_id = auth.uid()`, non su se stessi, non da sospesi |
+| Leggi le segnalazioni | `from('user_reports').select` | chi l'ha scritta, o l'amministratore |
+| Blocca / sblocca | `from('user_blocks').insert/delete` | `blocker_id = auth.uid()`; le righe le legge solo chi le ha messe |
+| Sospendi / riabilita | `from('profiles').update({sospeso})` | solo amministratore (policy + trigger) |
 
 Realtime: canale `posti-live` su `postgres_changes` per `rides`, `seat_claims`, `ride_requests` (RLS applicata anche agli eventi).

@@ -22,6 +22,11 @@ export default [
         clearTimeout: 'readonly',
         console: 'readonly',
         Event: 'readonly',
+        // Servono all'esportazione dei propri dati (C11): il file si costruisce e si
+        // scarica nel browser, senza passare da nessun server.
+        Blob: 'readonly',
+        URL: 'readonly',
+        location: 'readonly',
       },
     },
     rules: {

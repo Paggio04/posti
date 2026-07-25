@@ -52,3 +52,20 @@ C'era, era `supabase-setup.sql`, e non funzionava: su un database vuoto si ferma
 (una policy su `ride_comments` prima che la tabella esistesse), e conteneva due volte lo
 stesso blocco, quindi rilanciarlo dava errore. Il dettaglio sta in
 `docs/adr/002-migrazioni-numerate.md`.
+
+## In che ordine si pubblica, codice e schema
+
+Non c'e' una risposta sola, e sbagliarla si vede subito sul sito vivo:
+
+> Si applica per prima la meta' che l'altra non puo' ignorare. Una migrazione che **toglie** va
+> **dopo** il codice che regge il vincolo; una migrazione che **aggiunge** va **prima** del codice
+> che se ne serve.
+
+Successo due volte, in due sensi opposti. La 011 chiudeva i profili: applicata prima della
+pubblicazione avrebbe mandato in errore l'app vecchia, che leggeva `driver.display_name` senza
+rete. Le 012-014 aggiungono colonne e tabelle che il codice nuovo interroga al primo caricamento
+(`sospeso`, `user_blocks`, `visibilita`): pubblicare quel codice prima di applicarle vuol dire
+un'app che non parte affatto.
+
+Nel dubbio, la domanda giusta e' una sola: **quale delle due meta' sopravvive senza l'altra?**
+Quella parte per prima.

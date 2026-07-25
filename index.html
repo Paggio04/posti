@@ -112,6 +112,14 @@
 
     <main class="app-view">
 
+      <!-- Account sospeso: si legge tutto, non si scrive piu' niente -->
+      <div id="sospeso-banner" class="sospeso-banner hidden" role="alert">
+        <strong>Il tuo account è sospeso.</strong>
+        <span id="sospeso-motivo"></span>
+        Puoi ancora leggere e annullare quello che avevi già preso, ma non pubblicare auto,
+        prenotare posti o scrivere commenti.
+      </div>
+
       <!-- HOME -->
       <section id="view-home" class="view">
 
@@ -182,6 +190,17 @@
             <input type="text" id="ride-note" maxlength="200" placeholder="Nota (facoltativa)" aria-label="Nota" class="note-input" />
               <button type="submit" id="save-place-btn" class="btn btn-primary">Pubblica</button>
             </div>
+            <div class="form-row form-row-end">
+              <label class="rating-label" for="ride-visibilita">Chi lo vede
+                <select id="ride-visibilita">
+                  <option value="gruppo" selected>Solo la comitiva</option>
+                  <option value="zona">Anche chi è in zona</option>
+                  <option value="pubblico">Chiunque</option>
+                </select>
+              </label>
+              <button type="button" id="ride-qui" class="btn btn-ghost btn-small"><svg width="14" height="14"><use href="#i-pin"/></svg> Parto da qui</button>
+              <span id="ride-posizione" class="form-hint"></span>
+            </div>
           </form>
         </section>
 
@@ -245,8 +264,32 @@
         </div>
         <div class="profile-actions">
           <button id="profile-rename" class="btn btn-secondary btn-full"><svg width="15" height="15"><use href="#i-edit"/></svg> Cambia nome</button>
+          <button type="button" id="profile-export" class="btn btn-secondary btn-full">Scarica i miei dati</button>
           <button id="profile-logout" class="btn btn-secondary btn-full btn-danger-full"><svg width="15" height="15"><use href="#i-logout"/></svg> Esci dall'account</button>
+          <button type="button" id="profile-delete" class="btn btn-secondary btn-full btn-danger-full">Elimina il mio account</button>
         </div>
+
+        <section id="zona-card" class="card">
+          <h3 class="card-title">La mia zona</h3>
+          <p class="card-sub">Serve solo a farti vedere i passaggi che partono vicino a te. La posizione resta un punto, non un indirizzo, e la puoi togliere quando vuoi.</p>
+          <p id="zona-stato" class="card-sub"></p>
+          <div class="group-card-actions">
+            <button type="button" id="zona-imposta" class="btn btn-ghost btn-small"><svg width="14" height="14"><use href="#i-pin"/></svg> Sono qui</button>
+            <button type="button" id="zona-togli" class="btn btn-ghost btn-small btn-danger">Togli la zona</button>
+          </div>
+        </section>
+
+        <section id="blocked-card" class="card hidden">
+          <h3 class="card-title">Persone bloccate</h3>
+          <p class="card-sub">Non vedete più i passaggi l'uno dell'altra, e non potete salire in macchina insieme.</p>
+          <div id="blocked-list" class="chip-row"></div>
+        </section>
+
+        <section id="admin-card" class="card hidden">
+          <h3 class="card-title">Segnalazioni</h3>
+          <p class="card-sub">Solo per l'amministratore. Chi ha segnalato non sa cosa succede dopo.</p>
+          <div id="reports-list"></div>
+        </section>
         <p class="profile-hint">Suggerimento: dal browser del telefono usa "Aggiungi a schermata Home" per avere WeTransport come un'app.</p>
         <p class="profile-hint"><a href="privacy.html">Informativa privacy</a></p>
       </section>
@@ -270,6 +313,31 @@
       <div class="dialog-actions">
         <button type="button" id="dialog-cancel" class="btn btn-secondary">Annulla</button>
         <button type="submit" id="dialog-ok" class="btn btn-primary">Conferma</button>
+      </div>
+    </form>
+  </dialog>
+
+  <dialog id="persona-dialog" class="app-dialog">
+    <form method="dialog" id="persona-form">
+      <h3 id="persona-title">Segnala o blocca</h3>
+      <p class="auth-subtitle">Segnalare avvisa solo l'amministratore: l'altra persona non lo viene a sapere. Bloccare è una tua decisione e ha effetto subito.</p>
+
+      <label for="persona-motivo">Motivo della segnalazione</label>
+      <select id="persona-motivo">
+        <option value="guida-pericolosa">Guida pericolosa</option>
+        <option value="molestie">Molestie o offese</option>
+        <option value="non-si-e-presentato">Non si è presentato</option>
+        <option value="profilo-falso">Profilo falso</option>
+        <option value="altro">Altro</option>
+      </select>
+
+      <label for="persona-dettagli">Cos'è successo (facoltativo)</label>
+      <textarea id="persona-dettagli" rows="3" maxlength="1000" placeholder="Più dettagli dai, più la segnalazione è utile."></textarea>
+
+      <div class="dialog-actions">
+        <button type="button" id="persona-cancel" class="btn btn-secondary">Chiudi</button>
+        <button type="button" id="persona-blocca" class="btn btn-secondary btn-danger-full">Blocca</button>
+        <button type="submit" id="persona-segnala" class="btn btn-primary">Segnala</button>
       </div>
     </form>
   </dialog>

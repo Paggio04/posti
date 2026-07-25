@@ -40,6 +40,54 @@ policy troppo larghe.
 
 ---
 
+## Dove siamo (25/07/2026)
+
+**Fasi 0, 1 e 2 chiuse e pubblicate.** `main` è al merge della PR #1, il sito vivo serve l'app
+nuova, le migrazioni 000-011 sono applicate in produzione, e il ramo che pubblica è protetto da
+controlli obbligatori. **T1 è raggiunto sul piano tecnico**; quello che manca per dire "pronta per
+la comitiva" è gente vera che la usa.
+
+**Fase 3 scritta e verificata sul ramo, non ancora pubblicata**: C10 sicurezza delle persone
+(migrazione 012), C11 GDPR (013), C9 passaggi in zona (014). Ogni cantiere ha il suo file di test in
+CI, e ogni test è stato provato al contrario — tolta una protezione alla volta, per vedere se
+diventa rosso davvero.
+
+Prima di pubblicare la Fase 3, quattro cose che il repo non può fare da solo:
+
+| Cosa | Dove | Perché | Stato |
+|---|---|---|---|
+| Titolare del trattamento nell'informativa | `privacy.html` | Dato legale obbligatorio; pubblicare un'email personale è una decisione di chi la possiede | Riquadro rosso in pagina |
+| Regione del progetto Supabase | Supabase → Settings → General | L'API non la espone, si legge solo dalla dashboard | Riquadro rosso in pagina |
+| Revocare il token Supabase della sessione del 24/07 | Supabase → Account → Access Tokens | Era servito per applicare le migrazioni; un token che non serve più non deve esistere | Da fare |
+| Due account di prova + segreti `WT_TEST_*` | Supabase + GitHub → Settings → Secrets | Sbloccano `tests/flussi.spec.js` a ogni PR; senza, restano i soli smoke (C8) | Assenti all'ultima PR |
+
+### L'ordine di pubblicazione, che qui è l'opposto di quello della 011
+
+**Prima le migrazioni 012, 013 e 014 in produzione, poi il codice.** Verificato sul progetto vivo il
+25/07/2026: `profiles.sospeso`, `profiles.zona_lat`, `rides.visibilita` e la tabella `user_reports`
+**non esistono ancora**. Il codice nuovo le legge al primo caricamento: `ensureProfile` chiede
+`sospeso`, `loadBlocked` interroga `user_blocks`, la pubblicazione scrive `visibilita`.
+
+Cosa succede davvero se si pubblica il codice prima (tracciato, non supposto): la pagina **si apre**
+— supabase-js restituisce l'errore invece di sollevarlo — ma `ensureProfile` non trova il profilo,
+ricade sul ripiego e **il nome di tutti torna a essere il prefisso dell'email**; soprattutto,
+**pubblicare un'auto fallisce**, perche' l'insert contiene una colonna che non esiste. Non e' una
+schermata bianca, e' di peggio: sembra funzionare e non fa la cosa per cui esiste.
+
+Con la 011 la regola era il contrario, e non è una contraddizione: quella **restringeva** letture che
+il codice vecchio non sapeva gestire, quindi andava dopo. Queste tre **aggiungono** cose che il
+codice nuovo pretende, quindi vanno prima. La regola vera, che vale per entrambe:
+
+> Si applica per prima la metà che l'altra non può ignorare. Una migrazione che toglie va dopo il
+> codice che regge; una migrazione che aggiunge va prima del codice che se ne serve.
+
+Applicarle mentre il sito vivo serve ancora l'app vecchia **non rompe niente**, ed è il motivo per
+cui si può fare in quest'ordine: le colonne nuove hanno un default che conserva il comportamento di
+oggi (`visibilita = 'gruppo'`), le tabelle nuove l'app vecchia non le guarda, e le restrizioni non
+hanno su cosa mordere — nessun blocco, nessun sospeso, nessun passaggio aperto fuori dalla comitiva.
+
+---
+
 ## Fase 0 — Rete di sicurezza (prima di toccare qualsiasi altra cosa)
 
 Oggi ogni push su `main` è la pubblicazione, e gli smoke test girano **dopo**, contro il sito
@@ -61,8 +109,13 @@ tocca sicurezza e schema, cioè le cose dove sbagliare costa di più. Questa fas
 - **Un difetto trovato dal primo giro di CI:** il workflow era fissato a Node 20, mentre
   html-validate 11 usa `fs.globSync`, che esiste da Node 22. In locale passava (Node 22), in CI no.
   Alzato a Node 24 e dichiarato `engines` in `package.json`.
-- **Resta da fare a mano:** `checks`, `schema` ed `e2e-anteprima` come controlli **obbligatori** sul
-  ramo `main` (Settings → Branches). Finché non lo sono, la CI rossa avvisa ma non impedisce il merge.
+- **Controlli obbligatori: fatti** (25/07/2026, ruleset `Claude`). `checks`, `schema` ed
+  `e2e-anteprima` sono richiesti su `main`, insieme al divieto di cancellare il ramo e di
+  riscriverne la storia; nessuna eccezione, nemmeno per il proprietario. La configurazione è
+  copiata in `.github/rulesets/main.json` — vedi `.github/rulesets/README.md`. **C1 è chiuso.**
+- Nota per la prossima volta: la PR #1 è stata pubblicata *prima* che la regola esistesse, quindi
+  era verde per fortuna e non per costruzione. La rete di sicurezza va accesa prima di servirsene,
+  non dopo.
 
 ### C2 — Migrazioni numerate al posto del file unico — *fatto e verificato*
 - **Obiettivo:** sapere sempre quale schema è davvero applicato.
@@ -133,14 +186,15 @@ tocca sicurezza e schema, cioè le cose dove sbagliare costa di più. Questa fas
 - **Applicata in produzione il 24/07/2026.** Stato prima: 4 utenti, 1 gruppo con 0 membri, 1 auto
   senza comitiva. Dopo: quell'auto è nell'archivio, `group_id` è obbligatorio su `rides` e
   `ride_requests`, le policy nuove sono attive. Nessun dato perso.
-- **Attenzione — codice e database ora sono disallineati:** il sito vivo serve ancora l'app vecchia,
-  quella con la pillola "Tutti", mentre il database non accetta più passaggi senza comitiva. Con 0
-  membri nei gruppi nessuno se ne accorge, ma finché questo ramo non è pubblicato la Home mostra
-  una lista vuota e pubblicare un'auto darebbe errore. **Va pubblicato.**
-- **Resta il collaudo a video**, che nessun test sostituisce: due account veri, due comitive, stesso
-  giorno.
+- **Disallineamento chiuso il 25/07/2026**: la PR #1 è stata pubblicata (merge alle 02:01, CI verde
+  su `main`, deploy Netlify andato, smoke sul sito vivo verdi). Fino a quel momento il database non
+  accettava più passaggi senza comitiva mentre il sito serviva ancora l'app vecchia, quella con la
+  pillola "Tutti": Home vuota e pubblicazione in errore. Con 0 membri nei gruppi non l'ha visto
+  nessuno.
+- **Collaudo a video: fatto da C8**, con due account veri in due comitive diverse. Restano da vedere
+  da utente vero, non da test, le viste Storico e Statistiche.
 
-### C5 — Profili chiusi *(decisione D2)* — *scritto e verificato sul database; da applicare in produzione dopo la pubblicazione*
+### C5 — Profili chiusi *(decisione D2)* — *fatto, applicato in produzione*
 - **Obiettivo:** smettere di mostrare nome e avatar di tutti a tutti.
 - **Database** (`011_profili_chiusi.sql`): `profiles read using (true)` diventa "il mio profilo,
   più chi condivide con me almeno una comitiva, più l'amministratore". Il confronto passa da
@@ -158,6 +212,9 @@ tocca sicurezza e schema, cioè le cose dove sbagliare costa di più. Questa fas
 - **Ordine di applicazione, importante:** la 011 va applicata in produzione **dopo** aver pubblicato
   questo ramo, non prima. Restringe letture che il codice vecchio non sa gestire: prima il codice
   che regge i profili nascosti, poi la regola che li nasconde.
+- **Applicata in produzione**, nell'ordine giusto: il 25/07/2026 la funzione `condivide_gruppo`
+  risponde sul progetto vivo, e la crea solo la 011. Con questa, `schema_migrations` registra tutte
+  e 12 le migrazioni presenti nel repo. **Fase 1 chiusa.**
 - **Collaudo a video:** account estraneo → home, storico, statistiche, commenti: nessun nome di
   gente fuori dalla propria comitiva, e nessun buco al posto di una persona.
 
@@ -209,6 +266,11 @@ tre sarebbero andati in errore con un profilo nascosto — cioè proprio il caso
   Rinominarla farebbe ricomparire il banner a chi l'aveva già chiuso: non vale il cambio.
 - Il conteggio sul bottone dei commenti non si aggiorna dopo averne scritto uno, fino al
   ricaricamento successivo. Cosmetico.
+- *(trovate durante C10, con un confronto fra le classi usate dal JS e quelle definite nel
+  CSS)* Tre classi non esistono in `style.css`: `maps-link` sul link al ritrovo, che quindi
+  resta un'ancora senza stile, e i due modificatori `fuel` e `waitlist-row`, che non
+  cambiano niente rispetto alla classe di base. Nessuna rompe la pagina; darle uno stile e'
+  lavoro di C15, dove l'aspetto si decide tutto insieme invece che un pezzo per volta.
 
 **Collaudo:** lint e validazione verdi, schermata di accesso identica al riferimento pixel per
 pixel. Le correzioni sui percorsi con utenti veri (posto liberato, passaggio annullato, uscita dal
@@ -234,7 +296,9 @@ gruppo) restano da vedere a video: sono esattamente i flussi che C8 deve coprire
   `WT_TEST_EMAIL_A`, `WT_TEST_EMAIL_B`, `WT_TEST_PASSWORD` (due account di prova già confermati).
   Senza, si salta e restano gli smoke: nessun falso rosso su chi clona il repo.
 - **Resta da fare a mano:** creare i due account di prova stabili e metterne le credenziali nei
-  segreti del repo, se si vuole quel test a ogni PR.
+  segreti del repo, se si vuole quel test a ogni PR. Nell'ultima PR i tre segreti erano vuoti e il
+  flusso a due utenti si è saltato: `1 skipped, 3 passed`. Il ripiego funziona come previsto, ma il
+  cuore dell'app in CI resta scoperto.
 
 ---
 
@@ -243,31 +307,126 @@ gruppo) restano da vedere a video: sono esattamente i flussi che C8 deve coprire
 Da qui in poi l'app la usano persone che non conosco. Nessuno di questi cantieri parte prima che
 la Fase 1 sia chiusa.
 
-### C9 — Passaggi in zona *(la D dell'intervista)*
+### C9 — Passaggi in zona *(la D dell'intervista)* — *fatto, da collaudare a video*
 - **Obiettivo:** trovare un passaggio da qualcuno che sta in zona ma non è della mia comitiva.
-- **Cosa:** luogo di partenza e arrivo veri sul passaggio (oggi c'è solo un link Maps testuale);
-  zona sul profilo; campo `visibilità` (`gruppo` / `zona` / `pubblico`); regole di lettura che
-  seguono; **estensione della regola D2**: vedo il nome di chi guida un passaggio che posso vedere.
+- **Fatto** (`014_passaggi_in_zona.sql` + interfaccia): campo `visibilita` sul passaggio
+  (`gruppo` / `zona` / `pubblico`), coordinate di partenza e arrivo, zona sul profilo, e
+  l'estensione di D2 — si legge il nome di chi guida un passaggio che si vede, e di chi ci è
+  a bordo.
+- **Il default non cambia niente.** Un passaggio nasce `gruppo`, cioè esattamente com'era prima:
+  chi vuole uscire dalla comitiva lo deve dire. È l'unico modo di aggiungere un'apertura senza
+  aprire retroattivamente quello che c'è già.
+- **Tre scelte, nessuna obbligata:**
+  - **Niente geocodifica di terzi.** D6 dice API native del browser: le coordinate vengono da
+    `navigator.geolocation`, cioè dal telefono di chi pubblica, e il nome del luogo resta il testo
+    libero di prima. Un geocoder sarebbe una voce in più nella CSP e un terzo che vede dove vanno
+    gli utenti.
+  - **La zona è un punto più un raggio (25 km)**, non un comune: i confini amministrativi non
+    dicono niente su quanto è comodo un passaggio, e servirebbe un elenco da mantenere. Il raggio
+    sta in `raggio_zona_km()`, una riga sola da cambiare.
+  - **Il gruppo resta obbligatorio anche per i passaggi pubblici** (D1). Un passaggio pubblico è di
+    una comitiva che si lascia guardare da fuori, non un passaggio senza padrone: archiviazione e
+    regole di scrittura restano quelle. Si può aprire il proprio passaggio, non pubblicarne uno in
+    casa d'altri.
+- **La regola di visibilità sta in una funzione sola**, `passaggio_visibile()`, e non
+  nell'espressione della policy: serve anche alla policy dei profili, che altrimenti dovrebbe
+  riscriverla e prima o poi divergere. Le due sottoquery di `profiles read` leggono `rides` e
+  `seat_claims` con le loro policy attive, quindi vedono esattamente il visibile: se la regola
+  cambia, cambiano anche loro da sole.
+- **Il blocco viene prima di tutto**, anche di `pubblico`: una persona bloccata non ricompare
+  perché qualcuno ha aperto il proprio passaggio a chiunque.
+- **Storico e Statistiche restano dentro la comitiva**, di proposito: servono a sapere di chi è il
+  turno, e un passaggio preso fuori falserebbe la rotazione. Il sottotitolo di quelle viste lo dice
+  già ("Gruppo: …").
+- **Difetto trovato facendolo, e non era mio:** aggiungere una colonna a `rides` **rompeva la
+  ripetibilità della 010**, che copia nell'archivio con `insert … select *`. Alla seconda passata
+  l'insert trovava più colonne della destinazione e il job `schema` diventava rosso. Ora 014
+  allinea anche l'archivio, e la regola è scritta lì: chi tocca `rides` tocca anche l'archivio.
+- **Verificato:** `supabase/test/verifica-zona.sql`, in CI. Provato al contrario, sei mutazioni su
+  sei fanno diventare rosso il test — compresa "raggio a 1000 km" e "il blocco non vince più su
+  pubblico".
 - **Fatto quando:** cerco un passaggio fuori dal mio gruppo, lo trovo, e continuo a non vedere
-  niente dei gruppi a cui non appartengo.
-- **Dipende da:** C4, C5, C10.
+  niente dei gruppi a cui non appartengo. **Raggiunto**, ed è il controllo 6 del test.
+- **Resta il collaudo a video:** due account veri in due comitive diverse, con la posizione vera del
+  telefono. `navigator.geolocation` non si può collaudare da un test di database.
 
-### C10 — Sicurezza delle persone
+### C10 — Sicurezza delle persone — *fatto, da collaudare a video*
 - **Obiettivo:** un'app dove sconosciuti salgono in macchina insieme e non c'è modo di segnalare
   nessuno non è pronta per il pubblico. Vale più di qualsiasi funzione.
-- **Cosa:** segnalare un utente, bloccarlo (non ci vediamo più i passaggi a vicenda), una coda di
-  segnalazioni per me, sospensione di un account.
-- **Fatto quando:** posso segnalare, bloccare, e vedere le segnalazioni; un utente sospeso non
-  entra più.
+- **Fatto** (`012_sicurezza_persone.sql` + interfaccia): tre cose distinte, che si confondono
+  facilmente.
+  - **Segnalazione**: motivo fra cinque, dettagli facoltativi, e la vedono solo chi la scrive e
+    l'amministratore. Il segnalato **non sa di esserlo**: se lo sapesse, segnalare diventerebbe un
+    modo per litigare invece che per farsi aiutare. Una sola aperta per coppia, altrimenti chi vuole
+    molestare qualcuno lo fa riempiendo la coda dell'amministratore.
+  - **Blocco**: decisione propria, immediata, senza passare da nessuno. Vale **nei due sensi** anche
+    se lo decide uno solo: spariscono auto, commenti e richieste dell'altro, e non si sale in
+    macchina insieme.
+  - **Sospensione**: decisione dell'amministratore. Toglie la parola, non la vista — si legge tutto
+    e si può ancora annullare quello che si era preso, perché liberare un posto toglie ingombro
+    agli altri.
+- **Due scelte non ovvie**, entrambe prese guardando cosa succede il giorno dopo:
+  - **Il blocco non cancella niente.** L'auto di una persona bloccata sparisce *tranne* se ci sei
+    già sopra: nasconderla lascerebbe una prenotazione invisibile e impossibile da annullare. Per la
+    stessa ragione al contrario, i sedili occupati restano visibili — un posto preso che risultasse
+    libero verrebbe prenotato e poi rifiutato dall'indice unico, con un errore senza spiegazione.
+    Sparisce il nome, resta l'ingombro.
+  - **Sul nome il blocco è asimmetrico.** Chi blocca continua a leggere il profilo di chi ha
+    bloccato; chi subisce il blocco no. Senza, la lista dei bloccati sarebbe un elenco di
+    sconosciuti e non si potrebbe più sbloccare nessuno. Resta dentro il vincolo di 011: fuori dalla
+    comitiva condivisa non si legge comunque niente, quindi bloccare non è un modo per tenersi
+    leggibile una persona.
+- **Il punto meno ovvio è la lista d'attesa:** `promote_waitlist()` è `security definer`, quindi non
+  passa da nessuna policy e avrebbe fatto salire un bloccato sull'auto di chi l'ha bloccato. La
+  ferma un trigger che guarda **le righe**, non `auth.uid()`, perché lì chi scrive non è chi sale.
+- **Difetto trovato scrivendo il test, ed è di C2/008:** *il primo amministratore non si poteva
+  nominare.* L'update dal SQL editor lo rifiutava il trigger stesso — lì `auth.uid()` è nullo,
+  quindi `is_admin()` è falso, quindi "non sei amministratore, non puoi nominarne uno". Non se n'era
+  accorto nessuno perché un amministratore non è mai esistito: la coda delle segnalazioni sarebbe
+  rimasta senza nessuno che la legge. Corretto in 012.
+- **Verificato:** `supabase/test/verifica-sicurezza.sql`, in CI a ogni push, e **provato al
+  contrario**: tolta una protezione alla volta, ogni mutazione fa diventare rosso il test. Le due
+  che restano verdi sono cinture ridondanti, e nel file c'è scritto quali.
+- **Fatto quando** *(criterio originale)*: posso segnalare, bloccare, e vedere le segnalazioni; un
+  utente sospeso non entra più. **Con una precisazione presa qui:** sospeso *entra* ma non scrive.
+  Il ban vero su `auth.users` richiederebbe una Edge Function con `service_role`, cioè una chiave
+  che apre tutto messa in un servizio nuovo: superficie in più per una differenza che l'utente
+  vede uguale.
+- **Resta il collaudo a video**, che nessun test sostituisce: due account veri, segnalazione,
+  blocco, e la coda vista da un amministratore.
 
-### C11 — GDPR completo
+### C11 — GDPR completo — *fatto nel codice; due dati mancano e li può mettere solo una persona*
 - **Obiettivo:** oggi `SECURITY.md` segna la conformità come parziale, e va bene finché siamo fra
   amici. Con iscritti sconosciuti diventa un obbligo.
-- **Cosa:** informativa privacy pubblicata e aggiornata (titolare, base giuridica, conservazione,
-  Supabase come responsabile, regione dei dati); esportazione dei propri dati; cancellazione
-  dell'account dall'app, non dalla dashboard.
+- **Esportazione** — "Scarica i miei dati" nel Profilo: un JSON con profilo, comitive, auto, posti,
+  richieste, commenti, liste d'attesa, segnalazioni fatte e persone bloccate. Si costruisce nel
+  browser **con le query di tutti i giorni**: le policy decidono già cosa esce, quindi una funzione
+  che deve solo restituire il visibile non ha bisogno di nessun permesso nuovo.
+  - Le segnalazioni **ricevute** non ci sono, di proposito: contengono il racconto di un'altra
+    persona, che non diventa esportabile perché parla di te.
+- **Cancellazione** (`013_cancella_account.sql`) — "Elimina il mio account" chiama
+  `elimina_account()`, `security definer`, **senza parametri**: sa cancellare una persona sola, chi
+  la chiama. Dal client non si potrebbe fare altrimenti — l'API di amministrazione vuole la
+  `service_role`, cioè la chiave che apre tutto, che nel browser non deve esistere. Questa funzione
+  è l'opposto di dare quella chiave al client.
+- **Il danno che si stava per fare agli altri:** `groups.owner_id` cascata su `profiles`, quindi la
+  cancellazione avrebbe portato via **la comitiva intera**, con le auto e le prenotazioni di tutti
+  gli altri membri. Ora il gruppo passa al membro più anziano rimasto; se non è rimasto nessuno, se
+  ne va anche lui, perché un gruppo vuoto non è di nessuno. Verificato in
+  `supabase/test/verifica-cancellazione.sql`, in CI, e provato al contrario: tolta l'eredità, il
+  test diventa rosso su "DANNO AGLI ALTRI".
+- **Informativa** riscritta: tabella dato → perché → base giuridica, chi vede cosa, responsabili
+  (Supabase e Netlify), tempi di conservazione, i tre diritti che si esercitano da soli dall'app,
+  reclamo al Garante, soglia dei 14 anni.
+- **Due cose non le può mettere il codice**, e nella pagina sono riquadri rossi bene in vista
+  invece che frasi plausibili inventate:
+  - **il titolare del trattamento** — nome e contatto di chi gestisce l'app. È un dato legale, e
+    pubblicare un'email personale su un sito pubblico è una decisione di chi la possiede;
+  - **la regione del progetto Supabase**, che si legge solo dalla dashboard (Settings → General) e
+    che l'API non espone.
+  Finché ci sono quei riquadri, l'informativa **non** è completa e l'app non è pronta per T2.
 - **Fatto quando:** un utente esporta e cancella tutto da solo, e la cancellazione porta via anche
-  auto, prenotazioni, richieste e commenti.
+  auto, prenotazioni, richieste e commenti. **Raggiunto**, meno i due dati qui sopra.
 
 ---
 

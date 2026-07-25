@@ -4,7 +4,7 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>Privacy — WeTransport</title>
-  <meta name="description" content="Come WeTransport tratta i tuoi dati: quali raccoglie, perché, per quanto li conserva e come cancellarli." />
+  <meta name="description" content="Come WeTransport tratta i tuoi dati: quali raccoglie, perché, per quanto li conserva e come esportarli o cancellarli." />
   <link rel="stylesheet" href="style.css" />
   <link rel="icon" href="icon.svg" type="image/svg+xml" />
   <style>
@@ -14,33 +14,111 @@
     .privacy p, .privacy li { color: var(--ink-soft); font-size: 0.95rem; }
     .privacy ul { padding-left: 20px; }
     .privacy a { color: var(--primary); }
+    .privacy table { width: 100%; border-collapse: collapse; margin: 12px 0; font-size: 0.9rem; }
+    .privacy th, .privacy td { text-align: left; padding: 8px 10px; border-bottom: 1px solid var(--border); color: var(--ink-soft); vertical-align: top; }
+    .privacy th { color: var(--ink); font-weight: 600; }
+    .da-completare { border: 1px dashed var(--danger); border-radius: 12px; padding: 12px 14px; color: var(--danger); }
   </style>
 </head>
 <body>
   <main class="privacy">
     <h1>Informativa privacy</h1>
-    <p>WeTransport è un'app senza scopo di lucro per organizzare i passaggi in auto tra amici.</p>
+    <p>WeTransport è un'app senza scopo di lucro per organizzare i passaggi in auto. Questa pagina
+    dice quali dati raccoglie, perché, per quanto tempo, e cosa puoi farci tu.</p>
+    <p><em>Ultimo aggiornamento: 25 luglio 2026.</em></p>
 
-    <h2>Quali dati raccogliamo</h2>
-    <ul>
-      <li><strong>Email</strong> — solo per l'accesso; non è mai visibile agli altri utenti.</li>
-      <li><strong>Nome visibile</strong> — quello che scegli tu; lo vedono i membri dei tuoi gruppi.</li>
-      <li><strong>Attività</strong> — auto pubblicate, posti prenotati, richieste e commenti, con data e ora.</li>
-    </ul>
-    <p>Nessun tracciamento pubblicitario, nessuna analytics di terze parti, nessun cookie di profilazione.</p>
+    <h2>Titolare del trattamento</h2>
+    <div class="da-completare">
+      <strong>Da completare prima di aprire l'app al pubblico:</strong> nome e cognome (o ragione
+      sociale) di chi gestisce WeTransport, e un indirizzo email di contatto per le richieste sui
+      dati. Finché resta questo riquadro l'informativa è incompleta: il titolare è
+      un'informazione obbligatoria, e non è una cosa che si possa indovinare al posto tuo.
+    </div>
 
-    <h2>Dove sono i dati</h2>
-    <p>Su <a href="https://supabase.com">Supabase</a> (database e autenticazione) e serviti via
-    <a href="https://www.netlify.com">Netlify</a>. Le connessioni sono sempre cifrate (HTTPS/TLS).</p>
+    <h2>Quali dati trattiamo, e perché</h2>
+    <table>
+      <thead>
+        <tr><th>Dato</th><th>Perché</th><th>Base giuridica</th></tr>
+      </thead>
+      <tbody>
+        <tr>
+          <td>Email</td>
+          <td>Accesso all'account e reimpostazione della password. Non è mai visibile agli altri utenti.</td>
+          <td>Esecuzione del servizio che hai richiesto (art. 6.1.b GDPR)</td>
+        </tr>
+        <tr>
+          <td>Nome visibile e foto profilo</td>
+          <td>Farti riconoscere da chi sale in macchina con te. Il nome lo scegli tu; la foto arriva dall'account Google, se entri con quello.</td>
+          <td>Esecuzione del servizio (art. 6.1.b GDPR)</td>
+        </tr>
+        <tr>
+          <td>Attività: auto pubblicate, posti prenotati, richieste, commenti, liste d'attesa</td>
+          <td>È il servizio stesso. Ogni riga ha data e ora.</td>
+          <td>Esecuzione del servizio (art. 6.1.b GDPR)</td>
+        </tr>
+        <tr>
+          <td>Segnalazioni e blocchi</td>
+          <td>Poter segnalare un comportamento scorretto, e non incontrare più una persona. Una segnalazione contiene quello che scrivi tu e chi riguarda.</td>
+          <td>Legittimo interesse alla sicurezza di chi usa l'app (art. 6.1.f GDPR)</td>
+        </tr>
+      </tbody>
+    </table>
+    <p>Nessun tracciamento pubblicitario, nessuna analytics di terze parti, nessun cookie di
+    profilazione. Nel browser l'app salva soltanto quale comitiva stavi guardando e se hai già
+    chiuso il riquadro delle istruzioni.</p>
 
     <h2>Chi vede cosa</h2>
-    <p>I dati dei gruppi sono visibili solo ai membri del gruppo. L'amministratore dell'app può
-    intervenire su qualsiasi contenuto per moderazione.</p>
+    <ul>
+      <li>I dati di una comitiva li vedono solo i membri di quella comitiva.</li>
+      <li>Il tuo nome lo vede chi condivide con te almeno un gruppo, nessun altro.</li>
+      <li>Se blocchi una persona, non vedete più i passaggi l'uno dell'altra.</li>
+      <li>Una segnalazione la leggono solo chi l'ha scritta e l'amministratore: chi viene segnalato
+        non ne è informato.</li>
+      <li>L'amministratore può intervenire sui contenuti per moderazione e sospendere un account.</li>
+    </ul>
+    <p>Non sono promesse dell'interfaccia: sono regole scritte nel database, e valgono anche per chi
+    provasse a interrogarlo direttamente.</p>
 
-    <h2>Cancellazione</h2>
-    <p>Puoi lasciare un gruppo o cancellare posti, richieste e commenti in qualsiasi momento.
-    Per eliminare l'intero account (e con esso tutti i tuoi dati, a cascata) scrivi
-    all'amministratore: la cancellazione è definitiva.</p>
+    <h2>Dove sono i dati</h2>
+    <p>Su <a href="https://supabase.com">Supabase</a> (database e autenticazione) e serviti da
+    <a href="https://www.netlify.com">Netlify</a>. Entrambi li trattano per conto del titolare, come
+    responsabili del trattamento. Le connessioni sono sempre cifrate (HTTPS/TLS).</p>
+    <div class="da-completare">
+      <strong>Da completare:</strong> la regione del progetto Supabase (per esempio <em>Europa,
+      Francoforte</em>). Si legge nella dashboard del progetto, in Settings → General. Se è fuori
+      dall'Unione Europea, qui va detto anche su quale garanzia si appoggia il trasferimento.
+    </div>
+
+    <h2>Per quanto tempo</h2>
+    <ul>
+      <li><strong>Account e profilo</strong>: finché l'account esiste.</li>
+      <li><strong>Auto, prenotazioni, richieste, commenti</strong>: finché esiste l'account, o finché
+        non li cancelli tu — puoi farlo in qualsiasi momento dall'app.</li>
+      <li><strong>Segnalazioni</strong>: finché esiste l'account di chi le ha scritte o di chi
+        riguardano. Se uno dei due se ne va, la segnalazione se ne va con lui.</li>
+    </ul>
+
+    <h2>I tuoi diritti, e dove si esercitano</h2>
+    <p>Tre si esercitano da soli, dall'app, senza chiedere niente a nessuno — nella scheda
+    <strong>Profilo</strong>:</p>
+    <ul>
+      <li><strong>Accesso e portabilità</strong> — "Scarica i miei dati" produce un file con tutto
+        quello che ti riguarda: profilo, comitive, auto, posti, richieste, commenti, liste d'attesa,
+        segnalazioni che hai fatto, persone che hai bloccato. Le segnalazioni <em>ricevute</em> non
+        ci sono: contengono il racconto di un'altra persona, che non diventa tuo perché parla di te.</li>
+      <li><strong>Cancellazione</strong> — "Elimina il mio account" porta via account, profilo, auto,
+        prenotazioni, richieste, commenti, segnalazioni e blocchi. È definitiva e non passa da
+        nessuna approvazione. Se possiedi una comitiva, passa al membro più anziano rimasto; se non
+        è rimasto nessuno, sparisce anche quella.</li>
+      <li><strong>Rettifica</strong> — il nome visibile si cambia da "Cambia nome".</li>
+    </ul>
+    <p>Restano limitazione, opposizione e reclamo: per quelli, e per qualsiasi altra richiesta, si
+    scrive al titolare all'indirizzo indicato in cima. In Italia il reclamo si presenta al
+    <a href="https://www.garanteprivacy.it">Garante per la protezione dei dati personali</a>.</p>
+
+    <h2>Minori</h2>
+    <p>WeTransport non è pensato per chi ha meno di 14 anni, l'età sotto la quale in Italia serve il
+    consenso di chi esercita la responsabilità genitoriale.</p>
 
     <p><a href="index.html">← Torna a WeTransport</a></p>
   </main>

@@ -1201,6 +1201,103 @@ input:focus-visible, select:focus-visible, textarea:focus-visible {
   .topbar { background: oklch(0.14 0.03 262 / 0.88); }
 }
 
+/* ================= SICUREZZA DELLE PERSONE (C10) ================= */
+
+.sospeso-banner {
+  background: var(--danger-soft);
+  border: 1px solid var(--danger);
+  color: var(--danger);
+  border-radius: var(--radius);
+  padding: 14px 18px;
+  margin-bottom: 20px;
+  font-size: 0.9rem;
+  line-height: 1.5;
+}
+.sospeso-banner strong { display: block; margin-bottom: 4px; }
+
+/* Il "⋯" accanto a una persona: presente ma discreto. Segnalare qualcuno non e'
+   un'azione da mettere in evidenza come "prenota". */
+.chip-report {
+  background: none;
+  border: none;
+  color: var(--ink-soft);
+  cursor: pointer;
+  margin-left: 6px;
+  padding: 0 4px;
+  font-size: 0.9rem;
+  line-height: 1;
+  border-radius: var(--pill);
+}
+.chip-report:hover { color: var(--ink); background: var(--surface-2); }
+
+.card {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-xl);
+  box-shadow: var(--shadow-1);
+  padding: 20px;
+  margin-top: 20px;
+}
+.card-title { font-size: 1rem; font-weight: 650; margin-bottom: 4px; }
+.card-sub { color: var(--ink-soft); font-size: 0.86rem; margin-bottom: 14px; }
+.chip-row { display: flex; gap: 8px; flex-wrap: wrap; }
+
+.report-row {
+  border-top: 1px solid var(--border);
+  padding-top: 14px;
+  margin-top: 14px;
+}
+.report-row:first-child { border-top: none; padding-top: 0; margin-top: 0; }
+.report-head { font-weight: 600; font-size: 0.92rem; }
+.report-body {
+  color: var(--ink-soft);
+  font-size: 0.88rem;
+  margin: 6px 0 10px;
+  white-space: pre-wrap;
+}
+
+#persona-dialog select,
+#persona-dialog textarea {
+  width: 100%;
+  margin-bottom: 12px;
+  font: inherit;
+  color: var(--ink);
+  background: var(--surface-2);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  padding: 10px 12px;
+}
+#persona-dialog label {
+  display: block;
+  font-size: 0.82rem;
+  font-weight: 600;
+  color: var(--ink-soft);
+  margin-bottom: 5px;
+}
+
+/* ================= PASSAGGI IN ZONA (C9) ================= */
+
+/* Un passaggio che arriva da fuori la propria comitiva deve dirlo: senza, sembrerebbe
+   della comitiva e non si capirebbe chi e' chi guida. */
+.badge-fuori {
+  display: inline-block;
+  margin-left: 8px;
+  padding: 1px 8px;
+  border-radius: var(--pill);
+  background: var(--surface-2);
+  border: 1px solid var(--border);
+  color: var(--ink-soft);
+  font-size: 0.72rem;
+  font-weight: 600;
+  vertical-align: middle;
+}
+
+.form-hint {
+  color: var(--ink-soft);
+  font-size: 0.8rem;
+  align-self: center;
+}
+
 @media (prefers-reduced-motion: reduce) {
   *, *::before, *::after { animation: none !important; transition: none !important; }
 }
