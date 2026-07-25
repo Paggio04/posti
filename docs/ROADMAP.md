@@ -460,14 +460,41 @@ Nessun servizio di terzi. *Dipende da:* C12.
 ### C14 — Servizi esterni
 **Deciso — solo cose che il browser sa già fare, nessun SDK, nessuna voce nuova nella CSP:**
 
-| Cosa | Come | Perché così |
-|---|---|---|
-| Invita al gruppo | Web Share API nativa (che sul telefono offre WhatsApp da sola) + copia del codice come ripiego | Zero dipendenze, funziona con tutte le app di messaggistica, non solo WhatsApp |
-| Passaggio nel calendario | File `.ics` generato dall'app | Nessun servizio esterno, funziona con Google, Apple e Outlook allo stesso modo |
-| Navigazione al ritrovo | Link Maps, con coordinate vere al posto del testo libero | Rimandato dentro C9, che è il cantiere dove nascono i luoghi veri |
+| Cosa | Come | Perché così | Stato |
+|---|---|---|---|
+| Invita al gruppo | Web Share API nativa (che sul telefono offre WhatsApp da sola) + copia del codice come ripiego | Zero dipendenze, funziona con tutte le app di messaggistica, non solo WhatsApp | **fatto**, `navigator.share` in tre punti di `app.js` |
+| Passaggio nel calendario | File `.ics` generato dall'app | Nessun servizio esterno, funziona con Google, Apple e Outlook allo stesso modo | da fare |
+| Navigazione al ritrovo | Link Maps, con coordinate vere al posto del testo libero | Rimandato dentro C9, che è il cantiere dove nascono i luoghi veri | **fatto**, `linkRitrovo()` |
 
 **Esclusi**: SDK di terzi, analytics, login social oltre a Google. Ogni SDK è codice altrui in
 esecuzione dentro la mia pagina e una riga in più nella CSP.
+
+**Navigazione al ritrovo — com'è finita.** C9 aveva creato `origin_lat`/`origin_lon` e lasciato il
+link a cercare il testo libero, quindi il ritrovo poteva spostarsi di un chilometro: "piazza" trova
+la piazza sbagliata. Ora il link apre il percorso (`maps/dir`) sul punto vero.
+
+Non lo stesso link per tutti, però, e la ragione non è estetica: **la policy di 014 è di riga, non
+di colonna.** Chi vede un passaggio `zona` o `pubblico` riceve la riga intera, coordinate comprese,
+e il punto di partenza di una persona può essere casa sua al metro. Dentro la comitiva — o avendo un
+posto su quell'auto — il punto esatto è quello che serve; da fuori resta la ricerca sul nome del
+luogo, che dice la zona e non l'indirizzo. Vale anche per ogni passaggio pubblicato prima della 014,
+che coordinate non ne ha.
+
+**`dest_lat`/`dest_lon` restano colonne morte, e non per dimenticanza.** La 014 le ha create,
+niente le scrive: le coordinate arrivano solo da `navigator.geolocation`, e alla destinazione non ci
+sei. Riempirle vorrebbe dire un geocoder — che D6 esclude — o un selettore su mappa, cioè una
+dipendenza nuova. Se un giorno servono, quella è la decisione da riaprire, non un bug da chiudere.
+
+### C21 — Le coordinate esatte non devono uscire dalla comitiva — *debito della Fase 3, non un'integrazione*
+Sta qui perché è nato guardando C14, non perché appartenga a "Integrare": è un buco di 014, e come
+tale viene prima delle cose nuove. Nato guardando C14, ed è il buco vero che quel cantiere ha solo smesso di offrire con un click:
+`select('*')` su `rides` porta `origin_lat`/`origin_lon` a **chiunque** possa vedere il passaggio,
+compresi gli estranei che lo vedono perché è `pubblico`. Il link ora è prudente, il payload no.
+
+**Come:** una vista che espone le coordinate solo a chi è dentro (o ha un posto), più un `select`
+con le colonne nominate al posto di `*`. Migrazione `015`, con il suo file di test provato al
+contrario come gli altri. *Fatto quando:* un utente fuori comitiva che interroga l'API a mano
+riceve il passaggio senza le coordinate.
 
 ---
 

@@ -1335,6 +1335,39 @@ function svgEl(tag, attrs) {
   return el;
 }
 
+// --- Navigazione al ritrovo (cantiere C14, decisione D6) ---
+// Le coordinate della partenza esistono da C9, ma il link continuava a cercare il testo
+// libero: "piazza" trova la piazza sbagliata, e il ritrovo si sposta di un chilometro.
+// Con origin_lat/origin_lon il punto e' quello vero, e il link apre il percorso invece
+// della sola ricerca. Nessun servizio nuovo: e' un indirizzo di Maps, non un SDK.
+//
+// **Non a tutti lo stesso link, pero'.** La policy di 014 e' di riga, non di colonna: chi
+// vede un passaggio 'zona' o 'pubblico' riceve la riga intera, coordinate comprese, e il
+// punto di partenza di una persona puo' essere casa sua al metro. Dentro la comitiva (o
+// avendo un posto sopra quell'auto) il punto esatto e' esattamente quello che serve; da
+// fuori resta la ricerca sul nome del luogo, che dice la zona e non l'indirizzo.
+// Restringere anche il payload e' un cantiere a parte, ed e' scritto in ROADMAP: qui si
+// smette di *offrire* l'indirizzo con un click, non si finge che il dato non arrivi.
+function linkRitrovo(ride) {
+  const haCoordinate = ride.origin_lat != null && ride.origin_lon != null;
+  const dentro = ride.group_id === currentGroupId
+    || (ride.seat_claims ?? []).some((c) => c.passenger_id === currentUser?.id);
+  if (haCoordinate && dentro) {
+    return {
+      href: 'https://www.google.com/maps/dir/?api=1&destination='
+        + encodeURIComponent(`${ride.origin_lat},${ride.origin_lon}`),
+      testo: 'Naviga al ritrovo',
+    };
+  }
+  // Senza coordinate — o guardando da fuori — vale quello che c'era: il testo libero.
+  // Vale anche per ogni passaggio pubblicato prima della 014, che coordinate non ne ha.
+  if (!ride.origin) return null;
+  return {
+    href: 'https://www.google.com/maps/search/?api=1&query=' + encodeURIComponent(ride.origin),
+    testo: 'Punto di ritrovo su Maps',
+  };
+}
+
 function buildCar(ride) {
   const isLong = ride.seats >= 5;
   const H = isLong ? 330 : 250;
@@ -1492,13 +1525,14 @@ function renderRides(rides) {
     route.className = 'ride-route';
     route.textContent = ride.origin ? `${ride.origin} → ${ride.destination}` : ride.destination;
     info.appendChild(route);
-    if (ride.origin) {
+    const ritrovo = linkRitrovo(ride);
+    if (ritrovo) {
       const maps = document.createElement('a');
       maps.className = 'maps-link';
-      maps.href = 'https://www.google.com/maps/search/?api=1&query=' + encodeURIComponent(ride.origin);
+      maps.href = ritrovo.href;
       maps.target = '_blank';
       maps.rel = 'noopener';
-      maps.innerHTML = '<svg width="13" height="13"><use href="#i-pin"/></svg> Punto di ritrovo su Maps';
+      maps.innerHTML = '<svg width="13" height="13"><use href="#i-pin"/></svg> ' + ritrovo.testo;
       info.appendChild(maps);
     }
     const sub = document.createElement('div');

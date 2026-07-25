@@ -753,6 +753,14 @@ input:focus-visible, select:focus-visible, textarea:focus-visible {
 .ride-head { display: flex; justify-content: space-between; align-items: start; gap: 8px; }
 .ride-route { font-weight: 700; font-size: 1rem; }
 .ride-sub { color: var(--ink-soft); font-size: 0.85rem; margin-top: 2px; }
+/* Il link al ritrovo era senza regola da quando esiste: ereditava lo stile dei link e
+   dentro la scheda sembrava un errore. Riga sua, allineata all'icona del pin. */
+.maps-link {
+  display: inline-flex; align-items: center; gap: 4px; margin-top: 2px;
+  color: var(--ink-soft); font-size: 0.83rem; text-decoration: none;
+}
+.maps-link:hover { color: var(--primary-hover); text-decoration: underline; }
+.maps-link svg { flex: none; }
 .ride-foot { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
 .ride-note { color: var(--ink-soft); font-size: 0.83rem; }
 
