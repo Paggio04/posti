@@ -527,26 +527,48 @@ riceve il passaggio senza le coordinate.
 
 ## Fase 5 — Abbellire e ottimizzare
 
-### C15 — Togliere l'aria di cosa generata
-**Il problema non è che sia brutta: è che sembra generata.** Aurora animata sull'accesso, nav
-flottante a pillola, tutto arrotondato, animazioni a molla, gradienti morbidi: è l'estetica
-predefinita delle interfacce fatte dall'AI in questi mesi. Nessun dettaglio è sbagliato, e proprio
-per questo nessuno è *suo*. Chi la apre non ricorda niente.
+### C15 — Togliere l'aria di cosa generata — *impreziosita, non svuotata*
 
-**Cosa si fa:**
-1. **Togliere gli effetti che non dicono niente**: aurora, bagliori, gradienti decorativi. Sono
-   costati righe di CSS e non distinguono l'app da altre mille.
-2. **Scegliere un carattere tipografico vero** e portarne il peso: la tipografia è il modo più
-   economico di avere un'identità, e oggi è quella di sistema.
-3. **Fare dell'auto la protagonista.** L'SVG dei sedili è l'unica cosa qui dentro che nessun altro
-   ha: è disegnata su misura per questo problema. Oggi è un elemento fra tanti dentro una scheda.
-4. **Un accento solo, deciso**, al posto della palette morbida buona per qualsiasi cosa.
-5. **Testi con una voce.** "Bentornato", "Accedi per vedere chi guida oggi" sono corretti e
-   anonimi: è il registro predefinito. Questa è un'app per una comitiva di amici, può parlare come loro.
-6. **Stati vuoti disegnati**, non icona grigia centrata con frase gentile.
+**Come è andata, perché vale più del risultato.** Il primo tentativo ha preso "sembra generata" e ha
+risposto togliendo: via aurora, gradienti, ombre, schede, Inter, raggi grandi. Verdetto del
+proprietario, giusto: *«fa schifo, sembra il sito di una casa di riposo, era meglio prima»*. Quel
+commit è stato revertito (resta in `a94d1dc` se un giorno serve un pezzo). La lezione sta in una
+riga: **la base era buona e andava impreziosita, non spogliata.** Togliere la decorazione senza
+mettere niente al suo posto non dà carattere, dà povertà.
 
-**Fatto quando:** copro il logo e il nome con un dito, mostro uno screenshot a qualcuno, e si
-capisce lo stesso che è questa app e non un'altra. Prima e dopo affiancati.
+Secondo tentativo, in aggiunta. Vincoli dati: **navy resta il colore principale**, i **bordi restano
+tondeggianti**, ricco ma sobrio.
+
+1. **Il tondo della navigazione è di "dove sei", non della Home.** Era fisso sulla Home, rialzato,
+   con un anello che pulsava. Ora è un elemento solo che **scivola** sulla colonna attiva, e l'icona
+   di quella scheda sale dentro. La colonna la passa il codice al CSS leggendo l'ordine vero dei
+   pulsanti, così l'elenco delle viste non vive in due posti che possono divergere. Verificato a
+   390, 820 e 1440px: il centro del tondo cade sul centro della scheda entro 1px, in tutte e tre.
+2. **Passare sopra anticipa il tocco.** Sulla scheda non attiva compare un tondo pallido dove
+   arriverebbe quello pieno, e l'icona si alza di un soffio nella stessa direzione: non un bagliore,
+   un'anteprima. Chiuso in `@media (hover: hover) and (pointer: fine)`, perché sul telefono `:hover`
+   resta attaccato dopo il tocco e una scheda illuminata a vuoto sembra rotta. **Sul telefono basta
+   l'animazione della tab attiva**, ed è esattamente quello che resta.
+3. **Un secondo colore, l'ottone, e usato poco per scelta**: il tuo sedile, il tuo ruolo nello
+   storico, il tuo codice del gruppo. Navy resta il colore dell'app; l'ottone è il colore di chi la
+   sta usando. Prima "il mio sedile" era verde, cioè il colore di "va bene": ma quello non è una
+   conferma, è l'unico posto che ti riguarda, e in un'auto da cinque deve trovarsi senza leggere le
+   iniziali.
+4. **L'auto è diventata un oggetto.** Lamiera con la luce che arriva dall'alto (un gradiente per
+   ogni `--car-hue`, così funziona su qualsiasi tinta di guidatore), filo di luce sul bordo alto,
+   riflesso di sbieco sul parabrezza, ombra a terra che la appoggia invece di lasciarla galleggiare,
+   e una piega sul cuscino che fa leggere i sedili come imbottitura e non come tessere. Da
+   `min(200px, 72%)` a `min(228px, 82%)`.
+5. **Profondità vera invece di ombre grigie.** Due strati tinti del navy — una stretta che appoggia,
+   una larga che stacca — più un filo di luce interno da 1px in cima alle superfici. È la differenza
+   fra "pulito" e "curato", ed è un pixel.
+6. **Finiture**: numeri tabellari su ore, posti e codici (una colonna di orari resta una colonna
+   invece di ballare a ogni cifra), marchio con tracciatura strizzata, anello di focus disegnato.
+
+**Fatto quando:** coperto il logo e il nome con un dito, si capisce che è questa app. Il pezzo che
+risponde di più a quella prova è l'auto, che nessun altro ha. **Il giudizio finale resta tuo, su un
+telefono in mano**: qui dentro il browser è girato per davvero, ma un'app che si usa di corsa in
+piedi si valuta in piedi.
 
 ### C16 — Peso e velocità sul telefono
 1200 righe di CSS e 1311 di JS senza build, più supabase-js da CDN. Misurare prima di ottimizzare:

@@ -624,8 +624,20 @@ function switchView(view) {
   for (const v of VIEWS) {
     document.getElementById('view-' + v).classList.toggle('hidden', v !== view);
   }
-  document.querySelectorAll('.nav-item').forEach(b =>
-    b.classList.toggle('active', b.dataset.view === view));
+  // Il tondo della navigazione scivola sulla scheda attiva: la sua colonna la
+  // passa il codice al CSS, letta dall'ordine vero dei pulsanti, per non tenere
+  // l'elenco delle viste scritto in due posti che possono divergere.
+  const schede = [...document.querySelectorAll('.nav-item')];
+  schede.forEach((b, i) => {
+    const attiva = b.dataset.view === view;
+    b.classList.toggle('active', attiva);
+    if (attiva) {
+      b.setAttribute('aria-current', 'page');
+      document.querySelector('.bottom-nav')?.style.setProperty('--nav-i', i);
+    } else {
+      b.removeAttribute('aria-current');
+    }
+  });
   window.scrollTo({ top: 0 });
   if (view === 'history') loadHistory();
   if (view === 'stats') loadStats();
@@ -1457,9 +1469,40 @@ function buildCar(ride) {
   const svg = svgEl('svg', { viewBox: `0 0 190 ${H}`, class: 'car-svg', role: 'img' });
   svg.setAttribute('aria-label', `Auto di ${nomeDi(ride.driver)}`);
 
-  svg.appendChild(svgEl('rect', { x: 10, y: 10, width: 170, height: H - 20, rx: 46, class: 'car-body' }));
-  svg.appendChild(svgEl('rect', { x: 30, y: 44, width: 130, height: 16, rx: 8, class: 'car-glass' }));
-  svg.appendChild(svgEl('rect', { x: 34, y: H - 42, width: 122, height: 12, rx: 6, class: 'car-glass' }));
+  // Materiali (C15). L'auto e' l'unica cosa qui dentro che nessun altro ha, quindi
+  // vale disegnarla come un oggetto e non come un rettangolo: la luce arriva
+  // dall'alto, il vetro riflette, e sotto c'e' un'ombra che la appoggia. Il
+  // gradiente serve alla lamiera, non alla pagina: la carrozzeria ha un colore
+  // per ogni guidatore (--car-hue) e senza una variazione di luce sembra piatta.
+  const uid = ++carGradId;
+  const defs = svgEl('defs', {});
+  const lamiera = svgEl('linearGradient', { id: `lamiera-${uid}`, x1: '0', y1: '0', x2: '0.35', y2: '1' });
+  lamiera.appendChild(svgEl('stop', { offset: '0', class: 'lamiera-alto' }));
+  lamiera.appendChild(svgEl('stop', { offset: '0.55', class: 'lamiera-mezzo' }));
+  lamiera.appendChild(svgEl('stop', { offset: '1', class: 'lamiera-basso' }));
+  defs.appendChild(lamiera);
+  const vetro = svgEl('linearGradient', { id: `vetro-${uid}`, x1: '0', y1: '0', x2: '1', y2: '1' });
+  vetro.appendChild(svgEl('stop', { offset: '0', class: 'vetro-chiaro' }));
+  vetro.appendChild(svgEl('stop', { offset: '0.5', class: 'vetro-scuro' }));
+  vetro.appendChild(svgEl('stop', { offset: '1', class: 'vetro-chiaro' }));
+  defs.appendChild(vetro);
+  svg.appendChild(defs);
+
+  // L'ombra a terra: appoggia l'auto invece di lasciarla galleggiare.
+  svg.appendChild(svgEl('ellipse', { cx: 95, cy: H - 6, rx: 74, ry: 7, class: 'car-ombra' }));
+
+  svg.appendChild(svgEl('rect', {
+    x: 10, y: 10, width: 170, height: H - 20, rx: 46,
+    class: 'car-body', fill: `url(#lamiera-${uid})`,
+  }));
+  // Il filo di luce sul bordo alto: un pixel, ed e' quello che da' lo spessore.
+  svg.appendChild(svgEl('path', {
+    d: `M 56 11 Q 95 11 134 11`, class: 'car-luce',
+  }));
+  svg.appendChild(svgEl('rect', { x: 30, y: 44, width: 130, height: 16, rx: 8, class: 'car-glass', fill: `url(#vetro-${uid})` }));
+  // Riflesso sul parabrezza: una striscia sola, di sbieco.
+  svg.appendChild(svgEl('path', { d: 'M 40 58 L 58 46 L 74 46 L 56 58 Z', class: 'car-riflesso' }));
+  svg.appendChild(svgEl('rect', { x: 34, y: H - 42, width: 122, height: 12, rx: 6, class: 'car-glass', fill: `url(#vetro-${uid})` }));
   for (const [wx, wy] of [[2, 60], [180, 60], [2, H - 90], [180, H - 90]]) {
     svg.appendChild(svgEl('rect', { x: wx - 4, y: wy, width: 12, height: 34, rx: 5, class: 'car-wheel' }));
   }
@@ -1498,6 +1541,7 @@ function buildCar(ride) {
 }
 
 let avatarClipId = 0;
+let carGradId = 0;
 function drawSeat(svg, pos, { kind, label, name, avatar = null, clickable = false }) {
   const g = svgEl('g', { class: `seat seat-${kind}${clickable ? ' seat-click' : ''}`, tabindex: clickable ? 0 : -1 });
   const title = svgEl('title', {});
@@ -1505,6 +1549,8 @@ function drawSeat(svg, pos, { kind, label, name, avatar = null, clickable = fals
   g.appendChild(title);
   g.appendChild(svgEl('rect', { x: pos.x - 20, y: pos.y - 26, width: 40, height: 14, rx: 7, class: 'seat-back' }));
   g.appendChild(svgEl('rect', { x: pos.x - 22, y: pos.y - 14, width: 44, height: 40, rx: 12, class: 'seat-base' }));
+  // La piega del cuscino: due linee, e il sedile smette di sembrare una tessera.
+  g.appendChild(svgEl('path', { d: `M ${pos.x - 13} ${pos.y - 6} L ${pos.x + 13} ${pos.y - 6}`, class: 'seat-piega' }));
   if (avatar) {
     const clipId = 'seat-av-' + (++avatarClipId);
     const clip = svgEl('clipPath', { id: clipId });
