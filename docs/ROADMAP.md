@@ -42,18 +42,18 @@ policy troppo larghe.
 
 ## Dove siamo (25/07/2026)
 
-**Fasi 0, 1 e 2 chiuse.** Codice pubblicato e database allineati: `main` è al merge della PR #1, il
-sito vivo serve l'app nuova, le migrazioni 000-011 sono applicate in produzione. **T1 è raggiunto
-sul piano tecnico**; quello che manca per dire "pronta per la comitiva" è gente vera che la usa.
+**Fasi 0, 1 e 2 chiuse, tutte e tre per intero.** `main` è al merge della PR #1, il sito vivo serve
+l'app nuova, le migrazioni 000-011 sono applicate in produzione, e il ramo che pubblica è protetto
+da controlli obbligatori. Codice, database e regole di pubblicazione sono allineati: **T1 è
+raggiunto sul piano tecnico**; quello che manca per dire "pronta per la comitiva" è gente vera che
+la usa.
 
-Restano tre cose che si fanno **solo dai pannelli**, non dal repo. Nessuna blocca la Fase 3, ma la
-prima lascia il ramo che pubblica senza rete:
+Restano due cose, entrambe fuori dal repo e nessuna bloccante per la Fase 3:
 
-| Cosa | Dove | Perché |
-|---|---|---|
-| Importare `.github/rulesets/main.json` | GitHub → Settings → Rules | Senza, la CI rossa avvisa e basta: si può pubblicare lo stesso (C1) |
-| Revocare il token Supabase della sessione del 24/07 | Supabase → Account → Access Tokens | Era servito per applicare le migrazioni; un token che non serve più non deve esistere |
-| Due account di prova + segreti `WT_TEST_*` | Supabase + GitHub → Settings → Secrets | Sblocca `tests/flussi.spec.js` a ogni PR; senza, restano gli smoke (C8) |
+| Cosa | Dove | Perché | Stato |
+|---|---|---|---|
+| Revocare il token Supabase della sessione del 24/07 | Supabase → Account → Access Tokens | Era servito per applicare le migrazioni; un token che non serve più non deve esistere | Da fare, non verificabile dal repo |
+| Due account di prova + segreti `WT_TEST_*` | Supabase + GitHub → Settings → Secrets | Sbloccano `tests/flussi.spec.js` a ogni PR; senza, restano i soli smoke (C8) | Assenti all'ultima PR; la prossima PR lo dirà |
 
 ---
 
@@ -78,11 +78,13 @@ tocca sicurezza e schema, cioè le cose dove sbagliare costa di più. Questa fas
 - **Un difetto trovato dal primo giro di CI:** il workflow era fissato a Node 20, mentre
   html-validate 11 usa `fs.globSync`, che esiste da Node 22. In locale passava (Node 22), in CI no.
   Alzato a Node 24 e dichiarato `engines` in `package.json`.
-- **Resta da fare a mano, due minuti:** importare `.github/rulesets/main.json` da
-  **Settings → Rules → Rulesets → New ruleset → Import a ruleset**. Rende `checks`, `schema` ed
-  `e2e-anteprima` controlli **obbligatori** sul ramo `main`. Finché non lo si fa, la CI rossa avvisa
-  ma non impedisce il merge — ed è successo davvero: la PR #1 è stata pubblicata senza che nessuna
-  regola lo consentisse o lo impedisse, era verde per fortuna e non per costruzione.
+- **Controlli obbligatori: fatti** (25/07/2026, ruleset `Claude`). `checks`, `schema` ed
+  `e2e-anteprima` sono richiesti su `main`, insieme al divieto di cancellare il ramo e di
+  riscriverne la storia; nessuna eccezione, nemmeno per il proprietario. La configurazione è
+  copiata in `.github/rulesets/main.json` — vedi `.github/rulesets/README.md`. **C1 è chiuso.**
+- Nota per la prossima volta: la PR #1 è stata pubblicata *prima* che la regola esistesse, quindi
+  era verde per fortuna e non per costruzione. La rete di sicurezza va accesa prima di servirsene,
+  non dopo.
 
 ### C2 — Migrazioni numerate al posto del file unico — *fatto e verificato*
 - **Obiettivo:** sapere sempre quale schema è davvero applicato.
@@ -258,7 +260,9 @@ gruppo) restano da vedere a video: sono esattamente i flussi che C8 deve coprire
   `WT_TEST_EMAIL_A`, `WT_TEST_EMAIL_B`, `WT_TEST_PASSWORD` (due account di prova già confermati).
   Senza, si salta e restano gli smoke: nessun falso rosso su chi clona il repo.
 - **Resta da fare a mano:** creare i due account di prova stabili e metterne le credenziali nei
-  segreti del repo, se si vuole quel test a ogni PR.
+  segreti del repo, se si vuole quel test a ogni PR. Nell'ultima PR i tre segreti erano vuoti e il
+  flusso a due utenti si è saltato: `1 skipped, 3 passed`. Il ripiego funziona come previsto, ma il
+  cuore dell'app in CI resta scoperto.
 
 ---
 
