@@ -40,6 +40,23 @@ policy troppo larghe.
 
 ---
 
+## Dove siamo (25/07/2026)
+
+**Fasi 0, 1 e 2 chiuse.** Codice pubblicato e database allineati: `main` è al merge della PR #1, il
+sito vivo serve l'app nuova, le migrazioni 000-011 sono applicate in produzione. **T1 è raggiunto
+sul piano tecnico**; quello che manca per dire "pronta per la comitiva" è gente vera che la usa.
+
+Restano tre cose che si fanno **solo dai pannelli**, non dal repo. Nessuna blocca la Fase 3, ma la
+prima lascia il ramo che pubblica senza rete:
+
+| Cosa | Dove | Perché |
+|---|---|---|
+| Importare `.github/rulesets/main.json` | GitHub → Settings → Rules | Senza, la CI rossa avvisa e basta: si può pubblicare lo stesso (C1) |
+| Revocare il token Supabase della sessione del 24/07 | Supabase → Account → Access Tokens | Era servito per applicare le migrazioni; un token che non serve più non deve esistere |
+| Due account di prova + segreti `WT_TEST_*` | Supabase + GitHub → Settings → Secrets | Sblocca `tests/flussi.spec.js` a ogni PR; senza, restano gli smoke (C8) |
+
+---
+
 ## Fase 0 — Rete di sicurezza (prima di toccare qualsiasi altra cosa)
 
 Oggi ogni push su `main` è la pubblicazione, e gli smoke test girano **dopo**, contro il sito
@@ -61,8 +78,11 @@ tocca sicurezza e schema, cioè le cose dove sbagliare costa di più. Questa fas
 - **Un difetto trovato dal primo giro di CI:** il workflow era fissato a Node 20, mentre
   html-validate 11 usa `fs.globSync`, che esiste da Node 22. In locale passava (Node 22), in CI no.
   Alzato a Node 24 e dichiarato `engines` in `package.json`.
-- **Resta da fare a mano:** `checks`, `schema` ed `e2e-anteprima` come controlli **obbligatori** sul
-  ramo `main` (Settings → Branches). Finché non lo sono, la CI rossa avvisa ma non impedisce il merge.
+- **Resta da fare a mano, due minuti:** importare `.github/rulesets/main.json` da
+  **Settings → Rules → Rulesets → New ruleset → Import a ruleset**. Rende `checks`, `schema` ed
+  `e2e-anteprima` controlli **obbligatori** sul ramo `main`. Finché non lo si fa, la CI rossa avvisa
+  ma non impedisce il merge — ed è successo davvero: la PR #1 è stata pubblicata senza che nessuna
+  regola lo consentisse o lo impedisse, era verde per fortuna e non per costruzione.
 
 ### C2 — Migrazioni numerate al posto del file unico — *fatto e verificato*
 - **Obiettivo:** sapere sempre quale schema è davvero applicato.
@@ -133,14 +153,15 @@ tocca sicurezza e schema, cioè le cose dove sbagliare costa di più. Questa fas
 - **Applicata in produzione il 24/07/2026.** Stato prima: 4 utenti, 1 gruppo con 0 membri, 1 auto
   senza comitiva. Dopo: quell'auto è nell'archivio, `group_id` è obbligatorio su `rides` e
   `ride_requests`, le policy nuove sono attive. Nessun dato perso.
-- **Attenzione — codice e database ora sono disallineati:** il sito vivo serve ancora l'app vecchia,
-  quella con la pillola "Tutti", mentre il database non accetta più passaggi senza comitiva. Con 0
-  membri nei gruppi nessuno se ne accorge, ma finché questo ramo non è pubblicato la Home mostra
-  una lista vuota e pubblicare un'auto darebbe errore. **Va pubblicato.**
-- **Resta il collaudo a video**, che nessun test sostituisce: due account veri, due comitive, stesso
-  giorno.
+- **Disallineamento chiuso il 25/07/2026**: la PR #1 è stata pubblicata (merge alle 02:01, CI verde
+  su `main`, deploy Netlify andato, smoke sul sito vivo verdi). Fino a quel momento il database non
+  accettava più passaggi senza comitiva mentre il sito serviva ancora l'app vecchia, quella con la
+  pillola "Tutti": Home vuota e pubblicazione in errore. Con 0 membri nei gruppi non l'ha visto
+  nessuno.
+- **Collaudo a video: fatto da C8**, con due account veri in due comitive diverse. Restano da vedere
+  da utente vero, non da test, le viste Storico e Statistiche.
 
-### C5 — Profili chiusi *(decisione D2)* — *scritto e verificato sul database; da applicare in produzione dopo la pubblicazione*
+### C5 — Profili chiusi *(decisione D2)* — *fatto, applicato in produzione*
 - **Obiettivo:** smettere di mostrare nome e avatar di tutti a tutti.
 - **Database** (`011_profili_chiusi.sql`): `profiles read using (true)` diventa "il mio profilo,
   più chi condivide con me almeno una comitiva, più l'amministratore". Il confronto passa da
@@ -158,6 +179,9 @@ tocca sicurezza e schema, cioè le cose dove sbagliare costa di più. Questa fas
 - **Ordine di applicazione, importante:** la 011 va applicata in produzione **dopo** aver pubblicato
   questo ramo, non prima. Restringe letture che il codice vecchio non sa gestire: prima il codice
   che regge i profili nascosti, poi la regola che li nasconde.
+- **Applicata in produzione**, nell'ordine giusto: il 25/07/2026 la funzione `condivide_gruppo`
+  risponde sul progetto vivo, e la crea solo la 011. Con questa, `schema_migrations` registra tutte
+  e 12 le migrazioni presenti nel repo. **Fase 1 chiusa.**
 - **Collaudo a video:** account estraneo → home, storico, statistiche, commenti: nessun nome di
   gente fuori dalla propria comitiva, e nessun buco al posto di una persona.
 
