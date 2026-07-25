@@ -61,9 +61,25 @@ Prima di pubblicare la Fase 3, quattro cose che il repo non può fare da solo:
 | Revocare il token Supabase della sessione del 24/07 | Supabase → Account → Access Tokens | Era servito per applicare le migrazioni; un token che non serve più non deve esistere | Da fare |
 | Due account di prova + segreti `WT_TEST_*` | Supabase + GitHub → Settings → Secrets | Sbloccano `tests/flussi.spec.js` a ogni PR; senza, restano i soli smoke (C8) | Assenti all'ultima PR |
 
-**Le migrazioni 012, 013 e 014 vanno applicate in produzione dopo la pubblicazione del codice**, non
-prima: la 014 cambia la lettura dei passaggi, e l'app vecchia non sa cosa farsene di `visibilita`.
-È la stessa regola imparata con la 011.
+### L'ordine di pubblicazione, che qui è l'opposto di quello della 011
+
+**Prima le migrazioni 012, 013 e 014 in produzione, poi il codice.** Verificato sul progetto vivo il
+25/07/2026: `profiles.sospeso`, `profiles.zona_lat`, `rides.visibilita` e la tabella `user_reports`
+**non esistono ancora**. Il codice nuovo le legge al primo caricamento — `ensureProfile` chiede
+`sospeso`, `loadBlocked` interroga `user_blocks` — quindi pubblicarlo prima vuol dire un'app rotta
+per chiunque la apra, non un degrado elegante.
+
+Con la 011 la regola era il contrario, e non è una contraddizione: quella **restringeva** letture che
+il codice vecchio non sapeva gestire, quindi andava dopo. Queste tre **aggiungono** cose che il
+codice nuovo pretende, quindi vanno prima. La regola vera, che vale per entrambe:
+
+> Si applica per prima la metà che l'altra non può ignorare. Una migrazione che toglie va dopo il
+> codice che regge; una migrazione che aggiunge va prima del codice che se ne serve.
+
+Applicarle mentre il sito vivo serve ancora l'app vecchia **non rompe niente**, ed è il motivo per
+cui si può fare in quest'ordine: le colonne nuove hanno un default che conserva il comportamento di
+oggi (`visibilita = 'gruppo'`), le tabelle nuove l'app vecchia non le guarda, e le restrizioni non
+hanno su cosa mordere — nessun blocco, nessun sospeso, nessun passaggio aperto fuori dalla comitiva.
 
 ---
 
