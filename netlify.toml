@@ -6,5 +6,10 @@
     X-Content-Type-Options = "nosniff"
     X-Frame-Options = "DENY"
     Referrer-Policy = "strict-origin-when-cross-origin"
-    Permissions-Policy = "camera=(), microphone=(), geolocation=(), payment=()"
+    # geolocation=(self), non geolocation=(). L'allowlist vuota spegne la funzione per
+    # tutti *compresa questa pagina*, e da C9 la posizione serve: "Parto da qui" e la zona
+    # sul profilo. Con () il browser rifiuta prima di chiedere il permesso all'utente, con
+    # un errore che sembra un rifiuto suo. Le altre tre restano vuote perche' quelle non
+    # servono davvero a nessuno qui.
+    Permissions-Policy = "camera=(), microphone=(), geolocation=(self), payment=()"
     Content-Security-Policy = "default-src 'self'; script-src 'self' https://cdn.jsdelivr.net; connect-src 'self' https://ggjhvsnhzwapdulcjgkh.supabase.co wss://ggjhvsnhzwapdulcjgkh.supabase.co https://cdn.jsdelivr.net; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src https://fonts.gstatic.com; img-src 'self' data: https://*.googleusercontent.com; base-uri 'self'; form-action 'self'; frame-ancestors 'none'; object-src 'none'; upgrade-insecure-requests"
