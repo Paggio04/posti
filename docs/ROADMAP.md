@@ -441,11 +441,29 @@ la Fase 1 sia chiusa.
 
 ## Fase 4 — Integrare
 
-### C12 — PWA vera
-Il `manifest.json` c'è ma **manca il service worker**: l'app non è installabile come si deve e non
-apre offline. Serve anche l'icona in PNG 192 e 512 (oggi solo SVG, che alcuni sistemi ignorano) e
-una schermata sensata quando la rete non c'è. *Fatto quando:* installata dal telefono, si apre
-senza barra del browser e mostra qualcosa di utile anche offline.
+### C12 — PWA vera — *fatta nel codice, da installare su un telefono vero*
+C'è `sw.js`, ci sono le icone PNG 192 e 512 (generate da `icon.svg`, senza aggiungere nessuna
+libreria di conversione al progetto), e c'è `offline.html`.
+
+**La decisione che conta è cosa resta fuori dalla cache**, e sta scritta anche in `sw.js`: tutto
+quello che passa da Supabase, e tutto quello che non è `GET`. Sono dati di persone e token di
+sessione — una copia in cache sarebbe una copia che nessuno ha chiesto, che "Scarica i miei dati"
+non mostra e che "Elimina il mio account" non porta via. Sarebbe C11 al contrario. In cache va solo
+il guscio: i file pubblici, identici per tutti.
+
+Un dettaglio che si scopre solo provando: nella cache va messo anche **il modulo di Supabase preso
+dal CDN**, perché è il primo `import` di `app.js`. Senza quello "si apre offline" è una promessa che
+la prima riga smentisce, e l'app non parte affatto.
+
+L'avviso di rete non è decorazione: da quando l'app si apre offline, una schermata che compare e non
+si aggiorna **sembra rotta**. La barra rossa dice che è il segnale che manca, e al ritorno della rete
+i passaggi si ricaricano da soli.
+
+*Fatto quando:* installata dal telefono, si apre senza barra del browser e mostra qualcosa di utile
+anche offline. **Il worker, la cache e la ricarica offline sono verificati in un browser vero**; la
+parte che manca è l'installazione su un telefono, che da qui non si può fare: icona sulla home,
+avvio senza barra, e come sta l'icona dentro la maschera di Android (le PNG sono `purpose: "any"`,
+non `maskable`: una variante con i margini giusti è un lavoro di disegno, quindi C15).
 
 ### C13 — Notifiche a scheda chiusa
 Oggi le notifiche esistono solo con la scheda aperta in secondo piano (`maybeNotify`).
@@ -466,13 +484,13 @@ più niente. Se serviranno, saranno da attivare a mano, spente di default.
 Function Supabase innescata dal database per i primi due eventi, `pg_cron` per il promemoria orario.
 Nessun servizio di terzi. *Dipende da:* C12.
 
-### C14 — Servizi esterni
+### C14 — Servizi esterni — *chiuso*
 **Deciso — solo cose che il browser sa già fare, nessun SDK, nessuna voce nuova nella CSP:**
 
 | Cosa | Come | Perché così | Stato |
 |---|---|---|---|
 | Invita al gruppo | Web Share API nativa (che sul telefono offre WhatsApp da sola) + copia del codice come ripiego | Zero dipendenze, funziona con tutte le app di messaggistica, non solo WhatsApp | **fatto**, `navigator.share` in tre punti di `app.js` |
-| Passaggio nel calendario | File `.ics` generato dall'app | Nessun servizio esterno, funziona con Google, Apple e Outlook allo stesso modo | da fare |
+| Passaggio nel calendario | File `.ics` generato dall'app | Nessun servizio esterno, funziona con Google, Apple e Outlook allo stesso modo | **fatto**, `testoIcs()` |
 | Navigazione al ritrovo | Link Maps, con coordinate vere al posto del testo libero | Rimandato dentro C9, che è il cantiere dove nascono i luoghi veri | **fatto**, `linkRitrovo()` |
 
 **Esclusi**: SDK di terzi, analytics, login social oltre a Google. Ogni SDK è codice altrui in

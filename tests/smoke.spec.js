@@ -32,6 +32,36 @@ test('la pagina privacy esiste', async ({ page }) => {
   await expect(page.locator('h1')).toHaveText('Informativa privacy');
 });
 
+// C12: "installabile e si apre offline" e' una promessa che si verifica solo staccando la
+// rete. Il worker mette in cache il guscio, non i dati — qui si controlla che il guscio
+// basti a far comparire l'app, non che i passaggi ci siano: quelli senza rete non esistono.
+test('l\'app si apre anche senza rete', async ({ page, context }) => {
+  await page.goto('/');
+  const scope = await page.evaluate(async () => {
+    const r = await navigator.serviceWorker.ready;
+    return r.active ? r.scope : null;
+  });
+  expect(scope).not.toBeNull();
+
+  await context.setOffline(true);
+  await page.reload({ waitUntil: 'domcontentloaded' });
+  await expect(page.locator('#auth-view')).toBeAttached();
+  // E lo deve dire, invece di mostrare una schermata ferma senza spiegazioni.
+  await expect(page.locator('#offline-bar')).toBeVisible();
+  await context.setOffline(false);
+});
+
+test('il manifest dichiara le icone PNG che servono a installarla', async ({ request }) => {
+  const manifest = await (await request.get('/manifest.json')).json();
+  const misure = manifest.icons.map((i) => i.sizes);
+  // Solo l'SVG non basta: diversi sistemi lo ignorano e mostrano un quadrato vuoto.
+  expect(misure).toContain('192x192');
+  expect(misure).toContain('512x512');
+  for (const icona of manifest.icons) {
+    expect((await request.get('/' + icona.src)).status()).toBe(200);
+  }
+});
+
 // Questo test nasce da un bug vero, e nessun controllo del repo lo vedeva: la
 // Permissions-Policy diceva `geolocation=()`, cioe' allowlist vuota, cioe' funzione
 // spenta *anche per la pagina stessa*. Da C9 la posizione serve, quindi "Parto da qui"

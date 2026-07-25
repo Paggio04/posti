@@ -37,4 +37,28 @@ export default [
       eqeqeq: ['error', 'smart'],
     },
   },
+  {
+    // Il service worker (C12) vive in un altro mondo: niente document, niente window, e
+    // `self` al posto loro. Senza queste regole restava fuori dal lint, ed e' proprio il
+    // file che sbaglia in silenzio: se non si registra, l'app funziona e nessuno lo scopre.
+    files: ['sw.js'],
+    languageOptions: {
+      ecmaVersion: 2023,
+      sourceType: 'script',
+      globals: {
+        self: 'readonly',
+        caches: 'readonly',
+        fetch: 'readonly',
+        Response: 'readonly',
+        URL: 'readonly',
+        console: 'readonly',
+      },
+    },
+    rules: {
+      'no-undef': 'error',
+      'no-unused-vars': ['error', { args: 'none' }],
+      'no-eval': 'error',
+      eqeqeq: ['error', 'smart'],
+    },
+  },
 ];

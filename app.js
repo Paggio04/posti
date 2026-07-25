@@ -1893,3 +1893,27 @@ async function render() {
     realtimeChannel = null;
   }
 }
+
+// --- Installabile e apribile senza rete (cantiere C12) ---
+// Il service worker mette in cache il guscio, non i dati: cosa resta fuori e perche' e'
+// scritto in sw.js. Registrato dopo il caricamento, cosi' non ruba banda alla prima
+// schermata utile, e senza far cadere niente se il browser non lo sa fare.
+if ('serviceWorker' in navigator) {
+  window.addEventListener('load', () => {
+    navigator.serviceWorker.register('/sw.js').catch(() => { /* pazienza, l'app funziona */ });
+  });
+}
+
+// Da quando l'app si apre anche offline, il silenzio non va piu' bene: una schermata che
+// si apre e non si aggiorna sembra rotta. Meglio dire che manca il segnale.
+const offlineBar = document.getElementById('offline-bar');
+function segnalaRete() {
+  offlineBar.hidden = navigator.onLine;
+}
+window.addEventListener('offline', segnalaRete);
+window.addEventListener('online', () => {
+  segnalaRete();
+  // Tornata la rete, i dati a schermo sono vecchi: si ricaricano da soli, senza chiedere.
+  if (currentUser) loadRides(true);
+});
+segnalaRete();
