@@ -446,6 +446,70 @@ async function renderReports() {
   }
 }
 
+// --- I propri dati: portarli via, o cancellarli (cantiere C11) ---
+// L'esportazione si fa dal client, con le stesse query di tutti i giorni: le policy
+// decidono cosa esce, quindi non serve nessun permesso nuovo per una cosa che deve solo
+// restituire il gia' visibile.
+
+async function esportaDati() {
+  const mio = (tabella, colonna) => supabase.from(tabella).select('*').eq(colonna, currentUser.id);
+  const [profilo, auto, posti, richieste, commenti, attesa, gruppi, segnalazioni, blocchi] = await Promise.all([
+    supabase.from('profiles').select('*').eq('id', currentUser.id).maybeSingle(),
+    mio('rides', 'driver_id'),
+    mio('seat_claims', 'passenger_id'),
+    mio('ride_requests', 'user_id'),
+    mio('ride_comments', 'user_id'),
+    mio('ride_waitlist', 'user_id'),
+    supabase.from('group_members').select('group_id, created_at, gruppo:groups(name, code)').eq('user_id', currentUser.id),
+    mio('user_reports', 'reporter_id'),
+    mio('user_blocks', 'blocker_id'),
+  ]);
+  const primoErrore = [profilo, auto, posti, richieste, commenti, attesa, gruppi, segnalazioni, blocchi]
+    .find(r => r.error);
+  if (primoErrore) { toast(friendlyError(primoErrore.error)); return; }
+
+  const dati = {
+    esportato_il: new Date().toISOString(),
+    account: { id: currentUser.id, email: currentUser.email, registrato_il: currentUser.created_at },
+    profilo: profilo.data,
+    comitive: gruppi.data,
+    auto_pubblicate: auto.data,
+    posti_prenotati: posti.data,
+    richieste_di_passaggio: richieste.data,
+    commenti: commenti.data,
+    liste_di_attesa: attesa.data,
+    segnalazioni_fatte: segnalazioni.data,
+    persone_bloccate: blocchi.data,
+  };
+  // Le segnalazioni RICEVUTE non ci sono, ed e' voluto: contengono il racconto di
+  // un'altra persona, che non diventa esportabile perche' parla di te.
+
+  const blob = new Blob([JSON.stringify(dati, null, 2)], { type: 'application/json' });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url;
+  a.download = `wetransport-${todayISO()}.json`;
+  a.click();
+  URL.revokeObjectURL(url);
+  toast('Dati scaricati.');
+}
+
+document.getElementById('profile-export').addEventListener('click', esportaDati);
+
+document.getElementById('profile-delete').addEventListener('click', async () => {
+  if (!confirm('Eliminare l\'account? Spariscono profilo, auto, prenotazioni, richieste e commenti. Non si torna indietro.')) return;
+  const conferma = await ask('Conferma l\'eliminazione', {
+    text: 'Scrivi ELIMINA per confermare. Se possiedi una comitiva passerà a un altro membro; se non ce ne sono, sparisce anche quella.',
+    placeholder: 'ELIMINA',
+  });
+  if (conferma !== 'ELIMINA') { toast('Eliminazione annullata.'); return; }
+  const { error } = await supabase.rpc('elimina_account');
+  if (error) { toast(friendlyError(error)); return; }
+  await supabase.auth.signOut();
+  toast('Account eliminato.');
+  location.reload();
+});
+
 // --- Dialog custom (sostituisce prompt(): funziona anche nei browser in-app) ---
 const appDialog = document.getElementById('app-dialog');
 const dialogInput = document.getElementById('dialog-input');

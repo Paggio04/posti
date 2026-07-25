@@ -330,14 +330,38 @@ la Fase 1 sia chiusa.
 - **Resta il collaudo a video**, che nessun test sostituisce: due account veri, segnalazione,
   blocco, e la coda vista da un amministratore.
 
-### C11 — GDPR completo
+### C11 — GDPR completo — *fatto nel codice; due dati mancano e li può mettere solo una persona*
 - **Obiettivo:** oggi `SECURITY.md` segna la conformità come parziale, e va bene finché siamo fra
   amici. Con iscritti sconosciuti diventa un obbligo.
-- **Cosa:** informativa privacy pubblicata e aggiornata (titolare, base giuridica, conservazione,
-  Supabase come responsabile, regione dei dati); esportazione dei propri dati; cancellazione
-  dell'account dall'app, non dalla dashboard.
+- **Esportazione** — "Scarica i miei dati" nel Profilo: un JSON con profilo, comitive, auto, posti,
+  richieste, commenti, liste d'attesa, segnalazioni fatte e persone bloccate. Si costruisce nel
+  browser **con le query di tutti i giorni**: le policy decidono già cosa esce, quindi una funzione
+  che deve solo restituire il visibile non ha bisogno di nessun permesso nuovo.
+  - Le segnalazioni **ricevute** non ci sono, di proposito: contengono il racconto di un'altra
+    persona, che non diventa esportabile perché parla di te.
+- **Cancellazione** (`013_cancella_account.sql`) — "Elimina il mio account" chiama
+  `elimina_account()`, `security definer`, **senza parametri**: sa cancellare una persona sola, chi
+  la chiama. Dal client non si potrebbe fare altrimenti — l'API di amministrazione vuole la
+  `service_role`, cioè la chiave che apre tutto, che nel browser non deve esistere. Questa funzione
+  è l'opposto di dare quella chiave al client.
+- **Il danno che si stava per fare agli altri:** `groups.owner_id` cascata su `profiles`, quindi la
+  cancellazione avrebbe portato via **la comitiva intera**, con le auto e le prenotazioni di tutti
+  gli altri membri. Ora il gruppo passa al membro più anziano rimasto; se non è rimasto nessuno, se
+  ne va anche lui, perché un gruppo vuoto non è di nessuno. Verificato in
+  `supabase/test/verifica-cancellazione.sql`, in CI, e provato al contrario: tolta l'eredità, il
+  test diventa rosso su "DANNO AGLI ALTRI".
+- **Informativa** riscritta: tabella dato → perché → base giuridica, chi vede cosa, responsabili
+  (Supabase e Netlify), tempi di conservazione, i tre diritti che si esercitano da soli dall'app,
+  reclamo al Garante, soglia dei 14 anni.
+- **Due cose non le può mettere il codice**, e nella pagina sono riquadri rossi bene in vista
+  invece che frasi plausibili inventate:
+  - **il titolare del trattamento** — nome e contatto di chi gestisce l'app. È un dato legale, e
+    pubblicare un'email personale su un sito pubblico è una decisione di chi la possiede;
+  - **la regione del progetto Supabase**, che si legge solo dalla dashboard (Settings → General) e
+    che l'API non espone.
+  Finché ci sono quei riquadri, l'informativa **non** è completa e l'app non è pronta per T2.
 - **Fatto quando:** un utente esporta e cancella tutto da solo, e la cancellazione porta via anche
-  auto, prenotazioni, richieste e commenti.
+  auto, prenotazioni, richieste e commenti. **Raggiunto**, meno i due dati qui sopra.
 
 ---
 
