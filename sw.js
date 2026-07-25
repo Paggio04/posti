@@ -12,7 +12,7 @@
 //
 // Quello che si mette in cache e' solo il guscio: i file pubblici, identici per tutti.
 
-const VERSIONE = 'wetransport-v2';   // C15: il guscio e' cambiato
+const VERSIONE = 'wetransport-v1';
 
 const GUSCIO = [
   '/',
@@ -26,12 +26,6 @@ const GUSCIO = [
   '/icon.svg',
   '/icona-192.png',
   '/icona-512.png',
-  // I caratteri sono nostri (C15), quindi vanno nel guscio come tutto il resto:
-  // altrimenti senza rete la pagina ricade su system-ui e perde la faccia.
-  '/fonts/ibm-plex-sans-latin-400-normal.woff2',
-  '/fonts/ibm-plex-sans-latin-600-normal.woff2',
-  '/fonts/ibm-plex-sans-latin-700-normal.woff2',
-  '/fonts/ibm-plex-mono-latin-500-normal.woff2',
 ];
 
 // app.js importa questo modulo come prima riga: senza, non parte niente. Se resta fuori
