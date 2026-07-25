@@ -1348,11 +1348,16 @@ function svgEl(tag, attrs) {
 // fuori resta la ricerca sul nome del luogo, che dice la zona e non l'indirizzo.
 // Restringere anche il payload e' un cantiere a parte, ed e' scritto in ROADMAP: qui si
 // smette di *offrire* l'indirizzo con un click, non si finge che il dato non arrivi.
-function linkRitrovo(ride) {
-  const haCoordinate = ride.origin_lat != null && ride.origin_lon != null;
-  const dentro = ride.group_id === currentGroupId
+// Chi vede il punto esatto di partenza e chi no. Una decisione sola, in un posto solo: la
+// usano sia il link di navigazione sia il file del calendario, e se cambia idea cambia qui.
+function coordinateVisibili(ride) {
+  if (ride.origin_lat == null || ride.origin_lon == null) return false;
+  return ride.group_id === currentGroupId
     || (ride.seat_claims ?? []).some((c) => c.passenger_id === currentUser?.id);
-  if (haCoordinate && dentro) {
+}
+
+function linkRitrovo(ride) {
+  if (coordinateVisibili(ride)) {
     return {
       href: 'https://www.google.com/maps/dir/?api=1&destination='
         + encodeURIComponent(`${ride.origin_lat},${ride.origin_lon}`),
@@ -1366,6 +1371,84 @@ function linkRitrovo(ride) {
     href: 'https://www.google.com/maps/search/?api=1&query=' + encodeURIComponent(ride.origin),
     testo: 'Punto di ritrovo su Maps',
   };
+}
+
+// --- Il passaggio nel calendario (cantiere C14, decisione D6) ---
+// Un file .ics costruito qui dentro: nessun servizio esterno da avvisare di dove va la
+// gente, e Google, Apple e Outlook lo aprono allo stesso modo. Il formato e' pignolo su tre
+// cose, e sbagliarne una vuol dire un file che un calendario apre e un altro rifiuta senza
+// dire perche': le righe finiscono con CRLF e non con \n, virgole e punto e virgola dentro
+// il testo vanno protetti, e le righe lunghe vanno spezzate.
+function testoIcs(ride) {
+  const esc = (s) => String(s)
+    .replace(/\\/g, '\\\\').replace(/([;,])/g, '\\$1').replace(/\r?\n/g, '\\n');
+  const istante = (d) => d.toISOString().replace(/[-:]/g, '').replace(/\.\d{3}/, '');
+  const giorno = (iso) => iso.replace(/-/g, '');
+
+  const righe = [
+    'BEGIN:VCALENDAR',
+    'VERSION:2.0',
+    'PRODID:-//WeTransport//IT',
+    'CALSCALE:GREGORIAN',
+    'BEGIN:VEVENT',
+    `UID:${ride.id}@wetransport`,
+    `DTSTAMP:${istante(new Date())}`,
+  ];
+
+  if (ride.depart_time) {
+    // L'ora salvata e' l'ora dell'orologio di chi parte. La converto in UTC col fuso di
+    // questo dispositivo, che per una comitiva che parte dallo stesso posto e' il fuso
+    // giusto: cosi' l'appuntamento resta l'istante corretto anche aprendolo da altrove.
+    const inizio = new Date(`${ride.ride_date}T${ride.depart_time}`);
+    righe.push(
+      `DTSTART:${istante(inizio)}`,
+      `DTEND:${istante(new Date(inizio.getTime() + 60 * 60 * 1000))}`,
+    );
+  } else {
+    // Senza ora non si inventa un orario: giornata intera, e chi guida la precisa poi.
+    righe.push(
+      `DTSTART;VALUE=DATE:${giorno(ride.ride_date)}`,
+      `DTEND;VALUE=DATE:${giorno(addDaysISO(ride.ride_date, 1))}`,
+    );
+  }
+
+  const liberi = ride.seats - ride.seat_claims.length;
+  const descrizione = [
+    `Guida ${nomeDi(ride.driver)}.`,
+    liberi > 0 ? `${liberi} posti liberi quando hai scaricato questo file.` : 'Auto al completo.',
+    ride.fuel_per_person ? `Benzina: ${ride.fuel_per_person} € a testa.` : null,
+    ride.note ? `Nota: ${ride.note}` : null,
+    SITE_URL,
+  ].filter(Boolean).join('\n');
+
+  righe.push(`SUMMARY:${esc('Passaggio verso ' + ride.destination)}`);
+  righe.push(`DESCRIPTION:${esc(descrizione)}`);
+  if (ride.origin) righe.push(`LOCATION:${esc(ride.origin)}`);
+  // Il punto esatto solo a chi lo vede comunque: stessa regola del link di navigazione.
+  if (coordinateVisibili(ride)) righe.push(`GEO:${ride.origin_lat};${ride.origin_lon}`);
+  righe.push('END:VEVENT', 'END:VCALENDAR');
+
+  // Piegatura: il formato vuole righe da non piu' di 75 ottetti, e la continuazione deve
+  // cominciare con uno spazio. Taglio a 70 caratteri invece di contare gli ottetti perche'
+  // le lettere accentate ne occupano due, e questo margine le copre senza fare i conti.
+  return righe.flatMap((r) => {
+    const pezzi = [];
+    for (let i = 0; i < r.length; i += 70) pezzi.push((i === 0 ? '' : ' ') + r.slice(i, i + 70));
+    return pezzi;
+  }).join('\r\n') + '\r\n';
+}
+
+function scaricaIcs(ride) {
+  const url = URL.createObjectURL(new Blob([testoIcs(ride)], { type: 'text/calendar;charset=utf-8' }));
+  const a = document.createElement('a');
+  a.href = url;
+  a.download = `passaggio-${ride.ride_date}.ics`;
+  document.body.appendChild(a);
+  a.click();
+  a.remove();
+  // Non subito: revocare l'indirizzo nello stesso istante del click lascia a mani vuote i
+  // browser che leggono il blob un attimo dopo.
+  setTimeout(() => URL.revokeObjectURL(url), 10_000);
 }
 
 function buildCar(ride) {
@@ -1581,6 +1664,15 @@ function renderRides(rides) {
       }
     });
     actions.appendChild(share);
+    const cal = document.createElement('button');
+    cal.className = 'place-delete';
+    cal.innerHTML = '<svg width="16" height="16"><use href="#i-calendar"/></svg>';
+    cal.title = 'Aggiungi al calendario';
+    cal.addEventListener('click', () => {
+      scaricaIcs(ride);
+      toast('File del calendario scaricato: aprilo e il passaggio entra nel tuo calendario.');
+    });
+    actions.appendChild(cal);
     if (ride.driver_id === currentUser.id || isAdmin) {
       const del = document.createElement('button');
       del.className = 'place-delete';
