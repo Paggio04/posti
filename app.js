@@ -1326,7 +1326,18 @@ async function renderWalkers(rides) {
 // Layout sedili centrato nella carrozzeria (larghezza 190, centro x = 95).
 // Il guidatore è sempre davanti a sinistra; le posizioni dei passeggeri
 // dipendono da quanti posti offre l'auto.
-const ROW_FRONT = 92, ROW_BACK = 176, ROW_THIRD = 252;
+// Le tre file sono equidistanti: 92, 176, 260, cioe' 84 di passo. Prima l'ultima
+// era a 252, quindi 84 e poi 76: la terza fila risultava schiacciata verso il
+// lunotto, e su un disegno simmetrico si vede subito anche senza misurarlo.
+const PASSO_FILA = 84;
+const ROW_FRONT = 92, ROW_BACK = ROW_FRONT + PASSO_FILA, ROW_THIRD = ROW_BACK + PASSO_FILA;
+
+// La geometria della scocca. Tutto quello che sta a destra si RICAVA da quello che
+// sta a sinistra: scrivere le due coordinate a mano e' esattamente il modo in cui
+// le ruote sono finite fuori di 4px, con quelle di sinistra tagliate dal bordo.
+const CAR_W = 190;
+const CAR_INSET = 10;                       // margine della scocca dal viewBox
+const specchia = (x, w) => CAR_W - x - w;   // riflette un rettangolo sull'asse
 const DRIVER_POS = { x: 58, y: ROW_FRONT };
 const SEAT_LAYOUTS = {
   1: { 1: { x: 132, y: ROW_FRONT } },
@@ -1465,7 +1476,9 @@ function scaricaIcs(ride) {
 
 function buildCar(ride) {
   const isLong = ride.seats >= 5;
-  const H = isLong ? 330 : 250;
+  // Altezza della scocca: quanto serve alle file che ci stanno dentro, piu' lo
+  // spazio del lunotto e del baule. Non un numero tondo scelto a occhio.
+  const H = isLong ? 344 : 250;
   const svg = svgEl('svg', { viewBox: `0 0 190 ${H}`, class: 'car-svg', role: 'img' });
   svg.setAttribute('aria-label', `Auto di ${nomeDi(ride.driver)}`);
 
@@ -1503,11 +1516,22 @@ function buildCar(ride) {
   // Riflesso sul parabrezza: una striscia sola, di sbieco.
   svg.appendChild(svgEl('path', { d: 'M 40 58 L 58 46 L 74 46 L 56 58 Z', class: 'car-riflesso' }));
   svg.appendChild(svgEl('rect', { x: 34, y: H - 42, width: 122, height: 12, rx: 6, class: 'car-glass', fill: `url(#vetro-${uid})` }));
-  for (const [wx, wy] of [[2, 60], [180, 60], [2, H - 90], [180, H - 90]]) {
-    svg.appendChild(svgEl('rect', { x: wx - 4, y: wy, width: 12, height: 34, rx: 5, class: 'car-wheel' }));
+  // Ruote: due coppie, e ogni coppia si specchia sui due assi. La distanza dal
+  // bordo alto della scocca e' la stessa di quella dal bordo basso, quindi le
+  // anteriori e le posteriori sono simmetriche invece di essere sfasate di 4px.
+  const RUOTA_W = 12, RUOTA_H = 34, RUOTA_X = 2, RUOTA_DAL_BORDO = 50;
+  const corpoAlto = CAR_INSET, corpoBasso = H - CAR_INSET;
+  const ruoteY = [corpoAlto + RUOTA_DAL_BORDO, corpoBasso - RUOTA_DAL_BORDO - RUOTA_H];
+  for (const ry of ruoteY) {
+    for (const rx of [RUOTA_X, specchia(RUOTA_X, RUOTA_W)]) {
+      svg.appendChild(svgEl('rect', { x: rx, y: ry, width: RUOTA_W, height: RUOTA_H, rx: 5, class: 'car-wheel' }));
+    }
   }
-  svg.appendChild(svgEl('rect', { x: 0, y: 46, width: 14, height: 6, rx: 3, class: 'car-wheel' }));
-  svg.appendChild(svgEl('rect', { x: 176, y: 46, width: 14, height: 6, rx: 3, class: 'car-wheel' }));
+  // Gli specchietti, alla stessa altezza del parabrezza.
+  const SPECCHIO_X = 0, SPECCHIO_W = 14;
+  for (const mx of [SPECCHIO_X, specchia(SPECCHIO_X, SPECCHIO_W)]) {
+    svg.appendChild(svgEl('rect', { x: mx, y: 46, width: SPECCHIO_W, height: 6, rx: 3, class: 'car-wheel' }));
+  }
 
   const claims = new Map(ride.seat_claims.map(c => [c.seat_index, c]));
   const myClaim = ride.seat_claims.find(c => c.passenger_id === currentUser.id);
