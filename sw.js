@@ -12,7 +12,7 @@
 //
 // Quello che si mette in cache e' solo il guscio: i file pubblici, identici per tutti.
 
-const VERSIONE = 'wetransport-v1';
+const VERSIONE = 'wetransport-v2';   // sale quando cambia il GUSCIO qui sotto
 
 const GUSCIO = [
   '/',

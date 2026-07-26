@@ -4,6 +4,8 @@
 flowchart LR
   U[Browser utente\nHTML/CSS/JS vanilla] -->|HTTPS| N[Netlify CDN\nstatico + headers/CSP]
   U -->|supabase-js\nHTTPS + WSS| S[Supabase]
+  U --- SW[Service worker\nsolo il guscio in cache]
+  SW -.->|mai dati ne' token| S
   subgraph S[Supabase]
     A[Auth\nJWT, email conferma] --> P[(Postgres\nRLS + trigger)]
     R[Realtime\npostgres_changes] --> P
@@ -16,6 +18,28 @@ Principi:
 - **Niente backend proprio.** Tutta la logica di sicurezza vive nel database (RLS + trigger), il client è non fidato per definizione.
 - **Niente build step.** File statici serviti così come sono; l'unica dipendenza runtime è supabase-js da CDN.
 - **Il DB è la verità.** Il client non tiene stato autorevole; realtime invalida la vista.
+- **Ciò che regge la mancanza di rete non può dipendere dalla rete.** Regola pagata in Fase 4: la
+  barra "sei senza rete" e la registrazione del service worker vivevano in `app.js`, che come prima
+  riga importa supabase-js **da un CDN**. Senza linea quel modulo non arriva, quindi l'avviso non
+  compariva e la PWA non si registrava — proprio a chi ha la rete peggiore. Ora stanno in `rete.js`,
+  che non importa niente. Per la stessa ragione `rete.js` **prova** la rete con una richiesta
+  piccola invece di fidarsi di `navigator.onLine`, che dice "esiste una scheda di rete", non
+  "internet funziona".
+- **In cache va il guscio, non i dati.** Il service worker non tocca niente che passi da Supabase,
+  né richieste che non siano `GET`: una copia di dati o sessioni sarebbe una copia che
+  l'esportazione non mostra e che la cancellazione non porta via.
+
+## I file del frontend
+
+| File | Cosa fa | Perché è separato |
+|---|---|---|
+| `index.html` | Guscio, sprite delle icone, dati strutturati | — |
+| `app.js` | Tutta l'app: auth, gruppi, passaggi, sedili, realtime | Un file solo finché non supera 2-3k righe (ADR 001) |
+| `rete.js` | Avviso "sei senza rete" e registrazione del service worker | **Non importa niente**: deve funzionare quando `app.js` non parte |
+| `sw.js` | Cache del guscio, apertura offline | Gira in un altro mondo (`self`, nessun DOM) |
+| `config.js` | URL e publishable key di Supabase | Pubblici per design |
+| `style.css` | Tutto il CSS, con i token in cima | — |
+| `offline.html`, `404.html` | Le due pagine che si vedono quando qualcosa non c'è | Servite dal worker e da Netlify |
 
 ## Schema dati
 
