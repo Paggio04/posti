@@ -14,5 +14,13 @@ Ospitandoli qui si possono anche **togliere** due voci dalla CSP (`fonts.googlea
 `style-src`, `fonts.gstatic.com` da `font-src`) invece di aggiungerne: la stessa direzione di
 D6, che vale per i font come per gli SDK.
 
+**Sono in uso dal 27/07/2026, e prima non lo erano.** Per tre giorni questi file sono stati
+nel repo mentre `index.html` caricava Inter da `fonts.googleapis.com`: l'intenzione scritta qui
+e il codice dicevano due cose diverse, e a farne le spese era l'informativa. Le `@font-face`
+stanno in cima a `style.css`, i file sono nel `GUSCIO` di `sw.js` e la CSP non nomina piu'
+nessun dominio di Google.
+
 Aggiornarli: scaricare il peso che serve da `@fontsource/ibm-plex-sans` (o `-mono`) e
 aggiungere la sua `@font-face` in `style.css`. Nessun passo di build, come tutto il resto.
+**Un peso che non e' un file qui dentro non esiste**: chiederlo dal CSS fa ingrossare il
+carattere al browser invece di disegnarlo.

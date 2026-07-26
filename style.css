@@ -1,3 +1,38 @@
+/* Caratteri — serviti da qui, non da un CDN di terzi.
+   Il perche' sta in fonts/README.md e vale due volte: la tipografia e' l'identita'
+   (C15), e prenderli da Google vorrebbe dire che il browser di chi apre l'app
+   contatta Google — un destinatario in piu' che l'informativa non elenca.
+   Ci sono solo i pesi che esistono davvero come file: 400, 600 e 700 per il testo,
+   500 per il monospaziato. Chiederne un altro fa inventare il grassetto al browser. */
+@font-face {
+  font-family: 'IBM Plex Sans';
+  src: url('fonts/ibm-plex-sans-latin-400-normal.woff2') format('woff2');
+  font-weight: 400;
+  font-style: normal;
+  font-display: swap;
+}
+@font-face {
+  font-family: 'IBM Plex Sans';
+  src: url('fonts/ibm-plex-sans-latin-600-normal.woff2') format('woff2');
+  font-weight: 600;
+  font-style: normal;
+  font-display: swap;
+}
+@font-face {
+  font-family: 'IBM Plex Sans';
+  src: url('fonts/ibm-plex-sans-latin-700-normal.woff2') format('woff2');
+  font-weight: 700;
+  font-style: normal;
+  font-display: swap;
+}
+@font-face {
+  font-family: 'IBM Plex Mono';
+  src: url('fonts/ibm-plex-mono-latin-500-normal.woff2') format('woff2');
+  font-weight: 500;
+  font-style: normal;
+  font-display: swap;
+}
+
 :root {
   /* Palette navy — OKLCH */
   --bg: oklch(0.965 0.008 250);
@@ -64,7 +99,7 @@
   --t-fast: 160ms;
   --t-med: 280ms;
 
-  font-family: 'Inter', system-ui, sans-serif;
+  font-family: 'IBM Plex Sans', system-ui, sans-serif;
 }
 
 * { box-sizing: border-box; margin: 0; }
@@ -661,14 +696,16 @@ input:focus-visible, select:focus-visible, textarea:focus-visible {
 }
 
 .group-code {
-  font-weight: 700;
+  /* 500 e non 700: il file monospaziato ha quel peso solo, e chiederne uno piu'
+     grasso lo farebbe ingrossare al browser invece di disegnarlo. */
+  font-weight: 500;
   font-variant-numeric: tabular-nums;
   letter-spacing: 0.1em;
   color: var(--primary);
   background: var(--primary-soft);
   padding: 5px 12px;
   border-radius: var(--pill);
-  font-family: ui-monospace, 'Cascadia Mono', monospace;
+  font-family: 'IBM Plex Mono', ui-monospace, monospace;
 }
 .group-members-count { color: var(--ink-soft); font-weight: 500; }
 
@@ -860,7 +897,7 @@ input:focus-visible, select:focus-visible, textarea:focus-visible {
 }
 .seat-text {
   text-anchor: middle;
-  font-family: 'Inter', system-ui, sans-serif;
+  font-family: 'IBM Plex Sans', system-ui, sans-serif;
   font-size: 14px;
   font-weight: 700;
   fill: var(--ink-soft);

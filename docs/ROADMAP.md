@@ -612,6 +612,15 @@ tondeggianti**, ricco ma sobrio.
    fra "pulito" e "curato", ed è un pixel.
 6. **Finiture**: numeri tabellari su ore, posti e codici (una colonna di orari resta una colonna
    invece di ballare a ogni cifra), marchio con tracciatura strizzata, anello di focus disegnato.
+7. **Il carattere, che per tre giorni è stato solo un'intenzione** (27/07/2026). I file di IBM Plex
+   erano nel repo dal secondo tentativo, con un `README` che spiegava perché — ma `style.css`
+   diceva `font-family: 'Inter'` e `index.html` caricava Inter da `fonts.googleapis.com`. Quindi:
+   l'identità tipografica non esisteva, e ogni apertura dell'app faceva contattare Google al
+   browser di chi la usa, mentre `privacy.html` elenca come destinatari **solo** Supabase e
+   Netlify. Ora le `@font-face` sono in `style.css`, i quattro file stanno nel `GUSCIO` di `sw.js`
+   e la CSP ha perso `fonts.googleapis.com` e `fonts.gstatic.com`: una regola che si stringe.
+   **Trovato guardando le risorse della pagina viva in un browser**, non leggendo il repo — come
+   la `Permissions-Policy` di C9, e per la stessa ragione: un file può essere presente e inerte.
 
 **Fatto quando:** coperto il logo e il nome con un dito, si capisce che è questa app. Il pezzo che
 risponde di più a quella prova è l'auto, che nessun altro ha. **Il giudizio finale resta tuo, su un
