@@ -1094,6 +1094,7 @@ input:focus-visible, select:focus-visible, textarea:focus-visible {
    quindi il movimento racconta il passaggio da una vista all'altra. */
 .bottom-nav::before {
   content: '';
+  box-sizing: border-box;   /* il bordo sta DENTRO i 50px, altrimenti sono 58 */
   position: absolute;
   top: calc(var(--nav-centro) - var(--nav-tondo) / 2);
   left: calc((var(--nav-i, 2) + 0.5) * 20%);
@@ -1410,6 +1411,7 @@ input:focus-visible, select:focus-visible, textarea:focus-visible {
   .nav-item { position: relative; }
   .nav-item:not(.active)::after {
     content: '';
+    box-sizing: border-box;
     position: absolute;
     top: calc(var(--nav-centro-sopra) - var(--nav-tondo-sopra) / 2);
     left: 50%;
