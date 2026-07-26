@@ -60,6 +60,10 @@ self.addEventListener('fetch', (e) => {
 
   const url = new URL(req.url);
   if (url.hostname.endsWith('.supabase.co')) return;   // dati e sessioni: sempre rete
+  // La sonda di rete di rete.js deve passare: se la servissi dalla cache
+  // risponderebbe "connesso" anche a chi non ha linea, che e' il contrario del suo
+  // scopo. Riconoscibile dal parametro `rete`.
+  if (url.searchParams.has('rete')) return;
 
   // Aprire l'app: prima la rete, perche' una versione nuova va vista appena esiste.
   // Se la rete non c'e', il guscio salvato; e se manca anche quello, la pagina che

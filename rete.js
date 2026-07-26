@@ -11,8 +11,26 @@
 
 const barra = document.getElementById('offline-bar');
 
-function segnala() {
-  if (barra) barra.hidden = navigator.onLine;
+// `navigator.onLine` non basta, e non e' un dettaglio: dice "esiste una scheda di
+// rete", non "internet funziona". Resta `true` sul wifi dell'albergo che non porta da
+// nessuna parte, e resta `true` anche con la rete staccata dentro un browser
+// pilotato -- e' cosi' che questo difetto e' arrivato fino in CI, con la barra che
+// non compariva mai. Quindi: se il browser dice "offline" gli si crede subito
+// (nessun dubbio possibile); se dice "online" si prova, con una richiesta piccola
+// che il service worker lascia passare invece di servire dalla cache.
+async function connesso() {
+  if (!navigator.onLine) return false;
+  try {
+    const r = await fetch(`/manifest.json?rete=${Date.now()}`, { method: 'HEAD', cache: 'no-store' });
+    return r.ok;
+  } catch {
+    return false;
+  }
+}
+
+async function segnala() {
+  const ok = await connesso();
+  if (barra) barra.hidden = ok;
 }
 
 window.addEventListener('offline', segnala);
