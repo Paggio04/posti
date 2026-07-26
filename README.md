@@ -44,7 +44,8 @@ Da `localhost` funziona l'accesso con email e password; **non** "Continua con Go
 - [docs/adr/](docs/adr/) — decisioni architetturali
 - CI (`.github/workflows/ci.yml`), tutta bloccante: sintassi JS, ESLint, validazione HTML,
   scansione segreti, migrazioni applicate da zero **e riapplicate** (devono essere ripetibili)
-  con i test SQL su isolamento, sicurezza, cancellazione e passaggi in zona, più Playwright
+  con i test SQL su isolamento, sicurezza, cancellazione, passaggi in zona e coordinate
+  riservate, più Playwright
   sull'**anteprima** della PR prima del merge e sul sito vivo dopo
 
 ## Sicurezza

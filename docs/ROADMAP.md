@@ -52,7 +52,7 @@ serve tutto quello che segue:
 | C13 notifiche a scheda chiusa | **da fare**, e bloccato su cose che il repo non può fare: chiavi VAPID, deploy di una Edge Function, `pg_cron` |
 | C14 servizi esterni | **chiuso** (Web Share, `.ics`, navigazione sul punto vero) |
 | C15 estetica | fatto al secondo tentativo; il giudizio finale è di chi la usa |
-| C18 standard dello Starter | fatto nel repo; resta il ritorno **verso** lo Starter |
+| C18 standard dello Starter | **chiuso nei due versi**: il 27/07/2026 le lezioni sono tornate nello Starter del vault (`Permissions-Policy`, migrazioni numerate, ordine codice/schema, «provalo al contrario») |
 | C21 coordinate nel payload | **fatto** (`015` + `016`), **da applicare in produzione nell'ordine giusto** |
 
 **T1 è raggiunto sul piano tecnico.** Quello che manca per dire "pronta per la comitiva" non è
@@ -688,9 +688,16 @@ repo: quello che WeTransport ha imparato e lo Starter non sa ancora — l'ordine
 codice, le migrazioni numerate che si registrano da sole, i test provati al contrario, e la
 Permissions-Policy che spegne una funzione se l'allowlist è vuota.
 
-### C19 — Vault e codice allineati
+### C19 — Vault e codice allineati — *fatto il 27/07/2026*
 Mappa Graphify rigenerata, memoria tecnica aggiornata con le decisioni di questo file, nota
 progetto che punta qui invece di duplicare.
+
+Fatto, ed è servito a scoprire quanto fosse scaduta: la nota del vault raccontava una Fase 3 «sul
+ramo, da collaudare» mentre era pubblicata da un giorno, e il clone locale era **44 commit**
+indietro. Ora la nota progetto rimanda qui invece di ripetere, la memoria tecnica ha una regola
+nuova su **come si legge lo stato vero** (repo, sito servito, schema applicato) invece di
+ricordarlo, e `audit-vault.py` è pulito. La lezione che resta: *le note invecchiano in silenzio, il
+sistema vivo no* — quindi si guarda quello per primo.
 
 ### C20 — Un nome solo
 Oggi sono tre: repo `posti`, cartella `C:\Progetti\posti`, dominio `wetransport.netlify.app`.
