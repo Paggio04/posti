@@ -27,6 +27,9 @@ export default [
         Blob: 'readonly',
         URL: 'readonly',
         location: 'readonly',
+        // Serve a rete.js: la sonda che prova se la linea c'e' davvero, invece di
+        // fidarsi di navigator.onLine, che dice un'altra cosa.
+        fetch: 'readonly',
       },
     },
     rules: {

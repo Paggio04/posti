@@ -141,6 +141,17 @@ Due lezioni pagate in questa sessione, e vale rispettarle:
    chiudere il caso. La mia misura del tondo diceva "centrato a 0.02px" mentre ignorava un bordo da
    4px, e il difetto l'ha trovato l'occhio del proprietario, non il mio script.
 
-E la terza, dalla CI: **ciò che rende l'app resistente alla mancanza di rete non può dipendere
-dalla rete.** La barra "sei senza rete" e la registrazione del service worker stavano in `app.js`,
-che come prima riga importa un modulo da un CDN. Ora stanno in `rete.js`, che non importa niente.
+E la terza, dalla CI, che ha avuto ragione contro di me **due volte di fila**:
+
+- primo giro: un test rosso ha trovato un difetto vero che il collaudo locale mascherava (lo stub
+  del CDN rispondeva sempre, quindi `app.js` partiva sempre). Da lì la regola: **ciò che rende
+  l'app resistente alla mancanza di rete non può dipendere dalla rete** — la barra "sei senza
+  rete" e la registrazione del service worker stavano in `app.js`, che come prima riga importa un
+  modulo da un CDN. Ora stanno in `rete.js`, che non importa niente;
+- secondo giro: la CI ha bocciato quella correzione, ragionevole e insufficiente. Il colpevole era
+  `navigator.onLine`, che dice *«esiste una scheda di rete»*, non *«internet funziona»*: resta
+  `true` sul wifi dell'albergo che non porta da nessuna parte. Ora la rete **si prova** con una
+  richiesta piccola che il service worker lascia passare invece di servire dalla cache.
+
+In nessuno dei due giri il test era da aggiustare. Se un test è rosso e la spiegazione comoda è
+"il test è fragile", quasi sempre la spiegazione è sbagliata.
