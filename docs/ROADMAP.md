@@ -618,15 +618,43 @@ risponde di più a quella prova è l'auto, che nessun altro ha. **Il giudizio fi
 telefono in mano**: qui dentro il browser è girato per davvero, ma un'app che si usa di corsa in
 piedi si valuta in piedi.
 
-### C16 — Peso e velocità sul telefono
-1200 righe di CSS e 1311 di JS senza build, più supabase-js da CDN. Misurare prima di ottimizzare:
-tempo alla prima schermata utile su rete lenta, dimensione totale, quante query fa la home.
-*Fatto quando:* c'è un numero di partenza e uno di arrivo, non un'impressione.
+### C16 — Peso e velocità sul telefono — *misurato il 27/07/2026; il numero di arrivo manca ancora*
+1287 righe di CSS e 1822 di JS senza build, più supabase-js da CDN. Misurare prima di ottimizzare, e
+la misura ha già cambiato l'idea di dove sia il problema.
+
+**Byte davvero sul filo** (compressione `br` di Netlify, sito vivo, prima schermata utile):
+
+| Cosa | Sul filo | Note |
+|---|---|---|
+| `index.html` | 6,6 KB | comprende lo sprite delle icone e il JSON-LD |
+| `style.css` | 10,7 KB | 1287 righe |
+| `app.js` | 24,0 KB | 1822 righe |
+| `rete.js` + `config.js` + `manifest.json` + `icon.svg` | 2,4 KB | |
+| **guscio proprio** | **43,7 KB** | tutto quello che è scritto qui dentro |
+| **supabase-js dal CDN** | **73,5 KB in 9 richieste** | `auth-js` da solo pesa 24,4 KB, cioè quanto tutta l'app |
+
+**Il numero che conta è il secondo: la libreria pesa più di tutto il sito**, e arriva da un'altra
+origine, quindi paga una connessione TLS in più prima ancora di scaricare. Il `+esm` di jsdelivr si
+tira dietro `storage-js`, `functions-js`, `realtime-js`, `phoenix`, `iceberg-js` e `tslib`: di
+questi, storage e functions questa app **non li usa affatto**. Ottimizzare `app.js` prima di aver
+guardato quel numero sarebbe stato lavoro sulla metà più piccola.
+
+**Query alla prima schermata: 8, in 4 attese incatenate** — profilo → persone bloccate → comitive →
+(passaggi ‖ richieste ‖ coordinate ‖ i due della rotazione dei turni). Sono le quattro attese in
+fila, non il numero di query, a fare il tempo su rete lenta.
+
+*Fatto quando:* c'è un numero di partenza e uno di arrivo, non un'impressione. **Il numero di
+partenza c'è** (43,7 + 73,5 KB, 8 query, 4 attese). Il numero di arrivo arriverà quando si sceglierà
+cosa fare, e le tre strade sono già visibili: ospitare un bundle di supabase-js con dentro solo auth
++ postgrest + realtime, accorpare profilo/bloccati/comitive in una sola chiamata, e misurare il
+tempo alla prima schermata con la rete strozzata invece che dalla fibra di casa.
 
 ### C17 — Spezzare `app.js`
-L'ADR 001 dice di rivedere la scelta "un file solo" oltre le 2-3k righe di JS: oggi siamo a 1311 e
-le Fasi 3 e 4 aggiungono roba. Quando si supera la soglia: moduli ES separati (auth, gruppi,
-passaggi, render), sempre senza build. **Non prima**: dividere presto costa e non rende.
+L'ADR 001 dice di rivedere la scelta "un file solo" oltre le 2-3k righe di JS: **al 27/07/2026 sono
+1822** — le Fasi 3 e 4 ne hanno aggiunte 500 — quindi la soglia bassa è vicina e quella alta no.
+Quando si supera: moduli ES separati (auth, gruppi, passaggi, render), sempre senza build. **Non
+prima**: dividere presto costa e non rende. Il conto si rifà qui, non a memoria:
+`node -e "console.log(require('fs').readFileSync('app.js','utf8').split('\n').length)"`.
 
 ---
 
