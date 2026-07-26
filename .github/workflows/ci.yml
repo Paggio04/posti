@@ -83,6 +83,9 @@ jobs:
       - name: I passaggi in zona escono, e niente altro con loro
         run: psql -v ON_ERROR_STOP=1 -q -f supabase/test/verifica-zona.sql
 
+      - name: Le notifiche si accodano quando devono, e una volta sola
+        run: psql -v ON_ERROR_STOP=1 -q -f supabase/test/verifica-notifiche.sql
+
       - name: Aggiornamento dal vecchio schema, senza perdere dati
         run: |
           psql -v ON_ERROR_STOP=1 -q -c "create database aggiornamento"

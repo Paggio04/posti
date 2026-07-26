@@ -49,7 +49,7 @@ serve tutto quello che segue:
 | Cantiere | Stato |
 |---|---|
 | C12 PWA | fatto nel codice, **da installare su un telefono vero** |
-| C13 notifiche a scheda chiusa | **da fare**, e bloccato su cose che il repo non può fare: chiavi VAPID, deploy di una Edge Function, `pg_cron` |
+| C13 notifiche a scheda chiusa | **metà fatta**: coda, trigger, iscrizioni e interruttore ci sono e sono verificati in CI; restano le chiavi VAPID, il deploy della Edge Function e `pg_cron`, che il repo non può fare |
 | C14 servizi esterni | **chiuso** (Web Share, `.ics`, navigazione sul punto vero) |
 | C15 estetica | fatto al secondo tentativo; il giudizio finale è di chi la usa |
 | C18 standard dello Starter | fatto nel repo; resta il ritorno **verso** lo Starter |
@@ -531,6 +531,41 @@ più niente. Se serviranno, saranno da attivare a mano, spente di default.
 **Come:** Web Push standard (VAPID) sul service worker di C12, tabella delle iscrizioni, Edge
 Function Supabase innescata dal database per i primi due eventi, `pg_cron` per il promemoria orario.
 Nessun servizio di terzi. *Dipende da:* C12.
+
+#### Dove sta adesso (27/07/2026): fatta la metà che si può verificare
+
+**Il database non spedisce niente, e non è una limitazione: è la scelta.** Spedire una push vuole
+una chiave privata e una richiesta HTTP verso un servizio di terzi dentro una transazione. Qui i
+trigger **accodano** e basta (`017_notifiche.sql`); a spedire è una Edge Function che legge la coda
+con la propria chiave. Se la spedizione è rotta — o non è ancora stata messa in piedi — prenotare un
+posto continua a funzionare: l'evento resta in coda e nessuno se ne accorge.
+
+| Pezzo | Stato |
+|---|---|
+| `push_subscriptions`, un'iscrizione **per dispositivo** (telefono e portatile sono due) | fatto, RLS: solo le proprie |
+| Coda `notifiche_coda`, RLS accesa e **nessuna policy** — come l'archivio di 010 | fatto |
+| Trigger «qualcuno prenota un posto nella tua auto» | fatto |
+| «Sei salito dalla lista d'attesa», dentro `promote_waitlist` | fatto |
+| «Parte fra un'ora», funzione chiamata dal cron | fatto |
+| Interruttore nel Profilo + `push`/`notificationclick` nel service worker | fatto |
+| Chiavi VAPID, deploy della Edge Function, `pg_cron` | **fuori dal repo**, istruzioni in `supabase/README.md` |
+
+**Verificato** in `supabase/test/verifica-notifiche.sql`, in CI, provato al contrario: si accoda
+quando deve, non si accoda per il proprio gesto, non si accoda due volte per lo stesso evento, e
+dal client la coda non si legge.
+
+**Due scelte prese scrivendolo:**
+
+- **La chiave della coda decide cosa è «lo stesso evento».** Senza, scendere e risalire dalla stessa
+  auto manderebbe due vibrazioni, e il cron che gira ogni dieci minuti ne manderebbe una a giro.
+- **Il promemoria guarda l'istante di partenza, non il giorno.** Un'auto che parte alle 00:20 va
+  avvisata alle 23:20 del giorno prima: filtrando per `ride_date = oggi` quella sarebbe l'unica ora
+  in cui il promemoria non arriva — e il test sarebbe rosso una notte su dodici e verde per caso
+  tutte le altre.
+
+**Quello che resta è anche quello che non si può provare da qui:** la Edge Function non è mai stata
+eseguita. Il primo giro va guardato nei log, e la prova vera è una notifica che arriva su un telefono
+con l'app chiusa.
 
 ### C14 — Servizi esterni — *chiuso*
 **Deciso — solo cose che il browser sa già fare, nessun SDK, nessuna voce nuova nella CSP:**

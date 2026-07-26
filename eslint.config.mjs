@@ -30,6 +30,9 @@ export default [
         // Serve a rete.js: la sonda che prova se la linea c'e' davvero, invece di
         // fidarsi di navigator.onLine, che dice un'altra cosa.
         fetch: 'readonly',
+        // C13: la chiave VAPID arriva in base64url e il browser la vuole in byte.
+        atob: 'readonly',
+        Uint8Array: 'readonly',
       },
     },
     rules: {
