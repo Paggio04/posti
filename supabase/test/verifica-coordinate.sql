@@ -6,6 +6,9 @@
 --   * il controllo `is_member or ho_un_posto` in 015        -> controllo 2
 --   * il primo `passaggio_visibile` di `coordinate_visibili`-> controllo 6
 --   * la revoca di execute su `blinda_coordinate`           -> controllo 7
+--   * la riscrittura di `check_claim` in 016                -> controllo 5, che e' il
+--     motivo per cui quella riscrittura esiste: con il `select *` di prima, prenotare un
+--     posto muore con "permission denied for table rides". Trovato qui, non in produzione.
 
 grant usage on schema public to authenticated;
 grant all on all tables in schema public to authenticated;
@@ -110,7 +113,10 @@ begin
   end if;
 
   -- ===== 5. Chi ha un posto sull'auto le ha, anche da fuori comitiva =====
-  -- Ci deve salire davvero: serve a chi e'' a bordo per arrivare al ritrovo.
+  -- Ci deve salire davvero, e questo insert e' anche il controllo piu' importante del file:
+  -- fa scattare il trigger `check_claim`, che prima leggeva la riga intera di `rides` e
+  -- quindi moriva sul permesso per colonna. Se questa riga fallisce, il permesso nuovo ha
+  -- rotto la prenotazione di un posto — cioe' il gesto per cui esiste l'app.
   insert into public.seat_claims (ride_id, seat_index, passenger_id) values (pubblico, 1, carla);
   select count(*) into quante from public.coordinate_passaggi(array[pubblico]);
   if quante <> 1 then
