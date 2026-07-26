@@ -69,3 +69,16 @@ un'app che non parte affatto.
 
 Nel dubbio, la domanda giusta e' una sola: **quale delle due meta' sopravvive senza l'altra?**
 Quella parte per prima.
+
+Il caso di scuola sono la **015 e la 016** (cantiere C21), che tirano nei due versi opposti e per
+questo sono due file invece di uno:
+
+1. **015 prima del deploy** — aggiunge `coordinate_passaggi()`, che il codice nuovo chiama a ogni
+   caricamento della Home. Sul sito vecchio non cambia niente: nessuno la chiama.
+2. **si pubblica il codice.**
+3. **016 dopo il deploy** — toglie il permesso di leggere `origin_lat`, `origin_lon`, `dest_lat` e
+   `dest_lon`. Applicarla prima vuol dire una Home in errore, perche' il codice vecchio fa
+   `select('*')` su `rides`, e da qui in poi quel `*` viene rifiutato.
+
+Applicarle tutte e due di fila su un sito ancora vecchio non e' una scorciatoia: e' il passo 3 fatto
+troppo presto.
