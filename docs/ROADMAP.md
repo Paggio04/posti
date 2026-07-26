@@ -91,7 +91,7 @@ account veri in due comitive diverse:
 |---|---|---|
 | Titolare del trattamento | `privacy.html` | **fatto** |
 | Regione del progetto Supabase | Supabase → Settings → General | **fatto** — `eu-west-2`, cioè **Londra**: fuori dall'Unione, e l'informativa lo dice citando l'adeguatezza |
-| Revocare il token Supabase del 24/07 | Supabase → Account → Access Tokens | **da fare** |
+| Revocare il token Supabase del 24/07 | Supabase → Account → Access Tokens | **fatto** il 27/07/2026: nessun token attivo sull'account |
 | Due account di prova + segreti `WT_TEST_*` | Supabase + GitHub Secrets | assenti |
 
 ### Tre lezioni pagate, che vale rispettare
