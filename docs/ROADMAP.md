@@ -40,38 +40,86 @@ policy troppo larghe.
 
 ---
 
-## Dove siamo (25/07/2026)
+## Dove siamo (26/07/2026)
 
-**Fasi 0, 1, 2 e 3 chiuse e pubblicate.** `main` è al merge della PR #2, il sito vivo serve l'app
-nuova, **le migrazioni 000-014 sono applicate in produzione** e il ramo che pubblica è protetto da
-controlli obbligatori. C10 sicurezza delle persone (012), C11 GDPR (013), C9 passaggi in zona (014):
-ogni cantiere ha il suo file di test in CI, e ogni test è stato provato al contrario — tolta una
-protezione alla volta, per vedere se diventa rosso davvero.
+**Fasi 0-3 chiuse, e della Fase 4 mancano solo le notifiche.** `main` è al merge della PR #3.
+Migrazioni 000-014 applicate in produzione, ramo protetto da un ruleset versionato, e il sito vivo
+serve tutto quello che segue:
 
-**T1 è raggiunto sul piano tecnico**; quello che manca per dire "pronta per la comitiva" è gente
-vera che la usa — e l'interfaccia della Fase 3 **non è mai stata eseguita in un browser**.
+| Cantiere | Stato |
+|---|---|
+| C12 PWA | fatto nel codice, **da installare su un telefono vero** |
+| C13 notifiche a scheda chiusa | **da fare**, e bloccato su cose che il repo non può fare: chiavi VAPID, deploy di una Edge Function, `pg_cron` |
+| C14 servizi esterni | **chiuso** (Web Share, `.ics`, navigazione sul punto vero) |
+| C15 estetica | fatto al secondo tentativo; il giudizio finale è di chi la usa |
+| C18 standard dello Starter | fatto nel repo; resta il ritorno **verso** lo Starter |
+| C21 coordinate nel payload | **da fare**: migrazione `015` |
 
-Come è andata la pubblicazione, perché vale più di un ricordo: **il codice è stato pubblicato prima
-delle migrazioni**, cioè nell'ordine sbagliato, quello che questo stesso file avverte di non usare.
-Il sito è rimasto rotto — nome di tutti come prefisso dell'email, pubblicazione di un'auto in errore
-— finché le 012-014 non sono state applicate a mano dal SQL editor. Danno piccolo perché nessuno la
-stava usando; la regola dell'ordine, però, non è teorica: è già costata due volte.
+**T1 è raggiunto sul piano tecnico.** Quello che manca per dire "pronta per la comitiva" non è
+codice: è **gente vera che la usa**, e un collaudo a video che non è mai stato fatto. Sotto, cosa
+esattamente.
 
-Le quattro cose che il repo non può fare da solo:
+### Il difetto peggiore della Fase 4, e perché nessun controllo lo vedeva
 
-| Cosa | Dove | Perché | Stato |
-|---|---|---|---|
-| Titolare del trattamento nell'informativa | `privacy.html` | Dato legale obbligatorio; pubblicare un'email personale è una decisione di chi la possiede | **fatto** — Elia Paggetti, con un indirizzo di contatto che non è quello personale |
-| Regione del progetto Supabase | Supabase → Settings → General | L'API non la espone, si legge solo dalla dashboard | **fatto** — `eu-west-2`, cioè **Londra**: fuori dall'Unione, e l'informativa ora lo dice e cita l'adeguatezza |
-| Revocare il token Supabase della sessione del 24/07 | Supabase → Account → Access Tokens | Era servito per applicare le migrazioni; un token che non serve più non deve esistere | **da fare** |
-| Due account di prova + segreti `WT_TEST_*` | Supabase + GitHub → Settings → Secrets | Sbloccano `tests/flussi.spec.js` a ogni PR; senza, restano i soli smoke (C8) | assenti |
+`Permissions-Policy: geolocation=()` teneva spenta la geolocalizzazione **anche per la pagina
+stessa**. Quindi da quando C9 esiste, sul sito vivo: "Parto da qui" falliva sempre, nessun passaggio
+poteva avere coordinate, `visibilita = 'zona'` era irraggiungibile perché il form la rifiuta senza
+coordinate, e la zona sul profilo non si impostava. **Un cantiere intero, pubblicato e con i suoi
+test verdi, inerte.** Lint, sintassi e test sullo schema non potevano trovarlo: un header non è né
+codice né schema. Ora c'è uno smoke test che lo verifica in un browser.
 
-### L'ordine di pubblicazione, che qui è l'opposto di quello della 011
+### Cosa non è stato verificato da un essere umano
 
-**Prima le migrazioni 012, 013 e 014 in produzione, poi il codice.** Verificato sul progetto vivo il
-25/07/2026: `profiles.sospeso`, `profiles.zona_lat`, `rides.visibilita` e la tabella `user_reports`
-**non esistono ancora**. Il codice nuovo le legge al primo caricamento: `ensureProfile` chiede
-`sospeso`, `loadBlocked` interroga `user_blocks`, la pubblicazione scrive `visibilita`.
+Tutto quello che segue è verificato **automaticamente** e da nessun altro. Serve un telefono e due
+account veri in due comitive diverse:
+
+- **C9:** "Parto da qui" con GPS vero; pubblicare in **zona**; un secondo account entro 25 km lo
+  vede e uno fuori raggio no
+- **C14:** il `.ics` si apre in Calendario **con l'ora giusta**; il link "Naviga al ritrovo" da
+  dentro la comitiva e "Punto di ritrovo su Maps" da fuori (è la regola di `coordinateVisibili()`:
+  il punto di partenza di una persona può essere casa sua)
+- **C12:** installarla da iOS e da Android, avvio senza barra del browser, l'icona nella maschera
+  circolare di Android (le PNG sono `purpose: "any"`, non `maskable`), modalità aereo
+- **C15:** la prova del nove — coperti logo e nome, si capisce che è questa app?
+- **Fase 3 intera:** segnalazione (il segnalato non deve saperlo), blocco nei due sensi,
+  sospensione, esportazione, e **la cancellazione di un account che possiede una comitiva**, che è
+  il controllo più importante perché un errore lì danneggia gli altri
+
+### Le quattro cose che il repo non può fare da solo
+
+| Cosa | Dove | Stato |
+|---|---|---|
+| Titolare del trattamento | `privacy.html` | **fatto** |
+| Regione del progetto Supabase | Supabase → Settings → General | **fatto** — `eu-west-2`, cioè **Londra**: fuori dall'Unione, e l'informativa lo dice citando l'adeguatezza |
+| Revocare il token Supabase del 24/07 | Supabase → Account → Access Tokens | **da fare** |
+| Due account di prova + segreti `WT_TEST_*` | Supabase + GitHub Secrets | assenti |
+
+### Tre lezioni pagate, che vale rispettare
+
+1. **Le coordinate speculari si calcolano, non si scrivono.** Le ruote dell'auto erano fuori di 4px
+   con quelle di sinistra tagliate dal bordo, le file non equidistanti, i tondi della navigazione
+   posizionati a occhio. Ora c'è `specchia(x, w)` e le misure della barra sono variabili da cui si
+   ricava tutto.
+2. **Un controllo che misura la cosa sbagliata è peggio di nessun controllo**, perché autorizza a
+   chiudere il caso. La mia misura del tondo diceva "centrato a 0.02px" ignorando un bordo da 4px;
+   il difetto l'ha trovato l'occhio del proprietario. Lo stesso vale per uno `str.replace` muto: ha
+   fatto credere per due commit che la versione della cache fosse salita.
+3. **La CI ha avuto ragione tre volte di fila**, e due volte contro una mia diagnosi. Se un test è
+   rosso e la spiegazione comoda è "il test è fragile", quasi sempre la spiegazione è sbagliata.
+
+### L'ordine di pubblicazione, che alla 012-014 era l'opposto della 011 — *storia, e la regola che resta*
+
+> Questa sezione descrive la pubblicazione della Fase 3, che è **già avvenuta** (male, vedi sotto).
+> Le migrazioni 012-014 sono applicate dal 25/07/2026. Resta per la regola, non per le istruzioni.
+
+**Andavano applicate prima del codice**, e non è andata così: il codice è stato pubblicato per
+primo, quindi il sito è rimasto rotto — nome di tutti come prefisso dell'email, pubblicazione di
+un'auto in errore — finché le tre migrazioni non sono state applicate a mano dal SQL editor. Danno
+piccolo solo perché nessuno la stava usando.
+
+Perché andavano prima: `profiles.sospeso`, `profiles.zona_lat`, `rides.visibilita` e la tabella
+`user_reports` non esistevano, e il codice nuovo le legge al primo caricamento — `ensureProfile`
+chiede `sospeso`, `loadBlocked` interroga `user_blocks`, la pubblicazione scrive `visibilita`.
 
 Cosa succede davvero se si pubblica il codice prima (tracciato, non supposto): la pagina **si apre**
 — supabase-js restituisce l'errore invece di sollevarlo — ma `ensureProfile` non trova il profilo,
