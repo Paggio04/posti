@@ -25,11 +25,40 @@
   --radius-sm: 16px;
   --pill: 999px;
 
-  --shadow-1: 0 2px 8px oklch(0.3 0.05 258 / 0.07), 0 8px 24px oklch(0.3 0.05 258 / 0.07);
-  --shadow-2: 0 4px 14px oklch(0.3 0.05 258 / 0.1), 0 18px 44px oklch(0.3 0.05 258 / 0.14);
+  --shadow-1: 0 1px 2px oklch(0.30 0.06 258 / 0.10), 0 6px 16px -4px oklch(0.30 0.06 258 / 0.12);
+  --shadow-2: 0 2px 4px oklch(0.30 0.06 258 / 0.10), 0 12px 28px -6px oklch(0.30 0.06 258 / 0.18),
+              0 32px 60px -20px oklch(0.30 0.06 258 / 0.20);
   --glow: 0 6px 22px oklch(0.42 0.11 258 / 0.38);
 
+  /* Ottone: il secondo colore, e usato poco per scelta. Solo dove una cosa e'
+     **tua** -- il tuo sedile, il tuo codice, il tuo ruolo. Il navy resta il
+     colore dell'app; questo e' il colore di chi la sta usando. */
+  --ottone: oklch(0.74 0.13 78);
+  --ottone-scuro: oklch(0.50 0.11 72);          /* per il testo: 5.4:1 su carta */
+  --ottone-velo: oklch(0.95 0.035 85);
+  --ottone-bordo: oklch(0.84 0.09 80);
+
+  /* Profondita': ombre tinte del navy invece che grigie, su due strati -- una
+     stretta che appoggia l'oggetto, una larga e morbida che lo stacca. Il grigio
+     puro e' quello che fa sembrare le ombre incollate. */
+  --luce-interna: inset 0 1px 0 oklch(1 0 0 / 0.75);
+  --luce-interna-scura: inset 0 1px 0 oklch(1 0 0 / 0.06);
+
   /* Motion system */
+  /* Geometria della navigazione. Il centro dell'icona e la posizione dei tondi si
+     calcolano da qui: cambiando una misura restano allineati da soli. */
+  --nav-pad: 8px;          /* padding verticale della barra */
+  --nav-item-pad: 7px;     /* padding sopra l'icona nella scheda */
+  --nav-icona: 21px;       /* lato dell'icona */
+  --nav-salita: 26px;      /* di quanto sale l'icona attiva */
+  --nav-salita-sopra: 6px; /* di quanto si alza al passaggio */
+  --nav-tondo: 50px;
+  --nav-tondo-sopra: 42px;
+  /* Centro verticale dell'icona attiva, misurato dal bordo alto della barra. */
+  --nav-centro: calc(var(--nav-pad) + var(--nav-item-pad) + var(--nav-icona) / 2 - var(--nav-salita));
+  /* E al passaggio, misurato dal bordo alto della scheda. */
+  --nav-centro-sopra: calc(var(--nav-item-pad) + var(--nav-icona) / 2 - var(--nav-salita-sopra));
+
   --ease-out: cubic-bezier(0.22, 1, 0.36, 1);
   --spring: cubic-bezier(0.34, 1.4, 0.44, 1);
   --t-fast: 160ms;
@@ -194,7 +223,7 @@ svg { vertical-align: -0.15em; }
   background: var(--surface);
   border: 1px solid var(--border);
   border-radius: var(--radius-xl);
-  box-shadow: var(--shadow-2);
+  box-shadow: var(--shadow-2), var(--luce-interna);
   padding: 32px;
   animation: card-pop 500ms var(--spring) both;
 }
@@ -456,7 +485,7 @@ input:focus-visible, select:focus-visible, textarea:focus-visible {
   z-index: 10;
 }
 
-.brand { font-weight: 700; font-size: 1.1rem; display: flex; align-items: center; gap: 9px; }
+.brand { font-weight: 800; font-size: 1.1rem; letter-spacing: -0.03em; display: flex; align-items: center; gap: 9px; }
 
 .user-name-btn {
   background: oklch(1 0 0 / 0.12);
@@ -477,7 +506,7 @@ input:focus-visible, select:focus-visible, textarea:focus-visible {
   width: 100%;
   max-width: 920px;
   margin: 0 auto;
-  padding: 26px 20px 130px;
+  padding: 26px 20px 148px;
 }
 
 /* Transizione tra viste */
@@ -633,7 +662,8 @@ input:focus-visible, select:focus-visible, textarea:focus-visible {
 
 .group-code {
   font-weight: 700;
-  letter-spacing: 0.08em;
+  font-variant-numeric: tabular-nums;
+  letter-spacing: 0.1em;
   color: var(--primary);
   background: var(--primary-soft);
   padding: 5px 12px;
@@ -734,6 +764,7 @@ input:focus-visible, select:focus-visible, textarea:focus-visible {
 }
 
 .ride-card {
+  box-shadow: var(--shadow-1), var(--luce-interna);
   --car-hue: 258;
   --i: 0;
   background: var(--surface);
@@ -753,6 +784,14 @@ input:focus-visible, select:focus-visible, textarea:focus-visible {
 .ride-head { display: flex; justify-content: space-between; align-items: start; gap: 8px; }
 .ride-route { font-weight: 700; font-size: 1rem; }
 .ride-sub { color: var(--ink-soft); font-size: 0.85rem; margin-top: 2px; }
+/* Il link al ritrovo era senza regola da quando esiste: ereditava lo stile dei link e
+   dentro la scheda sembrava un errore. Riga sua, allineata all'icona del pin. */
+.maps-link {
+  display: inline-flex; align-items: center; gap: 4px; margin-top: 2px;
+  color: var(--ink-soft); font-size: 0.83rem; text-decoration: none;
+}
+.maps-link:hover { color: var(--primary-hover); text-decoration: underline; }
+.maps-link svg { flex: none; }
 .ride-foot { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
 .ride-note { color: var(--ink-soft); font-size: 0.83rem; }
 
@@ -782,15 +821,32 @@ input:focus-visible, select:focus-visible, textarea:focus-visible {
   border-radius: var(--pill);
 }
 .place-badge.public { color: var(--ok-deep); background: var(--ok-soft); }
-.place-badge.mine { color: var(--primary); background: var(--primary-soft); }
+/* Il tuo posto: ottone, non lo stesso navy di tutto il resto. Prima "il mio
+   sedile" e "un sedile" erano lo stesso colore con due parole diverse. */
+.place-badge.mine {
+  color: var(--ottone-scuro);
+  background: var(--ottone-velo);
+  border-color: var(--ottone-bordo);
+}
 
-/* Auto SVG */
-.car-svg { width: min(200px, 72%); margin: 4px auto; display: block; }
+/* Auto SVG. Materiali, non tinte piatte (C15): la lamiera prende luce dall'alto,
+   il vetro ha un riflesso, e sotto c'e' un'ombra che appoggia l'auto a terra.
+   Ogni guidatore ha la sua tinta (--car-hue), quindi la luce deve funzionare su
+   qualsiasi colore: per questo e' fatta di chiaro e scuro sullo stesso hue e non
+   di grigio sopra. */
+.car-svg { width: min(228px, 82%); margin: 6px auto 2px; display: block; }
 .car-body {
-  fill: oklch(0.93 0.02 var(--car-hue));
-  stroke: oklch(0.72 0.06 var(--car-hue));
+  stroke: oklch(0.70 0.06 var(--car-hue));
   stroke-width: 2;
 }
+.lamiera-alto { stop-color: oklch(0.97 0.015 var(--car-hue)); }
+.lamiera-mezzo { stop-color: oklch(0.93 0.022 var(--car-hue)); }
+.lamiera-basso { stop-color: oklch(0.87 0.032 var(--car-hue)); }
+.car-luce { fill: none; stroke: oklch(1 0 0 / 0.9); stroke-width: 2; stroke-linecap: round; }
+.car-ombra { fill: oklch(0.30 0.06 258 / 0.16); }
+.car-riflesso { fill: oklch(1 0 0 / 0.38); }
+.vetro-chiaro { stop-color: oklch(0.90 0.02 240); }
+.vetro-scuro { stop-color: oklch(0.83 0.03 240); }
 .car-glass { fill: oklch(0.87 0.015 240); }
 .car-wheel { fill: oklch(0.35 0.02 260); }
 .car-wheel-steer { fill: none; stroke: oklch(0.35 0.02 260); stroke-width: 3; }
@@ -826,9 +882,18 @@ input:focus-visible, select:focus-visible, textarea:focus-visible {
 .seat-taken .seat-back { fill: var(--primary-hover); }
 .seat-taken .seat-text { fill: #fff; }
 
-.seat-mine .seat-base { fill: var(--ok); stroke: var(--ok-deep); }
-.seat-mine .seat-back { fill: var(--ok-deep); }
-.seat-mine .seat-text { fill: #fff; }
+/* Il tuo posto e' ottone. Prima era verde come "va bene", ma qui non e' una
+   conferma: e' l'unico sedile che ti riguarda, e in un'auto da cinque deve
+   trovarsi con un colpo d'occhio, senza leggere le iniziali. */
+.seat-mine .seat-base { fill: var(--ottone); stroke: var(--ottone-scuro); }
+.seat-mine .seat-back { fill: var(--ottone-scuro); }
+.seat-mine .seat-text { fill: oklch(0.24 0.04 70); }
+.seat-mine .seat-piega { stroke: oklch(0.24 0.04 70 / 0.28); }
+
+/* La piega del cuscino, scura sui sedili pieni e chiara su quelli vuoti. */
+.seat-piega { fill: none; stroke: oklch(0.30 0.03 260 / 0.16); stroke-width: 1.5; stroke-linecap: round; }
+.seat-taken .seat-piega, .seat-driver .seat-piega { stroke: oklch(1 0 0 / 0.22); }
+.seat-free .seat-piega { stroke: var(--primary); opacity: 0.28; }
 
 .seat-click { cursor: pointer; }
 .seat-click:hover .seat-base { transform: scale(1.12); transform-box: fill-box; transform-origin: center; }
@@ -894,7 +959,12 @@ input:focus-visible, select:focus-visible, textarea:focus-visible {
   font-weight: 500;
   color: var(--ink-soft);
 }
-.history-chip.driver { background: var(--primary-soft); color: var(--primary); font-weight: 600; }
+.history-chip.driver {
+  background: var(--ottone-velo);
+  color: var(--ottone-scuro);
+  border: 1px solid var(--ottone-bordo);
+  font-weight: 600;
+}
 
 .chip-kick {
   background: none;
@@ -1010,13 +1080,32 @@ input:focus-visible, select:focus-visible, textarea:focus-visible {
   width: min(94vw, 520px);
   display: grid;
   grid-template-columns: repeat(5, 1fr);
-  background: oklch(1 0 0 / 0.85);
-  backdrop-filter: blur(16px);
+  background: var(--surface);
   border: 1px solid var(--border);
   border-radius: var(--pill);
   box-shadow: var(--shadow-2);
-  padding: 8px 10px;
+  padding: 8px 0;
   z-index: 50;
+}
+
+/* Il tondo non appartiene piu' alla Home: appartiene a **dove sei**, e ci va.
+   Scivola sulla colonna attiva, e l'icona di quella scheda sale dentro. E' un
+   elemento solo che si sposta -- non cinque tondi che si accendono a turno --
+   quindi il movimento racconta il passaggio da una vista all'altra. */
+.bottom-nav::before {
+  content: '';
+  box-sizing: border-box;   /* il bordo sta DENTRO i 50px, altrimenti sono 58 */
+  position: absolute;
+  top: calc(var(--nav-centro) - var(--nav-tondo) / 2);
+  left: calc((var(--nav-i, 2) + 0.5) * 20%);
+  width: var(--nav-tondo); height: var(--nav-tondo);
+  margin-left: calc(var(--nav-tondo) / -2);
+  border-radius: 50%;
+  background: linear-gradient(150deg, var(--primary-bright), var(--primary));
+  border: 4px solid var(--bg);
+  box-shadow: var(--glow);
+  transition: left 420ms var(--spring);
+  pointer-events: none;
 }
 
 .nav-item {
@@ -1036,38 +1125,21 @@ input:focus-visible, select:focus-visible, textarea:focus-visible {
   touch-action: manipulation;
   transition: color var(--t-fast) var(--ease-out), transform var(--t-med) var(--spring);
 }
-.nav-item:hover { color: var(--ink); transform: translateY(-2px); }
-.nav-item.active { color: var(--primary); }
+.nav-item:hover { color: var(--ink); }
+.nav-item.active { color: var(--primary); font-weight: 700; }
+.nav-item svg {
+  position: relative;
+  z-index: 1;
+  transition: transform 420ms var(--spring), color var(--t-fast) var(--ease-out);
+}
+.nav-item.active svg { transform: translateY(calc(-1 * var(--nav-salita))); color: #fff; }
+/* L'etichetta non si muove: alzandola finiva sotto il tondo. Al posto dell'icona
+   che e' salita resta un vuoto, ed e' giusto che si veda -- e' quel vuoto a dire
+   che l'icona e' quella dentro il tondo. */
+.nav-item.active span { color: var(--primary); }
 .nav-item:active { transform: scale(0.92); }
 .nav-item:focus-visible { outline: 2px solid var(--primary); outline-offset: -2px; }
 
-.nav-home { margin-top: -30px; }
-.nav-home-circle {
-  width: 58px; height: 58px;
-  border-radius: 50%;
-  background: linear-gradient(135deg, var(--primary-bright), var(--primary));
-  color: #fff;
-  display: grid;
-  place-items: center;
-  box-shadow: var(--glow);
-  border: 4px solid var(--bg);
-  transition: transform var(--t-med) var(--spring), box-shadow var(--t-med) var(--ease-out);
-  position: relative;
-}
-.nav-home.active .nav-home-circle::after {
-  content: '';
-  position: absolute;
-  inset: -7px;
-  border-radius: 50%;
-  border: 2px solid oklch(0.42 0.11 258 / 0.35);
-  animation: ring 2.2s var(--ease-out) infinite;
-}
-@keyframes ring {
-  0% { transform: scale(0.85); opacity: 1; }
-  100% { transform: scale(1.25); opacity: 0; }
-}
-.nav-home:hover .nav-home-circle { transform: translateY(-3px) scale(1.05); }
-.nav-home:active .nav-home-circle { transform: scale(0.92); }
 
 /* ================= DIALOG / TOAST / VUOTI ================= */
 
@@ -1112,6 +1184,17 @@ input:focus-visible, select:focus-visible, textarea:focus-visible {
 }
 .empty-title { font-weight: 700; font-size: 1.08rem; margin-bottom: 8px; }
 .empty-hint { color: var(--ink-soft); font-size: 0.92rem; max-width: 46ch; margin: 0 auto; line-height: 1.6; }
+
+/* Avviso di rete (C12). Da quando c'e' il service worker l'app si apre anche offline, e
+   proprio per questo va detto: una schermata che si apre e non si aggiorna, senza avviso,
+   sembra un'app rotta invece di un telefono senza segnale. */
+.offline-bar {
+  position: sticky; top: 0; z-index: 60;
+  padding: 8px 14px;
+  background: var(--danger); color: #fff;
+  font-size: 0.85rem; font-weight: 500; text-align: center;
+}
+.offline-bar[hidden] { display: none; }
 
 .toast {
   position: fixed;
@@ -1196,8 +1279,7 @@ input:focus-visible, select:focus-visible, textarea:focus-visible {
   .car-wheel-steer { stroke: oklch(0.55 0.01 260); }
   .howto { border-color: var(--border-strong); }
   .toast { background: var(--surface-2); color: var(--ink); }
-  .bottom-nav { background: oklch(0.22 0.025 260 / 0.85); }
-  .nav-home-circle { border-color: var(--bg); }
+  .bottom-nav { background: var(--surface); }
   .topbar { background: oklch(0.14 0.03 262 / 0.88); }
 }
 
@@ -1300,4 +1382,61 @@ input:focus-visible, select:focus-visible, textarea:focus-visible {
 
 @media (prefers-reduced-motion: reduce) {
   *, *::before, *::after { animation: none !important; transition: none !important; }
+}
+
+/* --- Finiture (C15) ------------------------------------------------------- */
+
+/* Ore, posti, prezzi e codici in tabellare: le cifre hanno tutte la stessa
+   larghezza, quindi una colonna di orari resta una colonna invece di ballare. */
+.ride-sub, .ride-route, .stat-box strong, .stats-row-label, .group-code,
+.history-chip, .place-badge, .day-picker { font-variant-numeric: tabular-nums; }
+
+/* Un anello di focus che fa parte del disegno invece di quello del browser:
+   doppio, cosi' si vede sia sul chiaro sia sullo scuro. */
+:where(button, a, input, select, textarea):focus-visible {
+  outline: 2px solid var(--primary);
+  outline-offset: 2px;
+  border-radius: var(--radius-sm);
+}
+
+/* --- Passare sopra (C15) --------------------------------------------------
+   Solo dove esiste un puntatore vero: su un telefono `:hover` resta attaccato
+   dopo il tocco, e una scheda che rimane illuminata sembra rotta.
+
+   L'idea e' una sola: passare sopra **anticipa** quello che succede se tocchi.
+   La scheda della navigazione mostra un tondo pallido dove arriverebbe quello
+   pieno, e l'icona si alza di un soffio nella stessa direzione. Non e' un
+   bagliore decorativo: e' un'anteprima.                                     */
+@media (hover: hover) and (pointer: fine) {
+  .nav-item { position: relative; }
+  .nav-item:not(.active)::after {
+    content: '';
+    box-sizing: border-box;
+    position: absolute;
+    top: calc(var(--nav-centro-sopra) - var(--nav-tondo-sopra) / 2);
+    left: 50%;
+    width: var(--nav-tondo-sopra); height: var(--nav-tondo-sopra);
+    margin-left: calc(var(--nav-tondo-sopra) / -2);
+    border-radius: 50%;
+    background: var(--primary-soft);
+    opacity: 0;
+    transform: scale(0.7);
+    transition: opacity var(--t-fast) var(--ease-out), transform var(--t-med) var(--spring);
+    pointer-events: none;
+  }
+  .nav-item:not(.active):hover::after { opacity: 1; transform: scale(1); }
+  .nav-item:not(.active):hover svg { transform: translateY(calc(-1 * var(--nav-salita-sopra))); color: var(--primary); }
+  .nav-item:not(.active):hover span { color: var(--ink); }
+
+  /* Le schede dei passaggi: si alzano un po' di piu' e l'ombra si approfondisce,
+     cosi' il movimento sembra peso che si stacca e non un salto. */
+  .ride-card:hover { box-shadow: var(--shadow-2), var(--luce-interna); }
+
+  /* I pulsanti: un pixel in su, non una molla. */
+  .btn:hover:not(:disabled) { transform: translateY(-1px); }
+  .btn-primary:hover:not(:disabled) { box-shadow: var(--glow), var(--luce-interna); }
+
+  /* Il codice del gruppo si copia con un tocco: che sia toccabile lo dice
+     l'ottone che si scalda, non un'istruzione scritta accanto. */
+  .group-code:hover { background: var(--ottone-velo); border-color: var(--ottone); }
 }

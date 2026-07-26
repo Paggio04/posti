@@ -1,0 +1,12 @@
+# WeTransport — https://wetransport.netlify.app
+# L'app vive dietro l'accesso: quello che un motore di ricerca puo' vedere e' la schermata
+# di ingresso e l'informativa, e vanno benissimo indicizzate.
+
+User-agent: *
+Allow: /
+
+# La pagina che compare quando manca la rete non e' contenuto: indicizzata sembrerebbe
+# un'app rotta a chi la trova da una ricerca.
+Disallow: /offline.html
+
+Sitemap: https://wetransport.netlify.app/sitemap.xml

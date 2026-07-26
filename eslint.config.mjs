@@ -4,7 +4,7 @@
 // versionata: stesse regole in locale (npm run lint) e in CI.
 export default [
   {
-    files: ['app.js', 'config.js'],
+    files: ['app.js', 'config.js', 'rete.js'],
     languageOptions: {
       ecmaVersion: 2023,
       sourceType: 'module',
@@ -27,10 +27,37 @@ export default [
         Blob: 'readonly',
         URL: 'readonly',
         location: 'readonly',
+        // Serve a rete.js: la sonda che prova se la linea c'e' davvero, invece di
+        // fidarsi di navigator.onLine, che dice un'altra cosa.
+        fetch: 'readonly',
       },
     },
     rules: {
       // Bloccanti: un nome sbagliato o una variabile morta sono bug o resti di refactor.
+      'no-undef': 'error',
+      'no-unused-vars': ['error', { args: 'none' }],
+      'no-eval': 'error',
+      eqeqeq: ['error', 'smart'],
+    },
+  },
+  {
+    // Il service worker (C12) vive in un altro mondo: niente document, niente window, e
+    // `self` al posto loro. Senza queste regole restava fuori dal lint, ed e' proprio il
+    // file che sbaglia in silenzio: se non si registra, l'app funziona e nessuno lo scopre.
+    files: ['sw.js'],
+    languageOptions: {
+      ecmaVersion: 2023,
+      sourceType: 'script',
+      globals: {
+        self: 'readonly',
+        caches: 'readonly',
+        fetch: 'readonly',
+        Response: 'readonly',
+        URL: 'readonly',
+        console: 'readonly',
+      },
+    },
+    rules: {
       'no-undef': 'error',
       'no-unused-vars': ['error', { args: 'none' }],
       'no-eval': 'error',

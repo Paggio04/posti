@@ -624,8 +624,20 @@ function switchView(view) {
   for (const v of VIEWS) {
     document.getElementById('view-' + v).classList.toggle('hidden', v !== view);
   }
-  document.querySelectorAll('.nav-item').forEach(b =>
-    b.classList.toggle('active', b.dataset.view === view));
+  // Il tondo della navigazione scivola sulla scheda attiva: la sua colonna la
+  // passa il codice al CSS, letta dall'ordine vero dei pulsanti, per non tenere
+  // l'elenco delle viste scritto in due posti che possono divergere.
+  const schede = [...document.querySelectorAll('.nav-item')];
+  schede.forEach((b, i) => {
+    const attiva = b.dataset.view === view;
+    b.classList.toggle('active', attiva);
+    if (attiva) {
+      b.setAttribute('aria-current', 'page');
+      document.querySelector('.bottom-nav')?.style.setProperty('--nav-i', i);
+    } else {
+      b.removeAttribute('aria-current');
+    }
+  });
   window.scrollTo({ top: 0 });
   if (view === 'history') loadHistory();
   if (view === 'stats') loadStats();
@@ -1314,7 +1326,18 @@ async function renderWalkers(rides) {
 // Layout sedili centrato nella carrozzeria (larghezza 190, centro x = 95).
 // Il guidatore è sempre davanti a sinistra; le posizioni dei passeggeri
 // dipendono da quanti posti offre l'auto.
-const ROW_FRONT = 92, ROW_BACK = 176, ROW_THIRD = 252;
+// Le tre file sono equidistanti: 92, 176, 260, cioe' 84 di passo. Prima l'ultima
+// era a 252, quindi 84 e poi 76: la terza fila risultava schiacciata verso il
+// lunotto, e su un disegno simmetrico si vede subito anche senza misurarlo.
+const PASSO_FILA = 84;
+const ROW_FRONT = 92, ROW_BACK = ROW_FRONT + PASSO_FILA, ROW_THIRD = ROW_BACK + PASSO_FILA;
+
+// La geometria della scocca. Tutto quello che sta a destra si RICAVA da quello che
+// sta a sinistra: scrivere le due coordinate a mano e' esattamente il modo in cui
+// le ruote sono finite fuori di 4px, con quelle di sinistra tagliate dal bordo.
+const CAR_W = 190;
+const CAR_INSET = 10;                       // margine della scocca dal viewBox
+const specchia = (x, w) => CAR_W - x - w;   // riflette un rettangolo sull'asse
 const DRIVER_POS = { x: 58, y: ROW_FRONT };
 const SEAT_LAYOUTS = {
   1: { 1: { x: 132, y: ROW_FRONT } },
@@ -1335,20 +1358,180 @@ function svgEl(tag, attrs) {
   return el;
 }
 
+// --- Navigazione al ritrovo (cantiere C14, decisione D6) ---
+// Le coordinate della partenza esistono da C9, ma il link continuava a cercare il testo
+// libero: "piazza" trova la piazza sbagliata, e il ritrovo si sposta di un chilometro.
+// Con origin_lat/origin_lon il punto e' quello vero, e il link apre il percorso invece
+// della sola ricerca. Nessun servizio nuovo: e' un indirizzo di Maps, non un SDK.
+//
+// **Non a tutti lo stesso link, pero'.** La policy di 014 e' di riga, non di colonna: chi
+// vede un passaggio 'zona' o 'pubblico' riceve la riga intera, coordinate comprese, e il
+// punto di partenza di una persona puo' essere casa sua al metro. Dentro la comitiva (o
+// avendo un posto sopra quell'auto) il punto esatto e' esattamente quello che serve; da
+// fuori resta la ricerca sul nome del luogo, che dice la zona e non l'indirizzo.
+// Restringere anche il payload e' un cantiere a parte, ed e' scritto in ROADMAP: qui si
+// smette di *offrire* l'indirizzo con un click, non si finge che il dato non arrivi.
+// Chi vede il punto esatto di partenza e chi no. Una decisione sola, in un posto solo: la
+// usano sia il link di navigazione sia il file del calendario, e se cambia idea cambia qui.
+function coordinateVisibili(ride) {
+  if (ride.origin_lat == null || ride.origin_lon == null) return false;
+  return ride.group_id === currentGroupId
+    || (ride.seat_claims ?? []).some((c) => c.passenger_id === currentUser?.id);
+}
+
+function linkRitrovo(ride) {
+  if (coordinateVisibili(ride)) {
+    return {
+      href: 'https://www.google.com/maps/dir/?api=1&destination='
+        + encodeURIComponent(`${ride.origin_lat},${ride.origin_lon}`),
+      testo: 'Naviga al ritrovo',
+    };
+  }
+  // Senza coordinate — o guardando da fuori — vale quello che c'era: il testo libero.
+  // Vale anche per ogni passaggio pubblicato prima della 014, che coordinate non ne ha.
+  if (!ride.origin) return null;
+  return {
+    href: 'https://www.google.com/maps/search/?api=1&query=' + encodeURIComponent(ride.origin),
+    testo: 'Punto di ritrovo su Maps',
+  };
+}
+
+// --- Il passaggio nel calendario (cantiere C14, decisione D6) ---
+// Un file .ics costruito qui dentro: nessun servizio esterno da avvisare di dove va la
+// gente, e Google, Apple e Outlook lo aprono allo stesso modo. Il formato e' pignolo su tre
+// cose, e sbagliarne una vuol dire un file che un calendario apre e un altro rifiuta senza
+// dire perche': le righe finiscono con CRLF e non con \n, virgole e punto e virgola dentro
+// il testo vanno protetti, e le righe lunghe vanno spezzate.
+function testoIcs(ride) {
+  const esc = (s) => String(s)
+    .replace(/\\/g, '\\\\').replace(/([;,])/g, '\\$1').replace(/\r?\n/g, '\\n');
+  const istante = (d) => d.toISOString().replace(/[-:]/g, '').replace(/\.\d{3}/, '');
+  const giorno = (iso) => iso.replace(/-/g, '');
+
+  const righe = [
+    'BEGIN:VCALENDAR',
+    'VERSION:2.0',
+    'PRODID:-//WeTransport//IT',
+    'CALSCALE:GREGORIAN',
+    'BEGIN:VEVENT',
+    `UID:${ride.id}@wetransport`,
+    `DTSTAMP:${istante(new Date())}`,
+  ];
+
+  if (ride.depart_time) {
+    // L'ora salvata e' l'ora dell'orologio di chi parte. La converto in UTC col fuso di
+    // questo dispositivo, che per una comitiva che parte dallo stesso posto e' il fuso
+    // giusto: cosi' l'appuntamento resta l'istante corretto anche aprendolo da altrove.
+    const inizio = new Date(`${ride.ride_date}T${ride.depart_time}`);
+    righe.push(
+      `DTSTART:${istante(inizio)}`,
+      `DTEND:${istante(new Date(inizio.getTime() + 60 * 60 * 1000))}`,
+    );
+  } else {
+    // Senza ora non si inventa un orario: giornata intera, e chi guida la precisa poi.
+    righe.push(
+      `DTSTART;VALUE=DATE:${giorno(ride.ride_date)}`,
+      `DTEND;VALUE=DATE:${giorno(addDaysISO(ride.ride_date, 1))}`,
+    );
+  }
+
+  const liberi = ride.seats - ride.seat_claims.length;
+  const descrizione = [
+    `Guida ${nomeDi(ride.driver)}.`,
+    liberi > 0 ? `${liberi} posti liberi quando hai scaricato questo file.` : 'Auto al completo.',
+    ride.fuel_per_person ? `Benzina: ${ride.fuel_per_person} € a testa.` : null,
+    ride.note ? `Nota: ${ride.note}` : null,
+    SITE_URL,
+  ].filter(Boolean).join('\n');
+
+  righe.push(`SUMMARY:${esc('Passaggio verso ' + ride.destination)}`);
+  righe.push(`DESCRIPTION:${esc(descrizione)}`);
+  if (ride.origin) righe.push(`LOCATION:${esc(ride.origin)}`);
+  // Il punto esatto solo a chi lo vede comunque: stessa regola del link di navigazione.
+  if (coordinateVisibili(ride)) righe.push(`GEO:${ride.origin_lat};${ride.origin_lon}`);
+  righe.push('END:VEVENT', 'END:VCALENDAR');
+
+  // Piegatura: il formato vuole righe da non piu' di 75 ottetti, e la continuazione deve
+  // cominciare con uno spazio. Taglio a 70 caratteri invece di contare gli ottetti perche'
+  // le lettere accentate ne occupano due, e questo margine le copre senza fare i conti.
+  return righe.flatMap((r) => {
+    const pezzi = [];
+    for (let i = 0; i < r.length; i += 70) pezzi.push((i === 0 ? '' : ' ') + r.slice(i, i + 70));
+    return pezzi;
+  }).join('\r\n') + '\r\n';
+}
+
+function scaricaIcs(ride) {
+  const url = URL.createObjectURL(new Blob([testoIcs(ride)], { type: 'text/calendar;charset=utf-8' }));
+  const a = document.createElement('a');
+  a.href = url;
+  a.download = `passaggio-${ride.ride_date}.ics`;
+  document.body.appendChild(a);
+  a.click();
+  a.remove();
+  // Non subito: revocare l'indirizzo nello stesso istante del click lascia a mani vuote i
+  // browser che leggono il blob un attimo dopo.
+  setTimeout(() => URL.revokeObjectURL(url), 10_000);
+}
+
 function buildCar(ride) {
   const isLong = ride.seats >= 5;
-  const H = isLong ? 330 : 250;
+  // Altezza della scocca: quanto serve alle file che ci stanno dentro, piu' lo
+  // spazio del lunotto e del baule. Non un numero tondo scelto a occhio.
+  const H = isLong ? 344 : 250;
   const svg = svgEl('svg', { viewBox: `0 0 190 ${H}`, class: 'car-svg', role: 'img' });
   svg.setAttribute('aria-label', `Auto di ${nomeDi(ride.driver)}`);
 
-  svg.appendChild(svgEl('rect', { x: 10, y: 10, width: 170, height: H - 20, rx: 46, class: 'car-body' }));
-  svg.appendChild(svgEl('rect', { x: 30, y: 44, width: 130, height: 16, rx: 8, class: 'car-glass' }));
-  svg.appendChild(svgEl('rect', { x: 34, y: H - 42, width: 122, height: 12, rx: 6, class: 'car-glass' }));
-  for (const [wx, wy] of [[2, 60], [180, 60], [2, H - 90], [180, H - 90]]) {
-    svg.appendChild(svgEl('rect', { x: wx - 4, y: wy, width: 12, height: 34, rx: 5, class: 'car-wheel' }));
+  // Materiali (C15). L'auto e' l'unica cosa qui dentro che nessun altro ha, quindi
+  // vale disegnarla come un oggetto e non come un rettangolo: la luce arriva
+  // dall'alto, il vetro riflette, e sotto c'e' un'ombra che la appoggia. Il
+  // gradiente serve alla lamiera, non alla pagina: la carrozzeria ha un colore
+  // per ogni guidatore (--car-hue) e senza una variazione di luce sembra piatta.
+  const uid = ++carGradId;
+  const defs = svgEl('defs', {});
+  const lamiera = svgEl('linearGradient', { id: `lamiera-${uid}`, x1: '0', y1: '0', x2: '0.35', y2: '1' });
+  lamiera.appendChild(svgEl('stop', { offset: '0', class: 'lamiera-alto' }));
+  lamiera.appendChild(svgEl('stop', { offset: '0.55', class: 'lamiera-mezzo' }));
+  lamiera.appendChild(svgEl('stop', { offset: '1', class: 'lamiera-basso' }));
+  defs.appendChild(lamiera);
+  const vetro = svgEl('linearGradient', { id: `vetro-${uid}`, x1: '0', y1: '0', x2: '1', y2: '1' });
+  vetro.appendChild(svgEl('stop', { offset: '0', class: 'vetro-chiaro' }));
+  vetro.appendChild(svgEl('stop', { offset: '0.5', class: 'vetro-scuro' }));
+  vetro.appendChild(svgEl('stop', { offset: '1', class: 'vetro-chiaro' }));
+  defs.appendChild(vetro);
+  svg.appendChild(defs);
+
+  // L'ombra a terra: appoggia l'auto invece di lasciarla galleggiare.
+  svg.appendChild(svgEl('ellipse', { cx: 95, cy: H - 6, rx: 74, ry: 7, class: 'car-ombra' }));
+
+  svg.appendChild(svgEl('rect', {
+    x: 10, y: 10, width: 170, height: H - 20, rx: 46,
+    class: 'car-body', fill: `url(#lamiera-${uid})`,
+  }));
+  // Il filo di luce sul bordo alto: un pixel, ed e' quello che da' lo spessore.
+  svg.appendChild(svgEl('path', {
+    d: `M 56 11 Q 95 11 134 11`, class: 'car-luce',
+  }));
+  svg.appendChild(svgEl('rect', { x: 30, y: 44, width: 130, height: 16, rx: 8, class: 'car-glass', fill: `url(#vetro-${uid})` }));
+  // Riflesso sul parabrezza: una striscia sola, di sbieco.
+  svg.appendChild(svgEl('path', { d: 'M 40 58 L 58 46 L 74 46 L 56 58 Z', class: 'car-riflesso' }));
+  svg.appendChild(svgEl('rect', { x: 34, y: H - 42, width: 122, height: 12, rx: 6, class: 'car-glass', fill: `url(#vetro-${uid})` }));
+  // Ruote: due coppie, e ogni coppia si specchia sui due assi. La distanza dal
+  // bordo alto della scocca e' la stessa di quella dal bordo basso, quindi le
+  // anteriori e le posteriori sono simmetriche invece di essere sfasate di 4px.
+  const RUOTA_W = 12, RUOTA_H = 34, RUOTA_X = 2, RUOTA_DAL_BORDO = 50;
+  const corpoAlto = CAR_INSET, corpoBasso = H - CAR_INSET;
+  const ruoteY = [corpoAlto + RUOTA_DAL_BORDO, corpoBasso - RUOTA_DAL_BORDO - RUOTA_H];
+  for (const ry of ruoteY) {
+    for (const rx of [RUOTA_X, specchia(RUOTA_X, RUOTA_W)]) {
+      svg.appendChild(svgEl('rect', { x: rx, y: ry, width: RUOTA_W, height: RUOTA_H, rx: 5, class: 'car-wheel' }));
+    }
   }
-  svg.appendChild(svgEl('rect', { x: 0, y: 46, width: 14, height: 6, rx: 3, class: 'car-wheel' }));
-  svg.appendChild(svgEl('rect', { x: 176, y: 46, width: 14, height: 6, rx: 3, class: 'car-wheel' }));
+  // Gli specchietti, alla stessa altezza del parabrezza.
+  const SPECCHIO_X = 0, SPECCHIO_W = 14;
+  for (const mx of [SPECCHIO_X, specchia(SPECCHIO_X, SPECCHIO_W)]) {
+    svg.appendChild(svgEl('rect', { x: mx, y: 46, width: SPECCHIO_W, height: 6, rx: 3, class: 'car-wheel' }));
+  }
 
   const claims = new Map(ride.seat_claims.map(c => [c.seat_index, c]));
   const myClaim = ride.seat_claims.find(c => c.passenger_id === currentUser.id);
@@ -1382,6 +1565,7 @@ function buildCar(ride) {
 }
 
 let avatarClipId = 0;
+let carGradId = 0;
 function drawSeat(svg, pos, { kind, label, name, avatar = null, clickable = false }) {
   const g = svgEl('g', { class: `seat seat-${kind}${clickable ? ' seat-click' : ''}`, tabindex: clickable ? 0 : -1 });
   const title = svgEl('title', {});
@@ -1389,6 +1573,8 @@ function drawSeat(svg, pos, { kind, label, name, avatar = null, clickable = fals
   g.appendChild(title);
   g.appendChild(svgEl('rect', { x: pos.x - 20, y: pos.y - 26, width: 40, height: 14, rx: 7, class: 'seat-back' }));
   g.appendChild(svgEl('rect', { x: pos.x - 22, y: pos.y - 14, width: 44, height: 40, rx: 12, class: 'seat-base' }));
+  // La piega del cuscino: due linee, e il sedile smette di sembrare una tessera.
+  g.appendChild(svgEl('path', { d: `M ${pos.x - 13} ${pos.y - 6} L ${pos.x + 13} ${pos.y - 6}`, class: 'seat-piega' }));
   if (avatar) {
     const clipId = 'seat-av-' + (++avatarClipId);
     const clip = svgEl('clipPath', { id: clipId });
@@ -1492,13 +1678,14 @@ function renderRides(rides) {
     route.className = 'ride-route';
     route.textContent = ride.origin ? `${ride.origin} → ${ride.destination}` : ride.destination;
     info.appendChild(route);
-    if (ride.origin) {
+    const ritrovo = linkRitrovo(ride);
+    if (ritrovo) {
       const maps = document.createElement('a');
       maps.className = 'maps-link';
-      maps.href = 'https://www.google.com/maps/search/?api=1&query=' + encodeURIComponent(ride.origin);
+      maps.href = ritrovo.href;
       maps.target = '_blank';
       maps.rel = 'noopener';
-      maps.innerHTML = '<svg width="13" height="13"><use href="#i-pin"/></svg> Punto di ritrovo su Maps';
+      maps.innerHTML = '<svg width="13" height="13"><use href="#i-pin"/></svg> ' + ritrovo.testo;
       info.appendChild(maps);
     }
     const sub = document.createElement('div');
@@ -1547,6 +1734,15 @@ function renderRides(rides) {
       }
     });
     actions.appendChild(share);
+    const cal = document.createElement('button');
+    cal.className = 'place-delete';
+    cal.innerHTML = '<svg width="16" height="16"><use href="#i-calendar"/></svg>';
+    cal.title = 'Aggiungi al calendario';
+    cal.addEventListener('click', () => {
+      scaricaIcs(ride);
+      toast('File del calendario scaricato: aprilo e il passaggio entra nel tuo calendario.');
+    });
+    actions.appendChild(cal);
     if (ride.driver_id === currentUser.id || isAdmin) {
       const del = document.createElement('button');
       del.className = 'place-delete';
@@ -1767,3 +1963,12 @@ async function render() {
     realtimeChannel = null;
   }
 }
+
+// La barra "sei senza rete" **non sta qui**, sta in rete.js: dipendeva da questo file,
+// che come prima riga importa un modulo da un CDN, quindi senza rete non partiva e
+// l'avviso non compariva proprio quando serviva. Qui resta solo cio' che ha davvero
+// bisogno dell'app: quando la linea torna, i dati a schermo sono vecchi e si
+// ricaricano da soli. L'evento lo annuncia rete.js.
+window.addEventListener('wt:rete-tornata', () => {
+  if (currentUser) loadRides(true);
+});

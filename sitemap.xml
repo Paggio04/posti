@@ -1,0 +1,19 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!-- Due pagine, perche' due sono. Netlify serve l'informativa sia come /privacy sia come
+     /privacy.html, entrambe con 200: qui c'e' solo la prima, ed e' quella che le pagine
+     dichiarano come canonica. Un sitemap che elenca due indirizzi per la stessa pagina
+     insegna al motore di ricerca il duplicato invece di risolverlo. -->
+<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">
+  <url>
+    <loc>https://wetransport.netlify.app/</loc>
+    <lastmod>2026-07-25</lastmod>
+    <changefreq>weekly</changefreq>
+    <priority>1.0</priority>
+  </url>
+  <url>
+    <loc>https://wetransport.netlify.app/privacy</loc>
+    <lastmod>2026-07-25</lastmod>
+    <changefreq>yearly</changefreq>
+    <priority>0.3</priority>
+  </url>
+</urlset>

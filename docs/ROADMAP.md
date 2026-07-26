@@ -42,24 +42,29 @@ policy troppo larghe.
 
 ## Dove siamo (25/07/2026)
 
-**Fasi 0, 1 e 2 chiuse e pubblicate.** `main` è al merge della PR #1, il sito vivo serve l'app
-nuova, le migrazioni 000-011 sono applicate in produzione, e il ramo che pubblica è protetto da
-controlli obbligatori. **T1 è raggiunto sul piano tecnico**; quello che manca per dire "pronta per
-la comitiva" è gente vera che la usa.
+**Fasi 0, 1, 2 e 3 chiuse e pubblicate.** `main` è al merge della PR #2, il sito vivo serve l'app
+nuova, **le migrazioni 000-014 sono applicate in produzione** e il ramo che pubblica è protetto da
+controlli obbligatori. C10 sicurezza delle persone (012), C11 GDPR (013), C9 passaggi in zona (014):
+ogni cantiere ha il suo file di test in CI, e ogni test è stato provato al contrario — tolta una
+protezione alla volta, per vedere se diventa rosso davvero.
 
-**Fase 3 scritta e verificata sul ramo, non ancora pubblicata**: C10 sicurezza delle persone
-(migrazione 012), C11 GDPR (013), C9 passaggi in zona (014). Ogni cantiere ha il suo file di test in
-CI, e ogni test è stato provato al contrario — tolta una protezione alla volta, per vedere se
-diventa rosso davvero.
+**T1 è raggiunto sul piano tecnico**; quello che manca per dire "pronta per la comitiva" è gente
+vera che la usa — e l'interfaccia della Fase 3 **non è mai stata eseguita in un browser**.
 
-Prima di pubblicare la Fase 3, quattro cose che il repo non può fare da solo:
+Come è andata la pubblicazione, perché vale più di un ricordo: **il codice è stato pubblicato prima
+delle migrazioni**, cioè nell'ordine sbagliato, quello che questo stesso file avverte di non usare.
+Il sito è rimasto rotto — nome di tutti come prefisso dell'email, pubblicazione di un'auto in errore
+— finché le 012-014 non sono state applicate a mano dal SQL editor. Danno piccolo perché nessuno la
+stava usando; la regola dell'ordine, però, non è teorica: è già costata due volte.
+
+Le quattro cose che il repo non può fare da solo:
 
 | Cosa | Dove | Perché | Stato |
 |---|---|---|---|
-| Titolare del trattamento nell'informativa | `privacy.html` | Dato legale obbligatorio; pubblicare un'email personale è una decisione di chi la possiede | Riquadro rosso in pagina |
-| Regione del progetto Supabase | Supabase → Settings → General | L'API non la espone, si legge solo dalla dashboard | Riquadro rosso in pagina |
-| Revocare il token Supabase della sessione del 24/07 | Supabase → Account → Access Tokens | Era servito per applicare le migrazioni; un token che non serve più non deve esistere | Da fare |
-| Due account di prova + segreti `WT_TEST_*` | Supabase + GitHub → Settings → Secrets | Sbloccano `tests/flussi.spec.js` a ogni PR; senza, restano i soli smoke (C8) | Assenti all'ultima PR |
+| Titolare del trattamento nell'informativa | `privacy.html` | Dato legale obbligatorio; pubblicare un'email personale è una decisione di chi la possiede | **fatto** — Elia Paggetti, con un indirizzo di contatto che non è quello personale |
+| Regione del progetto Supabase | Supabase → Settings → General | L'API non la espone, si legge solo dalla dashboard | **fatto** — `eu-west-2`, cioè **Londra**: fuori dall'Unione, e l'informativa ora lo dice e cita l'adeguatezza |
+| Revocare il token Supabase della sessione del 24/07 | Supabase → Account → Access Tokens | Era servito per applicare le migrazioni; un token che non serve più non deve esistere | **da fare** |
+| Due account di prova + segreti `WT_TEST_*` | Supabase + GitHub → Settings → Secrets | Sbloccano `tests/flussi.spec.js` a ogni PR; senza, restano i soli smoke (C8) | assenti |
 
 ### L'ordine di pubblicazione, che qui è l'opposto di quello della 011
 
@@ -395,7 +400,7 @@ la Fase 1 sia chiusa.
 - **Resta il collaudo a video**, che nessun test sostituisce: due account veri, segnalazione,
   blocco, e la coda vista da un amministratore.
 
-### C11 — GDPR completo — *fatto nel codice; due dati mancano e li può mettere solo una persona*
+### C11 — GDPR completo — *fatto, informativa compresa*
 - **Obiettivo:** oggi `SECURITY.md` segna la conformità come parziale, e va bene finché siamo fra
   amici. Con iscritti sconosciuti diventa un obbligo.
 - **Esportazione** — "Scarica i miei dati" nel Profilo: un JSON con profilo, comitive, auto, posti,
@@ -418,25 +423,47 @@ la Fase 1 sia chiusa.
 - **Informativa** riscritta: tabella dato → perché → base giuridica, chi vede cosa, responsabili
   (Supabase e Netlify), tempi di conservazione, i tre diritti che si esercitano da soli dall'app,
   reclamo al Garante, soglia dei 14 anni.
-- **Due cose non le può mettere il codice**, e nella pagina sono riquadri rossi bene in vista
-  invece che frasi plausibili inventate:
-  - **il titolare del trattamento** — nome e contatto di chi gestisce l'app. È un dato legale, e
-    pubblicare un'email personale su un sito pubblico è una decisione di chi la possiede;
-  - **la regione del progetto Supabase**, che si legge solo dalla dashboard (Settings → General) e
-    che l'API non espone.
-  Finché ci sono quei riquadri, l'informativa **non** è completa e l'app non è pronta per T2.
+- **Le due cose che il codice non poteva mettere sono state messe**, e per un po' sono state
+  riquadri rossi bene in vista invece che frasi plausibili inventate:
+  - **il titolare del trattamento** — Elia Paggetti, a titolo personale, con un indirizzo di
+    contatto dedicato: la casella personale non finisce su una pagina pubblica;
+  - **la regione del progetto**, che l'API davvero non espone — provato, gli header danno solo
+    `sb-project-ref`. Ed è la cosa che ha cambiato il paragrafo: `eu-west-2` è **Londra**, non
+    Francoforte come dava per scontato l'esempio. I dati escono dall'Unione. È lecito senza nessuno
+    strumento aggiuntivo perché il Regno Unito è un paese adeguato — decisione rinnovata il
+    19/12/2025, valida fino al 27/12/2031 — ma tacerlo sarebbe stata l'omissione più grossa
+    dell'informativa. Ora è scritto, con la fonte.
 - **Fatto quando:** un utente esporta e cancella tutto da solo, e la cancellazione porta via anche
-  auto, prenotazioni, richieste e commenti. **Raggiunto**, meno i due dati qui sopra.
+  auto, prenotazioni, richieste e commenti. **Raggiunto.** `SECURITY.md` segna la conformità GDPR
+  come piena, e la prossima scadenza da guardare è il 27/12/2031, non prima.
 
 ---
 
 ## Fase 4 — Integrare
 
-### C12 — PWA vera
-Il `manifest.json` c'è ma **manca il service worker**: l'app non è installabile come si deve e non
-apre offline. Serve anche l'icona in PNG 192 e 512 (oggi solo SVG, che alcuni sistemi ignorano) e
-una schermata sensata quando la rete non c'è. *Fatto quando:* installata dal telefono, si apre
-senza barra del browser e mostra qualcosa di utile anche offline.
+### C12 — PWA vera — *fatta nel codice, da installare su un telefono vero*
+C'è `sw.js`, ci sono le icone PNG 192 e 512 (generate da `icon.svg`, senza aggiungere nessuna
+libreria di conversione al progetto), e c'è `offline.html`.
+
+**La decisione che conta è cosa resta fuori dalla cache**, e sta scritta anche in `sw.js`: tutto
+quello che passa da Supabase, e tutto quello che non è `GET`. Sono dati di persone e token di
+sessione — una copia in cache sarebbe una copia che nessuno ha chiesto, che "Scarica i miei dati"
+non mostra e che "Elimina il mio account" non porta via. Sarebbe C11 al contrario. In cache va solo
+il guscio: i file pubblici, identici per tutti.
+
+Un dettaglio che si scopre solo provando: nella cache va messo anche **il modulo di Supabase preso
+dal CDN**, perché è il primo `import` di `app.js`. Senza quello "si apre offline" è una promessa che
+la prima riga smentisce, e l'app non parte affatto.
+
+L'avviso di rete non è decorazione: da quando l'app si apre offline, una schermata che compare e non
+si aggiorna **sembra rotta**. La barra rossa dice che è il segnale che manca, e al ritorno della rete
+i passaggi si ricaricano da soli.
+
+*Fatto quando:* installata dal telefono, si apre senza barra del browser e mostra qualcosa di utile
+anche offline. **Il worker, la cache e la ricarica offline sono verificati in un browser vero**; la
+parte che manca è l'installazione su un telefono, che da qui non si può fare: icona sulla home,
+avvio senza barra, e come sta l'icona dentro la maschera di Android (le PNG sono `purpose: "any"`,
+non `maskable`: una variante con i margini giusti è un lavoro di disegno, quindi C15).
 
 ### C13 — Notifiche a scheda chiusa
 Oggi le notifiche esistono solo con la scheda aperta in secondo piano (`maybeNotify`).
@@ -457,42 +484,91 @@ più niente. Se serviranno, saranno da attivare a mano, spente di default.
 Function Supabase innescata dal database per i primi due eventi, `pg_cron` per il promemoria orario.
 Nessun servizio di terzi. *Dipende da:* C12.
 
-### C14 — Servizi esterni
+### C14 — Servizi esterni — *chiuso*
 **Deciso — solo cose che il browser sa già fare, nessun SDK, nessuna voce nuova nella CSP:**
 
-| Cosa | Come | Perché così |
-|---|---|---|
-| Invita al gruppo | Web Share API nativa (che sul telefono offre WhatsApp da sola) + copia del codice come ripiego | Zero dipendenze, funziona con tutte le app di messaggistica, non solo WhatsApp |
-| Passaggio nel calendario | File `.ics` generato dall'app | Nessun servizio esterno, funziona con Google, Apple e Outlook allo stesso modo |
-| Navigazione al ritrovo | Link Maps, con coordinate vere al posto del testo libero | Rimandato dentro C9, che è il cantiere dove nascono i luoghi veri |
+| Cosa | Come | Perché così | Stato |
+|---|---|---|---|
+| Invita al gruppo | Web Share API nativa (che sul telefono offre WhatsApp da sola) + copia del codice come ripiego | Zero dipendenze, funziona con tutte le app di messaggistica, non solo WhatsApp | **fatto**, `navigator.share` in tre punti di `app.js` |
+| Passaggio nel calendario | File `.ics` generato dall'app | Nessun servizio esterno, funziona con Google, Apple e Outlook allo stesso modo | **fatto**, `testoIcs()` |
+| Navigazione al ritrovo | Link Maps, con coordinate vere al posto del testo libero | Rimandato dentro C9, che è il cantiere dove nascono i luoghi veri | **fatto**, `linkRitrovo()` |
 
 **Esclusi**: SDK di terzi, analytics, login social oltre a Google. Ogni SDK è codice altrui in
 esecuzione dentro la mia pagina e una riga in più nella CSP.
+
+**Navigazione al ritrovo — com'è finita.** C9 aveva creato `origin_lat`/`origin_lon` e lasciato il
+link a cercare il testo libero, quindi il ritrovo poteva spostarsi di un chilometro: "piazza" trova
+la piazza sbagliata. Ora il link apre il percorso (`maps/dir`) sul punto vero.
+
+Non lo stesso link per tutti, però, e la ragione non è estetica: **la policy di 014 è di riga, non
+di colonna.** Chi vede un passaggio `zona` o `pubblico` riceve la riga intera, coordinate comprese,
+e il punto di partenza di una persona può essere casa sua al metro. Dentro la comitiva — o avendo un
+posto su quell'auto — il punto esatto è quello che serve; da fuori resta la ricerca sul nome del
+luogo, che dice la zona e non l'indirizzo. Vale anche per ogni passaggio pubblicato prima della 014,
+che coordinate non ne ha.
+
+**`dest_lat`/`dest_lon` restano colonne morte, e non per dimenticanza.** La 014 le ha create,
+niente le scrive: le coordinate arrivano solo da `navigator.geolocation`, e alla destinazione non ci
+sei. Riempirle vorrebbe dire un geocoder — che D6 esclude — o un selettore su mappa, cioè una
+dipendenza nuova. Se un giorno servono, quella è la decisione da riaprire, non un bug da chiudere.
+
+### C21 — Le coordinate esatte non devono uscire dalla comitiva — *debito della Fase 3, non un'integrazione*
+Sta qui perché è nato guardando C14, non perché appartenga a "Integrare": è un buco di 014, e come
+tale viene prima delle cose nuove. Nato guardando C14, ed è il buco vero che quel cantiere ha solo smesso di offrire con un click:
+`select('*')` su `rides` porta `origin_lat`/`origin_lon` a **chiunque** possa vedere il passaggio,
+compresi gli estranei che lo vedono perché è `pubblico`. Il link ora è prudente, il payload no.
+
+**Come:** una vista che espone le coordinate solo a chi è dentro (o ha un posto), più un `select`
+con le colonne nominate al posto di `*`. Migrazione `015`, con il suo file di test provato al
+contrario come gli altri. *Fatto quando:* un utente fuori comitiva che interroga l'API a mano
+riceve il passaggio senza le coordinate.
 
 ---
 
 ## Fase 5 — Abbellire e ottimizzare
 
-### C15 — Togliere l'aria di cosa generata
-**Il problema non è che sia brutta: è che sembra generata.** Aurora animata sull'accesso, nav
-flottante a pillola, tutto arrotondato, animazioni a molla, gradienti morbidi: è l'estetica
-predefinita delle interfacce fatte dall'AI in questi mesi. Nessun dettaglio è sbagliato, e proprio
-per questo nessuno è *suo*. Chi la apre non ricorda niente.
+### C15 — Togliere l'aria di cosa generata — *impreziosita, non svuotata*
 
-**Cosa si fa:**
-1. **Togliere gli effetti che non dicono niente**: aurora, bagliori, gradienti decorativi. Sono
-   costati righe di CSS e non distinguono l'app da altre mille.
-2. **Scegliere un carattere tipografico vero** e portarne il peso: la tipografia è il modo più
-   economico di avere un'identità, e oggi è quella di sistema.
-3. **Fare dell'auto la protagonista.** L'SVG dei sedili è l'unica cosa qui dentro che nessun altro
-   ha: è disegnata su misura per questo problema. Oggi è un elemento fra tanti dentro una scheda.
-4. **Un accento solo, deciso**, al posto della palette morbida buona per qualsiasi cosa.
-5. **Testi con una voce.** "Bentornato", "Accedi per vedere chi guida oggi" sono corretti e
-   anonimi: è il registro predefinito. Questa è un'app per una comitiva di amici, può parlare come loro.
-6. **Stati vuoti disegnati**, non icona grigia centrata con frase gentile.
+**Come è andata, perché vale più del risultato.** Il primo tentativo ha preso "sembra generata" e ha
+risposto togliendo: via aurora, gradienti, ombre, schede, Inter, raggi grandi. Verdetto del
+proprietario, giusto: *«fa schifo, sembra il sito di una casa di riposo, era meglio prima»*. Quel
+commit è stato revertito (resta in `a94d1dc` se un giorno serve un pezzo). La lezione sta in una
+riga: **la base era buona e andava impreziosita, non spogliata.** Togliere la decorazione senza
+mettere niente al suo posto non dà carattere, dà povertà.
 
-**Fatto quando:** copro il logo e il nome con un dito, mostro uno screenshot a qualcuno, e si
-capisce lo stesso che è questa app e non un'altra. Prima e dopo affiancati.
+Secondo tentativo, in aggiunta. Vincoli dati: **navy resta il colore principale**, i **bordi restano
+tondeggianti**, ricco ma sobrio.
+
+1. **Il tondo della navigazione è di "dove sei", non della Home.** Era fisso sulla Home, rialzato,
+   con un anello che pulsava. Ora è un elemento solo che **scivola** sulla colonna attiva, e l'icona
+   di quella scheda sale dentro. La colonna la passa il codice al CSS leggendo l'ordine vero dei
+   pulsanti, così l'elenco delle viste non vive in due posti che possono divergere. Verificato a
+   390, 820 e 1440px: il centro del tondo cade sul centro della scheda entro 1px, in tutte e tre.
+2. **Passare sopra anticipa il tocco.** Sulla scheda non attiva compare un tondo pallido dove
+   arriverebbe quello pieno, e l'icona si alza di un soffio nella stessa direzione: non un bagliore,
+   un'anteprima. Chiuso in `@media (hover: hover) and (pointer: fine)`, perché sul telefono `:hover`
+   resta attaccato dopo il tocco e una scheda illuminata a vuoto sembra rotta. **Sul telefono basta
+   l'animazione della tab attiva**, ed è esattamente quello che resta.
+3. **Un secondo colore, l'ottone, e usato poco per scelta**: il tuo sedile, il tuo ruolo nello
+   storico, il tuo codice del gruppo. Navy resta il colore dell'app; l'ottone è il colore di chi la
+   sta usando. Prima "il mio sedile" era verde, cioè il colore di "va bene": ma quello non è una
+   conferma, è l'unico posto che ti riguarda, e in un'auto da cinque deve trovarsi senza leggere le
+   iniziali.
+4. **L'auto è diventata un oggetto.** Lamiera con la luce che arriva dall'alto (un gradiente per
+   ogni `--car-hue`, così funziona su qualsiasi tinta di guidatore), filo di luce sul bordo alto,
+   riflesso di sbieco sul parabrezza, ombra a terra che la appoggia invece di lasciarla galleggiare,
+   e una piega sul cuscino che fa leggere i sedili come imbottitura e non come tessere. Da
+   `min(200px, 72%)` a `min(228px, 82%)`.
+5. **Profondità vera invece di ombre grigie.** Due strati tinti del navy — una stretta che appoggia,
+   una larga che stacca — più un filo di luce interno da 1px in cima alle superfici. È la differenza
+   fra "pulito" e "curato", ed è un pixel.
+6. **Finiture**: numeri tabellari su ore, posti e codici (una colonna di orari resta una colonna
+   invece di ballare a ogni cifra), marchio con tracciatura strizzata, anello di focus disegnato.
+
+**Fatto quando:** coperto il logo e il nome con un dito, si capisce che è questa app. Il pezzo che
+risponde di più a quella prova è l'auto, che nessun altro ha. **Il giudizio finale resta tuo, su un
+telefono in mano**: qui dentro il browser è girato per davvero, ma un'app che si usa di corsa in
+piedi si valuta in piedi.
 
 ### C16 — Peso e velocità sul telefono
 1200 righe di CSS e 1311 di JS senza build, più supabase-js da CDN. Misurare prima di ottimizzare:
@@ -508,11 +584,33 @@ passaggi, render), sempre senza build. **Non prima**: dividere presto costa e no
 
 ## Fase 6 — Allineare al resto dello studio
 
-### C18 — Standard dello Starter
-Portare qui quello che la base dei siti ha già e questo repo no: SEO completa (`robots.txt`,
-`sitemap.xml`, dati strutturati), `404.html`, pagina cookie se serviranno cookie di profilazione,
-`eslint.config.js` versionato. Al contrario, quello che WeTransport ha imparato e lo Starter non
-sa ancora torna indietro nello Starter.
+### C18 — Standard dello Starter — *fatto nel repo; resta il ritorno verso lo Starter*
+Portare qui quello che la base dei siti ha già e questo repo no. Fatti: `robots.txt`,
+`sitemap.xml`, dati strutturati (JSON-LD `WebApplication` in `index.html`), `404.html`, più i
+`canonical` e i campi Open Graph che non c'erano.
+
+Tre cose scoperte facendo, che non erano nell'elenco:
+
+- **L'informativa risponde a due indirizzi.** `/privacy` e `/privacy.html` danno **entrambe 200**
+  — è la riscrittura di Netlify — quindi per un motore di ricerca sono due pagine identiche e
+  sceglie lui quale contare. Ora il canonico è dichiarato, ed è uno solo: quello nel sitemap e
+  quello che l'app usa nei link.
+- **`offline.html` non va indicizzata.** Trovata da una ricerca sembrerebbe un'app rotta.
+- **Open Graph serviva e non era nell'elenco.** Da C14 l'app si condivide da dentro — invito,
+  passaggio, giornata — e senza quei campi il link incollato in chat arriva come indirizzo nudo.
+
+**La pagina cookie non serve, e non è una dimenticanza:** non ci sono cookie di profilazione da
+dichiarare. Nessuna analytics, nessun SDK di terzi (D6), e la sessione di Supabase non è
+profilazione. Se un giorno entrasse un servizio che profila, quella pagina nasce con lui.
+`eslint.config.mjs` era già versionato dalla Fase 0 — quella riga dell'elenco era vecchia.
+
+Nel sitemap ogni indirizzo elencato viene interrogato dal test: un sitemap con un 404 dentro è
+peggio che non averlo, perché dice al motore di ricerca una cosa falsa.
+
+**Resta il verso opposto**, che è l'altra metà di questo cantiere e non si può fare da questo
+repo: quello che WeTransport ha imparato e lo Starter non sa ancora — l'ordine fra migrazioni e
+codice, le migrazioni numerate che si registrano da sole, i test provati al contrario, e la
+Permissions-Policy che spegne una funzione se l'allowlist è vuota.
 
 ### C19 — Vault e codice allineati
 Mappa Graphify rigenerata, memoria tecnica aggiornata con le decisioni di questo file, nota
