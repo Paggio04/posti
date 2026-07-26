@@ -78,8 +78,9 @@ account veri in due comitive diverse:
 - **C14:** il `.ics` si apre in Calendario **con l'ora giusta**; il link "Naviga al ritrovo" da
   dentro la comitiva e "Punto di ritrovo su Maps" da fuori (è la regola di `coordinateVisibili()`:
   il punto di partenza di una persona può essere casa sua)
-- **C12:** installarla da iOS e da Android, avvio senza barra del browser, l'icona nella maschera
-  circolare di Android (le PNG sono `purpose: "any"`, non `maskable`), modalità aereo
+- **C12:** installarla da iOS e da Android, avvio senza barra del browser, l'icona dentro la maschera
+  circolare di Android (le `maskable` ora ci sono e la geometria è verificata, ma vederla ritagliata
+  da un telefono vero è un'altra cosa), modalità aereo
 - **C15:** la prova del nove — coperti logo e nome, si capisce che è questa app?
 - **Fase 3 intera:** segnalazione (il segnalato non deve saperlo), blocco nei due sensi,
   sospensione, esportazione, e **la cancellazione di un account che possiede una comitiva**, che è
@@ -507,11 +508,27 @@ L'avviso di rete non è decorazione: da quando l'app si apre offline, una scherm
 si aggiorna **sembra rotta**. La barra rossa dice che è il segnale che manca, e al ritorno della rete
 i passaggi si ricaricano da soli.
 
+**L'icona per la maschera di Android c'è, dal 27/07/2026**, e non era un lavoro di disegno: era un
+lavoro di misura. Android ritaglia l'icona dentro una forma che decide il produttore, e garantisce
+solo il **cerchio** centrale di diametro 80%. Le PNG `purpose: "any"` restano quelle di prima; le due
+`maskable` sono la stessa auto su fondo pieno — niente angoli arrotondati, ci pensa la maschera — e
+ci sono voluti due aggiustamenti che a occhio non si vedono:
+
+1. **il tracciato non era centrato nel suo riquadro.** Con lo spessore del tratto va da y 31,5 a
+   y 78: il centro sta a 54,75, non a 50. Nell'icona quadrata non si nota, sotto un cerchio sì.
+2. **il disegno sbordava dal cerchio sicuro dell'8%.** Quello che conta non è la larghezza ma la
+   **mezza diagonale**, perché sono gli angoli a uscire per primi: senza ridurre, la maschera
+   avrebbe mangiato l'orlo delle ruote.
+
+Tutte e due le correzioni sono **misurate sui pixel del disegno**, non stimate dal tracciato — è la
+prima delle tre lezioni di questo file, applicata invece che citata. Lo strumento che le genera sta
+nel vault (`Strumenti/genera-icone-maskable.html`), non qui: è codice di studio, riusabile dalla
+prossima PWA, e non deve finire fra i file pubblicati.
+
 *Fatto quando:* installata dal telefono, si apre senza barra del browser e mostra qualcosa di utile
-anche offline. **Il worker, la cache e la ricarica offline sono verificati in un browser vero**; la
-parte che manca è l'installazione su un telefono, che da qui non si può fare: icona sulla home,
-avvio senza barra, e come sta l'icona dentro la maschera di Android (le PNG sono `purpose: "any"`,
-non `maskable`: una variante con i margini giusti è un lavoro di disegno, quindi C15).
+anche offline. **Il worker, la cache, la ricarica offline e ora la geometria delle icone sono
+verificati**; la parte che manca è l'installazione su un telefono, che da qui non si può fare: icona
+sulla home, avvio senza barra della URL, e la prova finale che l'auto nella maschera si veda intera.
 
 ### C13 — Notifiche a scheda chiusa
 Oggi le notifiche esistono solo con la scheda aperta in secondo piano (`maybeNotify`).
