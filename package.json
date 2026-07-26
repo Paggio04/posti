@@ -4,7 +4,7 @@
   "private": true,
   "description": "Organizza i passaggi in macchina della comitiva. Sito statico: queste dipendenze sono solo strumenti di sviluppo, non servono per servire l'app.",
   "scripts": {
-    "lint": "eslint app.js config.js sw.js",
+    "lint": "eslint app.js config.js sw.js rete.js",
     "validate": "html-validate index.html privacy.html",
     "test:e2e": "playwright test",
     "check": "npm run lint && npm run validate"

@@ -4,7 +4,7 @@
 // versionata: stesse regole in locale (npm run lint) e in CI.
 export default [
   {
-    files: ['app.js', 'config.js'],
+    files: ['app.js', 'config.js', 'rete.js'],
     languageOptions: {
       ecmaVersion: 2023,
       sourceType: 'module',

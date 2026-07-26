@@ -21,6 +21,7 @@ const GUSCIO = [
   '/privacy.html',
   '/style.css',
   '/app.js',
+  '/rete.js',
   '/config.js',
   '/manifest.json',
   '/icon.svg',
@@ -69,7 +70,7 @@ self.addEventListener('fetch', (e) => {
         return await fetch(req);
       } catch {
         const cache = await caches.open(VERSIONE);
-        return (await cache.match(req))
+        return (await cache.match(req, { ignoreVary: true }))
           ?? (await cache.match('/index.html'))
           ?? (await cache.match('/offline.html'))
           ?? Response.error();
@@ -83,7 +84,7 @@ self.addEventListener('fetch', (e) => {
   if (url.origin === self.location.origin || url.hostname === 'cdn.jsdelivr.net') {
     e.respondWith((async () => {
       const cache = await caches.open(VERSIONE);
-      const salvata = await cache.match(req);
+      const salvata = await cache.match(req, { ignoreVary: true });
       const dallaRete = fetch(req)
         .then((r) => { if (r.ok) cache.put(req, r.clone()); return r; })
         .catch(() => null);

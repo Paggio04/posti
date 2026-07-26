@@ -1964,26 +1964,11 @@ async function render() {
   }
 }
 
-// --- Installabile e apribile senza rete (cantiere C12) ---
-// Il service worker mette in cache il guscio, non i dati: cosa resta fuori e perche' e'
-// scritto in sw.js. Registrato dopo il caricamento, cosi' non ruba banda alla prima
-// schermata utile, e senza far cadere niente se il browser non lo sa fare.
-if ('serviceWorker' in navigator) {
-  window.addEventListener('load', () => {
-    navigator.serviceWorker.register('/sw.js').catch(() => { /* pazienza, l'app funziona */ });
-  });
-}
-
-// Da quando l'app si apre anche offline, il silenzio non va piu' bene: una schermata che
-// si apre e non si aggiorna sembra rotta. Meglio dire che manca il segnale.
-const offlineBar = document.getElementById('offline-bar');
-function segnalaRete() {
-  offlineBar.hidden = navigator.onLine;
-}
-window.addEventListener('offline', segnalaRete);
-window.addEventListener('online', () => {
-  segnalaRete();
-  // Tornata la rete, i dati a schermo sono vecchi: si ricaricano da soli, senza chiedere.
+// La barra "sei senza rete" **non sta qui**, sta in rete.js: dipendeva da questo file,
+// che come prima riga importa un modulo da un CDN, quindi senza rete non partiva e
+// l'avviso non compariva proprio quando serviva. Qui resta solo cio' che ha davvero
+// bisogno dell'app: quando la linea torna, i dati a schermo sono vecchi e si
+// ricaricano da soli. L'evento lo annuncia rete.js.
+window.addEventListener('wt:rete-tornata', () => {
   if (currentUser) loadRides(true);
 });
-segnalaRete();
