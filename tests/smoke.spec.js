@@ -83,6 +83,9 @@ test('il manifest dichiara le icone PNG che servono a installarla', async ({ req
   // Solo l'SVG non basta: diversi sistemi lo ignorano e mostrano un quadrato vuoto.
   expect(misure).toContain('192x192');
   expect(misure).toContain('512x512');
+  // E senza almeno una `maskable`, Android disegna l'icona dentro un quadratino bianco
+  // invece che a tutta forma: si vede un francobollo in mezzo al cerchio.
+  expect(manifest.icons.some((i) => (i.purpose || '').split(' ').includes('maskable'))).toBe(true);
   for (const icona of manifest.icons) {
     expect((await request.get('/' + icona.src)).status()).toBe(200);
   }
