@@ -31,7 +31,7 @@
     <h1>Informativa privacy</h1>
     <p>WeTransport è un'app senza scopo di lucro per organizzare i passaggi in auto. Questa pagina
     dice quali dati raccoglie, perché, per quanto tempo, e cosa puoi farci tu.</p>
-    <p><em>Ultimo aggiornamento: 25 luglio 2026.</em></p>
+    <p><em>Ultimo aggiornamento: 27 luglio 2026.</em></p>
 
     <h2>Titolare del trattamento</h2>
     <p>Il titolare del trattamento è <strong>Elia Paggetti</strong>, che gestisce WeTransport a
@@ -66,17 +66,42 @@
           <td>Poter segnalare un comportamento scorretto, e non incontrare più una persona. Una segnalazione contiene quello che scrivi tu e chi riguarda.</td>
           <td>Legittimo interesse alla sicurezza di chi usa l'app (art. 6.1.f GDPR)</td>
         </tr>
+        <tr>
+          <td>Posizione: il punto da cui parte un passaggio, e la tua zona</td>
+          <td>Solo se la chiedi tu, premendo "Parto da qui" quando pubblichi un'auto o "Sono qui"
+            sul profilo. Il telefono passa una coppia di coordinate, che serve a far trovare il
+            ritrovo e a mostrarti i passaggi che partono entro 25 km. Non c'è nessun tracciamento
+            continuo: la posizione si legge in quel momento e basta. Le coordinate esatte del
+            ritrovo le riceve solo chi è della comitiva o ha un posto su quell'auto; la tua zona
+            non la riceve nessun altro utente. Si toglie quando vuoi, da "Togli la zona".</td>
+          <td>Consenso, che dai al browser e puoi revocare (art. 6.1.a GDPR)</td>
+        </tr>
+        <tr>
+          <td>Avvisi sul telefono: l'indirizzo del dispositivo</td>
+          <td>Solo se li accendi dal profilo. Il browser ti dà un indirizzo a cui si può scrivere
+            per far comparire una notifica su <em>quel</em> dispositivo, e l'app lo conserva finché
+            non spegni gli avvisi. Gli avvisi sono tre e li mandiamo noi; a consegnarli è il
+            servizio push del produttore del tuo browser (Google, Apple o Mozilla), che vede
+            l'indirizzo del dispositivo e la notifica cifrata.</td>
+          <td>Consenso, che dai al browser e puoi revocare (art. 6.1.a GDPR)</td>
+        </tr>
       </tbody>
     </table>
     <p>Nessun tracciamento pubblicitario, nessuna analytics di terze parti, nessun cookie di
-    profilazione. Nel browser l'app salva soltanto quale comitiva stavi guardando e se hai già
-    chiuso il riquadro delle istruzioni.</p>
+    profilazione. Nel browser l'app salva quale comitiva stavi guardando, se hai già chiuso il
+    riquadro delle istruzioni, e il gettone della tua sessione, che è quello che ti tiene dentro
+    senza riscrivere la password. Salva anche una copia delle pagine e degli stili, per aprirsi
+    quando sei senza rete: solo file pubblici, uguali per tutti, mai i dati dei passaggi.</p>
 
     <h2>Chi vede cosa</h2>
     <ul>
       <li>I dati di una comitiva li vedono solo i membri di quella comitiva.</li>
       <li>Il tuo nome lo vede chi condivide con te almeno un gruppo, nessun altro.</li>
       <li>Se blocchi una persona, non vedete più i passaggi l'uno dell'altra.</li>
+      <li>La tua zona non la vede nessun altro utente: serve solo al database per decidere quali
+        passaggi mostrarti. Il punto esatto da cui parte un'auto lo ricevono solo i membri di
+        quella comitiva e chi ha un posto a bordo; a chi la vede da fuori arriva il nome del luogo,
+        non l'indirizzo.</li>
       <li>Una segnalazione la leggono solo chi l'ha scritta e l'amministratore: chi viene segnalato
         non ne è informato.</li>
       <li>L'amministratore può intervenire sui contenuti per moderazione e sospendere un account.</li>
@@ -88,6 +113,16 @@
     <p>Su <a href="https://supabase.com">Supabase</a> (database e autenticazione) e serviti da
     <a href="https://www.netlify.com">Netlify</a>. Entrambi li trattano per conto del titolare, come
     responsabili del trattamento. Le connessioni sono sempre cifrate (HTTPS/TLS).</p>
+    <p>Aprendo l'app il browser scarica una libreria da <a href="https://www.jsdelivr.com">jsDelivr</a>,
+    una rete di distribuzione di codice open source: come ogni file preso da un altro dominio, quella
+    richiesta fa arrivare lì il tuo indirizzo IP e il tipo di browser. Non trasmette nessun dato del
+    tuo account e non è un servizio di statistiche. Tutto il resto — pagine, stili, caratteri — arriva
+    da qui.</p>
+    <p>Se accendi gli avvisi sul telefono, la notifica passa dal <strong>servizio push del produttore
+    del tuo browser</strong> (Google, Apple o Mozilla a seconda di quale usi): è l'unico modo previsto
+    dagli standard del web per far comparire un avviso ad app chiusa. Vede l'indirizzo del tuo
+    dispositivo e il contenuto cifrato della notifica. Spegnendo gli avvisi dal profilo, l'indirizzo
+    viene cancellato e non passa più niente.</p>
     <p>Il database sta nella regione <strong>Londra, Regno Unito</strong> (<code>eu-west-2</code>):
     i dati escono quindi dall'Unione Europea. Il trasferimento si appoggia alla decisione di
     adeguatezza con cui la Commissione europea ha riconosciuto che il Regno Unito garantisce un
@@ -106,6 +141,12 @@
         non li cancelli tu — puoi farlo in qualsiasi momento dall'app.</li>
       <li><strong>Segnalazioni</strong>: finché esiste l'account di chi le ha scritte o di chi
         riguardano. Se uno dei due se ne va, la segnalazione se ne va con lui.</li>
+      <li><strong>Posizione</strong>: la zona resta finché non la togli tu; il punto di partenza di
+        un'auto vive quanto quell'auto, e sparisce quando il passaggio viene annullato o l'account
+        cancellato.</li>
+      <li><strong>Indirizzo del dispositivo per gli avvisi</strong>: finché tieni accesi gli avvisi
+        su quel dispositivo. Si cancella spegnendoli, o quando il servizio push dice che
+        quell'indirizzo non esiste più.</li>
     </ul>
 
     <h2>I tuoi diritti, e dove si esercitano</h2>
