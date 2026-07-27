@@ -25,7 +25,10 @@ begin
   insert into auth.users (email, raw_user_meta_data)
     values ('carla@esempio.it', '{"display_name":"Carla"}') returning id into carla;
 
-  if (select count(*) from public.profiles) <> 3 then
+  -- Contati per id, non in tutta la tabella: contare tutto vuol dire pretendere di essere
+  -- il primo file di test a girare, e quella e' una dipendenza invisibile che si paga il
+  -- giorno che qualcuno ne aggiunge un altro prima. (Successo il 27/07/2026, con C13.)
+  if (select count(*) from public.profiles where id in (ada, bruno, carla)) <> 3 then
     raise exception 'Il trigger di creazione profilo non ha funzionato';
   end if;
 

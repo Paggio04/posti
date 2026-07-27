@@ -71,18 +71,20 @@ jobs:
             psql -v ON_ERROR_STOP=1 -q -f "$f"
           done
 
-      # Sta per primo, e non per importanza: i suoi passaggi nascono tutti chiusi alla
-      # comitiva, quindi non si vedono dagli altri test — e cosi' questo passo non tocca
-      # le stesse righe del file su cui lavorano gli altri rami aperti. Un conflitto di
-      # merge in meno vale piu' dell'ordine alfabetico.
-      - name: Le notifiche si accodano quando devono, e una volta sola
-        run: psql -v ON_ERROR_STOP=1 -q -f supabase/test/verifica-notifiche.sql
-
       - name: Le comitive sono davvero separate
         run: psql -v ON_ERROR_STOP=1 -q -f supabase/test/verifica-isolamento.sql
 
       - name: Segnalazione, blocco e sospensione reggono
         run: psql -v ON_ERROR_STOP=1 -q -f supabase/test/verifica-sicurezza.sql
+
+      # Sta qui in mezzo per due ragioni opposte, e c'e' voluto un giro rosso per trovarle
+      # tutte e due. Non per primo: `verifica-isolamento` contava i profili di **tutta** la
+      # tabella, e i quattro utenti di questo test glieli facevano diventare sette (quel
+      # conto ora e' per id, cosi' l'ordine non conta piu'). E non per ultimo, dove sarebbe
+      # stato naturale: li' inserisce un passo anche un altro ramo aperto, e due modifiche
+      # nello stesso punto sono un conflitto di merge garantito.
+      - name: Le notifiche si accodano quando devono, e una volta sola
+        run: psql -v ON_ERROR_STOP=1 -q -f supabase/test/verifica-notifiche.sql
 
       - name: Cancellare il proprio account non danneggia gli altri
         run: psql -v ON_ERROR_STOP=1 -q -f supabase/test/verifica-cancellazione.sql
