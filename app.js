@@ -217,7 +217,8 @@ async function ensureProfile() {
   // `019_zona_riservata.sql` la zona e il motivo della sospensione non sono piu' colonne
   // leggibili da un client, nemmeno sulla propria riga (un permesso per colonna vale per
   // il ruolo, non per la riga). La funzione risponde di una persona sola, chi la chiama.
-  const { data: righe } = await supabase.rpc('mio_profilo');
+  const { data: righe, error: erroreProfilo } = await supabase.rpc('mio_profilo');
+  if (erroreProfilo) console.error('mio_profilo() non risponde:', erroreProfilo);
   const data = righe?.[0] ?? null;
   if (data) {
     myName = data.display_name; isAdmin = !!data.is_admin; myAvatar = data.avatar_url;
@@ -230,7 +231,13 @@ async function ensureProfile() {
     }
     return;
   }
-  await supabase.from('profiles').insert({ id: currentUser.id, display_name: fallback, avatar_url: oauthAvatar });
+  // La riga si crea solo se la funzione ha davvero risposto "non c'e' nessun profilo".
+  // Se invece ha dato errore — il caso vero e' la 018 non applicata — la riga esiste
+  // eccome, e l'insert fallirebbe in silenzio su chiave duplicata: due errori taciuti
+  // invece di uno. Sotto si prosegue con i valori di ripiego, e la console dice perche'.
+  if (!erroreProfilo) {
+    await supabase.from('profiles').insert({ id: currentUser.id, display_name: fallback, avatar_url: oauthAvatar });
+  }
   myName = fallback;
   myAvatar = oauthAvatar;
   isAdmin = false;
