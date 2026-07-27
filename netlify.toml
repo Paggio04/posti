@@ -12,7 +12,9 @@
     # un errore che sembra un rifiuto suo. Le altre tre restano vuote perche' quelle non
     # servono davvero a nessuno qui.
     Permissions-Policy = "camera=(), microphone=(), geolocation=(self), payment=()"
-    Content-Security-Policy = "default-src 'self'; script-src 'self' https://cdn.jsdelivr.net; worker-src 'self'; connect-src 'self' https://ggjhvsnhzwapdulcjgkh.supabase.co wss://ggjhvsnhzwapdulcjgkh.supabase.co https://cdn.jsdelivr.net; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src https://fonts.gstatic.com; img-src 'self' data: https://*.googleusercontent.com; base-uri 'self'; form-action 'self'; frame-ancestors 'none'; object-src 'none'; upgrade-insecure-requests"
+    # I caratteri stanno nel repo: Google esce da style-src e da font-src, e font-src
+    # diventa 'self' invece di un dominio altrui. Una regola che si stringe, non si allarga.
+    Content-Security-Policy = "default-src 'self'; script-src 'self' https://cdn.jsdelivr.net; worker-src 'self'; connect-src 'self' https://ggjhvsnhzwapdulcjgkh.supabase.co wss://ggjhvsnhzwapdulcjgkh.supabase.co https://cdn.jsdelivr.net; style-src 'self' 'unsafe-inline'; font-src 'self'; img-src 'self' data: https://*.googleusercontent.com; base-uri 'self'; form-action 'self'; frame-ancestors 'none'; object-src 'none'; upgrade-insecure-requests"
 
 # Il service worker non si mette in cache come gli altri file: e' lui che decide la cache
 # di tutto il resto, quindi una copia vecchia terrebbe in vita un guscio vecchio. Il

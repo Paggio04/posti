@@ -12,7 +12,7 @@
 //
 // Quello che si mette in cache e' solo il guscio: i file pubblici, identici per tutti.
 
-const VERSIONE = 'wetransport-v2';   // sale quando cambia il GUSCIO qui sotto
+const VERSIONE = 'wetransport-v3';   // sale quando cambia il GUSCIO qui sotto
 
 const GUSCIO = [
   '/',
@@ -27,6 +27,12 @@ const GUSCIO = [
   '/icon.svg',
   '/icona-192.png',
   '/icona-512.png',
+  // I caratteri fanno parte del guscio da quando non arrivano piu' da un CDN: senza,
+  // l'app aperta offline ripiegherebbe sul carattere di sistema e sarebbe un'altra app.
+  '/fonts/ibm-plex-sans-latin-400-normal.woff2',
+  '/fonts/ibm-plex-sans-latin-600-normal.woff2',
+  '/fonts/ibm-plex-sans-latin-700-normal.woff2',
+  '/fonts/ibm-plex-mono-latin-500-normal.woff2',
 ];
 
 // app.js importa questo modulo come prima riga: senza, non parte niente. Se resta fuori
