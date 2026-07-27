@@ -56,6 +56,7 @@ segue:
 | C18 standard dello Starter | **chiuso nei due versi**: il 27/07/2026 le lezioni sono tornate nello Starter del vault (`Permissions-Policy`, migrazioni numerate, ordine codice/schema, «provalo al contrario») |
 | C21 coordinate nel payload | **fatto e applicato** (`015` + `016`), nell'ordine giusto |
 | C22 la zona nel profilo | **scritto** (`018` + `019`), da pubblicare e applicare — è lo stesso buco di C21, sull'altra tabella |
+| C23 permessi delle funzioni | **scritto** (`020`), da applicare — `grant execute to public` è il default di Postgres, e si vedeva solo andando a cercarlo |
 
 **T1 è raggiunto sul piano tecnico.** Quello che manca per dire "pronta per la comitiva" non è
 codice: è **gente vera che la usa**, e un collaudo a video che non è mai stato fatto. Sotto, cosa
@@ -691,6 +692,32 @@ chiamata a `blinda_profilo()`, il filtro `p.id = auth.uid()` dentro `mio_profilo
 coordinate della zona. Da verificare in produzione dopo aver applicato la `019`, con la stessa prova
 di C21: `select=*` su `profiles` deve essere rifiutato, `select=display_name` no.
 
+### C23 — Le funzioni interne non si chiamano da un browser — *scritto il 27/07/2026, da applicare*
+
+Trovato nello stesso giro, guardando i **permessi delle funzioni** invece delle policy. In Postgres
+una funzione nasce eseguibile da chiunque: `grant execute to public` è il default, e non è scritto
+da nessuna parte. Le migrazioni se n'erano ricordate dove era evidente (`elimina_account`,
+`accoda_notifica`, `blinda_coordinate`, `accoda_partenze_imminenti`) e non dove non lo era.
+
+Due buchi veri, entrambi in `020_funzioni_riservate.sql`:
+
+- **`bloccati_fra(a, b)`** è `security definer` e prende **due** id come parametri. Il commento
+  della 012 dice che quelle funzioni «restano innocue perché non accettano scelte da chi chiama»:
+  è vero per `si_bloccano(altro)` e `mi_ha_bloccato(altro)`, ancorate ad `auth.uid()`, ed è falso
+  proprio per questa. Chiunque poteva chiedere «X e Y si sono bloccati?» su due persone che non lo
+  riguardano, e gli id si leggono dal payload della Home. Il blocco è la cosa che la 012 nasconde
+  perfino a chi lo subisce. Stessa forma per `sospeso(u)`, che dà lo stato di moderazione di
+  chiunque a chiunque.
+- **`create_group` / `join_group` erano chiamabili senza account.** Entrare non si riusciva — la
+  chiave primaria di `group_members` rifiuta un `user_id` nullo — ma **l'errore cambia** a seconda
+  che il codice esista o no: un oracolo per cercare i codici invito da fuori, cioè l'opposto di
+  quello che `SECURITY.md` promette. Ora `anon` non le chiama, `authenticated` sì.
+
+**Non ha un ordine di applicazione**, ed è l'unica delle tre a non averlo: non toglie niente che il
+codice pubblicato usi. Verificato in `supabase/test/verifica-permessi.sql`, in CI, e il quarto
+controllo è quello che tiene onesti gli altri tre — chiudere è facile, chiudere senza rompere
+l'ingresso in comitiva no.
+
 ---
 
 ## Fase 5 — Abbellire e ottimizzare
@@ -854,6 +881,7 @@ seconda volta che ripaga: il difetto peggiore era **fuori** dal file che stavo g
 | Cosa | Dove | Perché contava |
 |---|---|---|
 | La zona di casa usciva dentro il profilo | `018` + `019`, C22 qui sopra | Il buco di C21 sull'altra tabella, e più esposto: bastava vedere un passaggio pubblico |
+| `bloccati_fra` e `sospeso` rispondevano a chiunque su chiunque; i codici invito si potevano provare senza account | `020`, C23 qui sopra | `grant execute to public` è il default di Postgres. Il blocco è la cosa che la 012 nasconde perfino a chi lo subisce, e la lasciava leggere una funzione |
 | La Home mostrava le auto delle **proprie altre comitive**, etichettate "in zona" | `loadRides` | Da C9 il filtro sul gruppo era sparito dalla query, e la policy fa uscire tutto il visibile — comprese le comitive di cui sono membro. Con una comitiva sola non si vedeva; con due, le pillole dei gruppi non volevano più dire niente e l'etichetta mentiva |
 | `#i-edit` non esiste nello sprite | `index.html` | Il bottone "Cambia nome" mostrava un rettangolo vuoto al posto dell'icona, da sempre |
 | L'esportazione revocava il blob nello stesso istante del click | `esportaDati` | La lezione era già stata pagata in `scaricaIcs`, e lì sola: fuori da Chrome il file poteva arrivare vuoto |
