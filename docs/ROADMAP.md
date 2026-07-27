@@ -52,8 +52,8 @@ serve tutto quello che segue:
 | C13 notifiche a scheda chiusa | **da fare**, e bloccato su cose che il repo non può fare: chiavi VAPID, deploy di una Edge Function, `pg_cron` |
 | C14 servizi esterni | **chiuso** (Web Share, `.ics`, navigazione sul punto vero) |
 | C15 estetica | fatto al secondo tentativo; il giudizio finale è di chi la usa |
-| C18 standard dello Starter | fatto nel repo; resta il ritorno **verso** lo Starter |
-| C21 coordinate nel payload | **da fare**: migrazione `015` |
+| C18 standard dello Starter | **chiuso nei due versi**: il 27/07/2026 le lezioni sono tornate nello Starter del vault (`Permissions-Policy`, migrazioni numerate, ordine codice/schema, «provalo al contrario») |
+| C21 coordinate nel payload | **fatto** (`015` + `016`), **da applicare in produzione nell'ordine giusto** |
 
 **T1 è raggiunto sul piano tecnico.** Quello che manca per dire "pronta per la comitiva" non è
 codice: è **gente vera che la usa**, e un collaudo a video che non è mai stato fatto. Sotto, cosa
@@ -555,21 +555,49 @@ posto su quell'auto — il punto esatto è quello che serve; da fuori resta la r
 luogo, che dice la zona e non l'indirizzo. Vale anche per ogni passaggio pubblicato prima della 014,
 che coordinate non ne ha.
 
+Da C21 quella prudenza non è più solo del link: **il dato non arriva proprio**, e la decisione la
+prende il database invece dell'interfaccia. `coordinateVisibili()` ora chiede una cosa sola — sono
+arrivate le coordinate? — perché arrivare *è* il permesso.
+
 **`dest_lat`/`dest_lon` restano colonne morte, e non per dimenticanza.** La 014 le ha create,
 niente le scrive: le coordinate arrivano solo da `navigator.geolocation`, e alla destinazione non ci
 sei. Riempirle vorrebbe dire un geocoder — che D6 esclude — o un selettore su mappa, cioè una
 dipendenza nuova. Se un giorno servono, quella è la decisione da riaprire, non un bug da chiudere.
 
-### C21 — Le coordinate esatte non devono uscire dalla comitiva — *debito della Fase 3, non un'integrazione*
+### C21 — Le coordinate esatte non devono uscire dalla comitiva — *fatto (27/07/2026)*
 Sta qui perché è nato guardando C14, non perché appartenga a "Integrare": è un buco di 014, e come
-tale viene prima delle cose nuove. Nato guardando C14, ed è il buco vero che quel cantiere ha solo smesso di offrire con un click:
-`select('*')` su `rides` porta `origin_lat`/`origin_lon` a **chiunque** possa vedere il passaggio,
-compresi gli estranei che lo vedono perché è `pubblico`. Il link ora è prudente, il payload no.
+tale viene prima delle cose nuove. Il buco vero che quel cantiere aveva solo smesso di offrire con
+un click: `select('*')` su `rides` portava `origin_lat`/`origin_lon` a **chiunque** potesse vedere
+il passaggio, compresi gli estranei che lo vedono perché è `pubblico`. Il link era prudente, il
+payload no.
 
-**Come:** una vista che espone le coordinate solo a chi è dentro (o ha un posto), più un `select`
-con le colonne nominate al posto di `*`. Migrazione `015`, con il suo file di test provato al
-contrario come gli altri. *Fatto quando:* un utente fuori comitiva che interroga l'API a mano
-riceve il passaggio senza le coordinate.
+**Fatto in due migrazioni, e sono due perché tirano in direzioni opposte** — è la regola di
+`supabase/README.md` applicata alla lettera, non una complicazione:
+
+| | Cosa fa | Quando si applica |
+|---|---|---|
+| `015_coordinate_a_richiesta.sql` | aggiunge `coordinate_visibili()` e la funzione `coordinate_passaggi(ids)` | **prima** di pubblicare il codice, che la chiama |
+| `016_coordinate_riservate.sql` | toglie il permesso di lettura su `origin_lat`, `origin_lon`, `dest_lat`, `dest_lon` | **dopo** la pubblicazione: rompe il `select('*')` del codice vecchio |
+
+**Perché un permesso per colonna e non una vista.** Le due alternative sono state scartate per
+motivi diversi. Un *campo calcolato* di PostgREST riceve la riga intera, e un riferimento a riga
+intera in Postgres pretende il privilegio sulla tabella tutta: sarebbe incompatibile con la 016. Una
+*vista* avrebbe funzionato, ma spostava tutte le query della Home su un oggetto nuovo — con
+l'incorporamento di guidatore, sedili, commenti e lista d'attesa da riverificare in una volta sola,
+su un sito che si pubblica facendo merge. Una funzione in più lascia intatto quello che già gira, e
+se un giorno sparisse il link tornerebbe a cercare il nome del luogo: degrada, non rompe.
+
+**Da qui in poi le colonne di `rides` si nominano** (`COLONNE_RIDE` in `app.js`): chi ne aggiunge
+una la aggiunge anche lì, altrimenti nasce invisibile all'app. È lo stesso genere di vincolo che la
+010 ha messo sull'archivio.
+
+**Verificato** in `supabase/test/verifica-coordinate.sql`, in CI, e provato al contrario: togliendo
+la chiamata a `blinda_coordinate()`, il controllo `is_member or ho_un_posto`, il primo
+`passaggio_visibile` o la revoca dell'execute, il test diventa rosso — uno per ciascuno.
+
+*Fatto quando:* un utente fuori comitiva che interroga l'API a mano riceve il passaggio senza le
+coordinate. **Raggiunto**: da fuori `select *` viene rifiutato e `coordinate_passaggi` non torna
+nessuna riga, mentre chi è dentro o ha un posto sull'auto continua ad avere il punto esatto.
 
 ---
 
@@ -660,9 +688,16 @@ repo: quello che WeTransport ha imparato e lo Starter non sa ancora — l'ordine
 codice, le migrazioni numerate che si registrano da sole, i test provati al contrario, e la
 Permissions-Policy che spegne una funzione se l'allowlist è vuota.
 
-### C19 — Vault e codice allineati
+### C19 — Vault e codice allineati — *fatto il 27/07/2026*
 Mappa Graphify rigenerata, memoria tecnica aggiornata con le decisioni di questo file, nota
 progetto che punta qui invece di duplicare.
+
+Fatto, ed è servito a scoprire quanto fosse scaduta: la nota del vault raccontava una Fase 3 «sul
+ramo, da collaudare» mentre era pubblicata da un giorno, e il clone locale era **44 commit**
+indietro. Ora la nota progetto rimanda qui invece di ripetere, la memoria tecnica ha una regola
+nuova su **come si legge lo stato vero** (repo, sito servito, schema applicato) invece di
+ricordarlo, e `audit-vault.py` è pulito. La lezione che resta: *le note invecchiano in silenzio, il
+sistema vivo no* — quindi si guarda quello per primo.
 
 ### C20 — Un nome solo
 Oggi sono tre: repo `posti`, cartella `C:\Progetti\posti`, dominio `wetransport.netlify.app`.

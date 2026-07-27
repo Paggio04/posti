@@ -530,9 +530,13 @@ document.getElementById('zona-togli').addEventListener('click', async () => {
 
 async function esportaDati() {
   const mio = (tabella, colonna) => supabase.from(tabella).select('*').eq(colonna, currentUser.id);
+  // `rides` fa eccezione e chiede le colonne per nome: da C21 il `*` non e' piu' permesso
+  // (vedi COLONNE_RIDE). Le coordinate delle proprie auto rientrano subito dopo, dalla
+  // stessa funzione che le da' alla Home: sono dati propri, e devono esserci.
+  const mieAuto = () => supabase.from('rides').select(COLONNE_RIDE).eq('driver_id', currentUser.id);
   const [profilo, auto, posti, richieste, commenti, attesa, gruppi, segnalazioni, blocchi] = await Promise.all([
     supabase.from('profiles').select('*').eq('id', currentUser.id).maybeSingle(),
-    mio('rides', 'driver_id'),
+    mieAuto(),
     mio('seat_claims', 'passenger_id'),
     mio('ride_requests', 'user_id'),
     mio('ride_comments', 'user_id'),
@@ -544,6 +548,10 @@ async function esportaDati() {
   const primoErrore = [profilo, auto, posti, richieste, commenti, attesa, gruppi, segnalazioni, blocchi]
     .find(r => r.error);
   if (primoErrore) { toast(friendlyError(primoErrore.error)); return; }
+
+  // Le coordinate tornano dentro le proprie auto: "Scarica i miei dati" deve dare tutto
+  // quello che il database ha su di te, e il punto da cui hai detto di partire e' tuo.
+  await attaccaCoordinate(auto.data);
 
   const dati = {
     esportato_il: new Date().toISOString(),
@@ -1177,6 +1185,25 @@ function friendlyError(error) {
 
 let currentRequests = [];
 let loadToken = 0;
+// Le colonne di `rides` si nominano una per una, e non e' pignoleria (cantiere C21): da
+// `016_coordinate_riservate.sql` un client non ha il permesso di leggere origin_lat,
+// origin_lon, dest_lat e dest_lon, quindi `select('*')` verrebbe rifiutato in blocco.
+// Aggiungendo una colonna a `rides`, va aggiunta anche qui.
+const COLONNE_RIDE = 'id, driver_id, ride_date, depart_time, origin, destination, seats, note, created_at, group_id, fuel_per_person, visibilita';
+
+// Le coordinate del ritrovo arrivano a parte, e solo per i passaggi a cui si ha diritto:
+// e' il database a decidere quali (`coordinate_passaggi`), non il client. Chi resta senza
+// non ha un buco in pagina — il link torna a cercare il nome del luogo, com'era prima di
+// C14 — quindi un errore qui degrada, non rompe.
+async function attaccaCoordinate(rides) {
+  if (!rides?.length) return;
+  for (const r of rides) r.partenza = null;
+  const { data, error } = await supabase.rpc('coordinate_passaggi', { ids: rides.map((r) => r.id) });
+  if (error) { console.error(error); return; }
+  const punti = new Map((data ?? []).map((c) => [c.ride_id, { lat: c.origin_lat, lon: c.origin_lon }]));
+  for (const r of rides) r.partenza = punti.get(r.id) ?? null;
+}
+
 let retryCount = 0;
 async function loadRides(silent = false) {
   // Senza comitiva non c'e' niente da caricare: la Home mostra il benvenuto (vedi loadGroups).
@@ -1188,7 +1215,7 @@ async function loadRides(silent = false) {
   }
   let query = supabase
     .from('rides')
-    .select('*, driver:profiles!rides_driver_id_fkey(display_name, avatar_url), seat_claims(seat_index, passenger_id, passenger:profiles!seat_claims_passenger_id_fkey(display_name, avatar_url)), ride_comments(count), ride_waitlist(user_id, created_at, profile:profiles(display_name))')
+    .select(`${COLONNE_RIDE}, driver:profiles!rides_driver_id_fkey(display_name, avatar_url), seat_claims(seat_index, passenger_id, passenger:profiles!seat_claims_passenger_id_fkey(display_name, avatar_url)), ride_comments(count), ride_waitlist(user_id, created_at, profile:profiles(display_name))`)
     .eq('ride_date', currentDate)
     .order('depart_time', { ascending: true, nullsFirst: false });
   // Niente piu' filtro sul gruppo qui: da C9 la policy fa uscire anche i passaggi aperti
@@ -1219,6 +1246,8 @@ async function loadRides(silent = false) {
     return;
   }
   retryCount = 0;
+  await attaccaCoordinate(data);
+  if (token !== loadToken) return; // e' passata un'altra richiesta mentre chiedevo i punti
   currentRequests = reqs ?? [];
   updateDayCta(data);
   renderRides(data);
@@ -1373,17 +1402,20 @@ function svgEl(tag, attrs) {
 // smette di *offrire* l'indirizzo con un click, non si finge che il dato non arrivi.
 // Chi vede il punto esatto di partenza e chi no. Una decisione sola, in un posto solo: la
 // usano sia il link di navigazione sia il file del calendario, e se cambia idea cambia qui.
+// Da C21 la domanda non si fa piu' qui: le coordinate arrivano **solo** se il database ha
+// deciso che si possono avere (`coordinate_passaggi`), quindi averle in mano *e'* il
+// permesso. Prima questa funzione decideva sul group_id della comitiva aperta in quel
+// momento, cioe' rispondeva a una domanda diversa da quella del server; ora e' una sola
+// risposta, e sta dove stanno tutte le altre regole di visibilita'.
 function coordinateVisibili(ride) {
-  if (ride.origin_lat == null || ride.origin_lon == null) return false;
-  return ride.group_id === currentGroupId
-    || (ride.seat_claims ?? []).some((c) => c.passenger_id === currentUser?.id);
+  return ride.partenza != null;
 }
 
 function linkRitrovo(ride) {
   if (coordinateVisibili(ride)) {
     return {
       href: 'https://www.google.com/maps/dir/?api=1&destination='
-        + encodeURIComponent(`${ride.origin_lat},${ride.origin_lon}`),
+        + encodeURIComponent(`${ride.partenza.lat},${ride.partenza.lon}`),
       testo: 'Naviga al ritrovo',
     };
   }
@@ -1448,7 +1480,7 @@ function testoIcs(ride) {
   righe.push(`DESCRIPTION:${esc(descrizione)}`);
   if (ride.origin) righe.push(`LOCATION:${esc(ride.origin)}`);
   // Il punto esatto solo a chi lo vede comunque: stessa regola del link di navigazione.
-  if (coordinateVisibili(ride)) righe.push(`GEO:${ride.origin_lat};${ride.origin_lon}`);
+  if (coordinateVisibili(ride)) righe.push(`GEO:${ride.partenza.lat};${ride.partenza.lon}`);
   righe.push('END:VEVENT', 'END:VCALENDAR');
 
   // Piegatura: il formato vuole righe da non piu' di 75 ottetti, e la continuazione deve
