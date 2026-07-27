@@ -77,6 +77,15 @@ jobs:
       - name: Segnalazione, blocco e sospensione reggono
         run: psql -v ON_ERROR_STOP=1 -q -f supabase/test/verifica-sicurezza.sql
 
+      # Sta qui in mezzo per due ragioni opposte, e c'e' voluto un giro rosso per trovarle
+      # tutte e due. Non per primo: `verifica-isolamento` contava i profili di **tutta** la
+      # tabella, e i quattro utenti di questo test glieli facevano diventare sette (quel
+      # conto ora e' per id, cosi' l'ordine non conta piu'). E non per ultimo, dove sarebbe
+      # stato naturale: li' inserisce un passo anche un altro ramo aperto, e due modifiche
+      # nello stesso punto sono un conflitto di merge garantito.
+      - name: Le notifiche si accodano quando devono, e una volta sola
+        run: psql -v ON_ERROR_STOP=1 -q -f supabase/test/verifica-notifiche.sql
+
       - name: Cancellare il proprio account non danneggia gli altri
         run: psql -v ON_ERROR_STOP=1 -q -f supabase/test/verifica-cancellazione.sql
 

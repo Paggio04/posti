@@ -30,6 +30,44 @@ Progetto Supabase nuovo → applicare tutti i file di `migrations/` in ordine. N
 4. **Ultima riga**: la registrazione in `schema_migrations`.
 5. **Mai modificare un file già applicato in produzione.** Si aggiunge il successivo.
 
+## Notifiche (cantiere C13)
+
+Lo schema c'e' ed e' verificato in CI (`017_notifiche.sql`, `test/verifica-notifiche.sql`):
+i trigger accodano, la coda non e' leggibile dal client, e la stessa cosa non si accoda due
+volte. **Quello che manca non e' codice, sono tre cose che vivono fuori dal repo**, e finche'
+non ci sono l'unica conseguenza e' che la coda si riempie e nessuno la svuota — l'app
+funziona lo stesso.
+
+1. **Le due chiavi VAPID.** Si generano una volta sola, con `npx web-push generate-vapid-keys`.
+   - la **pubblica** va in `config.js` (`VAPID_PUBLIC_KEY`): e' pubblica per definizione, e
+     finche' quella riga e' vuota l'app non mostra nemmeno l'interruttore;
+   - la **privata** va nei segreti della Edge Function, e **da nessuna altra parte**.
+2. **Il deploy della funzione**, che questo repo non puo' fare (serve la CLI e un token):
+   ```
+   supabase secrets set VAPID_PUBLIC_KEY=... VAPID_PRIVATE_KEY=... VAPID_SUBJECT=mailto:... CRON_SECRET=...
+   supabase functions deploy notifiche
+   ```
+   Il codice sta in `supabase/functions/notifiche/index.ts`. **Non e' mai stato eseguito**:
+   il primo giro va guardato nei log.
+3. **`pg_cron` che la chiama**, ogni dieci minuti. Dal SQL editor, una volta:
+   ```sql
+   create extension if not exists pg_cron;
+   create extension if not exists pg_net;
+   select cron.schedule('notifiche', '*/10 * * * *', $$
+     select net.http_post(
+       url := 'https://<ref>.supabase.co/functions/v1/notifiche',
+       headers := '{"x-cron-secret": "<CRON_SECRET>"}'::jsonb
+     )
+   $$);
+   ```
+   La finestra delle partenze e' larga venti minuti proprio perche' il cron gira ogni dieci:
+   un giro saltato non fa perdere l'avviso, e la chiave della coda impedisce il doppione.
+
+Le notifiche sono **tre** e non di piu' (decisione D5): posto prenotato nella tua auto, sei
+salito dalla lista d'attesa, la tua auto parte fra un'ora. Commenti e auto nuove no: sono la
+maggior parte del traffico, e un'app che notifica troppo viene silenziata — e allora non
+notifica piu' niente.
+
 ## Collaudare in locale (serve Postgres)
 
 `test/stub-supabase.sql` ricrea le parti di Supabase che le migrazioni toccano — lo schema

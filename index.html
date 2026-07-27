@@ -316,6 +316,20 @@
           </div>
         </section>
 
+        <!-- Notifiche (C13). Nasce nascosta e resta nascosta finché non ci sono tutte e tre
+             le condizioni: la chiave pubblica in config.js, il service worker registrato e
+             un browser che sa fare push. Un interruttore che non può funzionare è peggio di
+             nessun interruttore. -->
+        <section id="notifiche-card" class="card hidden">
+          <h3 class="card-title">Avvisi sul telefono</h3>
+          <p class="card-sub">Tre soli, quelli che cambiano i piani: qualcuno prende un posto nella tua auto, sali dalla lista d'attesa, la tua auto parte fra un'ora. Niente avvisi per i commenti.</p>
+          <p id="notifiche-stato" class="card-sub"></p>
+          <div class="group-card-actions">
+            <button type="button" id="notifiche-attiva" class="btn btn-ghost btn-small">Attiva gli avvisi</button>
+            <button type="button" id="notifiche-spegni" class="btn btn-ghost btn-small btn-danger hidden">Spegni su questo dispositivo</button>
+          </div>
+        </section>
+
         <section id="blocked-card" class="card hidden">
           <h3 class="card-title">Persone bloccate</h3>
           <p class="card-sub">Non vedete più i passaggi l'uno dell'altra, e non potete salire in macchina insieme.</p>

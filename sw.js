@@ -60,6 +60,41 @@ self.addEventListener('activate', (e) => {
   })());
 });
 
+// --- Notifiche push (cantiere C13) ---
+// Arrivano anche a scheda chiusa: e' l'unica parte dell'app che gira senza pagina aperta.
+// Il messaggio lo costruisce chi lo manda (la Edge Function), qui non si decide niente:
+// se il corpo non arriva o non e' JSON si mostra un testo generico invece di non mostrare
+// niente, perche' una notifica ricevuta e non mostrata su iOS costa l'iscrizione.
+self.addEventListener('push', (e) => {
+  let dati = {};
+  try { dati = e.data ? e.data.json() : {}; } catch { dati = {}; }
+  const titolo = dati.titolo || 'WeTransport';
+  const opzioni = {
+    body: dati.corpo || 'Qualcosa e\' cambiato nei passaggi di oggi.',
+    icon: '/icona-192.png',
+    badge: '/icona-192.png',
+    // Due notifiche dello stesso tipo si sostituiscono invece di impilarsi: chi torna al
+    // telefono dopo un'ora vuole sapere com'e' adesso, non la cronaca.
+    tag: dati.tipo || 'wetransport',
+    data: { url: dati.url || '/' },
+  };
+  e.waitUntil(self.registration.showNotification(titolo, opzioni));
+});
+
+self.addEventListener('notificationclick', (e) => {
+  e.notification.close();
+  const destinazione = (e.notification.data && e.notification.data.url) || '/';
+  // Se l'app e' gia' aperta da qualche parte si porta in primo piano quella, invece di
+  // aprire una seconda copia: sono due schede che parlano allo stesso database.
+  e.waitUntil((async () => {
+    const aperte = await self.clients.matchAll({ type: 'window', includeUncontrolled: true });
+    for (const c of aperte) {
+      if (new URL(c.url).origin === self.location.origin) return c.focus();
+    }
+    return self.clients.openWindow(destinazione);
+  })());
+});
+
 self.addEventListener('fetch', (e) => {
   const req = e.request;
   if (req.method !== 'GET') return;
