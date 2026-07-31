@@ -71,6 +71,12 @@ jobs:
             psql -v ON_ERROR_STOP=1 -q -f "$f"
           done
 
+      # Prima degli altri di proposito: i test che seguono aprono i permessi con
+      # `grant all on all functions`, quindi da li' in poi l'ACL non e' piu' quella
+      # che le migrazioni hanno lasciato.
+      - name: Ogni funzione dichiara chi puo' chiamarla
+        run: psql -v ON_ERROR_STOP=1 -q -f supabase/test/verifica-acl-funzioni.sql
+
       - name: Le comitive sono davvero separate
         run: psql -v ON_ERROR_STOP=1 -q -f supabase/test/verifica-isolamento.sql
 
