@@ -15,7 +15,11 @@
 -- `verifica-sicurezza.sql`, `verifica-zona.sql`, `verifica-permessi.sql` e gli altri fanno
 -- `grant all on all functions in schema public to authenticated` per poter lavorare. Messo
 -- dopo di loro, questo controllo leggerebbe i permessi del test invece di quelli lasciati
--- dalle migrazioni, e sarebbe verde sempre.
+-- dalle migrazioni. **Provato, e il modo di sbagliare non e' quello che sembra**: spostato
+-- in fondo il controllo diventa ROSSO, non verde -- il `grant all` apre piu' di quanto le
+-- migrazioni dichiarano, quindi il primo scarto e' `accoda_notifica(...): atteso nessuno,
+-- trovato authenticated`. Un rosso che non parla di un difetto vero e' rumore, e insegna a
+-- ignorare il controllo: e' per questo che la posizione conta.
 --
 -- **Perche' i permessi si leggono dal catalogo e non dai file.** Un controllo testuale
 -- («dopo un `create function` deve venire un `revoke`») si aggira senza volerlo — un
