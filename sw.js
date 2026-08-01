@@ -12,7 +12,11 @@
 //
 // Quello che si mette in cache e' solo il guscio: i file pubblici, identici per tutti.
 
-const VERSIONE = 'wetransport-v4';   // sale quando cambia il GUSCIO qui sotto
+const VERSIONE = 'wetransport-v5';   // sale quando cambia il GUSCIO qui sotto
+// v5 (01/08/2026): il riepilogo rifatto sul disegno concordato — barra laterale nuova
+// in `index.html`, l'intero blocco della dashboard in `style.css`, `loadStats()`
+// riscritta in `app.js`. Tre file del guscio su tre: senza questa riga non l'avrebbe
+// visto nessuno di quelli che l'app ce l'hanno gia' aperta.
 // v4 (01/08/2026): index.html, style.css e app.js sono cambiati sette volte in un
 // pomeriggio — login a pannello, dashboard, tre tabelle nuove — e questa riga era
 // rimasta a v3. Chi aveva gia' aperto l'app continuava a vedere il guscio vecchio,
