@@ -901,6 +901,166 @@ Cercare "wetransport" su GitHub non trova niente.
 
 ---
 
+## Fase 7 — Le funzioni della comitiva (T1)
+
+Quattordici cantieri decisi il **01/08/2026**. Nascono da un elenco di sedici idee, ognuna
+verificata contro il codice prima di proporla — il controllo serviva, perché due delle prime
+proposte erano cose che esistevano già (le ricorrenze, che sono il selettore «Ripeti» del modulo
+dell'auto, e la lista d'attesa, che ha la sua interfaccia completa dal 006).
+
+**Due idee sono state scartate dal proprietario, e non tornano:**
+
+- *i turni come moneta invece degli euro* — un secondo modo di saldare accanto a `pagamenti`,
+  cioè due verità sullo stesso debito;
+- *la pagina del giorno condivisibile senza account* — apre un confine verso l'esterno mentre
+  C24 è ancora aperto.
+
+**Il vincolo d'ordine di questa fase**: C28, C29 e C30 non esistono finché non è acceso **C13**.
+La tabella `notifiche` c'è dalla `017` e i trigger la riempiono a ogni prenotazione, ma
+`VAPID_PUBLIC_KEY` è vuota, `supabase/functions/notifiche/` non è mai stato eseguito, `pg_cron`
+è spento, e nel client non c'è una riga che legga quella tabella. La coda si riempie e nessuno la
+svuota. Non è un cantiere di questa fase: è il suo prerequisito.
+
+### C25 — Saldare tutti i conti in un colpo
+
+Oggi si chiude un conto per volta, con un dialogo ciascuno. Con quattro persone in sospeso sono
+quattro giri. Un comando che salda tutti gli aperti con una persona, e uno che li salda tutti,
+sono N insert in `pagamenti`: nessuna migrazione, nessuna policy nuova.
+
+*Fatto quando*: dal riquadro «Conti in sospeso» si azzera l'intero saldo con una conferma sola, e
+il totale in cima torna a zero senza ricaricare.
+
+### C26 — Il conto mostra da cosa nasce
+
+Adesso si legge «Sara · 6 passaggi · dal 28 giu · + 16,50 €» e ci si deve fidare. Manca l'unica
+cosa che serve nel momento in cui qualcuno contesta la cifra, che è l'unico momento in cui un
+conto conta davvero: **quali** passaggi, a quanto ciascuno, e quali pagamenti già segnati.
+
+I dati sono **già tutti caricati** da `loadStats()`: è un pannello che si apre, non
+un'interrogazione nuova.
+
+*Fatto quando*: toccando una riga dei conti si aprono le voci che la compongono, e la loro somma è
+esattamente l'importo mostrato sopra.
+
+### C27 — Lo storico filtrato
+
+Lo storico è l'elenco indistinto di tutto il gruppo. Due interruttori — «solo i miei passaggi»,
+«solo quando ho guidato io» — rispondono alla domanda che ci si fa davvero («quante volte ci ho
+messo l'auto?») senza contare a mano. Filtro su dati già in memoria.
+
+*Fatto quando*: i due interruttori esistono, si combinano, e lo stato scelto sopravvive al
+cambio di vista.
+
+### C28 — Avviso di annullamento *(richiede C13)*
+
+Se chi guida cancella, **oggi il passaggio sparisce e basta**. I tipi previsti dalla `017` sono
+`posto_prenotato`, `posto_libero` e `partenza_vicina`: l'annullamento non c'è. È l'evento con la
+conseguenza più concreta di tutti — si resta sul portone alle 7:40 senza sapere perché — ed è
+l'unico difetto vero di questa fase, non un miglioramento.
+
+`eventi` (023) registra già `passaggio_annullato`: serve un quarto tipo di notifica e un trigger
+sulla cancellazione, che avvisi chi aveva un posto e chi era in lista d'attesa.
+
+*Fatto quando*: cancellando un passaggio con due passeggeri a bordo, quei due ricevono l'avviso, e
+chi non c'entra no.
+
+### C29 — «È comparsa l'auto che avevi chiesto» *(richiede C13)*
+
+Chiude il giro della richiesta con l'ora (`025`): hai chiesto un passaggio per le 7:40, qualcuno
+pubblica per quel giorno, te lo dice. Senza, la richiesta resta una cosa che chi guida deve
+ricordarsi di guardare, e il verso resta a senso unico.
+
+*Fatto quando*: chi ha una richiesta aperta per un giorno riceve l'avviso alla prima auto
+pubblicata per quel giorno nella sua comitiva, una volta sola.
+
+### C30 — «Sono in ritardo di cinque minuti» *(richiede C13)*
+
+Un tocco da chi guida che arriva a chi è a bordo. È la cosa che nei passaggi veri si risolve con
+dieci messaggi in chat, e costa un tipo di notifica in più più un bottone sulla scheda del
+passaggio, visibile solo a chi guida e solo il giorno stesso.
+
+*Fatto quando*: chi guida può segnalare un ritardo, chi ha un posto lo riceve, e il ritardo si
+vede sulla scheda del passaggio anche a chi apre l'app in quel momento.
+
+### C31 — Andata e ritorno legati
+
+Un passaggio è di sola andata, e il viaggio vero quasi sempre è A/R: «7:40 casa → università,
+13:30 università → casa». Oggi in `rides` non esiste **nessun legame fra due righe**, quindi chi
+prende il posto all'andata non sa se ha anche il ritorno, e chi guida ripubblica tutto da capo.
+
+*Fatto quando*: pubblicando si può indicare il ritorno nella stessa operazione, le due schede si
+riconoscono come coppia, e prenotare l'una propone l'altra.
+
+### C32 — Le fermate della comitiva
+
+Origine e destinazione sono testo libero ridigitato ogni volta: «Piazza Dante», «piazza dante» e
+«P.za Dante» diventano tre posti diversi, e le statistiche li contano separati. Una rubrica di
+punti di ritrovo del gruppo, da **scegliere** invece che da scrivere.
+
+*Fatto quando*: le fermate usate di recente si scelgono da un elenco, scriverne una nuova la
+aggiunge alla rubrica del gruppo, e due passaggi dallo stesso posto contano come lo stesso posto.
+
+### C33 — L'auto ha un profilo
+
+I posti si ridigitano a ogni pubblicazione. Un'auto salvata — quanti posti, che modello e colore
+**per riconoscerla sotto casa al buio**, che è il momento in cui quell'informazione serve
+davvero, e quanto consuma — riduce la pubblicazione a scegliere l'auto e l'ora.
+
+*Fatto quando*: chi ha salvato un'auto pubblica senza reinserire i posti, e chi aspetta sa che
+auto cercare.
+
+### C34 — La quota calcolata invece che digitata
+
+`fuel_per_person` è un numero che chi guida inventa ogni volta, quindi **cambia da persona a
+persona per lo stesso tragitto**. Con il consumo dell'auto (C33) e la distanza fra due fermate
+(C32) l'app propone la cifra e chi guida la conferma. Toglie l'unica trattativa che c'è.
+
+*Dipende da C32 e C33*, e senza quelle non ha i dati per calcolare niente.
+
+*Fatto quando*: il campo «€ a testa» arriva precompilato con un valore che si può correggere, e la
+proposta è la stessa per lo stesso tragitto indipendentemente da chi guida.
+
+### C35 — Il posto per un ospite
+
+Un sedile è un utente registrato. Prenotare due posti perché porti un amico che non ha l'app **non
+si può fare**, e nella vita succede di continuo. Serve un sedile con un nome libero invece di un
+`user_id`, e la quota di quell'ospite va nel conto di chi lo ha portato.
+
+*Fatto quando*: si prenota un posto per un ospite indicandone il nome, il posto risulta occupato a
+tutti, e la sua quota compare nel conto di chi lo ha invitato — non in un conto suo, che non
+esiste.
+
+### C36 — Le regole della comitiva
+
+Ogni passaggio è deciso da capo. Un gruppo dovrebbe poter fissare le sue una volta: «chi guida non
+paga», «quota fissa 5 €», «massimo quattro a bordo». Da lì la quota si precompila, e le eccezioni
+si vedono perché sono eccezioni.
+
+*Fatto quando*: un amministratore imposta le regole del gruppo, la pubblicazione le rispetta senza
+che nessuno le ridigiti, e chi le infrange lo vede scritto prima di confermare.
+
+### C37 — La settimana invece del giorno
+
+La Home guarda un giorno per volta, e la domanda vera della domenica sera è «come siamo messi
+questa settimana». Sette colonne con chi guida e quanti posti, dove i buchi si vedono a colpo
+d'occhio. Il riepilogo **calcola già** i giorni scoperti: manca la forma in cui si guardano.
+
+*Fatto quando*: dalla Home si passa alla settimana e ritorno, i giorni scoperti si distinguono
+senza leggere, e da un giorno vuoto si pubblica in un tocco.
+
+### C38 — La comitiva a tempo
+
+Un gruppo oggi è permanente. Un concerto, un matrimonio, un weekend fuori vogliono una comitiva
+che nasce, serve tre giorni e si chiude da sola, con un codice che scade. È un caso d'uso diverso
+da quello dei fuorisede, ed è probabilmente quello che porta persone nuove.
+
+**Attenzione**: un codice che scade è anche un codice in più che circola, e C24 è ancora aperto.
+Va fatto dopo, o insieme.
+
+*Fatto quando*: si crea una comitiva con una data di fine, dopo quella data non ci si entra più col
+codice, e i dati restano leggibili a chi c'era.
+
+---
 ## Revisione integrale del 27/07/2026 — cosa è uscito
 
 Lettura riga per riga di `app.js` (2103 righe), delle 17 migrazioni, del guscio (`sw.js`,
