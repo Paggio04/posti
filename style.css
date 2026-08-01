@@ -312,6 +312,79 @@ svg { vertical-align: -0.15em; }
 }
 .auth-switch.signup .auth-switch-slider { transform: translateX(100%); }
 
+/* ── Il pannello che scivola ──────────────────────────────────────────────
+   `setAuthMode` in app.js mette gia' `.signup` su `.auth-switch`: ci si
+   aggancia con `:has()` invece di toccare app.js. Se `:has()` mancasse, la
+   pagina resta ferma e usabile -- degrada, non si rompe.
+   Le due colonne devono essere uguali, altrimenti `translateX(100%)` non
+   atterra sull'altra meta'. */
+.auth-view { position: relative; grid-template-columns: 1fr 1fr; }
+
+.auth-brand-panel {
+  grid-area: 1 / 1;
+  z-index: 3;
+  padding: 48px calc(14% + 34px) 48px 48px;
+  clip-path: polygon(0 0, 100% 0, 86% 100%, 0 100%);
+  transition: transform 820ms cubic-bezier(.77, 0, .18, 1),
+              clip-path 820ms cubic-bezier(.77, 0, .18, 1),
+              padding   820ms cubic-bezier(.77, 0, .18, 1);
+}
+.auth-view:has(.auth-switch.signup) .auth-brand-panel {
+  transform: translateX(100%);
+  clip-path: polygon(14% 0, 100% 0, 100% 100%, 0 100%);
+  padding: 48px 48px 48px calc(14% + 34px);
+}
+
+.auth-form-panel { grid-area: 1 / 2; }
+.auth-view:has(.auth-switch.signup) .auth-form-panel { grid-area: 1 / 1; }
+
+/* I due testi occupano la stessa cella: ne e' leggibile uno solo per volta. */
+.brand-testo { display: grid; }
+.brand-testo > div {
+  grid-area: 1 / 1;
+  transition: opacity 340ms ease, transform 340ms cubic-bezier(.77, 0, .18, 1);
+}
+.brand-testo .t-registra { opacity: 0; transform: translateY(10px); pointer-events: none; }
+.auth-view:has(.auth-switch.signup) .brand-testo .t-accedi {
+  opacity: 0; transform: translateY(-10px); pointer-events: none;
+}
+.auth-view:has(.auth-switch.signup) .brand-testo .t-registra {
+  opacity: 1; transform: none; pointer-events: auto;
+}
+
+/* Lo switch non e' piu' due schede: e' il richiamo all'altro modo, quindi si
+   mostra il bottone NON attivo -- quello che porta dove non sei. */
+.auth-brand-panel .auth-switch {
+  display: block; background: none; padding: 0; margin-top: 26px; position: static;
+}
+.auth-brand-panel .auth-switch-slider { display: none; }
+.auth-brand-panel .auth-switch-btn {
+  flex: none; width: auto; color: #fff; font-weight: 600; font-size: 0.94rem;
+  padding: 11px 24px; border: 1px solid oklch(1 0 0 / 0.45); border-radius: var(--pill);
+  background: transparent; cursor: pointer;
+  transition: background 180ms ease, border-color 180ms ease, transform 180ms ease;
+}
+.auth-brand-panel .auth-switch-btn.active { display: none; }
+.auth-brand-panel .auth-switch-btn:hover { background: oklch(1 0 0 / 0.12); border-color: #fff; }
+.auth-brand-panel .auth-switch-btn:active { transform: translateY(1px); }
+.auth-brand-panel .auth-switch-btn:focus-visible { outline: 3px solid var(--ottone); outline-offset: 3px; }
+
+/* Sul telefono non ci sono due meta': niente scivolamento. */
+@media (max-width: 860px) {
+  .auth-view, .auth-view:has(.auth-switch.signup) { grid-template-columns: 1fr; }
+  .auth-brand-panel,
+  .auth-view:has(.auth-switch.signup) .auth-brand-panel {
+    grid-area: 1 / 1; transform: none; clip-path: none; padding: 38px 28px 30px;
+  }
+  .auth-form-panel,
+  .auth-view:has(.auth-switch.signup) .auth-form-panel { grid-area: 2 / 1; }
+  .auth-brand-panel .auth-steps { display: none; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .auth-brand-panel, .brand-testo > div { transition-duration: 1ms; }
+}
+
 /* Accesso con Google / Apple */
 .oauth-buttons { display: grid; gap: 10px; margin-bottom: 4px; }
 

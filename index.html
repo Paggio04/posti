@@ -85,24 +85,36 @@
     <div class="auth-brand-panel">
       <div class="auth-brand-inner">
         <div class="auth-logo"><svg width="44" height="44"><use href="#i-car"/></svg></div>
-        <h1>WeTransport</h1>
-        <p class="auth-tagline">I passaggi del tuo gruppo, senza caos. Chi guida pubblica la propria auto, gli altri scelgono il posto.</p>
-        <ul class="auth-steps">
-          <li><span>1</span> Crea il gruppo e invita gli amici</li>
-          <li><span>2</span> Chi guida pubblica la propria auto</li>
-          <li><span>3</span> Gli altri toccano un sedile e salgono</li>
-        </ul>
+        <div class="brand-testo">
+          <div class="t-accedi">
+            <h1>WeTransport</h1>
+            <p class="auth-tagline">Organizzazione dei passaggi in auto per gruppi ricorrenti.</p>
+            <ul class="auth-steps">
+              <li>Pubblicazione dei passaggi e prenotazione dei posti</li>
+              <li>Ripartizione dei costi di carburante</li>
+              <li>Gestione dei gruppi tramite codice di invito</li>
+            </ul>
+          </div>
+          <div class="t-registra" aria-hidden="true">
+            <h1>Accesso</h1>
+            <p class="auth-tagline">Se disponi gi&agrave; di un account, accedi con le tue credenziali.</p>
+            <ul class="auth-steps">
+              <li>Passaggi e prenotazioni in corso</li>
+              <li>Gruppi di cui fai parte</li>
+              <li>Riepilogo dei posti di domani</li>
+            </ul>
+          </div>
+        </div>
+        <div class="auth-switch" role="tablist">
+          <button id="mode-login" class="auth-switch-btn active" role="tab" aria-selected="true">Accedi</button>
+          <button id="mode-signup" class="auth-switch-btn" role="tab" aria-selected="false">Crea un account</button>
+          <span class="auth-switch-slider" aria-hidden="true"></span>
+        </div>
       </div>
     </div>
     <div class="auth-form-panel">
 
       <div class="auth-card" id="auth-card">
-        <div class="auth-switch" role="tablist">
-          <button id="mode-login" class="auth-switch-btn active" role="tab" aria-selected="true">Accedi</button>
-          <button id="mode-signup" class="auth-switch-btn" role="tab" aria-selected="false">Registrati</button>
-          <span class="auth-switch-slider" aria-hidden="true"></span>
-        </div>
-
         <h2 id="auth-title">Bentornato</h2>
         <p id="auth-subtitle" class="auth-subtitle">Accedi per vedere chi guida oggi.</p>
 
