@@ -40,20 +40,23 @@ policy troppo larghe.
 
 ---
 
-## Dove siamo (26/07/2026)
+## Dove siamo (27/07/2026, sera)
 
-**Fasi 0-3 chiuse, e della Fase 4 mancano solo le notifiche.** `main` è al merge della PR #3.
-Migrazioni 000-014 applicate in produzione, ramo protetto da un ruleset versionato, e il sito vivo
-serve tutto quello che segue:
+**Fasi 0-3 chiuse, e della Fase 4 mancano solo le chiavi delle notifiche.** `main` è al merge
+della PR #9: le sei PR aperte in giornata sono state pubblicate tutte, e con loro le migrazioni
+fino alla `017`. Ramo protetto da un ruleset versionato, e il sito vivo serve tutto quello che
+segue:
 
 | Cantiere | Stato |
 |---|---|
-| C12 PWA | fatto nel codice, **da installare su un telefono vero** |
+| C12 PWA | fatto nel codice, icone `maskable` comprese, **da installare su un telefono vero** |
 | C13 notifiche a scheda chiusa | **metà fatta**: coda, trigger, iscrizioni e interruttore ci sono e sono verificati in CI; restano le chiavi VAPID, il deploy della Edge Function e `pg_cron`, che il repo non può fare |
 | C14 servizi esterni | **chiuso** (Web Share, `.ics`, navigazione sul punto vero) |
-| C15 estetica | fatto al secondo tentativo; il giudizio finale è di chi la usa |
+| C15 estetica | fatto al secondo tentativo, carattere compreso; il giudizio finale è di chi la usa |
 | C18 standard dello Starter | **chiuso nei due versi**: il 27/07/2026 le lezioni sono tornate nello Starter del vault (`Permissions-Policy`, migrazioni numerate, ordine codice/schema, «provalo al contrario») |
-| C21 coordinate nel payload | **fatto** (`015` + `016`), **da applicare in produzione nell'ordine giusto** |
+| C21 coordinate nel payload | **fatto e applicato** (`015` + `016`), nell'ordine giusto |
+| C22 la zona nel profilo | **scritto** (`018` + `019`), da pubblicare e applicare — è lo stesso buco di C21, sull'altra tabella |
+| C23 permessi delle funzioni | **scritto** (`020`), da applicare — `grant execute to public` è il default di Postgres, e si vedeva solo andando a cercarlo |
 
 **T1 è raggiunto sul piano tecnico.** Quello che manca per dire "pronta per la comitiva" non è
 codice: è **gente vera che la usa**, e un collaudo a video che non è mai stato fatto. Sotto, cosa
@@ -651,6 +654,70 @@ la chiamata a `blinda_coordinate()`, il controllo `is_member or ho_un_posto`, il
 coordinate. **Raggiunto**: da fuori `select *` viene rifiutato e `coordinate_passaggi` non torna
 nessuna riga, mentre chi è dentro o ha un posto sull'auto continua ad avere il punto esatto.
 
+### C22 — La zona non è un dato del profilo pubblico — *scritto il 27/07/2026, da pubblicare*
+
+Nato dalla revisione integrale del 27/07: **C21 ha chiuso la porta di `rides` e ha lasciato aperta
+quella di `profiles`**, che è la stessa porta. La 014 ha aggiunto al profilo `zona_lat`, `zona_lon`
+e `zona_nome` — cioè il punto che il telefono misura quando premi "Sono qui", che per quasi tutti è
+casa propria — e una policy RLS è di riga: decide *quali profili* si leggono, non *quali colonne*.
+Quindi `GET /rest/v1/profiles?select=*` restituiva le coordinate di casa di chiunque condivida una
+comitiva. E da C9 non serve nemmeno la comitiva: la 014 apre la lettura del profilo anche a chi vede
+un passaggio `pubblico` guidato (o occupato) da quella persona — cioè **proprio l'estraneo a cui
+C21 aveva appena tolto il punto di ritrovo poteva prendersi quello di casa dal profilo di chi
+guida.** Insieme alle coordinate usciva `sospeso_motivo`, che è quello che l'amministratore ha
+scritto sospendendo qualcuno: cosa fra due persone, non notizia da comitiva.
+
+**Fatto in due migrazioni**, per la stessa ragione di C21 e con la stessa regola di ordine:
+
+| | Cosa fa | Quando si applica |
+|---|---|---|
+| `018_profilo_a_richiesta.sql` | aggiunge `mio_profilo()`, che restituisce la propria riga intera | **prima** di pubblicare il codice, che la chiama |
+| `019_zona_riservata.sql` | toglie il permesso di lettura su `zona_lat`, `zona_lon`, `zona_nome`, `sospeso_motivo` | **dopo** la pubblicazione: rompe il `select` del codice vecchio |
+
+**`returns setof profiles` invece di un elenco di colonne**, ed è l'unica differenza rispetto a
+`coordinate_passaggi`: lì le colonne da restituire erano due e non cambiano, qui sono tutte quelle
+del profilo, che sono cambiate tre volte in tre settimane. Un elenco dentro la funzione sarebbe la
+seconda copia da tenere allineata, e la prima colonna nuova nascerebbe invisibile all'app.
+
+**Cosa resta leggibile, e perché non è una dimenticanza:** `display_name` e `avatar_url` sono il
+motivo per cui i profili si leggono; `is_admin` dice chi modera; `sospeso` resta perché
+l'interfaccia dell'amministratore lo mostra accanto alla segnalazione — è lo stato, non la
+motivazione.
+
+**Verificato** in `supabase/test/verifica-profilo.sql`, in CI, e provato al contrario: togliendo la
+chiamata a `blinda_profilo()`, il filtro `p.id = auth.uid()` dentro `mio_profilo()`, la revoca di
+`execute` o il `grant` ad `authenticated`, il test diventa rosso — uno per ciascuno.
+
+*Fatto quando:* un utente che interroga l'API a mano riceve i profili che gli spettano **senza** le
+coordinate della zona. Da verificare in produzione dopo aver applicato la `019`, con la stessa prova
+di C21: `select=*` su `profiles` deve essere rifiutato, `select=display_name` no.
+
+### C23 — Le funzioni interne non si chiamano da un browser — *scritto il 27/07/2026, da applicare*
+
+Trovato nello stesso giro, guardando i **permessi delle funzioni** invece delle policy. In Postgres
+una funzione nasce eseguibile da chiunque: `grant execute to public` è il default, e non è scritto
+da nessuna parte. Le migrazioni se n'erano ricordate dove era evidente (`elimina_account`,
+`accoda_notifica`, `blinda_coordinate`, `accoda_partenze_imminenti`) e non dove non lo era.
+
+Due buchi veri, entrambi in `020_funzioni_riservate.sql`:
+
+- **`bloccati_fra(a, b)`** è `security definer` e prende **due** id come parametri. Il commento
+  della 012 dice che quelle funzioni «restano innocue perché non accettano scelte da chi chiama»:
+  è vero per `si_bloccano(altro)` e `mi_ha_bloccato(altro)`, ancorate ad `auth.uid()`, ed è falso
+  proprio per questa. Chiunque poteva chiedere «X e Y si sono bloccati?» su due persone che non lo
+  riguardano, e gli id si leggono dal payload della Home. Il blocco è la cosa che la 012 nasconde
+  perfino a chi lo subisce. Stessa forma per `sospeso(u)`, che dà lo stato di moderazione di
+  chiunque a chiunque.
+- **`create_group` / `join_group` erano chiamabili senza account.** Entrare non si riusciva — la
+  chiave primaria di `group_members` rifiuta un `user_id` nullo — ma **l'errore cambia** a seconda
+  che il codice esista o no: un oracolo per cercare i codici invito da fuori, cioè l'opposto di
+  quello che `SECURITY.md` promette. Ora `anon` non le chiama, `authenticated` sì.
+
+**Non ha un ordine di applicazione**, ed è l'unica delle tre a non averlo: non toglie niente che il
+codice pubblicato usi. Verificato in `supabase/test/verifica-permessi.sql`, in CI, e il quarto
+controllo è quello che tiene onesti gli altri tre — chiudere è facile, chiudere senza rompere
+l'ingresso in comitiva no.
+
 ---
 
 ## Fase 5 — Abbellire e ottimizzare
@@ -799,6 +866,64 @@ Cercare "wetransport" su GitHub non trova niente.
 - **Dominio proprio: sì, ma a T2.** Finché lo usa la comitiva, `.netlify.app` va benissimo. Quando
   si apre al pubblico serve un dominio vero: è anche il biglietto da visita dello studio, e un
   `.netlify.app` in vetrina dice "esperimento". Costo ~10-15 € l'anno.
+
+---
+
+## Revisione integrale del 27/07/2026 — cosa è uscito
+
+Lettura riga per riga di `app.js` (2103 righe), delle 17 migrazioni, del guscio (`sw.js`,
+`netlify.toml`, `index.html`, `manifest.json`), della Edge Function e dell'informativa, in una
+passata sola con tutte le classi di controllo insieme. Metodo imposto da `Regole.md`, ed è la
+seconda volta che ripaga: il difetto peggiore era **fuori** dal file che stavo guardando.
+
+**Corretto in questo giro**
+
+| Cosa | Dove | Perché contava |
+|---|---|---|
+| La zona di casa usciva dentro il profilo | `018` + `019`, C22 qui sopra | Il buco di C21 sull'altra tabella, e più esposto: bastava vedere un passaggio pubblico |
+| `bloccati_fra` e `sospeso` rispondevano a chiunque su chiunque; i codici invito si potevano provare senza account | `020`, C23 qui sopra | `grant execute to public` è il default di Postgres. Il blocco è la cosa che la 012 nasconde perfino a chi lo subisce, e la lasciava leggere una funzione |
+| La Home mostrava le auto delle **proprie altre comitive**, etichettate "in zona" | `loadRides` | Da C9 il filtro sul gruppo era sparito dalla query, e la policy fa uscire tutto il visibile — comprese le comitive di cui sono membro. Con una comitiva sola non si vedeva; con due, le pillole dei gruppi non volevano più dire niente e l'etichetta mentiva |
+| `#i-edit` non esiste nello sprite | `index.html` | Il bottone "Cambia nome" mostrava un rettangolo vuoto al posto dell'icona, da sempre |
+| L'esportazione revocava il blob nello stesso istante del click | `esportaDati` | La lezione era già stata pagata in `scaricaIcs`, e lì sola: fuori da Chrome il file poteva arrivare vuoto |
+| Doppia sottoscrizione realtime a ogni accesso | `subscribeRealtime` | `render()` sottoscrive, poi chiama `setDate()`, che sottoscrive di nuovo: una connessione aperta e chiusa nello stesso istante |
+| La Edge Function si apriva a chiunque se `CRON_SECRET` mancava | `functions/notifiche` | `if (segretoCron && ...)`: una guardia che si spegne da sola quando le manca la chiave. Ora rifiuta di partire |
+| `supabase functions deploy` senza `--no-verify-jwt` | `supabase/README.md` | Il primo giro del cron avrebbe risposto `401` senza che niente somigliasse a un errore delle notifiche |
+| L'informativa non diceva posizione, avvisi push e jsDelivr | `privacy.html` | Tre trattamenti veri e un terzo destinatario non dichiarati. È esattamente la lezione dei caratteri di C15: **un'informativa si verifica sulle richieste di rete, non sulle intenzioni** |
+
+**Trovati e lasciati stare, con motivo**
+
+- `.waitlist-row` e `.fuel` non esistono in `style.css` (già noto da C7). Non rompono niente:
+  sono modificatori che non modificano.
+- `askNotifyPermission()` chiede il permesso delle notifiche **al primo click ovunque**. Da C13
+  c'è un interruttore esplicito nel Profilo, quindi è una domanda doppia e fuori contesto — e i
+  browser penalizzano chi la fa a freddo. Toglierla è togliere un comportamento: serve un sì.
+- `push_subscriptions.endpoint` è unico su tutta la tabella. Due account sullo stesso browser: al
+  secondo l'app dice "avvisi accesi" e non arriva niente, perché la riga è dell'altro. Caso di
+  dispositivo condiviso, si risolve quando le notifiche verranno accese davvero.
+- Le Statistiche contano anche i passaggi **futuri** già pubblicati. Semanticamente discutibile,
+  ma è la stessa cifra che si vede in Home: cambiarla è una decisione di prodotto, non un fix.
+- Il realtime su `rides` passa da un permesso per colonna che prima non c'era (016). Il payload
+  arriva filtrato per colonna e l'app lo ignora — ricarica e basta — ma **questo si guarda a
+  video**, non si deduce: è già il punto 6 dei prossimi passi.
+
+**Idee raccolte, da valutare (nessuna decisa)**
+
+1. **Ospitare `supabase-js` invece di prenderlo da jsDelivr.** Chiude tre cose in un colpo: il
+   numero di arrivo di C16 (73,5 KB e 9 richieste da un'altra origine, più della metà del peso
+   totale), l'ultima riga di terze parti nella CSP, e l'ultimo destinatario nell'informativa. È il
+   seguito naturale di quello che si è fatto con i caratteri.
+2. **Accorpare le quattro attese incatenate della prima schermata** (profilo → bloccati → comitive
+   → passaggi) in una RPC sola. È l'altra metà di C16, e si sente solo su rete lenta.
+3. **Una vista "passaggi in zona" vera.** Oggi la scoperta è passiva: compaiono in Home mescolati
+   ai propri. Con più comitive intorno servirà un posto dove cercarli di proposito.
+4. **Avviso quando un passaggio viene annullato.** D5 dice tre notifiche sole, ma questa cambia i
+   piani di chi ci contava più di tutte le altre: da riaprire, non da aggiungere di nascosto.
+5. **Cancellare in blocco una serie ripetuta.** "Ripeti per 4 settimane" pubblica quattro auto e
+   poi si annullano una per una.
+6. **Il conto alla rovescia vivo** e il conteggio dei commenti che si aggiorna: due cosmetici già
+   annotati in C7, che oggi costerebbero poco.
+7. **`dest_lat`/`dest_lon`**: restano colonne morte finché non si riapre D6 (geocoder o selettore
+   su mappa). Non è un bug da chiudere, è una decisione da riprendere.
 
 ---
 

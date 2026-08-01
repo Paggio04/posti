@@ -45,10 +45,19 @@ funziona lo stesso.
 2. **Il deploy della funzione**, che questo repo non puo' fare (serve la CLI e un token):
    ```
    supabase secrets set VAPID_PUBLIC_KEY=... VAPID_PRIVATE_KEY=... VAPID_SUBJECT=mailto:... CRON_SECRET=...
-   supabase functions deploy notifiche
+   supabase functions deploy notifiche --no-verify-jwt
    ```
    Il codice sta in `supabase/functions/notifiche/index.ts`. **Non e' mai stato eseguito**:
    il primo giro va guardato nei log.
+
+   **`--no-verify-jwt` non e' una svista.** Di suo una Edge Function pretende un JWT valido
+   nell'header `Authorization`, e chi la chiama qui e' `pg_cron` via `pg_net`, che un utente
+   non ce l'ha: senza quella riga il primo giro risponde `401` e nei log non c'e' niente che
+   somigli a un errore delle notifiche. Chi entra resta filtrato lo stesso, e da una guardia
+   che questo repo controlla: `CRON_SECRET`, senza il quale la funzione **rifiuta di
+   partire** (`503`) invece di restare aperta. In alternativa si tiene la verifica del JWT e
+   si aggiunge `"Authorization": "Bearer <anon key>"` fra gli header del cron: cambia dove
+   sta il controllo, non quanto vale.
 3. **`pg_cron` che la chiama**, ogni dieci minuti. Dal SQL editor, una volta:
    ```sql
    create extension if not exists pg_cron;
@@ -120,3 +129,8 @@ questo sono due file invece di uno:
 
 Applicarle tutte e due di fila su un sito ancora vecchio non e' una scorciatoia: e' il passo 3 fatto
 troppo presto.
+
+La **018 e la 019** (cantiere C22) sono la stessa coppia, sull'altra tabella: la 018 aggiunge
+`mio_profilo()` e va prima del deploy; la 019 toglie il permesso di leggere `zona_lat`, `zona_lon`,
+`zona_nome` e `sospeso_motivo` dalla riga di chiunque, e va dopo — prima del deploy vorrebbe dire
+un'app che non parte, perche' `ensureProfile` quelle colonne le chiede al primo caricamento.

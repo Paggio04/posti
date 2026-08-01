@@ -92,10 +92,17 @@ jobs:
       - name: I passaggi in zona escono, e niente altro con loro
         run: psql -v ON_ERROR_STOP=1 -q -f supabase/test/verifica-zona.sql
 
-      # Va per ultimo di proposito: i test qui sopra aprono i permessi con un
-      # `grant all on all tables`, e questo li richiude prima di verificarli.
+      # Vanno per ultimi di proposito, e in quest'ordine: i test qui sopra aprono i
+      # permessi con un `grant all on all tables`, e questi due li richiudono — ciascuno
+      # il proprio — prima di verificarli.
       - name: Le coordinate non escono dalla comitiva
         run: psql -v ON_ERROR_STOP=1 -q -f supabase/test/verifica-coordinate.sql
+
+      - name: La zona di una persona non esce dal suo profilo
+        run: psql -v ON_ERROR_STOP=1 -q -f supabase/test/verifica-profilo.sql
+
+      - name: Le funzioni interne non si chiamano da un client
+        run: psql -v ON_ERROR_STOP=1 -q -f supabase/test/verifica-permessi.sql
 
       - name: Aggiornamento dal vecchio schema, senza perdere dati
         run: |

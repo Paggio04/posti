@@ -45,7 +45,7 @@ Principi:
 
 | Tabella | Scopo | Vincoli chiave |
 |---|---|---|
-| `profiles` | Nome visibile per utente | PK = `auth.users.id`, auto-creato da trigger alla registrazione |
+| `profiles` | Nome visibile per utente | PK = `auth.users.id`, auto-creato da trigger alla registrazione. Da C22 `zona_lat`, `zona_lon`, `zona_nome` e `sospeso_motivo` **non sono leggibili da un client**: la propria riga si prende da `mio_profilo()` |
 | `groups` | Comitive | `code` invito unico (6 char), owner |
 | `group_members` | Appartenenza | PK (group_id, user_id) |
 | `rides` | Auto pubblicate per un giorno | `group_id` obbligatorio; unique (driver, giorno, gruppo); trigger `check_ride`. Da C21 le quattro colonne delle coordinate **non sono leggibili da un client**: si passa da `coordinate_passaggi()` |
@@ -75,6 +75,7 @@ Trigger (fonte: `supabase/migrations/`):
 | Entra in gruppo | `rpc('join_group', {p_code})` → riga `groups` | utente autenticato, codice valido |
 | Leggi auto del giorno | `from('rides').select(...embed...)` — colonne nominate, mai `*` | membro del gruppo, più chi vede il passaggio perché è aperto alla zona o a chiunque |
 | Punto esatto del ritrovo | `rpc('coordinate_passaggi', {ids})` | solo membro della comitiva che ospita, o chi ha un posto su quell'auto |
+| Il proprio profilo, intero | `rpc('mio_profilo')` → una riga di `profiles` | chi chiama, e nessun altro: la funzione non prende parametri |
 | Pubblica auto | `from('rides').insert` | `driver_id = auth.uid()` + trigger |
 | Prenota/lascia sedile | `from('seat_claims').insert/delete` | `passenger_id = auth.uid()` (+ guidatore può liberare) + trigger |
 | Richiesta passaggio | `from('ride_requests').insert/delete` | proprie righe |

@@ -35,6 +35,7 @@ let myGroups = [];
 let currentGroupId = null; // sempre un gruppo vero quando l'utente ne ha almeno uno
 const ULTIMO_GRUPPO = 'wt_ultimo_gruppo'; // quale comitiva stavo guardando
 let realtimeChannel = null;
+let realtimeDate = null;     // il giorno su cui il canale e' filtrato adesso
 let rendered = false;
 
 // Data locale (non UTC: dopo mezzanotte toISOString darebbe il giorno sbagliato)
@@ -212,9 +213,13 @@ async function ensureProfile() {
     || currentUser.user_metadata?.name
     || currentUser.email.split('@')[0];
   const oauthAvatar = currentUser.user_metadata?.avatar_url || currentUser.user_metadata?.picture || null;
-  const { data } = await supabase.from('profiles')
-    .select('display_name, is_admin, avatar_url, sospeso, sospeso_motivo, zona_lat, zona_lon, zona_nome')
-    .eq('id', currentUser.id).maybeSingle();
+  // Il proprio profilo arriva da `mio_profilo()` e non da un select sulla tabella: da
+  // `019_zona_riservata.sql` la zona e il motivo della sospensione non sono piu' colonne
+  // leggibili da un client, nemmeno sulla propria riga (un permesso per colonna vale per
+  // il ruolo, non per la riga). La funzione risponde di una persona sola, chi la chiama.
+  const { data: righe, error: erroreProfilo } = await supabase.rpc('mio_profilo');
+  if (erroreProfilo) console.error('mio_profilo() non risponde:', erroreProfilo);
+  const data = righe?.[0] ?? null;
   if (data) {
     myName = data.display_name; isAdmin = !!data.is_admin; myAvatar = data.avatar_url;
     sospeso = !!data.sospeso; sospesoMotivo = data.sospeso_motivo;
@@ -226,7 +231,13 @@ async function ensureProfile() {
     }
     return;
   }
-  await supabase.from('profiles').insert({ id: currentUser.id, display_name: fallback, avatar_url: oauthAvatar });
+  // La riga si crea solo se la funzione ha davvero risposto "non c'e' nessun profilo".
+  // Se invece ha dato errore — il caso vero e' la 018 non applicata — la riga esiste
+  // eccome, e l'insert fallirebbe in silenzio su chiave duplicata: due errori taciuti
+  // invece di uno. Sotto si prosegue con i valori di ripiego, e la console dice perche'.
+  if (!erroreProfilo) {
+    await supabase.from('profiles').insert({ id: currentUser.id, display_name: fallback, avatar_url: oauthAvatar });
+  }
   myName = fallback;
   myAvatar = oauthAvatar;
   isAdmin = false;
@@ -534,8 +545,11 @@ async function esportaDati() {
   // (vedi COLONNE_RIDE). Le coordinate delle proprie auto rientrano subito dopo, dalla
   // stessa funzione che le da' alla Home: sono dati propri, e devono esserci.
   const mieAuto = () => supabase.from('rides').select(COLONNE_RIDE).eq('driver_id', currentUser.id);
+  // Il profilo esce intero, zona compresa, e per la stessa ragione delle coordinate: sono
+  // dati propri. Dopo la 019 pero' il `select('*')` sulla tabella non li porterebbe piu'
+  // (permesso per colonna), quindi si chiede a `mio_profilo()`, che li ha tutti.
   const [profilo, auto, posti, richieste, commenti, attesa, gruppi, segnalazioni, blocchi] = await Promise.all([
-    supabase.from('profiles').select('*').eq('id', currentUser.id).maybeSingle(),
+    supabase.rpc('mio_profilo'),
     mieAuto(),
     mio('seat_claims', 'passenger_id'),
     mio('ride_requests', 'user_id'),
@@ -556,7 +570,7 @@ async function esportaDati() {
   const dati = {
     esportato_il: new Date().toISOString(),
     account: { id: currentUser.id, email: currentUser.email, registrato_il: currentUser.created_at },
-    profilo: profilo.data,
+    profilo: profilo.data?.[0] ?? null,
     comitive: gruppi.data,
     auto_pubblicate: auto.data,
     posti_prenotati: posti.data,
@@ -574,8 +588,13 @@ async function esportaDati() {
   const a = document.createElement('a');
   a.href = url;
   a.download = `wetransport-${todayISO()}.json`;
+  // Stessa cautela di scaricaIcs(), e per lo stesso motivo: l'ancora deve stare nel
+  // documento perche' il click valga anche fuori da Chrome, e revocare l'indirizzo
+  // nello stesso istante lascia a mani vuote i browser che leggono il blob un attimo dopo.
+  document.body.appendChild(a);
   a.click();
-  URL.revokeObjectURL(url);
+  a.remove();
+  setTimeout(() => URL.revokeObjectURL(url), 10_000);
   toast('Dati scaricati.');
 }
 
@@ -1222,7 +1241,13 @@ function askNotifyPermission() {
 }
 
 // --- Realtime ---
+// Il canale filtra sul giorno guardato, quindi riabbonarsi allo stesso giorno e' lavoro
+// per niente: succedeva a ogni accesso, perche' render() sottoscrive e poi chiama
+// setDate(), che sottoscrive di nuovo. Una connessione aperta e chiusa nello stesso
+// istante, e sulla rete di un telefono si sente.
 function subscribeRealtime() {
+  if (realtimeChannel && realtimeDate === currentDate) return;
+  realtimeDate = currentDate;
   if (realtimeChannel) supabase.removeChannel(realtimeChannel);
   realtimeChannel = supabase
     .channel('posti-live')
@@ -1343,12 +1368,18 @@ async function loadRides(silent = false) {
     return;
   }
   retryCount = 0;
-  await attaccaCoordinate(data);
+  // La policy fa uscire tutto il visibile, e "visibile" comprende **le altre comitive di
+  // cui faccio parte**: senza questo filtro, guardando il gruppo A comparivano anche le
+  // auto del gruppo B, per giunta con l'etichetta "in zona" — che e' falsa, sono mie.
+  // Restano quelle di fuori (zona o pubbliche), che sono il senso di C9.
+  const miei = new Set(myGroups.map((g) => g.id));
+  const visibili = (data ?? []).filter((r) => r.group_id === currentGroupId || !miei.has(r.group_id));
+  await attaccaCoordinate(visibili);
   if (token !== loadToken) return; // e' passata un'altra richiesta mentre chiedevo i punti
   currentRequests = reqs ?? [];
-  updateDayCta(data);
-  renderRides(data);
-  renderWalkers(data);
+  updateDayCta(visibili);
+  renderRides(visibili);
+  renderWalkers(visibili);
   renderTurnHint();
 }
 
@@ -2090,6 +2121,7 @@ async function render() {
   } else if (realtimeChannel) {
     supabase.removeChannel(realtimeChannel);
     realtimeChannel = null;
+    realtimeDate = null;
   }
 }
 

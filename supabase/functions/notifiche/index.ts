@@ -26,8 +26,11 @@ const chiaveServizio = Deno.env.get('SUPABASE_SERVICE_KEY')!;
 const vapidPubblica = Deno.env.get('VAPID_PUBLIC_KEY')!;
 const vapidPrivata = Deno.env.get('VAPID_PRIVATE_KEY')!;
 const contatto = Deno.env.get('VAPID_SUBJECT') ?? 'mailto:wetransport@example.invalid';
-// Chi puo' svegliare questa funzione. Senza, l'indirizzo e' pubblico e chiunque puo' farla
-// girare a vuoto: non espone dati, ma consuma quota e manda notifiche in anticipo.
+// Chi puo' svegliare questa funzione. **Senza segreto non si parte**: prima il controllo
+// era `if (segretoCron && ...)`, cioe' dimenticare di impostarlo lasciava l'indirizzo
+// aperto a chiunque — e nessun errore lo diceva, perche' la funzione rispondeva benissimo.
+// Una guardia che si spegne da sola quando manca la sua chiave e' peggio di nessuna
+// guardia: chiudere e' l'unica scelta che si nota subito.
 const segretoCron = Deno.env.get('CRON_SECRET') ?? '';
 
 webpush.setVapidDetails(contatto, vapidPubblica, vapidPrivata);
@@ -35,7 +38,11 @@ webpush.setVapidDetails(contatto, vapidPubblica, vapidPrivata);
 const db = createClient(url, chiaveServizio, { auth: { persistSession: false } });
 
 Deno.serve(async (req) => {
-  if (segretoCron && req.headers.get('x-cron-secret') !== segretoCron) {
+  if (!segretoCron) {
+    console.error('CRON_SECRET non impostato: la funzione resta chiusa.');
+    return new Response('no', { status: 503 });
+  }
+  if (req.headers.get('x-cron-secret') !== segretoCron) {
     return new Response('no', { status: 401 });
   }
 
