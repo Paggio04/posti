@@ -38,37 +38,36 @@ const SONDE = [
     nome: 'bloccati_fra',
     funzione: 'bloccati_fra',
     corpo: { a: IGNOTO_A, b: IGNOTO_B },
-    attesoOggi: '200',
+    attesoOggi: '42501',
     attesoDopo: '42501',
-    spiega: 'security definer con due id come parametri: dice di due estranei se si sono bloccati',
+    spiega: 'security definer con due id come parametri: diceva di due estranei se si sono bloccati. Chiusa dalla 020',
   },
   {
     nome: 'sospeso',
     funzione: 'sospeso',
     corpo: { u: IGNOTO_A },
-    attesoOggi: '200',
+    attesoOggi: '42501',
     attesoDopo: '42501',
-    spiega: 'stato di moderazione di chiunque, a chiunque',
+    spiega: 'dava lo stato di moderazione di chiunque, a chiunque. Chiusa dalla 020',
   },
   {
     nome: 'join_group',
     funzione: 'join_group',
     corpo: { p_code: 'ZZZZZ9' },
-    attesoOggi: 'P0001',
+    attesoOggi: '42501',
     attesoDopo: '42501',
-    spiega: "risponde a chi non ha un account. Perche' e' un problema: vedi SECURITY.md, riga «Codici invito / enumerazione»",
+    spiega: "non e' piu' chiamabile senza account (020). Resta aperta da autenticato: vedi SECURITY.md, riga «Codici invito / enumerazione», e C24",
   },
   {
     nome: 'mio_profilo',
     funzione: 'mio_profilo',
     corpo: {},
-    attesoOggi: 'PGRST202',
+    attesoOggi: '42501',
     attesoDopo: '42501',
     migrazione: '018',
     spiega:
-      "sonda di stato dello schema, non di C23: PGRST202 significa che la 018 non e' applicata. " +
-      'Per questa riga la migrazione che cambia la risposta e\' la 018, non la 020: appena esiste, ' +
-      "la funzione c'e' ma resta riservata a chi ha un account.",
+      "sonda di stato dello schema, non di C23: la 018 l'ha creata (01/08/2026) e la lascia " +
+      "riservata a chi ha un account. PGRST202 qui vorrebbe dire che la funzione e' sparita.",
   },
 ];
 
@@ -109,14 +108,14 @@ for (const s of SONDE) {
   const esito = await sonda(s);
   righe.push({ ...s, ...esito });
   console.log(
-    `${s.nome} | ${esito.http} | ${esito.codice} | atteso oggi: ${s.attesoOggi} — dopo la ${s.migrazione ?? '020'}: ${s.attesoDopo}`
+    `${s.nome} | ${esito.http} | ${esito.codice} | atteso: ${s.attesoOggi}`
   );
 }
 
 console.log('');
 console.log(`Progetto: ${SUPABASE_URL}`);
 console.log('Legenda:');
-console.log('  200      la funzione ha risposto a chi non ha un account');
+console.log('  42501    permesso negato: lo stato corretto dal 01/08/2026');
 console.log('  P0001    ha risposto, e il messaggio distingue un caso dall\'altro');
 console.log('  42501    permesso negato: e\' quello che si vuole leggere dopo la 020');
 console.log('  PGRST202 la funzione non esiste su questo progetto');
@@ -128,7 +127,7 @@ const riepilogo = () => console.log(
   scarti.length === 0
     ? 'Tutte le sonde rispondono come SECURITY.md dichiara oggi.'
     : `Scarti rispetto a quanto dichiarato oggi: ${scarti.map((r) => `${r.nome} → ${r.codice}`).join(', ')}. ` +
-      'Se la 020 e la 018 sono state applicate, e\' questo file (e la riga di SECURITY.md) a dover cambiare.'
+      'Le migrazioni 018, 019 e 020 sono applicate dal 01/08/2026: uno scarto qui e\' una regressione, non un aggiornamento da fare.'
 );
 
 // --- La 019, che si misura senza account ---------------------------------
@@ -148,11 +147,10 @@ const rides = await tabella('rides');
 const profiles = await tabella('profiles');
 const zonaChiusa = profiles === 401 || profiles === 403;
 console.log(`019 | rides select=* -> ${rides} (riferimento: la 016 e' applicata)`);
-console.log(`019 | profiles select=* -> ${profiles} -> zona ${zonaChiusa ? 'RISERVATA' : 'ANCORA LEGGIBILE'}`);
-// Stessa semantica delle altre sonde: oggi la 019 NON e' applicata, quindi 200 e'
-// l'atteso e non uno scarto. Il giorno in cui diventa 42501, lo scarto e' il segnale
-// che questa riga e la ⚠️ di SECURITY.md vanno riscritte.
-if (zonaChiusa) scarti.push({ nome: '019', codice: `${profiles} (applicata: aggiorna SECURITY.md)` });
+console.log(`019 | profiles select=* -> ${profiles} -> zona ${zonaChiusa ? 'RISERVATA' : 'LEGGIBILE (regressione)'}`);
+// La 019 e' applicata dal 01/08/2026: la zona deve restare riservata. Se un giorno
+// `profiles select=*` tornasse leggibile, e' una regressione vera, non un aggiornamento.
+if (!zonaChiusa) scarti.push({ nome: '019', codice: `${profiles} (REGRESSIONE: la zona e' di nuovo leggibile)` });
 
 riepilogo();
 // Uno script di verifica che esce 0 comunque non verifica niente: se la realta'
