@@ -56,7 +56,7 @@ const SONDE = [
     corpo: { p_code: 'ZZZZZ9' },
     attesoOggi: 'P0001',
     attesoDopo: '42501',
-    spiega: "'Codice non valido' solo se il codice NON esiste: e' l'oracolo sui codici invito",
+    spiega: "risponde a chi non ha un account. Perche' e' un problema: vedi SECURITY.md, riga «Codici invito / enumerazione»",
   },
   {
     nome: 'mio_profilo',
