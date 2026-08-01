@@ -57,6 +57,7 @@ segue:
 | C21 coordinate nel payload | **fatto e applicato** (`015` + `016`), nell'ordine giusto |
 | C22 la zona nel profilo | **scritto** (`018` + `019`), da pubblicare e applicare — è lo stesso buco di C21, sull'altra tabella |
 | C23 permessi delle funzioni | **scritto** (`020`), da applicare — `grant execute to public` è il default di Postgres, e si vedeva solo andando a cercarlo |
+| C24 codici invito indovinabili | **aperto, non affrontato**: la `020` chiude la parte che riguarda chi non ha un account, resta quella che riguarda chi ce l'ha. Si affronta dopo la Fase A |
 
 **T1 è raggiunto sul piano tecnico.** Quello che manca per dire "pronta per la comitiva" non è
 codice: è **gente vera che la usa**, e un collaudo a video che non è mai stato fatto. Sotto, cosa
@@ -717,6 +718,37 @@ Due buchi veri, entrambi in `020_funzioni_riservate.sql`:
 codice pubblicato usi. Verificato in `supabase/test/verifica-permessi.sql`, in CI, e il quarto
 controllo è quello che tiene onesti gli altri tre — chiudere è facile, chiudere senza rompere
 l'ingresso in comitiva no.
+
+### C24 — I codici invito si indovinano, da autenticato — *aperto il 31/07/2026, non ancora affrontato*
+
+Nato scrivendo la riga «Codici invito / enumerazione» di `SECURITY.md`, che prima prometteva una
+cosa che non è vera. La `020` chiude la parte che riguarda chi **non** ha un account; resta quella
+che riguarda chi ce l'ha, ed è la più seria delle due — perché a quel punto un codice indovinato non
+si limita a rivelarsi.
+
+**Quando.** Dopo la Fase A, cioè dopo che `018`, `019` e `020` sono applicate e la PR #11 è fusa.
+Prima non ha senso: tocca lo stesso schema, e la Fase A è più urgente.
+
+**Perché non adesso.** Cambia i codici che le persone si sono già scambiate a voce. È una decisione
+del proprietario, non un fix da fare di iniziativa.
+
+**I tre rimedi, in ordine di rapporto valore/costo.**
+
+1. **Allungare il codice e allargarne l'alfabeto**, scartando i caratteri che si confondono
+   leggendoli a voce. I codici già distribuiti restano validi: cambia il `default` della colonna,
+   non le righe già scritte. Da sola rende le altre due un lusso.
+2. **Uniformare l'errore** di `join_group`, così che i casi che oggi si distinguono rispondano allo
+   stesso modo.
+3. **Un limite di tentativi** per utente. È l'unico dei tre che aggiunge stato da mantenere, ed è il
+   meno urgente se si fa la prima.
+
+*Fatto quando*: il `default` della colonna `code` produce codici del formato nuovo, `join_group`
+risponde uguale nei casi che oggi distingue, e la riga «Codici invito / enumerazione» di
+`SECURITY.md` passa da ⚠️ a ✅ con accanto il comando che lo prova.
+
+**La misura del buco, i numeri e il modo in cui si sfrutta non stanno qui**: sono nel vault, che è
+privato. Questo repo è pubblico, e finché C24 è aperto quel dettaglio descrive una cosa che
+funziona adesso.
 
 ---
 
