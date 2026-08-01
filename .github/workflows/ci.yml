@@ -110,6 +110,11 @@ jobs:
       - name: Le funzioni interne non si chiamano da un client
         run: psql -v ON_ERROR_STOP=1 -q -f supabase/test/verifica-permessi.sql
 
+      # I conti sono un dato fra due persone, non del gruppo: la stessa forma di C21
+      # e C22, ma su denaro. Va dopo gli altri perche' ricostruisce le sue persone.
+      - name: I conti restano fra le due parti
+        run: psql -v ON_ERROR_STOP=1 -q -f supabase/test/verifica-conti.sql
+
       - name: Aggiornamento dal vecchio schema, senza perdere dati
         run: |
           psql -v ON_ERROR_STOP=1 -q -c "create database aggiornamento"
