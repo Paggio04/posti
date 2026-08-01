@@ -674,6 +674,13 @@ function switchView(view) {
     b.classList.toggle('on', attiva);
     if (attiva) b.setAttribute('aria-current', 'page'); else b.removeAttribute('aria-current');
   });
+  // Il profilo non ha una voce: ce l'ha la scheda con la faccia, in fondo. Senza
+  // questa riga si arrivava sul profilo e nella barra non era acceso niente, cioe'
+  // la navigazione smetteva di dire dove sei proprio dove sei arrivato.
+  const scheda = document.getElementById('side-me');
+  scheda?.classList.toggle('on', view === 'profile');
+  if (view === 'profile') scheda?.setAttribute('aria-current', 'page');
+  else scheda?.removeAttribute('aria-current');
   window.scrollTo({ top: 0 });
   if (view === 'history') loadHistory();
   if (view === 'stats') loadStats();
@@ -1042,6 +1049,12 @@ function groupLabel() {
   return g ? `Gruppo: ${g.name}` : 'Nessuna comitiva';
 }
 
+// Il solo nome, senza etichetta davanti: nella testata del riepilogo sta accanto alla
+// parola «Riepilogo» e in un contesto che non lascia dubbi su cosa sia.
+function nomeComitiva() {
+  return myGroups.find(x => x.id === currentGroupId)?.name ?? 'Nessuna comitiva';
+}
+
 async function loadHistory() {
   if (!currentGroupId) return;
   const list = document.getElementById('history-list');
@@ -1335,7 +1348,6 @@ async function disegnaRiepilogo(box) {
     <section class="card hero g-carburante">
       <div class="head">
         <span class="sub">Carburante ripartito · mese corrente</span>
-        <span class="pill">${escapeHtml(groupLabel())}</span>
       </div>
       <div class="big">${escapeHtml(eur(meseCorr.tot))}</div>
       <div class="d">${
@@ -1464,12 +1476,15 @@ async function disegnaRiepilogo(box) {
       : '<p class="vuoto">Il registro parte da quando è stato acceso: qui comparirà quello che succede da adesso in poi.</p>'}
     </section>`;
 
+  // Erano cinque perche' cinque ne aveva il disegno, ma due — «Guarda lo storico» e
+  // «Il tuo profilo» — erano scorciatoie per due voci che stanno **gia'** nella
+  // navigazione, a pochi centimetri: lo stesso doppione della voce Profilo nel menu'.
+  // Qui restano solo le cose che si **fanno** e che da qui non si potrebbero fare
+  // altrimenti. Sono flex, quindi tre riempiono la riga esattamente come cinque.
   const AZIONI = [
     ['plus', 'Pubblica<br>un passaggio', 'offerta'],
     ['walk', 'Cerco<br>un passaggio', 'richiesta'],
     ['users', 'Invita<br>un membro', 'invita'],
-    ['history', 'Guarda<br>lo storico', 'storico'],
-    ['user', 'Il tuo<br>profilo', 'profilo'],
   ];
   const cardAzioni = `<div class="azioni g-azioni">${AZIONI.map(([i, t, a]) =>
     `<button type="button" class="az" data-azione="${a}"><span class="o">${ico(i)}</span><span class="t">${t}</span></button>`).join('')}</div>`;
@@ -1546,7 +1561,7 @@ async function disegnaRiepilogo(box) {
         <p>${escapeHtml(oggiInLettere())} · ${futuri.length} ${futuri.length === 1 ? 'passaggio in programma' : 'passaggi in programma'}${
           scoperti ? ` · ${scoperti} ${scoperti === 1 ? 'giorno scoperto' : 'giorni scoperti'}` : ''}</p>
       </div>
-      <span class="dash-gruppo">${escapeHtml(groupLabel())}</span>
+      <span class="dash-gruppo">${escapeHtml(nomeComitiva())}</span>
       <span class="dash-av">${escapeHtml(iniz(myName))}</span>
     </div>
 
@@ -1590,8 +1605,6 @@ async function disegnaRiepilogo(box) {
       b?.focus({ preventScroll: true });
     }
     if (a === 'invita') switchView('groups');
-    if (a === 'storico') switchView('history');
-    if (a === 'profilo') switchView('profile');
   }));
 }
 

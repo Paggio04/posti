@@ -33,6 +33,24 @@
   font-display: swap;
 }
 
+/* ═══════════════════════════════════════════════════════════════════════════
+   LE TRE FASCE, E NON CE NE SONO ALTRE
+
+     mobile    < 768px      progettato e verificato a 360 e 430
+     tablet    768-1279px   progettato e verificato a 768 e 1024
+     desktop   >= 1280px    progettato e verificato a 1280, 1440 e 1920
+
+   Quindi **due sole soglie**: `max-width: 767px` e `min-width: 1280px`. Prima ce
+   n'erano sei sparse — 430, 760, 820, 860, 1024, 1180 — nate ognuna dal componente
+   che la chiedeva. Sei soglie vogliono dire sei larghezze in cui qualcosa cambia, e
+   nessuna delle sei coincide con uno schermo vero: 820px non e' niente, 860px non e'
+   niente. Con due soglie ogni riordino avviene dove finisce un tipo di dispositivo e
+   ne comincia un altro, e le larghezze da provare sono sette, sempre le stesse.
+
+   Regola: **una regola responsive nuova usa una di queste due soglie.** Se sembra
+   servirne una terza, il problema e' il componente, non la soglia.
+   ═══════════════════════════════════════════════════════════════════════════ */
+
 :root {
   /* Palette navy — OKLCH */
   --bg: oklch(0.965 0.008 250);
@@ -370,7 +388,7 @@ svg { vertical-align: -0.15em; }
 .auth-brand-panel .auth-switch-btn:focus-visible { outline: 3px solid var(--ottone); outline-offset: 3px; }
 
 /* Sul telefono non ci sono due meta': niente scivolamento. */
-@media (max-width: 860px) {
+@media (max-width: 1279px) {
   .auth-view, .auth-view:has(.auth-switch.signup) { grid-template-columns: 1fr; }
   .auth-brand-panel,
   .auth-view:has(.auth-switch.signup) .auth-brand-panel {
@@ -581,7 +599,7 @@ input:focus-visible, select:focus-visible, textarea:focus-visible {
 .app-shell { min-height: 100vh; display: flex; flex-direction: column; }
 .shell-col { display: flex; flex-direction: column; flex: 1; min-width: 0; }
 
-/* ---- Barra laterale (>= 1024px) ----
+/* ---- Barra laterale (fascia desktop, >= 1280px) ----
    Nasce spenta e si accende con la media query: cosi' se il CSS nuovo non arrivasse
    per intero, la pagina resta quella di prima invece di mostrare una colonna navy
    senza posizione. */
@@ -610,7 +628,7 @@ input:focus-visible, select:focus-visible, textarea:focus-visible {
 .side-ic { flex: none; width: 15px; height: 15px; display: grid; place-items: center; color: inherit; }
 .side-et { flex: 1 1 auto; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 
-@media (min-width: 1024px) {
+@media (min-width: 1280px) {
   .app-shell:not(.hidden) {
     display: grid;
     grid-template-columns: 206px minmax(0, 1fr);
@@ -1254,10 +1272,34 @@ input:focus-visible, select:focus-visible, textarea:focus-visible {
   font-size: 1.3rem;
   flex: 0 0 auto;
   box-shadow: var(--glow);
+  /* Il cerchio c'era, il ritaglio no. L'avatar di Google arriva alla sua dimensione
+     naturale (96, 128, 256px a seconda del profilo) e senza queste tre righe si
+     disegnava per intero, quadrato, sfondando la scheda dal basso. Era visibile solo
+     con un account OAuth vero: con le iniziali il difetto non esiste. */
+  overflow: hidden;
+}
+.profile-avatar img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  display: block;
 }
 .profile-name { font-weight: 700; font-size: 1.1rem; }
 .profile-email { color: var(--ink-soft); font-size: 0.88rem; }
-.profile-actions { display: grid; gap: 10px; max-width: 420px; }
+/* I quattro bottoni stavano in una colonna larga 420px accanto a schede larghe quanto
+   la pagina: due misure e due allineamenti diversi per la stessa vista. Ora sono un
+   blocco 2x2 largo come tutto il resto, e i due distruttivi stanno nella riga in
+   fondo invece che in mezzo ai due innocui. */
+.profile-actions {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 10px;
+  margin-bottom: 16px;
+}
+.profile-actions .btn-full { margin-top: 0; }
+@media (max-width: 767px) {
+  .profile-actions { grid-template-columns: minmax(0, 1fr); }
+}
 .btn-danger-full { color: var(--danger); border-color: oklch(0.85 0.06 25); }
 .btn-danger-full:hover { background: var(--danger-soft); }
 .profile-hint { color: var(--ink-soft); font-size: 0.85rem; margin-top: 20px; max-width: 55ch; }
@@ -1415,7 +1457,7 @@ input:focus-visible, select:focus-visible, textarea:focus-visible {
 
 /* ================= RESPONSIVE ================= */
 
-@media (max-width: 760px) {
+@media (max-width: 767px) {
   .auth-view { grid-template-columns: 1fr; }
   .auth-brand-panel { padding: 38px 28px 30px; }
   .auth-brand-panel h1 { font-size: 2.1rem; }
@@ -1423,6 +1465,13 @@ input:focus-visible, select:focus-visible, textarea:focus-visible {
   .form-row-end { justify-content: stretch; }
   .form-row-end .btn { flex: 1; }
   .day-bar, .group-bar { flex-direction: column; align-items: stretch; }
+  /* A 360px — il bordo basso della fascia mobile — i due giorni piu' il selettore data
+     misurano 337px in un contenitore da 320: sbordavano di 17, invisibili perche'
+     `html { overflow-x: hidden }` li tagliava. Un elemento flex non scende sotto la
+     larghezza del proprio contenuto se non glielo si dice, e senza `wrap` non ha
+     nemmeno dove andare a capo. A 390 e 430 non cambia niente: li' ci stavano gia'. */
+  .day-tabs, .day-cta { flex-wrap: wrap; }
+  .day-tabs > *, .day-cta > * { min-width: 0; }
   .day-tabs, .group-pills, .group-actions { justify-content: center; }
   .rides-grid { grid-template-columns: 1fr; }
   .car-svg { width: min(220px, 80%); }
@@ -2057,7 +2106,7 @@ input:focus-visible, select:focus-visible, textarea:focus-visible {
    di niente. Misurate a 1100px: calendario 341, settimana 275, attivita 250, conti 250,
    carburante 230, prossimo 200, turni 200, domani 150. Appaiate cosi', lo scarto
    massimo di una riga scende da 100px a una trentina, che le righe interne assorbono. */
-@media (max-width: 1180px) {
+@media (max-width: 1279px) {
   .dash .grid {
     grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
     grid-template-areas:
@@ -2068,7 +2117,7 @@ input:focus-visible, select:focus-visible, textarea:focus-visible {
       "turni      domani";
   }
 }
-@media (max-width: 820px) {
+@media (max-width: 767px) {
   .dash .grid {
     grid-template-columns: minmax(0, 1fr);
     grid-template-areas:
@@ -2076,7 +2125,7 @@ input:focus-visible, select:focus-visible, textarea:focus-visible {
       "settimana" "turni" "attivita" "domani" "conti";
   }
 }
-@media (max-width: 430px) {
+@media (max-width: 767px) {
   .dash .kpi > .k { flex: 1 1 132px; }
   .dash .azioni > .az { flex: 1 1 92px; }
 }
@@ -2091,7 +2140,7 @@ input:focus-visible, select:focus-visible, textarea:focus-visible {
    due volte. Sta in fondo al foglio di proposito — `.bottom-nav` e `.topbar` sono
    dichiarate piu' sotto di dove nasce la barra laterale, e a parita' di
    specificita' vince l'ultima regola scritta, non quella piu' vicina al senso. */
-@media (min-width: 1024px) {
+@media (min-width: 1280px) {
   .bottom-nav { display: none; }
   .topbar { display: none; }
   .app-view { padding-bottom: 40px; padding-top: 22px; max-width: 1180px; }
@@ -2126,3 +2175,6 @@ input:focus-visible, select:focus-visible, textarea:focus-visible {
 .dash .grid > .card > .riemp,
 .dash .grid > .card > .att,
 .dash .g-prossimo .riga { flex: 1 1 auto; }
+
+/* La scheda con la faccia e' la voce del profilo, quindi si accende come una voce. */
+.side-me.on { background: oklch(1 0 0 / 0.14); box-shadow: inset 0 0 0 1px var(--ottone-bordo), var(--luce-interna-scura); }

@@ -163,30 +163,27 @@
          Sotto quella soglia sparisce e resta la navigazione di prima, che sul telefono
          e' migliore.
 
-         **Una voce per vista, ed e' il criterio.** Prima ce n'erano otto per cinque
-         viste: Richieste, Conti e Ricorrenze non aprivano niente di proprio, portavano
-         nella stessa pagina delle altre e ci scorrevano dentro. Un elenco che promette
-         sei destinazioni e ne ha tre e' un elenco che mente, e le tre voci in piu' non
-         facevano risparmiare un tocco a nessuno: dal riepilogo quei riquadri si vedono
-         gia' scorrendo. -->
+         **Una voce per vista, e nessuna vista due volte.** Prima erano otto voci per
+         cinque viste: Richieste, Conti e Ricorrenze non aprivano niente di proprio, ma
+         la stessa pagina delle altre, e ci scorrevano dentro. E Profilo era la stessa
+         destinazione della scheda con la faccia qui sotto, a venti centimetri di
+         distanza nello stesso elenco. Restano quattro voci, una per vista, piu' la
+         scheda in fondo che porta al profilo ed e' l'unica cosa che lo fa. -->
     <aside class="side-nav" aria-label="Sezioni">
       <div class="side-logo"><b>WeTransport</b></div>
       <nav class="side-list" aria-label="Sezioni dell'app">
-        <button type="button" class="side-item" data-view="stats" data-key="oggi">
+        <button type="button" class="side-item" data-view="stats" data-key="riepilogo">
           <span class="side-ic"><svg width="15" height="15"><use href="#i-chart"/></svg></span>
-          <span class="side-et">Oggi</span></button>
+          <span class="side-et">Riepilogo</span></button>
         <button type="button" class="side-item" data-view="home" data-key="passaggi">
           <span class="side-ic"><svg width="15" height="15"><use href="#i-car"/></svg></span>
           <span class="side-et">Passaggi</span></button>
-        <button type="button" class="side-item" data-view="groups" data-key="comitiva">
+        <button type="button" class="side-item" data-view="groups" data-key="comitive">
           <span class="side-ic"><svg width="15" height="15"><use href="#i-users"/></svg></span>
-          <span class="side-et">Comitiva</span></button>
+          <span class="side-et">Comitive</span></button>
         <button type="button" class="side-item" data-view="history" data-key="storico">
           <span class="side-ic"><svg width="15" height="15"><use href="#i-history"/></svg></span>
           <span class="side-et">Storico</span></button>
-        <button type="button" class="side-item" data-view="profile" data-key="profilo">
-          <span class="side-ic"><svg width="15" height="15"><use href="#i-user"/></svg></span>
-          <span class="side-et">Profilo</span></button>
       </nav>
       <button type="button" class="side-me" id="side-me" title="Vai al profilo" aria-label="Il tuo profilo">
         <span class="side-av" id="side-av"></span>
@@ -321,7 +318,7 @@
 
       <!-- GRUPPI -->
       <section id="view-groups" class="view hidden">
-        <h2 class="view-title"><svg width="20" height="20"><use href="#i-users"/></svg> I tuoi gruppi</h2>
+        <h2 class="view-title"><svg width="20" height="20"><use href="#i-users"/></svg> Le tue comitive</h2>
         <p class="view-subtitle">Crea una comitiva, invita gli amici col codice, gestisci i membri.</p>
         <div class="group-actions-row">
           <button id="group-create" class="btn btn-primary"><svg width="15" height="15"><use href="#i-plus"/></svg> Crea gruppo</button>
@@ -403,9 +400,9 @@
 
     <nav class="bottom-nav" aria-label="Navigazione principale">
       <button class="nav-item" data-view="history" aria-label="Storico"><svg width="21" height="21"><use href="#i-history"/></svg><span>Storico</span></button>
-      <button class="nav-item" data-view="groups" aria-label="Gruppi"><svg width="21" height="21"><use href="#i-users"/></svg><span>Gruppi</span></button>
-      <button class="nav-item active" data-view="home" aria-label="Home" aria-current="page"><svg width="21" height="21"><use href="#i-car"/></svg><span>Home</span></button>
-      <button class="nav-item" data-view="stats" aria-label="Statistiche"><svg width="21" height="21"><use href="#i-chart"/></svg><span>Statistiche</span></button>
+      <button class="nav-item" data-view="groups" aria-label="Comitive"><svg width="21" height="21"><use href="#i-users"/></svg><span>Comitive</span></button>
+      <button class="nav-item active" data-view="home" aria-label="Passaggi" aria-current="page"><svg width="21" height="21"><use href="#i-car"/></svg><span>Passaggi</span></button>
+      <button class="nav-item" data-view="stats" aria-label="Riepilogo"><svg width="21" height="21"><use href="#i-chart"/></svg><span>Riepilogo</span></button>
       <button class="nav-item" data-view="profile" aria-label="Profilo"><svg width="21" height="21"><use href="#i-user"/></svg><span>Profilo</span></button>
     </nav>
   </div>
