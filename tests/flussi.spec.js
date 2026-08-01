@@ -102,7 +102,7 @@ test('due utenti, una comitiva: pubblicare, entrare col codice, prenotare un sed
   bruno.on('dialog', (d) => d.accept());
   // `.place-delete` non e' univoca: la scheda ne ha tre (condividi, calendario, annulla),
   // e `:not(.share)` ne lascia comunque due. Si punta al titolo, che e' unico.
-  await ada.locator('.ride-card', { hasText: destinazione }).getByTitle('Annulla passaggio').click();
+  await ada.locator('.ride-card', { hasText: destinazione }).getByTitle('Annulla passaggio', { exact: true }).click();
   await expect(ada.locator('.ride-card', { hasText: destinazione })).toHaveCount(0, { timeout: 15000 });
   for (const [pagina, nome] of [[bruno, 'B'], [ada, 'A']]) {
     await vaiA(pagina, 'groups');
@@ -245,7 +245,7 @@ test('segnalare e bloccare: il dialogo, la lista dei bloccati, e la vista che ca
   // La segnalazione non si pulisce da qui: chiuderla puo' solo l'amministratore. Ne
   // resta una sola per coppia, con motivo `altro` e il testo che dice di ignorarla.
   // Stesso motivo del test qui sopra: `.place-delete` sta su tre bottoni della scheda.
-  await ada.locator('.ride-card', { hasText: destinazione }).getByTitle('Annulla passaggio').click();
+  await ada.locator('.ride-card', { hasText: destinazione }).getByTitle('Annulla passaggio', { exact: true }).click();
   await expect(ada.locator('.ride-card', { hasText: destinazione })).toHaveCount(0, { timeout: 15000 });
   for (const pagina of [bruno, ada]) {
     await vaiA(pagina, 'groups');
