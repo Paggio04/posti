@@ -1118,16 +1118,53 @@ async function loadHistory() {
 // perche' lo zero si legge come una misura.
 // ══════════════════════════════════════════════════════════════════════════
 async function loadStats() {
-  if (!currentGroupId) return;
   const box = document.getElementById('stats-content');
+
+  // **Questa vista non puo' finire bianca.** Prima il riquadro conteneva un titolo
+  // fisso scritto in `index.html`, quindi anche uscendo subito qualcosa restava a
+  // schermo; ora lo scrive tutto questa funzione, e uscire in silenzio vuol dire
+  // consegnare una pagina vuota — che chi guarda legge come «e' rotto», non come
+  // «manca un gruppo». Le tre uscite qui sotto dicono cosa manca e cosa fare.
+  if (!currentGroupId) {
+    box.innerHTML = `<div class="dash-top"><div class="dash-hi"><h1>Riepilogo</h1>
+      <p>Serve una comitiva: il riepilogo somma i passaggi di un gruppo.</p></div></div>
+      <section class="card"><div class="head"><h3>Nessuna comitiva selezionata</h3></div>
+      <p class="vuoto">Crea un gruppo o entra con un codice invito dalla vista Comitiva,
+      poi torna qui.</p>
+      <button type="button" class="cta-vuoto" data-vai="gruppi">Vai alla comitiva →</button>
+      </section>`;
+    box.querySelector('[data-vai]')?.addEventListener('click', () => switchView('groups'));
+    return;
+  }
+
   box.innerHTML = '<div class="skeleton"></div>';
+  try {
+    await disegnaRiepilogo(box);
+  } catch (err) {
+    // Un errore qui dentro lasciava lo scheletro a girare per sempre. Meglio dire
+    // che e' andata storta, e come rimediare, che una pagina che finge di caricare.
+    console.error('riepilogo:', err);
+    box.innerHTML = `<div class="dash-top"><div class="dash-hi"><h1>Riepilogo</h1>
+      <p>Qualcosa non ha funzionato nel caricare i dati.</p></div></div>
+      <section class="card"><div class="head"><h3>Riepilogo non disponibile</h3></div>
+      <p class="vuoto">Ricarica la pagina. Se continua, è un difetto: il dettaglio è nella
+      console del browser.</p>
+      <button type="button" class="cta-vuoto" data-ricarica>Riprova</button></section>`;
+    box.querySelector('[data-ricarica]')?.addEventListener('click', () => loadStats());
+  }
+}
+
+async function disegnaRiepilogo(box) {
 
   let sq = supabase
     .from('rides')
     .select('id, ride_date, depart_time, origin, destination, seats, driver_id, fuel_per_person, driver:profiles!rides_driver_id_fkey(display_name), seat_claims(passenger_id, passenger:profiles!seat_claims_passenger_id_fkey(display_name))');
   sq = sq.eq('group_id', currentGroupId);
   const { data, error } = await sq;
-  if (error || !data) { box.innerHTML = '<p class="vuoto">Impossibile caricare il riepilogo.</p>'; return; }
+  // Non si scrive un messaggio a mano: si lascia salire, cosi' l'errore vero finisce
+  // in console e il riquadro di sopra e' l'unico posto che decide cosa mostrare.
+  if (error) throw error;
+  if (!data) throw new Error('nessun dato dai passaggi');
 
   // Le tre tabelle della 022-024. `eventi` non ha chiavi esterne (e' un registro
   // storico: deve sopravvivere a cio' che racconta), quindi PostgREST non puo'

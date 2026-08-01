@@ -12,7 +12,12 @@
 //
 // Quello che si mette in cache e' solo il guscio: i file pubblici, identici per tutti.
 
-const VERSIONE = 'wetransport-v5';   // sale quando cambia il GUSCIO qui sotto
+const VERSIONE = 'wetransport-v6';   // sale quando cambia il GUSCIO qui sotto
+// v6 (01/08/2026): il guscio si serve **coerente**. Pagina «prima la rete» e file
+// «prima la cache» insieme davano, il giorno del rilascio, l'HTML nuovo con il CSS e il
+// codice vecchi: barra laterale senza stile in cima alla pagina e Statistiche vuota.
+// Il perche' e il come stanno nel gestore `fetch`, in fondo. Non era la VERSIONE a
+// mancare: quel numero dice **quale** cache, non **quando** preferirla alla rete.
 // v5 (01/08/2026): il riepilogo rifatto sul disegno concordato — barra laterale nuova
 // in `index.html`, l'intero blocco della dashboard in `style.css`, `loadStats()`
 // riscritta in `app.js`. Tre file del guscio su tre: senza questa riga non l'avrebbe
@@ -133,8 +138,49 @@ self.addEventListener('fetch', (e) => {
     return;
   }
 
-  // Il resto del guscio: prima la cache, cosi' parte subito e parte anche offline, poi
-  // si aggiorna in sottofondo per la volta dopo.
+  // ── Il guscio si serve **coerente**, ed e' il difetto che questa riga chiude ──
+  //
+  // Prima era tutto «prima la cache»: la pagina pero' e' «prima la rete» (qui sopra).
+  // Le due strategie insieme, il giorno di un rilascio, davano questo:
+  //
+  //     index.html  -> dalla rete  -> quello NUOVO
+  //     style.css   -> dalla cache -> quello VECCHIO
+  //     app.js      -> dalla cache -> quello VECCHIO
+  //
+  // cioe' il guscio nuovo vestito e mosso da quello vecchio. Non e' un caso limite:
+  // succede **a ogni rilascio**, al primo caricamento, a chiunque abbia gia' aperto
+  // l'app. L'1/08 e' costato una pagina con un elenco di bottoni senza stile in cima e
+  // la vista Statistiche vuota, perche' il vecchio `loadStats()` cercava un elemento
+  // che nel nuovo `index.html` non c'e' piu' e moriva prima di scrivere.
+  //
+  // Alzare la VERSIONE non bastava e non poteva bastare: quel numero decide **quale**
+  // cache si usa, non **quando** la si preferisce alla rete.
+  //
+  // Quindi: i tre file che devono essere d'accordo fra loro (documento, stile, codice)
+  // vanno a rete per primi, con la cache come rete di scorta — offline funziona
+  // esattamente come prima. Caratteri e immagini restano «prima la cache»: sono pesanti,
+  // non possono essere in disaccordo con niente, e sono il motivo per cui l'app parte
+  // subito. Le intestazioni di Netlify sono gia' `max-age=0, must-revalidate`, quindi
+  // per il browser questo e' spesso un 304 e non un trasferimento.
+  const coerenti = req.destination === 'style' || req.destination === 'script'
+    || req.destination === 'document' || url.pathname.endsWith('.json');
+
+  if (url.origin === self.location.origin && coerenti) {
+    e.respondWith((async () => {
+      const cache = await caches.open(VERSIONE);
+      try {
+        const r = await fetch(req);
+        if (r.ok) cache.put(req, r.clone());
+        return r;
+      } catch {
+        return (await cache.match(req, { ignoreVary: true })) ?? Response.error();
+      }
+    })());
+    return;
+  }
+
+  // Caratteri, icone e il modulo del CDN: prima la cache, cosi' parte subito e parte
+  // anche offline, poi si aggiorna in sottofondo per la volta dopo.
   if (url.origin === self.location.origin || url.hostname === 'cdn.jsdelivr.net') {
     e.respondWith((async () => {
       const cache = await caches.open(VERSIONE);
