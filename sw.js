@@ -12,7 +12,9 @@
 //
 // Quello che si mette in cache e' solo il guscio: i file pubblici, identici per tutti.
 
-const VERSIONE = 'wetransport-v6';   // sale quando cambia il GUSCIO qui sotto
+const VERSIONE = 'wetransport-v7';   // sale quando cambia il GUSCIO qui sotto
+// v7 (01/08/2026): barra laterale a cinque voci, riepilogo ricomposto su una griglia
+// sola di quattro righe. Cambiano `index.html`, `style.css` e `app.js`.
 // v6 (01/08/2026): il guscio si serve **coerente**. Pagina «prima la rete» e file
 // «prima la cache» insieme davano, il giorno del rilascio, l'HTML nuovo con il CSS e il
 // codice vecchi: barra laterale senza stile in cima alla pagina e Statistiche vuota.
