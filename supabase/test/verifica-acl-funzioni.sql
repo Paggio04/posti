@@ -72,6 +72,11 @@ begin
   insert into atteso_acl (nome, argomenti, chi) values
 
   -- --- Nessuno: interne, oppure rispondono su persone scelte da chi chiama (020) ---
+  ('crea_passaggi_ricorrenti',   'giorni_avanti integer', 'nessuno'),   -- 024, la chiama pg_cron
+  ('registra_evento_ride',       '',                    'nessuno'),   -- 023, li chiamano i trigger
+  ('registra_evento_posto',      '',                    'nessuno'),
+  ('registra_evento_membro',     '',                    'nessuno'),
+  ('registra_evento_pagamento',  '',                    'nessuno'),
   ('accoda_notifica',            'p_destinatario uuid, p_tipo text, p_ride uuid, p_titolo text, p_corpo text, p_chiave text', 'nessuno'),
   ('accoda_partenze_imminenti',  '',                    'nessuno'),
   ('blinda_coordinate',          '',                    'nessuno'),
@@ -81,6 +86,7 @@ begin
   ('sospeso',                    'u uuid',              'nessuno'),
 
   -- --- Solo da autenticato: servono al client, ma dopo l'accesso (018, 020) ---
+  ('saldo_con',                  'altro uuid',          'authenticated'),   -- 022, ancorata ad auth.uid()
   ('create_group',               'p_name text',         'authenticated'),
   ('elimina_account',            '',                    'authenticated'),
   ('join_group',                 'p_code text',         'authenticated'),
