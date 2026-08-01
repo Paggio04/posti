@@ -11,7 +11,7 @@
 // account l'insert non ci arriverebbe comunque. Nessuna sonda modifica la produzione.
 //
 // **Perche' Node e non `curl`**: sulla macchina di casa `curl` non c'e' (Ambiente.md,
-// insieme a `jq`, `bc` e `rg`). Il `fetch` nativo di Node >= 18 basta e non aggiunge
+// insieme a `jq`, `bc` e `rg`). Il `fetch` nativo di Node >= 22.7 basta e non aggiunge
 // dipendenze. Il `--no-warnings` serve solo a zittire l'avviso di Node che rilegge
 // `config.js` come modulo ES: il repo non ha `"type": "module"` in `package.json`.
 //
@@ -64,6 +64,7 @@ const SONDE = [
     corpo: {},
     attesoOggi: 'PGRST202',
     attesoDopo: '42501',
+    migrazione: '018',
     spiega:
       "sonda di stato dello schema, non di C23: PGRST202 significa che la 018 non e' applicata. " +
       'Per questa riga la migrazione che cambia la risposta e\' la 018, non la 020: appena esiste, ' +
@@ -108,7 +109,7 @@ for (const s of SONDE) {
   const esito = await sonda(s);
   righe.push({ ...s, ...esito });
   console.log(
-    `${s.nome} | ${esito.http} | ${esito.codice} | atteso oggi: ${s.attesoOggi} — dopo la 020: ${s.attesoDopo}`
+    `${s.nome} | ${esito.http} | ${esito.codice} | atteso oggi: ${s.attesoOggi} — dopo la ${s.migrazione ?? '020'}: ${s.attesoDopo}`
   );
 }
 
@@ -123,9 +124,37 @@ console.log('');
 for (const r of righe) console.log(`  ${r.nome}: ${r.spiega}`);
 console.log('');
 const scarti = righe.filter((r) => r.codice !== r.attesoOggi);
-console.log(
+const riepilogo = () => console.log(
   scarti.length === 0
     ? 'Tutte le sonde rispondono come SECURITY.md dichiara oggi.'
     : `Scarti rispetto a quanto dichiarato oggi: ${scarti.map((r) => `${r.nome} → ${r.codice}`).join(', ')}. ` +
       'Se la 020 e la 018 sono state applicate, e\' questo file (e la riga di SECURITY.md) a dover cambiare.'
 );
+
+// --- La 019, che si misura senza account ---------------------------------
+// Il permesso per colonna vale per il RUOLO e si valuta PRIMA della RLS: quindi
+// `select=*` su una tabella protetta e' rifiutato anche a chi non vedrebbe nessuna
+// riga. `rides` ce l'ha dalla 016 e risponde 42501; `profiles` no, e risponde 200 [].
+// La differenza fra le due risposte E' la misura: non serve un accesso autenticato.
+async function tabella(nome) {
+  const r = await fetch(`${SUPABASE_URL}/rest/v1/${nome}?select=*&limit=1`, {
+    headers: { apikey: SUPABASE_ANON_KEY, Authorization: `Bearer ${SUPABASE_ANON_KEY}` },
+  });
+  return r.status;
+}
+
+console.log('');
+const rides = await tabella('rides');
+const profiles = await tabella('profiles');
+const zonaChiusa = profiles === 401 || profiles === 403;
+console.log(`019 | rides select=* -> ${rides} (riferimento: la 016 e' applicata)`);
+console.log(`019 | profiles select=* -> ${profiles} -> zona ${zonaChiusa ? 'RISERVATA' : 'ANCORA LEGGIBILE'}`);
+// Stessa semantica delle altre sonde: oggi la 019 NON e' applicata, quindi 200 e'
+// l'atteso e non uno scarto. Il giorno in cui diventa 42501, lo scarto e' il segnale
+// che questa riga e la ⚠️ di SECURITY.md vanno riscritte.
+if (zonaChiusa) scarti.push({ nome: '019', codice: `${profiles} (applicata: aggiorna SECURITY.md)` });
+
+riepilogo();
+// Uno script di verifica che esce 0 comunque non verifica niente: se la realta'
+// si scosta da cio' che SECURITY.md dichiara, deve dirlo anche al processo.
+process.exitCode = scarti.length === 0 ? 0 : 1;
