@@ -55,6 +55,13 @@ create policy "eventi read gruppo" on public.eventi for select to authenticated
 create or replace function public.registra_evento_ride()
 returns trigger language plpgsql security definer set search_path = public as $$
 begin
+  -- Prima della 010 un passaggio poteva non avere comitiva, e nel repo c'e' un
+  -- test che riproduce proprio quello stato (`dati-prima-di-010.sql`). Un evento
+  -- senza gruppo non lo leggerebbe nessuno — la policy e' `is_member()` — quindi
+  -- non si scrive, invece di far fallire l'inserimento del passaggio.
+  if coalesce(new.group_id, old.group_id) is null then
+    return coalesce(new, old);
+  end if;
   if tg_op = 'INSERT' then
     insert into eventi (group_id, tipo, attore, ride_id)
     values (new.group_id, 'passaggio_pubblicato', new.driver_id, new.id);
