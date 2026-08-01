@@ -12,7 +12,12 @@
 //
 // Quello che si mette in cache e' solo il guscio: i file pubblici, identici per tutti.
 
-const VERSIONE = 'wetransport-v3';   // sale quando cambia il GUSCIO qui sotto
+const VERSIONE = 'wetransport-v4';   // sale quando cambia il GUSCIO qui sotto
+// v4 (01/08/2026): index.html, style.css e app.js sono cambiati sette volte in un
+// pomeriggio — login a pannello, dashboard, tre tabelle nuove — e questa riga era
+// rimasta a v3. Chi aveva gia' aperto l'app continuava a vedere il guscio vecchio,
+// perche' e' esattamente cio' che una cache fa. E' la seconda volta: la prima sta in
+// `85d023e`. Il guscio elencato qui sotto e' contenuto: se cambia, questo numero sale.
 
 const GUSCIO = [
   '/',
