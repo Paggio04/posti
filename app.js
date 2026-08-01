@@ -1067,14 +1067,28 @@ async function loadStats() {
   if (!currentGroupId) return;
   const box = document.getElementById('stats-content');
   document.querySelector('#view-stats .view-subtitle').textContent =
-    `I turni parlano da soli · ${groupLabel()} (si cambia dalla Home)`;
+    `Riepilogo di ${groupLabel()} (si cambia dalla Home)`;
   box.innerHTML = '<div class="skeleton"></div>';
   let sq = supabase
     .from('rides')
-    .select('driver_id, fuel_per_person, driver:profiles!rides_driver_id_fkey(display_name), seat_claims(passenger_id, passenger:profiles!seat_claims_passenger_id_fkey(display_name))');
+    .select('id, ride_date, depart_time, origin, destination, seats, driver_id, fuel_per_person, driver:profiles!rides_driver_id_fkey(display_name), seat_claims(passenger_id, passenger:profiles!seat_claims_passenger_id_fkey(display_name))');
   sq = sq.eq('group_id', currentGroupId);
   const { data, error } = await sq;
   if (error || !data) { box.innerHTML = '<p class="view-subtitle">Impossibile caricare le statistiche.</p>'; return; }
+
+  // Le tre tabelle della 022-024. `eventi` non ha chiavi esterne (e' un registro
+  // storico: deve sopravvivere a cio' che racconta), quindi PostgREST non puo'
+  // unirla a `profiles` da solo e i nomi si risolvono qui sotto.
+  const oggi = todayISO();
+  const [pagRes, evRes, ricRes] = await Promise.all([
+    supabase.from('pagamenti').select('da_utente, a_utente, importo').eq('group_id', currentGroupId),
+    supabase.from('eventi').select('tipo, attore, quando').eq('group_id', currentGroupId)
+      .order('quando', { ascending: false }).limit(8),
+    supabase.from('ricorrenze').select('id').eq('group_id', currentGroupId).eq('attiva', true),
+  ]);
+  const pagamenti = pagRes.data ?? [];
+  const eventi = evRes.data ?? [];
+  const nRicorrenze = (ricRes.data ?? []).length;
 
   const drives = new Map(); // id -> {name, n}
   const ridesTaken = new Map();
@@ -1110,20 +1124,136 @@ async function loadStats() {
       </div>`).join('') || '<p class="view-subtitle">Ancora nessun dato.</p>';
   };
 
+  // ── Riquadri della dashboard ────────────────────────────────────────────
+  const eur = (n) => (Math.round(n * 100) / 100).toLocaleString('it-IT',
+    { minimumFractionDigits: 2, maximumFractionDigits: 2 }) + ' €';
+
+  // Il prossimo passaggio, e i posti liberi che restano
+  const futuri = data
+    .filter(r => r.ride_date >= oggi)
+    .sort((a, b) => (a.ride_date + (a.depart_time || '')).localeCompare(b.ride_date + (b.depart_time || '')));
+  const prossimo = futuri[0] || null;
+  const liberiTot = futuri.reduce((s, r) => s + Math.max(0, (r.seats || 0) - r.seat_claims.length), 0);
+  const guidoIo = futuri.find(r => r.driver_id === currentUser.id) || null;
+
+  // Passaggi di questo mese: quelli su cui c'e' stato almeno un posto preso
+  const inizioMese = oggi.slice(0, 8) + '01';
+  const nelMese = data.filter(r => r.ride_date >= inizioMese && r.ride_date <= oggi).length;
+
+  // Il mio saldo: dovuto meno pagato, con la stessa aritmetica di saldo_con()
+  const dovutoDaMe = new Map();   // guidatore -> quanto gli devo
+  const dovutoAMe  = new Map();   // passeggero -> quanto mi deve
+  for (const r of data) {
+    const q = Number(r.fuel_per_person) || 0;
+    if (!q) continue;
+    for (const c of r.seat_claims) {
+      if (c.passenger_id === currentUser.id && r.driver_id !== currentUser.id) {
+        dovutoDaMe.set(r.driver_id, (dovutoDaMe.get(r.driver_id) || 0) + q);
+      } else if (r.driver_id === currentUser.id && c.passenger_id !== currentUser.id) {
+        dovutoAMe.set(c.passenger_id, (dovutoAMe.get(c.passenger_id) || 0) + q);
+      }
+    }
+  }
+  for (const pg of pagamenti) {
+    const imp = Number(pg.importo) || 0;
+    if (pg.da_utente === currentUser.id) dovutoDaMe.set(pg.a_utente, (dovutoDaMe.get(pg.a_utente) || 0) - imp);
+    if (pg.a_utente === currentUser.id)  dovutoAMe.set(pg.da_utente, (dovutoAMe.get(pg.da_utente) || 0) - imp);
+  }
+  const nomePer = new Map();
+  for (const r of data) {
+    nomePer.set(r.driver_id, nomeDi(r.driver));
+    for (const c of r.seat_claims) nomePer.set(c.passenger_id, nomeDi(c.passenger));
+  }
+  const partite = [];
+  for (const [id, v] of dovutoAMe)  if (Math.abs(v) >= 0.01) partite.push({ id, v });
+  for (const [id, v] of dovutoDaMe) if (Math.abs(v) >= 0.01) partite.push({ id, v: -v });
+  const saldo = partite.reduce((s, p) => s + p.v, 0);
+
+  const kpi = (cls, lab, val, nota) =>
+    `<div class="kpi-box ${cls}"><span class="kpi-lab">${lab}</span>` +
+    `<strong class="kpi-val">${val}</strong><span class="kpi-nota">${nota}</span></div>`;
+
+  const ETICHETTA = {
+    passaggio_pubblicato: 'ha pubblicato un passaggio',
+    passaggio_annullato: 'ha annullato un passaggio',
+    posto_preso: 'ha preso un posto',
+    posto_liberato: 'ha liberato un posto',
+    membro_entrato: 'è entrato nella comitiva',
+    pagamento_registrato: 'ha registrato un pagamento',
+  };
+
   box.innerHTML =
-    `<div class="stats-me">
-      <div class="stat-box"><strong>${myDrives}</strong><span>volte hai guidato</span></div>
-      <div class="stat-box"><strong>${myRides}</strong><span>passaggi ricevuti</span></div>
-    </div>
-    <div class="stats-section"><h3>Chi guida di più</h3>${bars(drives, false)}</div>
-    <div class="stats-section"><h3>Chi sale più spesso</h3>${bars(ridesTaken, true)}</div>`
-    + (fuelIn.size === 0 ? '' :
+    `<div class="kpi-strip">
+      ${kpi('mio', 'Prossimo turno tuo', guidoIo ? dataBreve(guidoIo.ride_date) : '—',
+            guidoIo ? escapeHtml(`${(guidoIo.depart_time || '').slice(0, 5)} · ${guidoIo.destination || ''}`) : 'nessuno in programma')}
+      ${kpi('', 'Passaggi nel mese', String(nelMese), `${drives.size} persone alla guida`)}
+      ${kpi('mio', 'Saldo', (saldo >= 0 ? '+ ' : '− ') + eur(Math.abs(saldo)),
+            partite.length ? `${partite.length} partite aperte` : 'nessuna partita aperta')}
+      ${kpi('', 'Posti disponibili', String(liberiTot), 'sui passaggi in programma')}
+      ${kpi('mio', 'I tuoi turni', String(myDrives), `${myRides} passaggi ricevuti`)}
+    </div>` +
+
+    (prossimo ? `<div class="stats-section prossimo-box">
+      <h3>Prossimo passaggio</h3>
+      <div class="prossimo-titolo">${escapeHtml(dataBreve(prossimo.ride_date))} · ${escapeHtml((prossimo.depart_time || '').slice(0, 5))} · ${escapeHtml(prossimo.destination || '')}</div>
+      <div class="prossimo-righe">
+        <span><b>${escapeHtml(nomeDi(prossimo.driver))}</b> guida</span>
+        <span><b>${prossimo.seat_claims.length} / ${prossimo.seats}</b> posti</span>
+        <span><b>${Math.max(0, prossimo.seats - prossimo.seat_claims.length)}</b> liberi</span>
+      </div>
+    </div>` : '') +
+
+    `<div class="stats-section"><h3>Chi guida di più</h3>${bars(drives, false)}</div>
+     <div class="stats-section"><h3>Chi sale più spesso</h3>${bars(ridesTaken, true)}</div>` +
+
+    (partite.length === 0 ? '' :
+    `<div class="stats-section"><h3>Partite aperte</h3>
+      <p class="view-subtitle">Quote di carburante non ancora saldate. Le vedi solo tu e la persona interessata.</p>
+      ${partite.sort((a, b) => b.v - a.v).map(p =>
+        `<div class="conto-row">
+          <span class="conto-chi">${escapeHtml(nomePer.get(p.id) || 'Qualcuno')}</span>
+          <span class="conto-imp ${p.v >= 0 ? 'avere' : 'dare'}">${p.v >= 0 ? '+ ' : '− '}${eur(Math.abs(p.v))}</span>
+        </div>`).join('')}
+    </div>`) +
+
+    (eventi.length === 0 ? '' :
+    `<div class="stats-section"><h3>Attività recente</h3>
+      ${eventi.map(e =>
+        `<div class="ev-row">
+          <span class="ev-chi">${escapeHtml(nomePer.get(e.attore) || 'Qualcuno')}</span>
+          <span class="ev-che">${ETICHETTA[e.tipo] || e.tipo}</span>
+          <span class="ev-quando">${escapeHtml(quandoBreve(e.quando))}</span>
+        </div>`).join('')}
+    </div>`) +
+
+    (nRicorrenze === 0 ? '' :
+    `<div class="stats-section"><h3>Ricorrenze attive</h3>
+      <p class="view-subtitle">${nRicorrenze} ${nRicorrenze === 1 ? 'passaggio si ripete' : 'passaggi si ripetono'} ogni settimana.</p>
+    </div>`) +
+
+    (fuelIn.size === 0 ? '' :
     `<div class="stats-section"><h3>⛽ Benzina: quanto spetta a chi guida</h3>
-      <p class="view-subtitle">Somma dei contributi "€ a testa" dei passeggeri saliti. I conti si regolano di persona.</p>
+      <p class="view-subtitle">Somma dei contributi "€ a testa" dei passeggeri saliti.</p>
       ${bars(new Map([...fuelIn].map(([k, v]) => [k, { name: v.name, n: Math.round(v.n * 100) / 100 }])), false)}
       <h3 style="margin-top:14px">Quanto ha versato ogni passeggero</h3>
       ${bars(new Map([...fuelOut].map(([k, v]) => [k, { name: v.name, n: Math.round(v.n * 100) / 100 }])), true)}
     </div>`);
+}
+
+// Data breve, per i riquadri: «gio 7 ago».
+function dataBreve(iso) {
+  if (!iso) return '—';
+  const d = new Date(iso + 'T00:00:00');
+  return d.toLocaleDateString('it-IT', { weekday: 'short', day: 'numeric', month: 'short' });
+}
+
+// «2 min», «3 h», «5 g»: quanto e' passato, senza librerie.
+function quandoBreve(ts) {
+  const m = Math.max(0, Math.round((Date.now() - new Date(ts).getTime()) / 60000));
+  if (m < 60) return m + ' min';
+  const h = Math.round(m / 60);
+  if (h < 24) return h + ' h';
+  return Math.round(h / 24) + ' g';
 }
 
 // --- Giorno ---

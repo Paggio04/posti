@@ -1550,3 +1550,55 @@ input:focus-visible, select:focus-visible, textarea:focus-visible {
      l'ottone che si scalda, non un'istruzione scritta accanto. */
   .group-code:hover { background: var(--ottone-velo); border-color: var(--ottone); }
 }
+
+/* ── Dashboard delle statistiche (022-024) ────────────────────────────────
+   L'ottone marca solo cio' che e' **tuo**: il tuo turno, il tuo saldo. Il navy
+   resta il colore dell'app. */
+.kpi-strip {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+  gap: 10px;
+  margin-bottom: 16px;
+}
+.kpi-box {
+  min-width: 0;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  padding: 12px 14px;
+  box-shadow: var(--shadow-1);
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+.kpi-box.mio { background: var(--ottone-velo); border-color: var(--ottone-bordo); }
+.kpi-lab { font-size: 0.72rem; color: var(--ink-soft); }
+.kpi-val { font-size: 1.3rem; font-weight: 700; letter-spacing: -0.4px; overflow-wrap: anywhere; }
+.kpi-box.mio .kpi-val { color: var(--ottone-scuro); }
+.kpi-nota { font-size: 0.7rem; color: var(--ink-soft); overflow-wrap: anywhere; }
+
+.prossimo-box { background: var(--primary-soft); border: 1px solid oklch(0.86 0.04 258); }
+.prossimo-titolo { font-size: 1.02rem; font-weight: 700; color: var(--primary); margin: 2px 0 8px; }
+.prossimo-righe { display: flex; flex-wrap: wrap; gap: 8px 18px; font-size: 0.86rem; color: var(--ink-soft); }
+
+.conto-row, .ev-row {
+  display: flex;
+  align-items: baseline;
+  gap: 10px;
+  padding: 7px 0;
+  border-top: 1px solid var(--border);
+  font-size: 0.88rem;
+}
+.conto-row:first-of-type, .ev-row:first-of-type { border-top: 0; }
+.conto-chi, .ev-chi { font-weight: 600; }
+.conto-imp {
+  margin-left: auto;
+  font-weight: 700;
+  font-family: 'IBM Plex Mono', ui-monospace, monospace;
+  white-space: nowrap;
+}
+.conto-imp.avere { color: var(--ok-deep); }
+.conto-imp.dare { color: var(--danger); }
+.ev-che { color: var(--ink-soft); min-width: 0; }
+.ev-quando { margin-left: auto; font-size: 0.76rem; color: var(--ink-soft); white-space: nowrap; }
+
