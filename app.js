@@ -619,6 +619,18 @@ const appDialog = document.getElementById('app-dialog');
 const dialogInput = document.getElementById('dialog-input');
 let dialogResolve = null;
 
+// Condividere: era scritto tre volte identico — invito al gruppo, giornata, singolo
+// passaggio. Stessa scelta, stesso ripiego su WhatsApp, stesso `catch {}` per l'utente
+// che chiude il foglio di sistema. Una funzione sola, e le tre chiamate diventano una
+// riga ciascuna.
+async function condividi(testo, url) {
+  if (navigator.share) {
+    try { await navigator.share({ title: 'WeTransport', text: testo, ...(url ? { url } : {}) }); } catch { /* chiuso */ }
+    return;
+  }
+  window.open('https://wa.me/?text=' + encodeURIComponent(testo), '_blank', 'noopener');
+}
+
 function ask(title, { text = '', placeholder = '', value = '', type = 'text' } = {}) {
   document.getElementById('dialog-title').textContent = title;
   document.getElementById('dialog-text').textContent = text;
@@ -1013,13 +1025,7 @@ async function renderGroupsView() {
     const invite = document.createElement('button');
     invite.className = 'btn btn-ghost btn-small';
     invite.textContent = 'Invita amici';
-    invite.addEventListener('click', async () => {
-      if (navigator.share) {
-        try { await navigator.share({ title: 'WeTransport', text: inviteText, url: SITE_URL }); } catch {}
-      } else {
-        window.open('https://wa.me/?text=' + encodeURIComponent(inviteText), '_blank', 'noopener');
-      }
-    });
+    invite.addEventListener('click', () => condividi(inviteText, SITE_URL));
     actions.appendChild(invite);
 
     const leave = document.createElement('button');
@@ -1548,10 +1554,13 @@ async function disegnaRiepilogo(box) {
           <div class="av" style="background:${coloreDi(p.id)}">${escapeHtml(iniz(nomePer.get(p.id)))}</div>
           <div class="chi">${escapeHtml(nomePer.get(p.id) || 'Qualcuno')}<small>${n} ${n === 1 ? 'passaggio' : 'passaggi'}${da ? ` · dal ${escapeHtml(dataBreve(da))}` : ''}</small></div>
           <span class="imp ${p.v >= 0 ? 'avere' : 'dare'}">${p.v >= 0 ? '+ ' : '− '}${escapeHtml(eur(Math.abs(p.v)))}</span>
+          <button type="button" class="salda" data-salda="${p.id}" data-verso="${p.v >= 0 ? 'ricevuto' : 'pagato'}"
+                  data-quanto="${Math.abs(p.v).toFixed(2)}"
+                  title="${p.v >= 0 ? 'Segna che ti ha pagato' : 'Segna che l\'hai pagato'}">${p.v >= 0 ? 'Ricevuto' : 'Pagato'}</button>
         </div>`;
       }).join('')}</div>`
       : '<p class="vuoto">Nessun conto in sospeso. Compaiono qui quando chi guida indica un «€ a testa».</p>'}
-      <div class="piede">Gli importi li vedete solo tu e la persona interessata: la policy sulla tabella nomina le due parti, non la comitiva.</div>
+      <div class="piede">${partite.length ? '<button type="button" class="cta-vuoto" id="conto-mese" style="margin:0 12px 0 0">Riepilogo del mese</button>' : ''}Gli importi li vedete solo tu e la persona interessata: la policy sulla tabella nomina le due parti, non la comitiva.</div>
     </section>`;
 
   box.innerHTML =
@@ -1584,6 +1593,46 @@ async function disegnaRiepilogo(box) {
     if (b.dataset.vai === 'home') switchView('home');
     if (b.dataset.vai === 'conti') document.getElementById('dash-conti')?.scrollIntoView({ block: 'start' });
   }));
+  // ── Segnare un pagamento ────────────────────────────────────────────────
+  // La tabella `pagamenti` esiste dalla 022 e il saldo la sottrae gia': mancava solo
+  // il gesto, e senza quello il numero poteva solo crescere. L'importo arriva
+  // precompilato con quanto resta, perche' nove volte su dieci si salda tutto.
+  box.querySelectorAll('[data-salda]').forEach(b => b.addEventListener('click', async () => {
+    const altro = b.dataset.salda;
+    const ricevuto = b.dataset.verso === 'ricevuto';
+    const chi = nomePer.get(altro) || 'questa persona';
+    const risposta = await ask(ricevuto ? `Quanto ti ha dato ${chi}?` : `Quanto hai dato a ${chi}?`, {
+      text: 'In euro. Puoi segnare anche solo una parte.',
+      value: b.dataset.quanto, type: 'number',
+    });
+    if (risposta === null) return;
+    const importo = Math.round(Number(String(risposta).replace(',', '.')) * 100) / 100;
+    if (!(importo > 0)) { toast('Serve un importo maggiore di zero.'); return; }
+    const { error } = await supabase.from('pagamenti').insert({
+      group_id: currentGroupId,
+      da_utente: ricevuto ? altro : currentUser.id,
+      a_utente: ricevuto ? currentUser.id : altro,
+      importo,
+      registrato_da: currentUser.id,
+    });
+    if (error) { toast(friendlyError(error)); return; }
+    toast(`Segnato: ${eur(importo)} ${ricevuto ? 'da' : 'a'} ${chi}.`);
+    loadStats();
+  }));
+
+  // Il riepilogo del mese: i numeri ci sono gia' tutti, mancava il modo di mandarli.
+  document.getElementById('conto-mese')?.addEventListener('click', () => {
+    const righe = [`WeTransport · ${nomeComitiva()} · ${meseInLettere(oggi)}`,
+      `Carburante diviso questo mese: ${eur(meseCorr.tot)}`,
+      `Il mio saldo: ${saldo >= 0 ? '+ ' : '− '}${eur(Math.abs(saldo))}`, ''];
+    for (const p of partite) {
+      righe.push(p.v >= 0
+        ? `${nomePer.get(p.id) || 'Qualcuno'} mi deve ${eur(p.v)}`
+        : `Devo ${eur(-p.v)} a ${nomePer.get(p.id) || 'qualcuno'}`);
+    }
+    condividi(righe.join('\n'));
+  });
+
   box.querySelectorAll('[data-azione]').forEach(b => b.addEventListener('click', () => {
     const a = b.dataset.azione;
     // Il modulo si apre, non si commuta: chi tocca «Pubblica un passaggio» vuole
@@ -1907,7 +1956,7 @@ async function loadRides(silent = false) {
 
   let reqQuery = supabase
     .from('ride_requests')
-    .select('user_id, profile:profiles(display_name)')
+    .select('user_id, ora, profile:profiles(display_name)')
     .eq('ride_date', currentDate);
   reqQuery = reqQuery.eq('group_id', currentGroupId);
 
@@ -1995,8 +2044,17 @@ document.getElementById('request-toggle').addEventListener('click', async () => 
     toast('Richiesta rimossa.');
   } else {
     if (bloccaSeSospeso('chiedere un passaggio')) return;
+    // Una domanda sola, e si puo' saltare. Chi guida senza l'ora sa **che** qualcuno e'
+    // a piedi ma non se il passaggio che sta per pubblicare gli serve davvero: era
+    // l'unica cosa che mancava perche' la richiesta valesse qualcosa.
+    const ora = await ask('A che ora ti serve?', {
+      text: 'Facoltativo. Lascia vuoto se ti va bene qualsiasi ora.',
+      placeholder: '07:40', type: 'time',
+    });
+    if (ora === null) return;
     const { error } = await supabase.from('ride_requests').insert({
       user_id: currentUser.id, ride_date: currentDate, group_id: currentGroupId,
+      ora: ora || null,
     });
     if (error && error.code !== '23505') { toast(friendlyError(error)); return; }
     toast('Fatto: i guidatori vedranno che cerchi un passaggio.');
@@ -2011,7 +2069,7 @@ async function renderWalkers(rides) {
     seated.add(r.driver_id);
     for (const c of r.seat_claims) seated.add(c.passenger_id);
   }
-  const requesters = new Set(currentRequests.map(r => r.user_id));
+  const requesters = new Map(currentRequests.map(r => [r.user_id, r.ora || null]));
 
   // Si arriva qui solo con una comitiva scelta (loadRides esce prima, altrimenti):
   // il ramo "senza gruppo" e' sparito con C4.
@@ -2024,18 +2082,37 @@ async function renderWalkers(rides) {
   const walkers = members.filter(m => !seated.has(m.user_id));
   // chi cerca un passaggio prima di tutti
   walkers.sort((a, b) => Number(requesters.has(b.user_id)) - Number(requesters.has(a.user_id)));
+  const guidoIoOggi = rides.some(r => r.driver_id === currentUser.id);
   walkersCard.classList.toggle('hidden', walkers.length === 0);
   walkersList.innerHTML = '';
   const seen = new Set();
   for (const w of walkers) {
     if (seen.has(w.user_id)) continue;
     seen.add(w.user_id);
-    const chip = document.createElement('span');
     const wants = requesters.has(w.user_id);
-    chip.className = 'walker-chip' + (wants ? ' request' : '');
+    const ora = requesters.get(w.user_id);
+    const suo = w.user_id === currentUser.id;
+
+    // Per chi cerca un passaggio la pastiglia diventa un bottone: apre il modulo
+    // dell'auto gia' aperto e con la sua ora dentro. Prima il verso funzionava in un
+    // senso solo — qualcuno pubblica, gli altri prenotano — e chi restava a piedi
+    // poteva solo aspettare che a qualcuno venisse in mente.
+    const offribile = wants && !suo && !guidoIoOggi && !isPastDay() && !sospeso;
+    const chip = document.createElement(offribile ? 'button' : 'span');
+    if (offribile) chip.type = 'button';
+    chip.className = 'walker-chip' + (wants ? ' request' : '') + (offribile ? ' offribile' : '');
     chip.textContent = nomeDi(w.profile)
-      + (w.user_id === currentUser.id ? ' (tu)' : '')
-      + (wants ? ' · cerca un passaggio' : '');
+      + (suo ? ' (tu)' : '')
+      + (wants ? (ora ? ` · cerca per le ${ora.slice(0, 5)}` : ' · cerca un passaggio') : '');
+    if (offribile) {
+      chip.title = `Metti la tua auto${ora ? ' per le ' + ora.slice(0, 5) : ''}`;
+      chip.addEventListener('click', () => {
+        if (offerCard.classList.contains('hidden')) offerToggle.click();
+        if (ora) document.getElementById('ride-time').value = ora.slice(0, 5);
+        offerCard.scrollIntoView({ block: 'center', behavior: 'smooth' });
+        document.getElementById('ride-destination').focus();
+      });
+    }
     walkersList.appendChild(chip);
   }
 }
@@ -2377,12 +2454,7 @@ function renderRides(rides) {
         lines.push('A bordo: ' + (r.seat_claims.map(c => nomeDi(c.passenger)).join(', ') || 'nessuno'));
         lines.push(freeN > 0 ? `Liberi: ${freeN} → prenota su ${SITE_URL}` : 'Al completo');
       }
-      const text = lines.join('\n');
-      if (navigator.share) {
-        try { await navigator.share({ title: 'WeTransport', text }); } catch {}
-      } else {
-        window.open('https://wa.me/?text=' + encodeURIComponent(text), '_blank', 'noopener');
-      }
+      condividi(lines.join('\n'));
     });
     statsEl.appendChild(shareDay);
   }
@@ -2447,13 +2519,7 @@ function renderRides(rides) {
       ` (${ride.ride_date.split('-').reverse().join('/')})` +
       (free > 0 ? ` — ${free} posti disponibili.` : ' — auto al completo.') +
       ` Prenota su ${SITE_URL}`;
-    share.addEventListener('click', async () => {
-      if (navigator.share) {
-        try { await navigator.share({ title: 'WeTransport', text: shareText, url: SITE_URL }); } catch {}
-      } else {
-        window.open('https://wa.me/?text=' + encodeURIComponent(shareText), '_blank', 'noopener');
-      }
-    });
+    share.addEventListener('click', () => condividi(shareText, SITE_URL));
     actions.appendChild(share);
     const cal = document.createElement('button');
     cal.className = 'place-delete';

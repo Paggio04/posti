@@ -960,6 +960,17 @@ input:focus-visible, select:focus-visible, textarea:focus-visible {
   font-weight: 600;
   animation: pulse-soft 2.4s ease-in-out infinite;
 }
+/* Per chi guida la pastiglia e' un bottone: apre il modulo dell'auto con dentro l'ora
+   chiesta. Si vede che si tocca dal bordo, non da una scritta in piu'. */
+.walker-chip.offribile {
+  border: 1px solid var(--primary);
+  font: inherit;
+  font-size: 0.84rem;
+  font-weight: 600;
+  cursor: pointer;
+}
+.walker-chip.offribile:hover { background: var(--primary); color: #fff; }
+.walker-chip.offribile:focus-visible { outline: 2px solid var(--primary); outline-offset: 2px; }
 @keyframes pulse-soft {
   0%, 100% { box-shadow: 0 0 0 0 oklch(0.42 0.11 258 / 0.25); }
   50% { box-shadow: 0 0 0 6px oklch(0.42 0.11 258 / 0); }
@@ -2178,3 +2189,20 @@ input:focus-visible, select:focus-visible, textarea:focus-visible {
 
 /* La scheda con la faccia e' la voce del profilo, quindi si accende come una voce. */
 .side-me.on { background: oklch(1 0 0 / 0.14); box-shadow: inset 0 0 0 1px var(--ottone-bordo), var(--luce-interna-scura); }
+
+/* Segnare un pagamento sta sulla riga del conto: il gesto accanto al numero che
+   cambia, non in un'altra pagina. */
+.dash .conto .salda {
+  flex: none;
+  border: 1px solid var(--border-strong);
+  border-radius: var(--pill);
+  background: transparent;
+  color: var(--ink-soft);
+  font: inherit;
+  font-size: 0.62rem;
+  font-weight: 600;
+  padding: 3px 9px;
+  cursor: pointer;
+}
+.dash .conto .salda:hover { background: var(--ok-soft); border-color: var(--ok); color: var(--ok-deep); }
+.dash .conto .salda:focus-visible { outline: 2px solid var(--primary); outline-offset: 2px; }
