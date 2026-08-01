@@ -1916,6 +1916,13 @@ function friendlyError(error) {
 }
 
 let currentRequests = [];
+// La 025 aggiunge `ora` a `ride_requests`. Il codice arriva sul sito appena si fonde,
+// la migrazione la applica una persona: fra i due momenti passa del tempo, e in quel
+// tempo chiedere una colonna che non c'e' fa fallire **tutto** il caricamento dei
+// passaggi, non solo l'ora. Quindi si prova con l'ora, e al primo `42703` si smette di
+// chiederla per il resto della sessione. Quando la migrazione c'e', questa riga non fa
+// niente e non se ne accorge nessuno.
+let requestsConOra = true;
 let loadToken = 0;
 // Le colonne di `rides` si nominano una per una, e non e' pignoleria (cantiere C21): da
 // `016_coordinate_riservate.sql` un client non ha il permesso di leggere origin_lat,
@@ -1956,11 +1963,22 @@ async function loadRides(silent = false) {
 
   let reqQuery = supabase
     .from('ride_requests')
-    .select('user_id, ora, profile:profiles(display_name)')
+    .select(requestsConOra ? 'user_id, ora, profile:profiles(display_name)' : 'user_id, profile:profiles(display_name)')
     .eq('ride_date', currentDate);
   reqQuery = reqQuery.eq('group_id', currentGroupId);
 
-  const [{ data, error }, { data: reqs }] = await Promise.all([query, reqQuery]);
+  let [{ data, error }, { data: reqs, error: erroreReq }] = await Promise.all([query, reqQuery]);
+  // Stessa ragione di `requestsConOra`: senza la 025 questa interrogazione fallisce e le
+  // richieste sparirebbero **in silenzio**, perche' vivono in una query separata e nessuno
+  // ne guarda l'errore. Si riprova una volta sola, senza la colonna.
+  if (erroreReq?.code === '42703') {
+    requestsConOra = false;
+    ({ data: reqs } = await supabase
+      .from('ride_requests')
+      .select('user_id, profile:profiles(display_name)')
+      .eq('ride_date', currentDate)
+      .eq('group_id', currentGroupId));
+  }
   if (token !== loadToken) return; // risposta vecchia, ignora
   if (error) {
     console.error(error);
@@ -2052,10 +2070,14 @@ document.getElementById('request-toggle').addEventListener('click', async () => 
       placeholder: '07:40', type: 'time',
     });
     if (ora === null) return;
-    const { error } = await supabase.from('ride_requests').insert({
-      user_id: currentUser.id, ride_date: currentDate, group_id: currentGroupId,
-      ora: ora || null,
-    });
+    const riga = { user_id: currentUser.id, ride_date: currentDate, group_id: currentGroupId };
+    if (requestsConOra && ora) riga.ora = ora;
+    let { error } = await supabase.from('ride_requests').insert(riga);
+    if (error?.code === '42703') {            // 025 non ancora applicata
+      requestsConOra = false;
+      delete riga.ora;
+      ({ error } = await supabase.from('ride_requests').insert(riga));
+    }
     if (error && error.code !== '23505') { toast(friendlyError(error)); return; }
     toast('Fatto: i guidatori vedranno che cerchi un passaggio.');
   }
