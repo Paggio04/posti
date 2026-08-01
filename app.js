@@ -665,6 +665,15 @@ function switchView(view) {
       b.removeAttribute('aria-current');
     }
   });
+  // La barra laterale segue le stesse viste. Non usa `.nav-item` di proposito:
+  // quel ciclo qui sopra ricava la colonna del tondo dalla **posizione** del
+  // pulsante nell'elenco, e tredici pulsanti al posto di cinque lo manderebbero
+  // a segnare una colonna che non esiste.
+  document.querySelectorAll('.side-item').forEach(b => {
+    const attiva = b.dataset.view === view && !b.dataset.scroll;
+    b.classList.toggle('on', attiva);
+    if (attiva) b.setAttribute('aria-current', 'page'); else b.removeAttribute('aria-current');
+  });
   window.scrollTo({ top: 0 });
   if (view === 'history') loadHistory();
   if (view === 'stats') loadStats();
@@ -674,6 +683,23 @@ function switchView(view) {
 
 document.querySelectorAll('.nav-item').forEach(b =>
   b.addEventListener('click', () => switchView(b.dataset.view)));
+
+// Le voci senza una vista propria — Richieste, Conti, Ricorrenze — aprono la
+// vista che le contiene e poi scorrono fino al riquadro. Lo scorrimento aspetta
+// il giro dopo perche' `loadStats()` scrive i riquadri e non ha ancora finito.
+document.querySelectorAll('.side-item').forEach(b => b.addEventListener('click', () => {
+  switchView(b.dataset.view);
+  const bersaglio = b.dataset.scroll;
+  if (!bersaglio) return;
+  const vaiLi = (tentativi) => {
+    const el = document.getElementById(bersaglio);
+    if (el && !el.classList.contains('hidden')) { el.scrollIntoView({ block: 'start', behavior: 'smooth' }); return; }
+    if (tentativi > 0) setTimeout(() => vaiLi(tentativi - 1), 120);
+  };
+  setTimeout(() => vaiLi(12), 0);
+}));
+
+document.getElementById('side-me')?.addEventListener('click', () => switchView('profile'));
 
 userNameEl.addEventListener('click', () => switchView('profile'));
 
@@ -690,7 +716,22 @@ document.getElementById('profile-rename').addEventListener('click', async () => 
   loadRides();
 });
 
+// La scheda in fondo alla barra laterale. Dice due cose vere e nessuna di piu':
+// come ti chiami e in quante comitive sei. Il ruolo lo scrive solo se c'e'.
+function aggiornaBarraLaterale() {
+  const av = document.getElementById('side-av');
+  const nome = document.getElementById('side-nome');
+  const ruolo = document.getElementById('side-ruolo');
+  if (!av || !nome || !ruolo) return;
+  av.textContent = initials(myName || '?');
+  nome.textContent = myName || '—';
+  const n = myGroups.length;
+  ruolo.textContent = (isAdmin ? 'Amministratore · ' : '') +
+    (n === 0 ? 'nessuna comitiva' : n === 1 ? '1 comitiva' : `${n} comitive`);
+}
+
 function renderProfile() {
+  aggiornaBarraLaterale();
   const av = document.getElementById('profile-avatar');
   if (myAvatar) {
     // Costruito con il DOM e non con innerHTML: l'indirizzo dell'avatar arriva da
@@ -865,6 +906,7 @@ async function loadGroups() {
     document.getElementById('day-stats').classList.add('hidden');
     document.getElementById('turn-hint').classList.add('hidden');
     walkersCard.classList.add('hidden');
+    segnaBadge('badge-richieste', 0);
     offerCard.classList.add('hidden');
   }
   renderGroupBar();
@@ -1062,116 +1104,304 @@ async function loadHistory() {
   }
 }
 
-// --- Vista Statistiche ---
+// ══════════════════════════════════════════════════════════════════════════
+// Il riepilogo.
+//
+// Una sola funzione perche' una sola lettura: le quattro interrogazioni partono
+// insieme e da li' in poi si contano le stesse righe piu' volte, invece di
+// chiedere al database una somma per riquadro. Con una comitiva vera sono
+// centinaia di righe, non milioni.
+//
+// Regola valida per ogni riquadro qui sotto: **se il dato non c'e', il riquadro
+// non c'e'**. Nessun numero finto, nessun trattino messo li' per riempire il
+// disegno. Un cruscotto che mostra zeri inventati e' peggio di uno spazio vuoto,
+// perche' lo zero si legge come una misura.
+// ══════════════════════════════════════════════════════════════════════════
 async function loadStats() {
   if (!currentGroupId) return;
   const box = document.getElementById('stats-content');
-  document.querySelector('#view-stats .view-subtitle').textContent =
-    `Riepilogo di ${groupLabel()} (si cambia dalla Home)`;
   box.innerHTML = '<div class="skeleton"></div>';
+
   let sq = supabase
     .from('rides')
     .select('id, ride_date, depart_time, origin, destination, seats, driver_id, fuel_per_person, driver:profiles!rides_driver_id_fkey(display_name), seat_claims(passenger_id, passenger:profiles!seat_claims_passenger_id_fkey(display_name))');
   sq = sq.eq('group_id', currentGroupId);
   const { data, error } = await sq;
-  if (error || !data) { box.innerHTML = '<p class="view-subtitle">Impossibile caricare le statistiche.</p>'; return; }
+  if (error || !data) { box.innerHTML = '<p class="vuoto">Impossibile caricare il riepilogo.</p>'; return; }
 
   // Le tre tabelle della 022-024. `eventi` non ha chiavi esterne (e' un registro
   // storico: deve sopravvivere a cio' che racconta), quindi PostgREST non puo'
   // unirla a `profiles` da solo e i nomi si risolvono qui sotto.
   const oggi = todayISO();
+  const domani = todayISO(1);
   const [pagRes, evRes, ricRes] = await Promise.all([
-    supabase.from('pagamenti').select('da_utente, a_utente, importo').eq('group_id', currentGroupId),
+    supabase.from('pagamenti').select('da_utente, a_utente, importo, quando').eq('group_id', currentGroupId),
     supabase.from('eventi').select('tipo, attore, quando').eq('group_id', currentGroupId)
-      .order('quando', { ascending: false }).limit(8),
-    supabase.from('ricorrenze').select('id').eq('group_id', currentGroupId).eq('attiva', true),
+      .order('quando', { ascending: false }).limit(6),
+    supabase.from('ricorrenze').select('id, giorno, depart_time, origin, destination, driver_id')
+      .eq('group_id', currentGroupId).eq('attiva', true),
   ]);
   const pagamenti = pagRes.data ?? [];
   const eventi = evRes.data ?? [];
-  const nRicorrenze = (ricRes.data ?? []).length;
+  const ricorrenze = ricRes.data ?? [];
 
-  const drives = new Map(); // id -> {name, n}
-  const ridesTaken = new Map();
-  const fuelIn = new Map();  // guidatore -> {name, n: € raccolti}
-  const fuelOut = new Map(); // passeggero -> {name, n: € versati}
+  // ── Un giro solo sui passaggi, e tutte le somme che servono ───────────────
+  const drives = new Map();      // guidatore -> {name, n}
+  const drives30 = new Map();    // idem, ultimi 30 giorni
+  const ridesTaken = new Map();  // passeggero -> {name, n}
+  const nomePer = new Map();
+  const trentaFa = isoMeno(oggi, 30);
   for (const r of data) {
+    nomePer.set(r.driver_id, nomeDi(r.driver));
     const d = drives.get(r.driver_id) ?? { name: nomeDi(r.driver), n: 0 };
     d.n++; drives.set(r.driver_id, d);
-    const fuel = Number(r.fuel_per_person) || 0;
+    if (r.ride_date >= trentaFa && r.ride_date <= oggi) {
+      const d30 = drives30.get(r.driver_id) ?? { name: nomeDi(r.driver), n: 0 };
+      d30.n++; drives30.set(r.driver_id, d30);
+    }
     for (const c of r.seat_claims) {
+      nomePer.set(c.passenger_id, nomeDi(c.passenger));
       const p = ridesTaken.get(c.passenger_id) ?? { name: nomeDi(c.passenger), n: 0 };
       p.n++; ridesTaken.set(c.passenger_id, p);
-      if (fuel > 0) {
-        const fi = fuelIn.get(r.driver_id) ?? { name: nomeDi(r.driver), n: 0 };
-        fi.n += fuel; fuelIn.set(r.driver_id, fi);
-        const fo = fuelOut.get(c.passenger_id) ?? { name: nomeDi(c.passenger), n: 0 };
-        fo.n += fuel; fuelOut.set(c.passenger_id, fo);
-      }
     }
   }
-
-  const myDrives = drives.get(currentUser.id)?.n ?? 0;
-  const myRides = ridesTaken.get(currentUser.id)?.n ?? 0;
-
-  const bars = (map, alt) => {
-    const rows = [...map.values()].sort((a, b) => b.n - a.n).slice(0, 8);
-    const max = rows[0]?.n || 1;
-    return rows.map(r =>
-      `<div class="stats-row${alt ? ' alt' : ''}">
-        <span class="stats-row-name">${escapeHtml(r.name)}</span>
-        <span class="stats-row-bar-wrap"><span class="stats-row-bar" style="width:${(r.n / max) * 100}%"></span></span>
-        <span class="stats-row-count">${r.n}</span>
-      </div>`).join('') || '<p class="view-subtitle">Ancora nessun dato.</p>';
-  };
-
-  // ── Riquadri della dashboard ────────────────────────────────────────────
-  const eur = (n) => (Math.round(n * 100) / 100).toLocaleString('it-IT',
-    { minimumFractionDigits: 2, maximumFractionDigits: 2 }) + ' €';
-
-  // Il prossimo passaggio, e i posti liberi che restano
   const futuri = data
     .filter(r => r.ride_date >= oggi)
     .sort((a, b) => (a.ride_date + (a.depart_time || '')).localeCompare(b.ride_date + (b.depart_time || '')));
   const prossimo = futuri[0] || null;
   const liberiTot = futuri.reduce((s, r) => s + Math.max(0, (r.seats || 0) - r.seat_claims.length), 0);
   const guidoIo = futuri.find(r => r.driver_id === currentUser.id) || null;
-
-  // Passaggi di questo mese: quelli su cui c'e' stato almeno un posto preso
   const inizioMese = oggi.slice(0, 8) + '01';
   const nelMese = data.filter(r => r.ride_date >= inizioMese && r.ride_date <= oggi).length;
 
-  // Il mio saldo: dovuto meno pagato, con la stessa aritmetica di saldo_con()
+  // ── Il carburante ripartito, mese per mese ───────────────────────────────
+  // Non e' quanto e' stato **pagato** (quello sta in `pagamenti`): e' quanto
+  // valgono le quote dei posti occupati, cioe' la spesa che la comitiva si e'
+  // divisa. Le due cose vanno tenute separate o il saldo non torna.
+  const perMese = new Map();
+  for (const r of data) {
+    const q = Number(r.fuel_per_person) || 0;
+    if (!q || !r.seat_claims.length) continue;
+    const m = (r.ride_date || '').slice(0, 7);
+    const v = perMese.get(m) ?? { tot: 0, n: 0 };
+    v.tot += q * r.seat_claims.length;
+    v.n += 1;
+    perMese.set(m, v);
+  }
+  const mesiFinestra = ultimiMesi(oggi, 6);
+  const serie = mesiFinestra.map(m => perMese.get(m)?.tot ?? 0);
+  const meseCorr = perMese.get(oggi.slice(0, 7)) ?? { tot: 0, n: 0 };
+  const mesePrec = perMese.get(mesiFinestra[mesiFinestra.length - 2]) ?? { tot: 0, n: 0 };
+  const delta = mesePrec.tot > 0 ? Math.round(((meseCorr.tot - mesePrec.tot) / mesePrec.tot) * 100) : null;
+
+  // ── Il mio saldo, con l'aritmetica di saldo_con() ────────────────────────
   const dovutoDaMe = new Map();   // guidatore -> quanto gli devo
-  const dovutoAMe  = new Map();   // passeggero -> quanto mi deve
+  const dovutoAMe = new Map();    // passeggero -> quanto mi deve
+  const quantiCon = new Map();    // altra persona -> quanti passaggi in ballo
+  const primaCon = new Map();     // altra persona -> il piu' vecchio dei passaggi
+  const segna = (id, giorno) => {
+    quantiCon.set(id, (quantiCon.get(id) || 0) + 1);
+    const p = primaCon.get(id);
+    if (!p || giorno < p) primaCon.set(id, giorno);
+  };
   for (const r of data) {
     const q = Number(r.fuel_per_person) || 0;
     if (!q) continue;
     for (const c of r.seat_claims) {
       if (c.passenger_id === currentUser.id && r.driver_id !== currentUser.id) {
         dovutoDaMe.set(r.driver_id, (dovutoDaMe.get(r.driver_id) || 0) + q);
+        segna(r.driver_id, r.ride_date);
       } else if (r.driver_id === currentUser.id && c.passenger_id !== currentUser.id) {
         dovutoAMe.set(c.passenger_id, (dovutoAMe.get(c.passenger_id) || 0) + q);
+        segna(c.passenger_id, r.ride_date);
       }
     }
   }
   for (const pg of pagamenti) {
     const imp = Number(pg.importo) || 0;
     if (pg.da_utente === currentUser.id) dovutoDaMe.set(pg.a_utente, (dovutoDaMe.get(pg.a_utente) || 0) - imp);
-    if (pg.a_utente === currentUser.id)  dovutoAMe.set(pg.da_utente, (dovutoAMe.get(pg.da_utente) || 0) - imp);
+    if (pg.a_utente === currentUser.id) dovutoAMe.set(pg.da_utente, (dovutoAMe.get(pg.da_utente) || 0) - imp);
   }
-  const nomePer = new Map();
-  for (const r of data) {
-    nomePer.set(r.driver_id, nomeDi(r.driver));
-    for (const c of r.seat_claims) nomePer.set(c.passenger_id, nomeDi(c.passenger));
-  }
-  const partite = [];
-  for (const [id, v] of dovutoAMe)  if (Math.abs(v) >= 0.01) partite.push({ id, v });
-  for (const [id, v] of dovutoDaMe) if (Math.abs(v) >= 0.01) partite.push({ id, v: -v });
+  // Una riga per persona, non una per verso. Con due mappe separate chi ha
+  // guidato per me **e** e' salito con me compariva due volte, una in credito e
+  // una in debito, e il totale in cima non tornava con la somma delle righe
+  // sotto. Il conto fra due persone e' uno solo: si sommano e si tiene il netto.
+  const netto = new Map();
+  for (const [id, v] of dovutoAMe) netto.set(id, (netto.get(id) || 0) + v);
+  for (const [id, v] of dovutoDaMe) netto.set(id, (netto.get(id) || 0) - v);
+  const partite = [...netto.entries()]
+    .filter(([, v]) => Math.abs(v) >= 0.01)
+    .map(([id, v]) => ({ id, v }))
+    .sort((a, b) => b.v - a.v);
   const saldo = partite.reduce((s, p) => s + p.v, 0);
 
-  const kpi = (cls, lab, val, nota) =>
-    `<div class="kpi-box ${cls}"><span class="kpi-lab">${lab}</span>` +
-    `<strong class="kpi-val">${val}</strong><span class="kpi-nota">${nota}</span></div>`;
+  // ── I prossimi sette giorni: chi guida, e i giorni senza nessuno ─────────
+  const settimana = [];
+  for (let i = 0; i < 7; i++) {
+    const g = todayISO(i);
+    const dellaGiornata = data.filter(r => r.ride_date === g)
+      .sort((a, b) => (a.depart_time || '').localeCompare(b.depart_time || ''));
+    const posti = dellaGiornata.reduce((s, r) => s + (r.seats || 0), 0);
+    const presi = dellaGiornata.reduce((s, r) => s + r.seat_claims.length, 0);
+    settimana.push({ giorno: g, rides: dellaGiornata, posti, presi });
+  }
+  const scoperti = settimana.filter(s => s.rides.length === 0).length;
+  const primoScoperto = settimana.find(s => s.rides.length === 0);
+  const postiSett = settimana.reduce((s, g) => s + g.posti, 0);
+  const presiSett = settimana.reduce((s, g) => s + g.presi, 0);
+
+  // L'agenda mostra il primo giorno che ha qualcosa: oggi se c'e', altrimenti
+  // il primo giorno pieno. Un'agenda vuota su "oggi" non dice niente.
+  const giornoAgenda = settimana.find(s => s.giorno === oggi && s.rides.length)
+    || settimana.find(s => s.rides.length) || settimana[0];
+
+  // ── L'occupazione di domani ──────────────────────────────────────────────
+  const diDomani = data.filter(r => r.ride_date === domani);
+  const postiDom = diDomani.reduce((s, r) => s + (r.seats || 0), 0);
+  const occupatiDom = diDomani.reduce((s, r) => s + r.seat_claims.length, 0);
+  const liberiDom = Math.max(0, postiDom - occupatiDom);
+
+  // ── Il calendario del mese ───────────────────────────────────────────────
+  const conPassaggio = new Set(data.map(r => r.ride_date));
+  const guidoIl = new Set(data.filter(r => r.driver_id === currentUser.id).map(r => r.ride_date));
+
+  // ── Da qui in giu' si scrive, non si calcola piu' ────────────────────────
+  const eur = (n) => (Math.round(n * 100) / 100).toLocaleString('it-IT',
+    { minimumFractionDigits: 2, maximumFractionDigits: 2 }) + ' €';
+  const ico = (id, w = 15) => `<svg width="${w}" height="${w}" aria-hidden="true"><use href="#i-${id}"/></svg>`;
+  const iniz = (n) => (String(n || '?').trim()[0] || '?').toUpperCase();
+  const mio = (id) => id === currentUser.id;
+  const nomeCorto = (id) => mio(id) ? 'Tu' : (nomePer.get(id) || 'Qualcuno');
+
+  const kpi = [];
+  kpi.push(guidoIo
+    ? box_k('mio', 'Il tuo prossimo turno', dataBreve(guidoIo.ride_date),
+        `${(guidoIo.depart_time || '').slice(0, 5)} · ${guidoIo.origin || '—'} → ${guidoIo.destination || ''}`)
+    : box_k('', 'Il tuo prossimo turno', '—', 'non sei alla guida di nessun passaggio'));
+  kpi.push(box_k('', 'Passaggi nel mese', String(nelMese),
+    `${drives.size} ${drives.size === 1 ? 'persona alla guida' : 'persone alla guida'}`));
+  kpi.push(box_k('mio', 'Il tuo saldo', (saldo >= 0 ? '+ ' : '− ') + eur(Math.abs(saldo)),
+    partite.length ? `${partite.length} ${partite.length === 1 ? 'partita aperta' : 'partite aperte'}` : 'nessuna partita aperta'));
+  kpi.push(scoperti
+    ? box_k('allerta', 'Giorni scoperti', String(scoperti),
+        `il primo: ${dataBreve(primoScoperto.giorno)}`)
+    : box_k('', 'Giorni scoperti', '0', 'sette giorni tutti coperti'));
+  kpi.push(box_k('', 'Posti disponibili', String(liberiTot), 'sui passaggi in programma'));
+
+  function box_k(cls, lab, val, nota) {
+    return `<div class="k${cls ? ' ' + cls : ''}"><div class="lab">${escapeHtml(lab)}</div>` +
+      `<div class="val">${escapeHtml(val)}</div><div class="nota">${escapeHtml(nota)}</div></div>`;
+  }
+
+  // Il grafico: si disegna solo se ci sono due mesi con qualcosa dentro. Una
+  // linea costruita su un punto solo e' una decorazione, non una misura.
+  const mesiPieni = serie.filter(v => v > 0).length;
+  const via = sparkline(serie);
+
+  const heroCarb = `
+    <section class="card hero">
+      <div class="head">
+        <span class="sub">Carburante ripartito · mese corrente</span>
+        <span class="pill">${escapeHtml(groupLabel())}</span>
+      </div>
+      <div class="big">${escapeHtml(eur(meseCorr.tot))}</div>
+      <div class="d">${
+        delta === null ? 'primo mese con le quote registrate' :
+        `${delta >= 0 ? '+' : '−'}${Math.abs(delta)}% sul mese precedente`
+      }${meseCorr.n ? ` · ${escapeHtml(eur(meseCorr.tot / meseCorr.n))} per passaggio` : ''}</div>
+      ${mesiPieni >= 2 ? `
+      <svg viewBox="0 0 250 56" preserveAspectRatio="none" role="img"
+           aria-label="Andamento del carburante ripartito negli ultimi sei mesi"
+           style="width:100%;height:56px;margin-top:8px;display:block">
+        <defs><linearGradient id="grad-carb" x1="0" y1="0" x2="0" y2="1">
+          <stop offset="0" stop-color="oklch(0.74 0.13 78)" stop-opacity=".40"/>
+          <stop offset="1" stop-color="oklch(0.74 0.13 78)" stop-opacity="0"/></linearGradient></defs>
+        <path d="${via} L250,56 L0,56 Z" fill="url(#grad-carb)"/>
+        <path d="${via}" fill="none" stroke="oklch(0.74 0.13 78)" stroke-width="2" vector-effect="non-scaling-stroke"/>
+      </svg>` : ''}
+      <button type="button" class="cta" data-vai="conti">Vedi le partite aperte →</button>
+    </section>`;
+
+  const cardProssimo = prossimo ? `
+    <section class="card next">
+      <div class="head"><span class="sub">Prossimo passaggio · ${escapeHtml(dataBreve(prossimo.ride_date))}</span></div>
+      <div class="titolo">${escapeHtml((prossimo.depart_time || '').slice(0, 5))} · ${escapeHtml(prossimo.origin || '—')} → ${escapeHtml(prossimo.destination || '')}</div>
+      <div class="riga${mio(prossimo.driver_id) ? ' tua' : ''}"><span>Conducente</span><b>${escapeHtml(nomeCorto(prossimo.driver_id))}</b></div>
+      <div class="riga"><span>Occupazione</span><b>${prossimo.seat_claims.length} / ${prossimo.seats} · ${Math.max(0, prossimo.seats - prossimo.seat_claims.length)} ${Math.max(0, prossimo.seats - prossimo.seat_claims.length) === 1 ? 'disponibile' : 'disponibili'}</b></div>
+      <div class="riga"><span>Ritrovo</span><b>${escapeHtml(prossimo.origin || 'da concordare')}</b></div>
+      <div class="riga"><span>${prossimo.seat_claims.length === 1 ? 'Passeggero' : 'Passeggeri'}</span><b>${
+        prossimo.seat_claims.length
+          ? prossimo.seat_claims.map(c => escapeHtml(nomeCorto(c.passenger_id))).join(' · ')
+          : 'nessuno, per ora'}</b></div>
+      <button type="button" class="go" data-vai="home" aria-label="Vai al passaggio">→</button>
+    </section>` : `
+    <section class="card next">
+      <div class="head"><span class="sub">Prossimo passaggio</span></div>
+      <div class="titolo">Nessun passaggio in programma</div>
+      <div class="riga"><span>Guidi tu?</span><b>Pubblica la tua auto dalla Home</b></div>
+      <button type="button" class="go" data-vai="home" aria-label="Vai alla Home">→</button>
+    </section>`;
+
+  // Il calendario del mese: le settimane cominciano di lunedi', come si usa qui.
+  const primo = new Date(oggi.slice(0, 8) + '01T00:00:00');
+  const scarto = (primo.getDay() + 6) % 7;
+  const celle = [];
+  for (let i = 0; i < 42; i++) {
+    const d = new Date(primo);
+    d.setDate(1 - scarto + i);
+    const iso = isoDi(d);
+    if (i >= 35 && d.getMonth() !== primo.getMonth()) break;
+    const cls = [];
+    if (d.getMonth() !== primo.getMonth()) cls.push('fuori');
+    if (iso === oggi) cls.push('oggi');
+    else if (guidoIl.has(iso)) cls.push('mio');
+    else if (conPassaggio.has(iso)) cls.push('ha');
+    celle.push(`<span class="${cls.join(' ')}">${d.getDate()}</span>`);
+  }
+
+  const cardCal = `
+    <section class="card cal">
+      <div class="head"><h3>${escapeHtml(meseInLettere(oggi))}</h3><span class="sub">oggi · tuoi turni · con auto</span></div>
+      <div class="dows"><span>L</span><span>M</span><span>M</span><span>G</span><span>V</span><span>S</span><span>D</span></div>
+      <div class="days">${celle.join('')}</div>
+      <div style="margin-top:9px">
+        ${giornoAgenda.rides.length
+          ? giornoAgenda.rides.slice(0, 4).map(r => {
+              const pieno = r.seat_claims.length >= (r.seats || 0);
+              return `<div class="ag">
+                <span class="h">${escapeHtml((r.depart_time || '').slice(0, 5) || '—')}</span>
+                <div class="t">${escapeHtml(r.origin || '—')} → ${escapeHtml(r.destination || '')}
+                  <small>${escapeHtml(nomeCorto(r.driver_id))} · ${r.seat_claims.length}/${r.seats}${pieno ? ' completo' : ''}</small></div>
+                <span class="chip${mio(r.driver_id) ? ' mia' : ''}" style="background:${mio(r.driver_id) ? 'var(--ottone-velo)' : 'var(--primary-soft)'}">${ico('car', 13)}</span>
+              </div>`;
+            }).join('')
+          : '<p class="vuoto" style="margin:0">Nessun passaggio nei prossimi sette giorni.</p>'}
+      </div>
+    </section>`;
+
+  // La ciambella si disegna solo se domani esiste qualcosa da ripartire.
+  const cardDomani = postiDom > 0 ? `
+    <section class="card hero">
+      <div class="head"><h3>Occupazione · domani</h3><span class="sub">${postiDom}</span></div>
+      <div class="ciambella">
+        <svg width="74" height="74" viewBox="0 0 42 42" style="flex:none" role="img"
+             aria-label="${occupatiDom} posti occupati su ${postiDom}">
+          <circle cx="21" cy="21" r="16" fill="none" stroke="oklch(1 0 0/.10)" stroke-width="7"/>
+          <circle cx="21" cy="21" r="16" fill="none" stroke="oklch(0.52 0.11 165)" stroke-width="7"
+                  stroke-dasharray="${((occupatiDom / postiDom) * 100).toFixed(1)} 100" transform="rotate(-90 21 21)"/>
+          <circle cx="21" cy="21" r="16" fill="none" stroke="oklch(0.52 0.13 255)" stroke-width="7"
+                  stroke-dasharray="${((liberiDom / postiDom) * 100).toFixed(1)} 100"
+                  stroke-dashoffset="-${((occupatiDom / postiDom) * 100).toFixed(1)}" transform="rotate(-90 21 21)"/>
+          <text x="21" y="20" text-anchor="middle" font-size="8.5" font-weight="700" fill="#fff">${postiDom}</text>
+          <text x="21" y="26" text-anchor="middle" font-size="3.4" fill="oklch(0.72 0.03 258)">posti</text>
+        </svg>
+        <div class="leg">
+          <div><i style="background:oklch(0.52 0.11 165)"></i><span class="nm">Occupati</span><b>${occupatiDom}</b></div>
+          <div><i style="background:oklch(0.52 0.13 255)"></i><span class="nm">Disponibili</span><b>${liberiDom}</b></div>
+          <div><i style="background:oklch(1 0 0/.18)"></i><span class="nm">Auto in strada</span><b>${diDomani.length}</b></div>
+        </div>
+      </div>
+    </section>` : '';
 
   const ETICHETTA = {
     passaggio_pubblicato: 'ha pubblicato un passaggio',
@@ -1182,62 +1412,230 @@ async function loadStats() {
     pagamento_registrato: 'ha registrato un pagamento',
   };
 
+  const cardAttivita = `
+    <section class="card">
+      <div class="head"><h3>Attività recente</h3></div>
+      ${eventi.length ? eventi.map(e => {
+        const chi = nomeCorto(e.attore);
+        return `<div class="att">
+          <div class="av" style="background:${mio(e.attore) ? 'var(--ottone)' : coloreDi(e.attore)};${mio(e.attore) ? 'color:oklch(0.28 0.05 70)' : ''}">${escapeHtml(iniz(chi))}</div>
+          <div class="txt"><b>${escapeHtml(chi)}</b> — ${ETICHETTA[e.tipo] || escapeHtml(e.tipo)}</div>
+          <span class="when">${escapeHtml(quandoBreve(e.quando))}</span>
+        </div>`;
+      }).join('')
+      : '<p class="vuoto">Il registro parte da quando è stato acceso: qui comparirà quello che succede da adesso in poi.</p>'}
+    </section>`;
+
+  const AZIONI = [
+    ['plus', 'Pubblica<br>un passaggio', 'offerta'],
+    ['walk', 'Cerco<br>un passaggio', 'richiesta'],
+    ['users', 'Invita<br>un membro', 'invita'],
+    ['history', 'Guarda<br>lo storico', 'storico'],
+    ['user', 'Il tuo<br>profilo', 'profilo'],
+  ];
+  const cardAzioni = `<div class="azioni">${AZIONI.map(([i, t, a]) =>
+    `<button type="button" class="az" data-azione="${a}"><span class="o">${ico(i)}</span><span class="t">${t}</span></button>`).join('')}</div>`;
+
+  const GIORNI = ['lun', 'mar', 'mer', 'gio', 'ven', 'sab', 'dom'];
+  const nomeGiorno = (iso) => GIORNI[(new Date(iso + 'T00:00:00').getDay() + 6) % 7];
+  const cardSettimana = `
+    <section class="card">
+      <div class="head"><div><h3>Occupazione settimanale</h3>
+        <span class="sub">posti assegnati, giorno per giorno</span></div></div>
+      ${settimana.map(g => {
+        // Con piu' di un'auto nello stesso giorno il nome di chi guida la prima
+        // sarebbe una mezza verita': si dice quante sono.
+        const guidatori = new Set(g.rides.map(r => r.driver_id));
+        const suo = guidatori.has(currentUser.id);
+        const perc = g.posti ? (g.presi / g.posti) * 100 : 0;
+        const et = `${nomeGiorno(g.giorno)} · ` + (
+          g.rides.length === 0 ? 'scoperto'
+          : guidatori.size > 1 ? `${guidatori.size} auto`
+          : nomeCorto(g.rides[0].driver_id).toLowerCase());
+        return `<div class="riemp">
+          <span class="n">${suo ? `<span class="tu">${escapeHtml(et)}</span>` : escapeHtml(et)}</span>
+          <span class="bar"><i style="width:${perc.toFixed(0)}%;background:${
+            !g.posti ? 'transparent' : perc >= 100 ? 'var(--ok)' : suo ? 'var(--ottone)' : 'var(--primary-bright)'}"></i></span>
+          <span class="p">${g.posti ? `${g.presi}/${g.posti}` : '—'}</span>
+        </div>`;
+      }).join('')}
+      <div class="piede"><b>${presiSett} / ${postiSett}</b> posti assegnati nei prossimi sette giorni${
+        scoperti ? ` · <b style="color:var(--danger)">${scoperti} ${scoperti === 1 ? 'giorno scoperto' : 'giorni scoperti'}</b>` : ' · nessun giorno scoperto'}</div>
+    </section>`;
+
+  const turni = [...drives30.entries()].sort((a, b) => b[1].n - a[1].n).slice(0, 6);
+  const totTurni = turni.reduce((s, [, v]) => s + v.n, 0);
+  const mieiTurni = drives30.get(currentUser.id)?.n ?? 0;
+  const cardTurni = turni.length ? `
+    <section class="card">
+      <div class="head"><div><h3>Distribuzione turni <span class="nuovo">NUOVO</span></h3><span class="sub">ultimi 30 giorni</span></div></div>
+      ${turni.map(([id, v]) => {
+        const suo = mio(id);
+        return `<div class="turno">
+          <span class="n">${suo ? '<b>Tu</b>' : escapeHtml(v.name)}</span>
+          <span class="bar"><i style="width:${totTurni ? ((v.n / turni[0][1].n) * 100).toFixed(0) : 0}%;background:${suo ? 'var(--ottone)' : 'var(--primary-bright)'}"></i><em>${v.n}</em></span>
+        </div>`;
+      }).join('')}
+      <div class="piede"><b style="color:var(--ottone-scuro)">${totTurni ? Math.round((mieiTurni / totTurni) * 100) : 0}%</b> dei turni a tuo carico</div>
+    </section>` : '';
+
+  const cardConti = `
+    <section class="card largo" id="dash-conti">
+      <div class="head"><div><h3>Partite aperte <span class="nuovo">NUOVO</span></h3>
+        <span class="sub">quote di carburante non ancora saldate</span></div>
+        <span class="pill">Saldo: <b style="color:${saldo >= 0 ? 'var(--ok-deep)' : 'var(--danger)'}">${saldo >= 0 ? '+ ' : '− '}${escapeHtml(eur(Math.abs(saldo)))}</b></span></div>
+      ${partite.length ? `<div class="conti">${partite.map(p => {
+        const n = quantiCon.get(p.id) || 0;
+        const da = primaCon.get(p.id);
+        return `<div class="conto">
+          <div class="av" style="background:${coloreDi(p.id)}">${escapeHtml(iniz(nomePer.get(p.id)))}</div>
+          <div class="chi">${escapeHtml(nomePer.get(p.id) || 'Qualcuno')}<small>${n} ${n === 1 ? 'passaggio' : 'passaggi'}${da ? ` · dal ${escapeHtml(dataBreve(da))}` : ''}</small></div>
+          <span class="imp ${p.v >= 0 ? 'avere' : 'dare'}">${p.v >= 0 ? '+ ' : '− '}${escapeHtml(eur(Math.abs(p.v)))}</span>
+        </div>`;
+      }).join('')}</div>`
+      : '<p class="vuoto">Nessun conto in sospeso. Le partite compaiono qui quando chi guida indica un «€ a testa».</p>'}
+      <div class="piede">Gli importi li vedete solo tu e la persona interessata: la policy sulla tabella nomina le due parti, non la comitiva.</div>
+    </section>`;
+
+  const RIC_GIORNI = ['lunedì', 'martedì', 'mercoledì', 'giovedì', 'venerdì', 'sabato', 'domenica'];
+  const cardRicorrenze = `
+    <section class="card largo" id="dash-ricorrenze">
+      <div class="head"><div><h3>Ricorrenze attive <span class="nuovo">NUOVO</span></h3>
+        <span class="sub">i passaggi che si ripetono ogni settimana</span></div>
+        <span class="pill">${ricorrenze.length}</span></div>
+      ${ricorrenze.length ? ricorrenze.map(r => `<div class="conto">
+          <div class="av" style="background:${mio(r.driver_id) ? 'var(--ottone)' : coloreDi(r.driver_id)};${mio(r.driver_id) ? 'color:oklch(0.28 0.05 70)' : ''}">${escapeHtml(iniz(nomePer.get(r.driver_id) || '?'))}</div>
+          <div class="chi">Ogni ${escapeHtml(RIC_GIORNI[(r.giorno || 1) - 1])} · ${escapeHtml((r.depart_time || '').slice(0, 5))}
+            <small>${escapeHtml(r.origin || '—')} → ${escapeHtml(r.destination || '')} · ${escapeHtml(nomeCorto(r.driver_id))}</small></div>
+        </div>`).join('')
+      : '<p class="vuoto">Nessuna ricorrenza attiva. Un passaggio che si ripete si pubblica ogni volta a mano.</p>'}
+    </section>`;
+
   box.innerHTML =
-    `<div class="kpi-strip">
-      ${kpi('mio', 'Prossimo turno tuo', guidoIo ? dataBreve(guidoIo.ride_date) : '—',
-            guidoIo ? escapeHtml(`${(guidoIo.depart_time || '').slice(0, 5)} · ${guidoIo.destination || ''}`) : 'nessuno in programma')}
-      ${kpi('', 'Passaggi nel mese', String(nelMese), `${drives.size} persone alla guida`)}
-      ${kpi('mio', 'Saldo', (saldo >= 0 ? '+ ' : '− ') + eur(Math.abs(saldo)),
-            partite.length ? `${partite.length} partite aperte` : 'nessuna partita aperta')}
-      ${kpi('', 'Posti disponibili', String(liberiTot), 'sui passaggi in programma')}
-      ${kpi('mio', 'I tuoi turni', String(myDrives), `${myRides} passaggi ricevuti`)}
-    </div>` +
-
-    (prossimo ? `<div class="stats-section prossimo-box">
-      <h3>Prossimo passaggio</h3>
-      <div class="prossimo-titolo">${escapeHtml(dataBreve(prossimo.ride_date))} · ${escapeHtml((prossimo.depart_time || '').slice(0, 5))} · ${escapeHtml(prossimo.destination || '')}</div>
-      <div class="prossimo-righe">
-        <span><b>${escapeHtml(nomeDi(prossimo.driver))}</b> guida</span>
-        <span><b>${prossimo.seat_claims.length} / ${prossimo.seats}</b> posti</span>
-        <span><b>${Math.max(0, prossimo.seats - prossimo.seat_claims.length)}</b> liberi</span>
+    `<div class="dash-top">
+      <div class="dash-hi">
+        <h1>Riepilogo</h1>
+        <p>${escapeHtml(oggiInLettere())} · ${futuri.length} ${futuri.length === 1 ? 'passaggio in programma' : 'passaggi in programma'}${
+          scoperti ? ` · ${scoperti} ${scoperti === 1 ? 'giorno scoperto' : 'giorni scoperti'}` : ''}</p>
       </div>
-    </div>` : '') +
+      <span class="dash-gruppo">${escapeHtml(groupLabel())}</span>
+      <span class="dash-av">${escapeHtml(iniz(myName))}</span>
+    </div>
 
-    `<div class="stats-section"><h3>Chi guida di più</h3>${bars(drives, false)}</div>
-     <div class="stats-section"><h3>Chi sale più spesso</h3>${bars(ridesTaken, true)}</div>` +
+    <div class="kpi">${kpi.join('')}</div>
 
-    (partite.length === 0 ? '' :
-    `<div class="stats-section"><h3>Partite aperte</h3>
-      <p class="view-subtitle">Quote di carburante non ancora saldate. Le vedi solo tu e la persona interessata.</p>
-      ${partite.sort((a, b) => b.v - a.v).map(p =>
-        `<div class="conto-row">
-          <span class="conto-chi">${escapeHtml(nomePer.get(p.id) || 'Qualcuno')}</span>
-          <span class="conto-imp ${p.v >= 0 ? 'avere' : 'dare'}">${p.v >= 0 ? '+ ' : '− '}${eur(Math.abs(p.v))}</span>
-        </div>`).join('')}
-    </div>`) +
+    <div class="grid">
+      ${heroCarb}
+      ${cardProssimo}
+      <div class="rail">${cardCal}${cardDomani}${cardAttivita}</div>
+      ${cardAzioni}
+      ${cardSettimana}
+      ${cardTurni}
+      ${cardConti}
+      ${cardRicorrenze}
+    </div>`;
 
-    (eventi.length === 0 ? '' :
-    `<div class="stats-section"><h3>Attività recente</h3>
-      ${eventi.map(e =>
-        `<div class="ev-row">
-          <span class="ev-chi">${escapeHtml(nomePer.get(e.attore) || 'Qualcuno')}</span>
-          <span class="ev-che">${ETICHETTA[e.tipo] || e.tipo}</span>
-          <span class="ev-quando">${escapeHtml(quandoBreve(e.quando))}</span>
-        </div>`).join('')}
-    </div>`) +
+  // I riquadri portano da qualche parte: nessun bottone qui sopra e' finto.
+  box.querySelectorAll('[data-vai]').forEach(b => b.addEventListener('click', () => {
+    if (b.dataset.vai === 'home') switchView('home');
+    if (b.dataset.vai === 'conti') document.getElementById('dash-conti')?.scrollIntoView({ block: 'start' });
+  }));
+  box.querySelectorAll('[data-azione]').forEach(b => b.addEventListener('click', () => {
+    const a = b.dataset.azione;
+    // Il modulo si apre, non si commuta: chi tocca «Pubblica un passaggio» vuole
+    // il modulo aperto, e con `.click()` toccarlo due volte lo richiudeva.
+    if (a === 'offerta') {
+      switchView('home');
+      if (offerCard.classList.contains('hidden')) document.getElementById('offer-toggle')?.click();
+      offerCard.scrollIntoView({ block: 'center', behavior: 'smooth' });
+    }
+    // Qui **non** si preme il bottone vero, e non e' una svista: «Cerco un
+    // passaggio» non apre un modulo, pubblica la richiesta — e ripremuto la
+    // ritira. Una mattonella che scrive nel database senza mostrare cosa sta
+    // scrivendo non e' una scorciatoia, e' un tranello. Si porta la persona
+    // dov'e' il bottone e decide lei.
+    if (a === 'richiesta') {
+      switchView('home');
+      const b = document.getElementById('request-toggle');
+      b?.scrollIntoView({ block: 'center', behavior: 'smooth' });
+      b?.focus({ preventScroll: true });
+    }
+    if (a === 'invita') switchView('groups');
+    if (a === 'storico') switchView('history');
+    if (a === 'profilo') switchView('profile');
+  }));
 
-    (nRicorrenze === 0 ? '' :
-    `<div class="stats-section"><h3>Ricorrenze attive</h3>
-      <p class="view-subtitle">${nRicorrenze} ${nRicorrenze === 1 ? 'passaggio si ripete' : 'passaggi si ripetono'} ogni settimana.</p>
-    </div>`) +
+  // Le pastiglie della barra laterale dicono un numero vero o non ci sono.
+  segnaBadge('badge-conti', partite.length);
+}
 
-    (fuelIn.size === 0 ? '' :
-    `<div class="stats-section"><h3>⛽ Benzina: quanto spetta a chi guida</h3>
-      <p class="view-subtitle">Somma dei contributi "€ a testa" dei passeggeri saliti.</p>
-      ${bars(new Map([...fuelIn].map(([k, v]) => [k, { name: v.name, n: Math.round(v.n * 100) / 100 }])), false)}
-      <h3 style="margin-top:14px">Quanto ha versato ogni passeggero</h3>
-      ${bars(new Map([...fuelOut].map(([k, v]) => [k, { name: v.name, n: Math.round(v.n * 100) / 100 }])), true)}
-    </div>`);
+// ── Attrezzi del riepilogo ─────────────────────────────────────────────────
+
+// Il tondo colorato accanto a un nome. Deriva dall'id, quindi la stessa persona
+// ha lo stesso colore in tutti i riquadri e fra una visita e l'altra — senza
+// tenere da nessuna parte una tabella di colori.
+const COLORI_AV = ['var(--primary)', 'var(--ok)', 'oklch(0.6 0.03 258)',
+  'oklch(0.55 0.14 300)', 'oklch(0.55 0.13 30)', 'oklch(0.5 0.1 200)'];
+function coloreDi(id) {
+  let h = 0;
+  for (const c of String(id || '')) h = (h * 31 + c.charCodeAt(0)) >>> 0;
+  return COLORI_AV[h % COLORI_AV.length];
+}
+
+// La linea del grafico. Curve di Bézier con i punti di controllo sulla verticale
+// di mezzo fra due punti: e' la curva morbida piu' semplice che non puo'
+// oltrepassare i valori veri, quindi non racconta un massimo che non c'e'.
+function sparkline(vals, w = 250, h = 56) {
+  const max = Math.max(...vals, 1);
+  const pts = vals.map((v, i) => [
+    (i / Math.max(1, vals.length - 1)) * w,
+    h - 8 - (v / max) * (h - 16),
+  ]);
+  let d = `M${pts[0][0].toFixed(1)},${pts[0][1].toFixed(1)}`;
+  for (let i = 1; i < pts.length; i++) {
+    const [x0, y0] = pts[i - 1], [x1, y1] = pts[i];
+    const cx = ((x0 + x1) / 2).toFixed(1);
+    d += ` C${cx},${y0.toFixed(1)} ${cx},${y1.toFixed(1)} ${x1.toFixed(1)},${y1.toFixed(1)}`;
+  }
+  return d;
+}
+
+// Le ultime `n` mensilita' che finiscono con quella di `iso`, come '2026-08'.
+function ultimiMesi(iso, n) {
+  const d = new Date(iso.slice(0, 8) + '01T00:00:00');
+  const out = [];
+  for (let i = n - 1; i >= 0; i--) {
+    const m = new Date(d);
+    m.setMonth(m.getMonth() - i);
+    out.push(`${m.getFullYear()}-${String(m.getMonth() + 1).padStart(2, '0')}`);
+  }
+  return out;
+}
+
+// Date in ISO senza passare da UTC: `toISOString()` sposta di un giorno chi sta
+// a est di Greenwich la sera, ed e' un difetto che si vede solo dopo le 22.
+function isoDi(d) {
+  return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
+}
+function isoMeno(iso, giorni) {
+  const d = new Date(iso + 'T00:00:00');
+  d.setDate(d.getDate() - giorni);
+  return isoDi(d);
+}
+function meseInLettere(iso) {
+  const d = new Date(iso.slice(0, 8) + '01T00:00:00');
+  const s = d.toLocaleDateString('it-IT', { month: 'long', year: 'numeric' });
+  return s.charAt(0).toUpperCase() + s.slice(1);
+}
+function oggiInLettere() {
+  const s = new Date().toLocaleDateString('it-IT', { weekday: 'long', day: 'numeric', month: 'long' });
+  return s.charAt(0).toUpperCase() + s.slice(1);
+}
+function segnaBadge(id, n) {
+  const el = document.getElementById(id);
+  if (!el) return;
+  el.textContent = String(n);
+  el.classList.toggle('hidden', !n);
 }
 
 // Data breve, per i riquadri: «gio 7 ago».
@@ -1494,6 +1892,7 @@ async function loadRides(silent = false) {
     ridesList.innerHTML = '';
     document.getElementById('day-stats').classList.add('hidden');
     walkersCard.classList.add('hidden');
+    segnaBadge('badge-richieste', 0);
     toast('Connessione instabile: riprova tra un attimo.');
     return;
   }
@@ -1594,6 +1993,7 @@ async function renderWalkers(rides) {
   // chi cerca un passaggio prima di tutti
   walkers.sort((a, b) => Number(requesters.has(b.user_id)) - Number(requesters.has(a.user_id)));
   walkersCard.classList.toggle('hidden', walkers.length === 0);
+  segnaBadge('badge-richieste', walkers.length);
   walkersList.innerHTML = '';
   const seen = new Set();
   for (const w of walkers) {
