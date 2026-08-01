@@ -50,6 +50,22 @@ segnala();
 // non diventerebbe apribile offline proprio a chi ha la rete peggiore. Registrato dopo
 // il caricamento, per non rubare banda alla prima schermata utile.
 if ('serviceWorker' in navigator) {
+  // C'era gia' un worker al comando **prima** di registrare? Serve saperlo adesso,
+  // perche' e' l'unico modo di distinguere «e' arrivata una versione nuova» dalla
+  // primissima installazione, e nella seconda non c'e' niente da ricaricare.
+  const c_era = !!navigator.serviceWorker.controller;
+  let ricaricato = false;
+
+  // Quando il worker nuovo prende il comando, la pagina a schermo e' ancora fatta con i
+  // file di prima: e' stata costruita quando comandava il vecchio. Una ricarica sola, e
+  // solo se prima c'era davvero qualcuno al comando. Il guardiano `ricaricato` esiste
+  // perche' senza, due eventi ravvicinati diventano un ciclo di ricariche.
+  navigator.serviceWorker.addEventListener('controllerchange', () => {
+    if (!c_era || ricaricato) return;
+    ricaricato = true;
+    location.reload();
+  });
+
   window.addEventListener('load', () => {
     navigator.serviceWorker.register('/sw.js').catch(() => { /* pazienza: l'app funziona */ });
   });

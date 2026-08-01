@@ -2062,3 +2062,19 @@ input:focus-visible, select:focus-visible, textarea:focus-visible {
   .topbar { display: none; }
   .app-view { padding-bottom: 40px; padding-top: 22px; max-width: 1180px; }
 }
+
+/* Il bottone dei riquadri vuoti (nessuna comitiva, riepilogo non disponibile). */
+.dash .cta-vuoto {
+  margin-top: 10px;
+  border: 1px solid var(--border-strong);
+  border-radius: var(--pill);
+  background: var(--surface-2);
+  color: var(--ink);
+  font: inherit;
+  font-size: 0.72rem;
+  font-weight: 600;
+  padding: 7px 14px;
+  cursor: pointer;
+}
+.dash .cta-vuoto:hover { background: var(--primary-soft); border-color: var(--primary); color: var(--primary); }
+.dash .cta-vuoto:focus-visible { outline: 2px solid var(--primary); outline-offset: 2px; }
