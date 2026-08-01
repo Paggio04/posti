@@ -684,9 +684,9 @@ function switchView(view) {
 document.querySelectorAll('.nav-item').forEach(b =>
   b.addEventListener('click', () => switchView(b.dataset.view)));
 
-// Le voci senza una vista propria — Richieste, Conti, Ricorrenze — aprono la
-// vista che le contiene e poi scorrono fino al riquadro. Lo scorrimento aspetta
-// il giro dopo perche' `loadStats()` scrive i riquadri e non ha ancora finito.
+// Ogni voce apre una vista e basta. `data-scroll` resta previsto ma non usato: se
+// un domani servisse una voce che porta a un riquadro dentro una vista, il pezzo
+// c'e' gia' e aspetta che `loadStats()` abbia finito di scrivere.
 document.querySelectorAll('.side-item').forEach(b => b.addEventListener('click', () => {
   switchView(b.dataset.view);
   const bersaglio = b.dataset.scroll;
@@ -906,7 +906,6 @@ async function loadGroups() {
     document.getElementById('day-stats').classList.add('hidden');
     document.getElementById('turn-hint').classList.add('hidden');
     walkersCard.classList.add('hidden');
-    segnaBadge('badge-richieste', 0);
     offerCard.classList.add('hidden');
   }
   renderGroupBar();
@@ -1171,16 +1170,13 @@ async function disegnaRiepilogo(box) {
   // unirla a `profiles` da solo e i nomi si risolvono qui sotto.
   const oggi = todayISO();
   const domani = todayISO(1);
-  const [pagRes, evRes, ricRes] = await Promise.all([
+  const [pagRes, evRes] = await Promise.all([
     supabase.from('pagamenti').select('da_utente, a_utente, importo, quando').eq('group_id', currentGroupId),
     supabase.from('eventi').select('tipo, attore, quando').eq('group_id', currentGroupId)
       .order('quando', { ascending: false }).limit(6),
-    supabase.from('ricorrenze').select('id, giorno, depart_time, origin, destination, driver_id')
-      .eq('group_id', currentGroupId).eq('attiva', true),
   ]);
   const pagamenti = pagRes.data ?? [];
   const eventi = evRes.data ?? [];
-  const ricorrenze = ricRes.data ?? [];
 
   // ── Un giro solo sui passaggi, e tutte le somme che servono ───────────────
   const drives = new Map();      // guidatore -> {name, n}
@@ -1318,7 +1314,7 @@ async function disegnaRiepilogo(box) {
   kpi.push(box_k('', 'Passaggi nel mese', String(nelMese),
     `${drives.size} ${drives.size === 1 ? 'persona alla guida' : 'persone alla guida'}`));
   kpi.push(box_k('mio', 'Il tuo saldo', (saldo >= 0 ? '+ ' : '− ') + eur(Math.abs(saldo)),
-    partite.length ? `${partite.length} ${partite.length === 1 ? 'partita aperta' : 'partite aperte'}` : 'nessuna partita aperta'));
+    partite.length ? `${partite.length} ${partite.length === 1 ? 'conto in sospeso' : 'conti in sospeso'}` : 'nessun conto in sospeso'));
   kpi.push(scoperti
     ? box_k('allerta', 'Giorni scoperti', String(scoperti),
         `il primo: ${dataBreve(primoScoperto.giorno)}`)
@@ -1336,7 +1332,7 @@ async function disegnaRiepilogo(box) {
   const via = sparkline(serie);
 
   const heroCarb = `
-    <section class="card hero">
+    <section class="card hero g-carburante">
       <div class="head">
         <span class="sub">Carburante ripartito · mese corrente</span>
         <span class="pill">${escapeHtml(groupLabel())}</span>
@@ -1356,11 +1352,11 @@ async function disegnaRiepilogo(box) {
         <path d="${via} L250,56 L0,56 Z" fill="url(#grad-carb)"/>
         <path d="${via}" fill="none" stroke="oklch(0.74 0.13 78)" stroke-width="2" vector-effect="non-scaling-stroke"/>
       </svg>` : ''}
-      <button type="button" class="cta" data-vai="conti">Vedi le partite aperte →</button>
+      <button type="button" class="cta" data-vai="conti">Vedi i conti →</button>
     </section>`;
 
   const cardProssimo = prossimo ? `
-    <section class="card next">
+    <section class="card next g-prossimo">
       <div class="head"><span class="sub">Prossimo passaggio · ${escapeHtml(dataBreve(prossimo.ride_date))}</span></div>
       <div class="titolo">${escapeHtml((prossimo.depart_time || '').slice(0, 5))} · ${escapeHtml(prossimo.origin || '—')} → ${escapeHtml(prossimo.destination || '')}</div>
       <div class="riga${mio(prossimo.driver_id) ? ' tua' : ''}"><span>Conducente</span><b>${escapeHtml(nomeCorto(prossimo.driver_id))}</b></div>
@@ -1372,7 +1368,7 @@ async function disegnaRiepilogo(box) {
           : 'nessuno, per ora'}</b></div>
       <button type="button" class="go" data-vai="home" aria-label="Vai al passaggio">→</button>
     </section>` : `
-    <section class="card next">
+    <section class="card next g-prossimo">
       <div class="head"><span class="sub">Prossimo passaggio</span></div>
       <div class="titolo">Nessun passaggio in programma</div>
       <div class="riga"><span>Guidi tu?</span><b>Pubblica la tua auto dalla Home</b></div>
@@ -1397,7 +1393,7 @@ async function disegnaRiepilogo(box) {
   }
 
   const cardCal = `
-    <section class="card cal">
+    <section class="card cal g-calendario">
       <div class="head"><h3>${escapeHtml(meseInLettere(oggi))}</h3><span class="sub">oggi · tuoi turni · con auto</span></div>
       <div class="dows"><span>L</span><span>M</span><span>M</span><span>G</span><span>V</span><span>S</span><span>D</span></div>
       <div class="days">${celle.join('')}</div>
@@ -1418,7 +1414,7 @@ async function disegnaRiepilogo(box) {
 
   // La ciambella si disegna solo se domani esiste qualcosa da ripartire.
   const cardDomani = postiDom > 0 ? `
-    <section class="card hero">
+    <section class="card hero g-domani">
       <div class="head"><h3>Occupazione · domani</h3><span class="sub">${postiDom}</span></div>
       <div class="ciambella">
         <svg width="74" height="74" viewBox="0 0 42 42" style="flex:none" role="img"
@@ -1438,7 +1434,12 @@ async function disegnaRiepilogo(box) {
           <div><i style="background:oklch(1 0 0/.18)"></i><span class="nm">Auto in strada</span><b>${diDomani.length}</b></div>
         </div>
       </div>
-    </section>` : '';
+    </section>` : `
+    <section class="card hero g-domani">
+      <div class="head"><h3>Occupazione · domani</h3></div>
+      <p class="vuoto" style="color:oklch(0.72 0.03 258)">Domani non c'è nessuna auto in programma.
+      Se guidi tu, pubblicala dalla Home.</p>
+    </section>`;
 
   const ETICHETTA = {
     passaggio_pubblicato: 'ha pubblicato un passaggio',
@@ -1450,7 +1451,7 @@ async function disegnaRiepilogo(box) {
   };
 
   const cardAttivita = `
-    <section class="card">
+    <section class="card g-attivita">
       <div class="head"><h3>Attività recente</h3></div>
       ${eventi.length ? eventi.map(e => {
         const chi = nomeCorto(e.attore);
@@ -1470,13 +1471,13 @@ async function disegnaRiepilogo(box) {
     ['history', 'Guarda<br>lo storico', 'storico'],
     ['user', 'Il tuo<br>profilo', 'profilo'],
   ];
-  const cardAzioni = `<div class="azioni">${AZIONI.map(([i, t, a]) =>
+  const cardAzioni = `<div class="azioni g-azioni">${AZIONI.map(([i, t, a]) =>
     `<button type="button" class="az" data-azione="${a}"><span class="o">${ico(i)}</span><span class="t">${t}</span></button>`).join('')}</div>`;
 
   const GIORNI = ['lun', 'mar', 'mer', 'gio', 'ven', 'sab', 'dom'];
   const nomeGiorno = (iso) => GIORNI[(new Date(iso + 'T00:00:00').getDay() + 6) % 7];
   const cardSettimana = `
-    <section class="card">
+    <section class="card g-settimana">
       <div class="head"><div><h3>Occupazione settimanale</h3>
         <span class="sub">posti assegnati, giorno per giorno</span></div></div>
       ${settimana.map(g => {
@@ -1504,8 +1505,8 @@ async function disegnaRiepilogo(box) {
   const totTurni = turni.reduce((s, [, v]) => s + v.n, 0);
   const mieiTurni = drives30.get(currentUser.id)?.n ?? 0;
   const cardTurni = turni.length ? `
-    <section class="card">
-      <div class="head"><div><h3>Distribuzione turni <span class="nuovo">NUOVO</span></h3><span class="sub">ultimi 30 giorni</span></div></div>
+    <section class="card g-turni">
+      <div class="head"><div><h3>Distribuzione turni</h3><span class="sub">ultimi 30 giorni</span></div></div>
       ${turni.map(([id, v]) => {
         const suo = mio(id);
         return `<div class="turno">
@@ -1514,11 +1515,15 @@ async function disegnaRiepilogo(box) {
         </div>`;
       }).join('')}
       <div class="piede"><b style="color:var(--ottone-scuro)">${totTurni ? Math.round((mieiTurni / totTurni) * 100) : 0}%</b> dei turni a tuo carico</div>
-    </section>` : '';
+    </section>` : `
+    <section class="card g-turni">
+      <div class="head"><div><h3>Distribuzione turni</h3><span class="sub">ultimi 30 giorni</span></div></div>
+      <p class="vuoto">Negli ultimi trenta giorni non ha guidato nessuno.</p>
+    </section>`;
 
   const cardConti = `
-    <section class="card largo" id="dash-conti">
-      <div class="head"><div><h3>Partite aperte <span class="nuovo">NUOVO</span></h3>
+    <section class="card g-conti" id="dash-conti">
+      <div class="head"><div><h3>Conti in sospeso</h3>
         <span class="sub">quote di carburante non ancora saldate</span></div>
         <span class="pill">Saldo: <b style="color:${saldo >= 0 ? 'var(--ok-deep)' : 'var(--danger)'}">${saldo >= 0 ? '+ ' : '− '}${escapeHtml(eur(Math.abs(saldo)))}</b></span></div>
       ${partite.length ? `<div class="conti">${partite.map(p => {
@@ -1530,22 +1535,8 @@ async function disegnaRiepilogo(box) {
           <span class="imp ${p.v >= 0 ? 'avere' : 'dare'}">${p.v >= 0 ? '+ ' : '− '}${escapeHtml(eur(Math.abs(p.v)))}</span>
         </div>`;
       }).join('')}</div>`
-      : '<p class="vuoto">Nessun conto in sospeso. Le partite compaiono qui quando chi guida indica un «€ a testa».</p>'}
+      : '<p class="vuoto">Nessun conto in sospeso. Compaiono qui quando chi guida indica un «€ a testa».</p>'}
       <div class="piede">Gli importi li vedete solo tu e la persona interessata: la policy sulla tabella nomina le due parti, non la comitiva.</div>
-    </section>`;
-
-  const RIC_GIORNI = ['lunedì', 'martedì', 'mercoledì', 'giovedì', 'venerdì', 'sabato', 'domenica'];
-  const cardRicorrenze = `
-    <section class="card largo" id="dash-ricorrenze">
-      <div class="head"><div><h3>Ricorrenze attive <span class="nuovo">NUOVO</span></h3>
-        <span class="sub">i passaggi che si ripetono ogni settimana</span></div>
-        <span class="pill">${ricorrenze.length}</span></div>
-      ${ricorrenze.length ? ricorrenze.map(r => `<div class="conto">
-          <div class="av" style="background:${mio(r.driver_id) ? 'var(--ottone)' : coloreDi(r.driver_id)};${mio(r.driver_id) ? 'color:oklch(0.28 0.05 70)' : ''}">${escapeHtml(iniz(nomePer.get(r.driver_id) || '?'))}</div>
-          <div class="chi">Ogni ${escapeHtml(RIC_GIORNI[(r.giorno || 1) - 1])} · ${escapeHtml((r.depart_time || '').slice(0, 5))}
-            <small>${escapeHtml(r.origin || '—')} → ${escapeHtml(r.destination || '')} · ${escapeHtml(nomeCorto(r.driver_id))}</small></div>
-        </div>`).join('')
-      : '<p class="vuoto">Nessuna ricorrenza attiva. Un passaggio che si ripete si pubblica ogni volta a mano.</p>'}
     </section>`;
 
   box.innerHTML =
@@ -1564,12 +1555,13 @@ async function disegnaRiepilogo(box) {
     <div class="grid">
       ${heroCarb}
       ${cardProssimo}
-      <div class="rail">${cardCal}${cardDomani}${cardAttivita}</div>
+      ${cardCal}
       ${cardAzioni}
       ${cardSettimana}
       ${cardTurni}
+      ${cardAttivita}
       ${cardConti}
-      ${cardRicorrenze}
+      ${cardDomani}
     </div>`;
 
   // I riquadri portano da qualche parte: nessun bottone qui sopra e' finto.
@@ -1601,9 +1593,6 @@ async function disegnaRiepilogo(box) {
     if (a === 'storico') switchView('history');
     if (a === 'profilo') switchView('profile');
   }));
-
-  // Le pastiglie della barra laterale dicono un numero vero o non ci sono.
-  segnaBadge('badge-conti', partite.length);
 }
 
 // ── Attrezzi del riepilogo ─────────────────────────────────────────────────
@@ -1667,12 +1656,6 @@ function meseInLettere(iso) {
 function oggiInLettere() {
   const s = new Date().toLocaleDateString('it-IT', { weekday: 'long', day: 'numeric', month: 'long' });
   return s.charAt(0).toUpperCase() + s.slice(1);
-}
-function segnaBadge(id, n) {
-  const el = document.getElementById(id);
-  if (!el) return;
-  el.textContent = String(n);
-  el.classList.toggle('hidden', !n);
 }
 
 // Data breve, per i riquadri: «gio 7 ago».
@@ -1929,7 +1912,6 @@ async function loadRides(silent = false) {
     ridesList.innerHTML = '';
     document.getElementById('day-stats').classList.add('hidden');
     walkersCard.classList.add('hidden');
-    segnaBadge('badge-richieste', 0);
     toast('Connessione instabile: riprova tra un attimo.');
     return;
   }
@@ -2030,7 +2012,6 @@ async function renderWalkers(rides) {
   // chi cerca un passaggio prima di tutti
   walkers.sort((a, b) => Number(requesters.has(b.user_id)) - Number(requesters.has(a.user_id)));
   walkersCard.classList.toggle('hidden', walkers.length === 0);
-  segnaBadge('badge-richieste', walkers.length);
   walkersList.innerHTML = '';
   const seen = new Set();
   for (const w of walkers) {

@@ -159,17 +159,18 @@
   <div id="app-shell" class="app-shell hidden">
 
     <!-- Barra laterale. Compare da 1024px in su e li' prende il posto della pillola in
-         basso: sullo schermo largo la pillola centrata lascia due terzi di riga vuota,
-         e le voci qui stanno tutte insieme senza doverle contare a cinque. Sotto quella
-         soglia sparisce e resta la navigazione di prima, che sul telefono e' migliore.
-         Nessuna voce porta in un posto che non esiste: quelle senza una vista propria
-         (Passaggi, Richieste, Conti, Ricorrenze) aprono la vista giusta e scorrono fino
-         al riquadro che le riguarda. -->
+         basso: sullo schermo largo la pillola centrata lascia due terzi di riga vuota.
+         Sotto quella soglia sparisce e resta la navigazione di prima, che sul telefono
+         e' migliore.
+
+         **Una voce per vista, ed e' il criterio.** Prima ce n'erano otto per cinque
+         viste: Richieste, Conti e Ricorrenze non aprivano niente di proprio, portavano
+         nella stessa pagina delle altre e ci scorrevano dentro. Un elenco che promette
+         sei destinazioni e ne ha tre e' un elenco che mente, e le tre voci in piu' non
+         facevano risparmiare un tocco a nessuno: dal riepilogo quei riquadri si vedono
+         gia' scorrendo. -->
     <aside class="side-nav" aria-label="Sezioni">
-      <div class="side-logo">
-        <b>WeTransport</b>
-        <span>Passaggi della comitiva</span>
-      </div>
+      <div class="side-logo"><b>WeTransport</b></div>
       <nav class="side-list" aria-label="Sezioni dell'app">
         <button type="button" class="side-item" data-view="stats" data-key="oggi">
           <span class="side-ic"><svg width="15" height="15"><use href="#i-chart"/></svg></span>
@@ -180,17 +181,6 @@
         <button type="button" class="side-item" data-view="groups" data-key="comitiva">
           <span class="side-ic"><svg width="15" height="15"><use href="#i-users"/></svg></span>
           <span class="side-et">Comitiva</span></button>
-        <button type="button" class="side-item" data-view="home" data-key="richieste" data-scroll="walkers-card">
-          <span class="side-ic"><svg width="15" height="15"><use href="#i-walk"/></svg></span>
-          <span class="side-et">Richieste</span>
-          <span class="side-badge hidden" id="badge-richieste"></span></button>
-        <button type="button" class="side-item" data-view="stats" data-key="conti" data-scroll="dash-conti">
-          <span class="side-ic"><svg width="15" height="15"><use href="#i-fuel"/></svg></span>
-          <span class="side-et">Conti</span>
-          <span class="side-badge mio hidden" id="badge-conti"></span></button>
-        <button type="button" class="side-item" data-view="stats" data-key="ricorrenze" data-scroll="dash-ricorrenze">
-          <span class="side-ic"><svg width="15" height="15"><use href="#i-calendar"/></svg></span>
-          <span class="side-et">Ricorrenze</span></button>
         <button type="button" class="side-item" data-view="history" data-key="storico">
           <span class="side-ic"><svg width="15" height="15"><use href="#i-history"/></svg></span>
           <span class="side-et">Storico</span></button>
