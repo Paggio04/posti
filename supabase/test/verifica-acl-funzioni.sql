@@ -91,7 +91,7 @@ begin
 
   -- --- Solo da autenticato: servono al client, ma dopo l'accesso (018, 020) ---
   ('saldo_con',                  'altro uuid',          'authenticated'),   -- 022, ancorata ad auth.uid()
-  ('create_group',               'p_name text',         'authenticated'),
+  ('create_group',               'p_name text, p_scade date', 'authenticated'),   -- 033
   ('elimina_account',            '',                    'authenticated'),
   ('join_group',                 'p_code text',         'authenticated'),
   ('mio_profilo',                '',                    'authenticated'),

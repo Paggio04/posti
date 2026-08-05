@@ -1163,19 +1163,39 @@ document.getElementById('notifiche-spegni')?.addEventListener('click', async () 
 async function createGroupFlow() {
   const name = await ask('Nuovo gruppo', { text: 'Il nome che vedranno gli amici.', placeholder: 'es. Comitiva del mare' });
   if (!name || !name.trim()) return;
-  const { data, error } = await supabase.rpc('create_group', { p_name: name.trim().slice(0, 40) });
+  // C38 — la seconda domanda, e si salta. Una comitiva permanente resta il caso
+  // normale: chiedere una data e basta trasformerebbe ogni gruppo in una cosa che
+  // scade, che e' l'opposto del punto.
+  const fine = await ask('Quando finisce?', {
+    text: 'Facoltativo. Per un concerto o un weekend: dopo quel giorno non ci si entra più col codice, e i dati restano a chi c\'era. Lascia vuoto per una comitiva che non finisce.',
+    type: 'date',
+  });
+  if (fine === null) return;
+  if (fine && fine < todayISO()) { toast('Una comitiva non può chiudere prima di aprire.'); return; }
+  const { data, error } = await supabase.rpc('create_group', {
+    p_name: name.trim().slice(0, 40), p_scade: fine || null,
+  });
   if (error) { toast('Errore: ' + error.message); return; }
   await loadGroups();
   selectGroup(data.id);
   renderGroupsView();
-  toast(`Gruppo creato. Condividi il codice ${data.code} con gli amici.`);
+  toast(fine
+    ? `Comitiva creata, si chiude il ${dataBreve(fine)}. Condividi il codice ${data.code}.`
+    : `Gruppo creato. Condividi il codice ${data.code} con gli amici.`);
 }
 
 async function joinGroupFlow() {
   const code = await ask('Entra in un gruppo', { text: 'Fatti mandare il codice da un amico.', placeholder: 'Codice invito (6 caratteri)' });
   if (!code || !code.trim()) return;
   const { data, error } = await supabase.rpc('join_group', { p_code: code.trim() });
-  if (error) { toast(error.message.includes('Codice') ? 'Codice non valido, ricontrolla.' : 'Errore: ' + error.message); return; }
+  if (error) {
+    // Tre esiti e non due (C38): «chiusa» non e' «sbagliato», e dirlo uguale
+    // manderebbe a ricontrollare le lettere di un codice giusto.
+    toast(error.message.includes('chiusa') ? 'Quella comitiva è chiusa: il codice non vale più.'
+      : error.message.includes('Codice') ? 'Codice non valido, ricontrolla.'
+      : 'Errore: ' + error.message);
+    return;
+  }
   await loadGroups();
   selectGroup(data.id);
   renderGroupsView();
@@ -1190,7 +1210,7 @@ document.getElementById('welcome-join').addEventListener('click', joinGroupFlow)
 async function loadGroups() {
   const { data, error } = await supabase
     .from('group_members')
-    .select('group:groups(id, name, code, owner_id, regola_quota, regola_guida_non_paga, regola_max_posti)')
+    .select('group:groups(id, name, code, owner_id, scade_il, regola_quota, regola_guida_non_paga, regola_max_posti)')
     .eq('user_id', currentUser.id);
   if (error) { console.error(error); return; }
   myGroups = (data ?? []).map(r => r.group).filter(Boolean);
@@ -1437,6 +1457,19 @@ async function renderGroupsView() {
     code.textContent = g.code;
     code.title = 'Codice invito';
     head.appendChild(code);
+    // C38: quando una comitiva finisce si legge accanto al codice, che e' la cosa
+    // che smette di funzionare. Chiusa e in scadenza sono due stati diversi: il
+    // primo e' un fatto, il secondo e' un avviso.
+    if (g.scade_il) {
+      const fine = document.createElement('span');
+      const chiusa = g.scade_il < todayISO();
+      fine.className = 'place-badge' + (chiusa ? ' ritardo' : '');
+      fine.textContent = chiusa ? `Chiusa il ${dataBreve(g.scade_il)}` : `Si chiude il ${dataBreve(g.scade_il)}`;
+      fine.title = chiusa
+        ? 'Col codice non si entra più e non si pubblica. Quello che c\'è resta leggibile a chi c\'era.'
+        : 'Dopo quel giorno col codice non si entra più.';
+      head.appendChild(fine);
+    }
     card.appendChild(head);
 
     const membersWrap = document.createElement('div');
@@ -1714,6 +1747,14 @@ function groupLabel() {
 // C36 — le regole della comitiva aperta. Sempre un oggetto, mai `undefined`: chi le
 // legge non deve chiedersi se c'e' una comitiva, e «nessuna regola» e' un caso
 // normale, non un errore.
+// C38 — la comitiva aperta ha gia' chiuso? Il confronto e' sulla data locale, la
+// stessa che `todayISO()` usa dappertutto: `current_date` del database e' in un
+// altro fuso, e un'ora di scarto a mezzanotte direbbe due cose diverse.
+function comitivaChiusa() {
+  const g = myGroups.find(x => x.id === currentGroupId);
+  return Boolean(g?.scade_il && g.scade_il < todayISO());
+}
+
 function regoleGruppo() {
   const g = myGroups.find(x => x.id === currentGroupId);
   return {
@@ -3068,8 +3109,12 @@ function updateDayCta(rides) {
   // `sospeso` va rimesso qui e non solo in applicaSospensione(): questa riga gira a ogni
   // caricamento dei passaggi e senza il controllo rimetterebbe il pulsante "pubblica" a
   // chi e' sospeso, che poi si prenderebbe un errore dal database.
-  offerToggle.classList.toggle('hidden', past || sospeso);
-  if (past || sospeso) offerCard.classList.add('hidden');
+  // C38: in una comitiva chiusa il database rifiuta comunque (033), ma un bottone che
+  // porta dritto a un errore e' peggio di un bottone che non c'e'. Stessa forma della
+  // riga qui sopra su `sospeso`.
+  const chiusa = comitivaChiusa();
+  offerToggle.classList.toggle('hidden', past || sospeso || chiusa);
+  if (past || sospeso || chiusa) offerCard.classList.add('hidden');
   const reqBtn = document.getElementById('request-toggle');
   const iDrive = rides.some(r => r.driver_id === currentUser.id);
   const iSit = rides.some(r => r.seat_claims.some(mioPosto));
