@@ -376,6 +376,11 @@
       <section id="view-history" class="view hidden">
         <h2 class="view-title"><svg width="20" height="20"><use href="#i-history"/></svg> Storico</h2>
         <p class="view-subtitle">Tutti i viaggi passati: chi ha guidato e chi era a bordo.</p>
+        <div class="history-filtri" role="group" aria-label="Filtra lo storico">
+          <button type="button" id="storico-miei" class="filtro" aria-pressed="false">Solo i miei passaggi</button>
+          <button type="button" id="storico-guidati" class="filtro" aria-pressed="false">Solo quando ho guidato io</button>
+          <span id="storico-conteggio" class="form-hint"></span>
+        </div>
         <div id="history-list" class="history-list"></div>
         <div id="history-empty" class="empty hidden">
           <div class="empty-icon"><svg width="40" height="40"><use href="#i-history"/></svg></div>

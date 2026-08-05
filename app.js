@@ -1117,24 +1117,86 @@ function nomeComitiva() {
   return myGroups.find(x => x.id === currentGroupId)?.name ?? 'Nessuna comitiva';
 }
 
+// ── C27: i due interruttori dello storico ──────────────────────────────────
+// Sono variabili di modulo, non stato di un elemento: e' l'unico modo perche'
+// la scelta sopravviva al cambio di vista senza scriverla da nessuna parte.
+// La domanda vera e' «quante volte ci ho messo l'auto?», e senza questi due si
+// risponde contando a mano un elenco indistinto.
+const STORICO_FINESTRA = 120;
+let storicoSoloMiei = false;
+let storicoSoloGuidati = false;
+
+function aggiornaFiltriStorico() {
+  const m = document.getElementById('storico-miei');
+  const g = document.getElementById('storico-guidati');
+  m.classList.toggle('on', storicoSoloMiei);
+  m.setAttribute('aria-pressed', String(storicoSoloMiei));
+  g.classList.toggle('on', storicoSoloGuidati);
+  g.setAttribute('aria-pressed', String(storicoSoloGuidati));
+}
+
+document.getElementById('storico-miei').addEventListener('click', () => {
+  storicoSoloMiei = !storicoSoloMiei;
+  aggiornaFiltriStorico();
+  loadHistory();
+});
+document.getElementById('storico-guidati').addEventListener('click', () => {
+  storicoSoloGuidati = !storicoSoloGuidati;
+  aggiornaFiltriStorico();
+  loadHistory();
+});
+
 async function loadHistory() {
   if (!currentGroupId) return;
   const list = document.getElementById('history-list');
   document.querySelector('#view-history .view-subtitle').textContent =
     `Chi ha guidato e chi era a bordo · ${groupLabel()} (si cambia dalla Home)`;
+  aggiornaFiltriStorico();
   list.innerHTML = '<div class="skeleton"></div>';
   let hq = supabase
     .from('rides')
-    .select('ride_date, origin, destination, depart_time, driver:profiles!rides_driver_id_fkey(display_name), seat_claims(passenger:profiles!seat_claims_passenger_id_fkey(display_name))')
+    .select('ride_date, origin, destination, depart_time, driver_id, driver:profiles!rides_driver_id_fkey(display_name), seat_claims(passenger_id, passenger:profiles!seat_claims_passenger_id_fkey(display_name))')
     .lt('ride_date', todayISO());
   hq = hq.eq('group_id', currentGroupId);
-  const { data, error } = await hq
+  const { data: tutti, error } = await hq
     .order('ride_date', { ascending: false })
     .order('depart_time', { ascending: true, nullsFirst: false })
-    .limit(120);
+    .limit(STORICO_FINESTRA);
   list.innerHTML = '';
-  document.getElementById('history-empty').classList.toggle('hidden', !!data?.length);
-  if (error || !data) return;
+  if (error || !tutti) {
+    document.getElementById('history-empty').classList.remove('hidden');
+    document.getElementById('storico-conteggio').textContent = '';
+    return;
+  }
+
+  // I due filtri si combinano, e insieme valgono il piu' stretto dei due: chi
+  // chiede «i miei» **e** «guidati da me» chiede i suoi turni alla guida.
+  const mioPosto = (r) => r.seat_claims.some(c => c.passenger_id === currentUser.id);
+  const data = tutti.filter(r =>
+    (!storicoSoloMiei || r.driver_id === currentUser.id || mioPosto(r))
+    && (!storicoSoloGuidati || r.driver_id === currentUser.id));
+
+  // Il conteggio e' la risposta alla domanda, e va detto anche quando il filtro
+  // non nasconde niente: e' il numero che si andava a contare a mano.
+  const conteggio = document.getElementById('storico-conteggio');
+  const filtrato = storicoSoloMiei || storicoSoloGuidati;
+  conteggio.textContent = filtrato
+    ? `${data.length} su ${tutti.length} · ultimi ${STORICO_FINESTRA} passaggi della comitiva`
+    : (tutti.length >= STORICO_FINESTRA ? `ultimi ${STORICO_FINESTRA} passaggi` : '');
+
+  // Vuoto per il filtro e vuoto per davvero sono due cose diverse, e dirle uguali
+  // fa credere che la comitiva non abbia mai viaggiato.
+  const vuoto = document.getElementById('history-empty');
+  vuoto.classList.toggle('hidden', data.length > 0);
+  if (!data.length && tutti.length) {
+    vuoto.querySelector('.empty-title').textContent = 'Nessun passaggio con questi filtri';
+    vuoto.querySelector('.empty-hint').textContent =
+      `La comitiva ne ha ${tutti.length} nella finestra guardata: togli un filtro per vederli.`;
+  } else if (!data.length) {
+    vuoto.querySelector('.empty-title').textContent = 'Ancora nessun viaggio';
+    vuoto.querySelector('.empty-hint').textContent =
+      'Quando i giorni passano, qui trovi chi ha guidato e chi era con lui.';
+  }
 
   let currentDay = null;
   let dayWrap = null;
@@ -1307,11 +1369,22 @@ async function disegnaRiepilogo(box) {
   const dovutoAMe = new Map();    // passeggero -> quanto mi deve
   const quantiCon = new Map();    // altra persona -> quanti passaggi in ballo
   const primaCon = new Map();     // altra persona -> il piu' vecchio dei passaggi
+  // C26 — le voci che compongono ogni conto, nello stesso giro che lo somma.
+  // Il segno e' sempre dal mio punto di vista: positivo = quella riga fa salire
+  // il mio credito. Cosi' la somma delle voci **e'** il netto, per costruzione, e
+  // non un secondo conto che puo' divergere dal primo.
+  const vociCon = new Map();      // altra persona -> [{quando, testo, importo}]
+  const voce = (id, quando, testo, importo) => {
+    const v = vociCon.get(id) ?? [];
+    v.push({ quando, testo, importo });
+    vociCon.set(id, v);
+  };
   const segna = (id, giorno) => {
     quantiCon.set(id, (quantiCon.get(id) || 0) + 1);
     const p = primaCon.get(id);
     if (!p || giorno < p) primaCon.set(id, giorno);
   };
+  const tratta = (r) => (r.origin ? `${r.origin} → ` : '') + (r.destination || '—');
   for (const r of data) {
     const q = Number(r.fuel_per_person) || 0;
     if (!q) continue;
@@ -1319,16 +1392,24 @@ async function disegnaRiepilogo(box) {
       if (c.passenger_id === currentUser.id && r.driver_id !== currentUser.id) {
         dovutoDaMe.set(r.driver_id, (dovutoDaMe.get(r.driver_id) || 0) + q);
         segna(r.driver_id, r.ride_date);
+        voce(r.driver_id, r.ride_date, `Posto sulla sua auto · ${tratta(r)}`, -q);
       } else if (r.driver_id === currentUser.id && c.passenger_id !== currentUser.id) {
         dovutoAMe.set(c.passenger_id, (dovutoAMe.get(c.passenger_id) || 0) + q);
         segna(c.passenger_id, r.ride_date);
+        voce(c.passenger_id, r.ride_date, `Posto sulla tua auto · ${tratta(r)}`, q);
       }
     }
   }
   for (const pg of pagamenti) {
     const imp = Number(pg.importo) || 0;
-    if (pg.da_utente === currentUser.id) dovutoDaMe.set(pg.a_utente, (dovutoDaMe.get(pg.a_utente) || 0) - imp);
-    if (pg.a_utente === currentUser.id) dovutoAMe.set(pg.da_utente, (dovutoAMe.get(pg.da_utente) || 0) - imp);
+    if (pg.da_utente === currentUser.id) {
+      dovutoDaMe.set(pg.a_utente, (dovutoDaMe.get(pg.a_utente) || 0) - imp);
+      voce(pg.a_utente, pg.quando, 'Pagamento che hai fatto', imp);
+    }
+    if (pg.a_utente === currentUser.id) {
+      dovutoAMe.set(pg.da_utente, (dovutoAMe.get(pg.da_utente) || 0) - imp);
+      voce(pg.da_utente, pg.quando, 'Pagamento che hai ricevuto', -imp);
+    }
   }
   // Una riga per persona, non una per verso. Con due mappe separate chi ha
   // guidato per me **e** e' salito con me compariva due volte, una in credito e
@@ -1606,17 +1687,33 @@ async function disegnaRiepilogo(box) {
       ${partite.length ? `<div class="conti">${partite.map(p => {
         const n = quantiCon.get(p.id) || 0;
         const da = primaCon.get(p.id);
-        return `<div class="conto">
+        // Le voci in ordine di tempo, dalla piu' recente: la contestazione parte
+        // quasi sempre dall'ultima cosa successa.
+        const voci = [...(vociCon.get(p.id) ?? [])].sort((a, b) => String(b.quando).localeCompare(String(a.quando)));
+        return `<div class="conto-blocco">
+          <div class="conto">
           <div class="av" style="background:${coloreDi(p.id)}">${escapeHtml(iniz(nomePer.get(p.id)))}</div>
-          <div class="chi">${escapeHtml(nomePer.get(p.id) || 'Qualcuno')}<small>${n} ${n === 1 ? 'passaggio' : 'passaggi'}${da ? ` · dal ${escapeHtml(dataBreve(da))}` : ''}</small></div>
+          <button type="button" class="chi" data-dettaglio="${p.id}" aria-expanded="false" aria-controls="voci-${p.id}">${escapeHtml(nomePer.get(p.id) || 'Qualcuno')}<small>${n} ${n === 1 ? 'passaggio' : 'passaggi'}${da ? ` · dal ${escapeHtml(dataBreve(da))}` : ''} · da cosa nasce</small></button>
           <span class="imp ${p.v >= 0 ? 'avere' : 'dare'}">${p.v >= 0 ? '+ ' : '− '}${escapeHtml(eur(Math.abs(p.v)))}</span>
           <button type="button" class="salda" data-salda="${p.id}" data-verso="${p.v >= 0 ? 'ricevuto' : 'pagato'}"
                   data-quanto="${Math.abs(p.v).toFixed(2)}"
                   title="${p.v >= 0 ? 'Segna che ti ha pagato' : 'Segna che l\'hai pagato'}">${p.v >= 0 ? 'Ricevuto' : 'Pagato'}</button>
+          </div>
+          <div class="voci hidden" id="voci-${p.id}">
+            ${voci.map(v => `<div class="riga-voce">
+              <span class="q">${escapeHtml(dataBreve(v.quando))}</span>
+              <span class="t">${escapeHtml(v.testo)}</span>
+              <span class="i ${v.importo >= 0 ? 'avere' : 'dare'}">${v.importo >= 0 ? '+ ' : '− '}${escapeHtml(eur(Math.abs(v.importo)))}</span>
+            </div>`).join('')}
+            <div class="riga-voce somma">
+              <span class="q"></span><span class="t">Totale</span>
+              <span class="i ${p.v >= 0 ? 'avere' : 'dare'}">${p.v >= 0 ? '+ ' : '− '}${escapeHtml(eur(Math.abs(p.v)))}</span>
+            </div>
+          </div>
         </div>`;
       }).join('')}</div>`
       : '<p class="vuoto">Nessun conto in sospeso. Compaiono qui quando chi guida indica un «€ a testa».</p>'}
-      <div class="piede">${partite.length ? '<button type="button" class="cta-vuoto" id="conto-mese" style="margin:0 12px 0 0">Riepilogo del mese</button>' : ''}Gli importi li vedete solo tu e la persona interessata: la policy sulla tabella nomina le due parti, non la comitiva.</div>
+      <div class="piede">${partite.length ? `<button type="button" class="cta-vuoto" id="salda-tutto" style="margin:0 12px 0 0">Salda tutto (${partite.length})</button><button type="button" class="cta-vuoto" id="conto-mese" style="margin:0 12px 0 0">Riepilogo del mese</button>` : ''}Gli importi li vedete solo tu e la persona interessata: la policy sulla tabella nomina le due parti, non la comitiva.</div>
     </section>`;
 
   box.innerHTML =
@@ -1675,6 +1772,48 @@ async function disegnaRiepilogo(box) {
     toast(`Segnato: ${eur(importo)} ${ricevuto ? 'da' : 'a'} ${chi}.`);
     loadStats();
   }));
+
+  // ── C26: da cosa nasce il conto ─────────────────────────────────────────
+  // Nessuna interrogazione nuova: le voci sono state contate nello stesso giro
+  // che ha prodotto il totale, e stanno gia' in pagina. Qui si scopre e basta —
+  // che e' anche il motivo per cui apre istantaneo e funziona senza rete.
+  box.querySelectorAll('[data-dettaglio]').forEach(b => b.addEventListener('click', () => {
+    const pannello = document.getElementById('voci-' + b.dataset.dettaglio);
+    if (!pannello) return;
+    const aperto = pannello.classList.toggle('hidden');
+    b.setAttribute('aria-expanded', String(!aperto));
+  }));
+
+  // ── C25: saldare tutto in un colpo ──────────────────────────────────────
+  // N righe in `pagamenti`, **un solo insert**: o passano tutte o non passa
+  // nessuna. Con una riga per volta un rifiuto a meta' strada lascerebbe il
+  // saldo per aria, cioe' esattamente lo stato che questo bottone deve chiudere.
+  document.getElementById('salda-tutto')?.addEventListener('click', async () => {
+    if (bloccaSeSospeso('saldare i conti')) return;
+    const daPagare = partite.filter(p => p.v < 0).reduce((s, p) => s - p.v, 0);
+    const daIncassare = partite.filter(p => p.v > 0).reduce((s, p) => s + p.v, 0);
+    const dettaglio = [
+      daPagare > 0 ? `${eur(daPagare)} che paghi tu` : null,
+      daIncassare > 0 ? `${eur(daIncassare)} che hai ricevuto` : null,
+    ].filter(Boolean).join(' e ');
+    if (!await conferma(`Azzerare tutti i conti (${partite.length})?`, {
+      testo: `Si registrano ${partite.length} ${partite.length === 1 ? 'pagamento' : 'pagamenti'}: ${dettaglio}. `
+        + 'Segnare un pagamento non lo esegue: dice che è già avvenuto.',
+      azione: 'Segna tutto saldato',
+    })) return;
+    const righe = partite.map(p => ({
+      group_id: currentGroupId,
+      da_utente: p.v >= 0 ? p.id : currentUser.id,
+      a_utente: p.v >= 0 ? currentUser.id : p.id,
+      importo: Math.round(Math.abs(p.v) * 100) / 100,
+      registrato_da: currentUser.id,
+      nota: 'Saldo totale',
+    }));
+    const { error } = await supabase.from('pagamenti').insert(righe);
+    if (error) { toast(friendlyError(error)); return; }
+    toast(`Conti azzerati: ${righe.length} ${righe.length === 1 ? 'pagamento registrato' : 'pagamenti registrati'}.`);
+    loadStats();
+  });
 
   // Il riepilogo del mese: i numeri ci sono gia' tutti, mancava il modo di mandarli.
   document.getElementById('conto-mese')?.addEventListener('click', () => {

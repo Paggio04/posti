@@ -1059,6 +1059,31 @@ input:focus-visible, select:focus-visible, textarea:focus-visible {
 
 /* ================= STORICO ================= */
 
+/* ---- i due interruttori dello storico (C27) ----
+   Stessa forma delle pastiglie del giorno, un gradino piu' piccola: sono un
+   filtro, non la navigazione principale della vista. Acceso e spento si
+   distinguono per colore **e** per bordo, non solo per colore. */
+.history-filtri {
+  display: flex; flex-wrap: wrap; align-items: center; gap: 8px;
+  margin: 0 0 18px;
+}
+.filtro {
+  background: var(--surface);
+  border: 1.5px solid var(--border);
+  color: var(--ink-soft);
+  padding: 7px 15px;
+  border-radius: var(--pill);
+  font: inherit;
+  font-size: 0.82rem;
+  font-weight: 600;
+  cursor: pointer;
+  touch-action: manipulation;
+  transition: all var(--t-med) var(--ease-out);
+}
+.filtro:hover { color: var(--ink); border-color: var(--border-strong); }
+.filtro:focus-visible { outline: 2px solid var(--primary-testo); outline-offset: 2px; }
+.filtro.on { background: var(--primary); border-color: var(--primary); color: #fff; }
+
 .history-list { display: grid; gap: 20px; }
 .history-day-title {
   font-size: 0.85rem;
@@ -1998,7 +2023,9 @@ input:focus-visible, select:focus-visible, textarea:focus-visible {
 
 /* ---- partite aperte ---- */
 .dash .conti { display: flex; flex-wrap: wrap; column-gap: 22px; }
-.dash .conti > .conto { flex: 1 1 230px; }
+/* Il blocco, non la riga: sotto la riga si apre il dettaglio di C26, e le due
+   cose devono restare nella stessa colonna quando l'elenco va a capo. */
+.dash .conti > .conto-blocco { flex: 1 1 230px; }
 .dash .conto { display: flex; align-items: center; gap: 8px; padding: 6px 0; font-size: 0.7rem; }
 .dash .conto .av {
   flex: none;
@@ -2008,11 +2035,39 @@ input:focus-visible, select:focus-visible, textarea:focus-visible {
   font-size: 0.68rem; font-weight: 700;
   color: #fff;
 }
-.dash .conto .chi { flex: 1 1 auto; min-width: 0; overflow-wrap: anywhere; }
+/* Il nome e' un bottone da C26: apre le voci che compongono la cifra. Resta
+   scritto come un nome — nessun bordo, nessuno sfondo — perche' e' il testo che
+   c'era prima, non un comando in piu' da imparare. */
+.dash .conto .chi {
+  flex: 1 1 auto; min-width: 0; overflow-wrap: anywhere;
+  border: 0; background: none; padding: 0; margin: 0;
+  font: inherit; color: inherit; text-align: left; cursor: pointer;
+}
 .dash .conto .chi small { display: block; color: var(--ink-soft); font-size: 0.68rem; }
+.dash .conto .chi:hover small { color: var(--primary-testo); }
+.dash .conto .chi:focus-visible { outline: 2px solid var(--primary-testo); outline-offset: 2px; border-radius: 4px; }
 .dash .conto .imp { flex: none; font-weight: 600; font-family: 'IBM Plex Mono', ui-monospace, monospace; white-space: nowrap; }
 .dash .conto .imp.dare { color: var(--danger); }
 .dash .conto .imp.avere { color: var(--ok-deep); }
+
+/* ---- da cosa nasce un conto (C26) ----
+   Rientrato sotto il nome e con la stessa griglia in tutte le righe: il totale
+   in fondo deve stare esattamente incolonnato con gli addendi, altrimenti
+   «controlla la somma» resta un invito che non si puo' accettare. */
+.dash .voci {
+  margin: 0 0 8px 32px;
+  padding: 6px 8px;
+  border-left: 2px solid var(--border);
+  font-size: 0.66rem;
+}
+.dash .riga-voce { display: flex; align-items: baseline; gap: 8px; padding: 2px 0; }
+.dash .riga-voce .q { flex: none; width: 46px; color: var(--ink-soft); }
+.dash .riga-voce .t { flex: 1 1 auto; min-width: 0; overflow-wrap: anywhere; color: var(--ink-soft); }
+.dash .riga-voce .i { flex: none; font-family: 'IBM Plex Mono', ui-monospace, monospace; white-space: nowrap; }
+.dash .riga-voce .i.dare { color: var(--danger); }
+.dash .riga-voce .i.avere { color: var(--ok-deep); }
+.dash .riga-voce.somma { border-top: 1px solid var(--border); margin-top: 4px; padding-top: 5px; }
+.dash .riga-voce.somma .t, .dash .riga-voce.somma .i { color: var(--ink); font-weight: 600; }
 
 /* ---- distribuzione dei turni ---- */
 .dash .turno { display: flex; align-items: center; gap: 8px; margin-bottom: 6px; font-size: 0.7rem; }
