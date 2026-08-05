@@ -1186,6 +1186,52 @@ input:focus-visible, select:focus-visible, textarea:focus-visible {
 }
 .auto-testo { flex: 1 1 160px; min-width: 0; font-size: 0.85rem; }
 .auto-testo small { display: block; color: var(--ink-soft); font-size: 0.76rem; margin-top: 2px; }
+
+/* ---- la settimana (C37) ----
+   Sette colonne su schermo largo, sette righe sul telefono: e' un elenco di
+   giorni, e su una colonna sola resta leggibile senza inventarsi uno scorrimento
+   orizzontale. Il criterio del cantiere e' «i giorni scoperti si distinguono
+   senza leggere», quindi il buco ha un fondo suo e un bordo tratteggiato — due
+   segnali, non solo un colore. */
+.week-grid { display: grid; gap: 10px; margin-bottom: 24px; }
+@media (min-width: 760px) { .week-grid { grid-template-columns: repeat(7, 1fr); align-items: start; } }
+.week-day {
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  background: var(--surface);
+  padding: 10px;
+  display: grid;
+  gap: 6px;
+  align-content: start;
+}
+.week-day.oggi { border-color: var(--primary); }
+.week-day.scoperto { border-style: dashed; border-color: var(--danger); background: var(--danger-soft); }
+/* Un giorno gia' passato non e' un buco da riempire: si spegne invece di gridare. */
+.week-day.finito { opacity: 0.6; }
+.week-testa { display: flex; align-items: baseline; gap: 5px; font-size: 0.8rem; color: var(--ink-soft); }
+.week-testa b { color: var(--ink); text-transform: capitalize; }
+.week-auto, .week-vuoto {
+  display: flex; align-items: baseline; gap: 6px; flex-wrap: wrap;
+  width: 100%;
+  text-align: left;
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  background: var(--surface-2);
+  color: var(--ink);
+  font: inherit;
+  font-size: 0.76rem;
+  padding: 7px 9px;
+  cursor: pointer;
+}
+.week-auto:hover, .week-vuoto:hover { border-color: var(--border-strong); }
+.week-auto:focus-visible, .week-vuoto:focus-visible { outline: 2px solid var(--primary-testo); outline-offset: 2px; }
+.week-auto b { font-variant-numeric: tabular-nums; }
+.week-auto span { flex: 1 1 auto; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.week-auto em { font-style: normal; color: var(--ok-deep); }
+.week-auto.pieno em { color: var(--ink-soft); }
+.week-auto.mia { border-color: var(--ottone-bordo); background: var(--ottone-velo); }
+.week-vuoto { color: var(--danger); border-color: transparent; background: transparent; font-weight: 600; }
+.week-piede { grid-column: 1 / -1; margin: 2px 0 0; }
 .group-card-actions { display: flex; gap: 8px; flex-wrap: wrap; }
 
 /* ================= STATISTICHE ================= */

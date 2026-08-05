@@ -301,6 +301,11 @@
             <button type="button" id="day-today" class="tab active">Oggi</button>
             <button type="button" id="day-tomorrow" class="tab">Domani</button>
             <input type="date" id="day-picker" class="day-picker" aria-label="Scegli un giorno" />
+            <!-- C37: la domanda della domenica sera non è «chi guida domani», è «come
+                 siamo messi questa settimana». Sta fra le pastiglie del giorno perché
+                 è la stessa scelta — quanto lontano si guarda — non una vista a parte
+                 da cercare altrove. -->
+            <button type="button" id="day-week" class="tab">Settimana</button>
           </div>
           <div class="day-cta">
             <button type="button" id="request-toggle" class="btn btn-secondary"><svg width="15" height="15"><use href="#i-walk"/></svg> Cerco un passaggio</button>
@@ -382,6 +387,7 @@
           <div id="walkers-list" class="walkers-list"></div>
         </section>
 
+        <div id="week-grid" class="week-grid hidden"></div>
         <div id="rides-list" class="rides-grid"></div>
         <div id="empty-message" class="empty hidden">
           <div class="empty-icon"><svg width="40" height="40"><use href="#i-parking"/></svg></div>

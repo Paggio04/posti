@@ -15,6 +15,7 @@ const groupPills = document.getElementById('group-pills');
 const dayToday = document.getElementById('day-today');
 const dayTomorrow = document.getElementById('day-tomorrow');
 const dayPicker = document.getElementById('day-picker');
+const dayWeek = document.getElementById('day-week');
 const offerToggle = document.getElementById('offer-toggle');
 const offerCard = document.getElementById('offer-card');
 const rideForm = document.getElementById('ride-form');
@@ -2562,13 +2563,130 @@ dayPicker.addEventListener('change', () => { if (dayPicker.value) setDate(dayPic
 
 function setDate(date) {
   currentDate = date;
+  // Scegliere un giorno vuol dire uscire dalla settimana (C37): sono la stessa
+  // scelta — quanto lontano si guarda — e due pastiglie accese insieme direbbero
+  // che si sta guardando due cose.
+  vistaSettimana = false;
   dayToday.classList.toggle('active', date === todayISO());
   dayTomorrow.classList.toggle('active', date === todayISO(1));
   dayPicker.classList.toggle('active', date !== todayISO() && date !== todayISO(1));
+  dayWeek.classList.remove('active');
   dayPicker.value = date;
+  document.getElementById('week-grid').classList.add('hidden');
+  ridesList.classList.remove('hidden');
   // il canale realtime filtra sul giorno visualizzato: cambiato giorno, ci si riabbona
   if (realtimeChannel) subscribeRealtime();
   loadRides();
+}
+
+// ══════════════════════════════════════════════════════════════════════════
+// C37 — La settimana.
+//
+// La Home guarda un giorno per volta, e la domanda della domenica sera e'
+// un'altra: «come siamo messi questa settimana». Il riepilogo il conto lo fa
+// gia' — `disegnaRiepilogo` calcola i giorni scoperti — ma li' e' un numero in
+// una pastiglia, e da un numero non si pubblica. Qui i sette giorni si guardano
+// e da un giorno vuoto si parte in un tocco, che e' la cosa che quel numero
+// faceva venire voglia di fare senza dare il modo di farla.
+// ══════════════════════════════════════════════════════════════════════════
+let vistaSettimana = false;
+const GIORNI_BREVI = ['lun', 'mar', 'mer', 'gio', 'ven', 'sab', 'dom'];
+
+dayWeek.addEventListener('click', () => {
+  if (vistaSettimana) { setDate(todayISO()); return; }
+  vistaSettimana = true;
+  dayToday.classList.remove('active');
+  dayTomorrow.classList.remove('active');
+  dayPicker.classList.remove('active');
+  dayWeek.classList.add('active');
+  // Tutto quello che parla del **giorno** sparisce: lasciarlo direbbe che quei
+  // numeri riguardano la settimana che si sta guardando, e non e' vero.
+  ridesList.classList.add('hidden');
+  emptyMessage.classList.add('hidden');
+  document.getElementById('day-stats').classList.add('hidden');
+  document.getElementById('turn-hint').classList.add('hidden');
+  walkersCard.classList.add('hidden');
+  offerCard.classList.add('hidden');
+  document.getElementById('week-grid').classList.remove('hidden');
+  loadWeek();
+});
+
+async function loadWeek() {
+  const box = document.getElementById('week-grid');
+  if (!currentGroupId) { box.innerHTML = ''; return; }
+  box.innerHTML = '<div class="skeleton"></div>';
+  const inizio = todayISO();
+  const fine = addDaysISO(inizio, 6);
+  const { data, error } = await supabase
+    .from('rides')
+    .select('id, ride_date, depart_time, origin, destination, seats, driver_id, ritardo_min, driver:profiles!rides_driver_id_fkey(display_name), seat_claims(passenger_id, ospite_nome)')
+    .eq('group_id', currentGroupId)
+    .gte('ride_date', inizio).lte('ride_date', fine)
+    .order('ride_date', { ascending: true })
+    .order('depart_time', { ascending: true, nullsFirst: false });
+  if (error) {
+    console.error('settimana:', error);
+    box.innerHTML = '<p class="empty-hint">La settimana non si è caricata. Riprova, o torna al giorno singolo.</p>';
+    return;
+  }
+  // Solo la comitiva aperta, e di proposito: un passaggio di fuori (C9) e' un'occasione
+  // per una persona, non copertura per il gruppo. Contarlo qui direbbe che martedi' e'
+  // coperto quando la comitiva martedi' non ha nessuno.
+  const perGiorno = new Map();
+  for (let i = 0; i < 7; i++) perGiorno.set(addDaysISO(inizio, i), []);
+  for (const r of data ?? []) perGiorno.get(r.ride_date)?.push(r);
+
+  box.innerHTML = '';
+  for (const [giorno, elenco] of perGiorno) {
+    const col = document.createElement('div');
+    const scoperto = elenco.length === 0;
+    const passato = giorno === inizio && elenco.every(hasDeparted) && elenco.length > 0;
+    col.className = 'week-day' + (scoperto ? ' scoperto' : '') + (giorno === inizio ? ' oggi' : '');
+
+    const testa = document.createElement('div');
+    testa.className = 'week-testa';
+    const gg = new Date(giorno + 'T12:00:00');
+    testa.innerHTML = `<b>${GIORNI_BREVI[(gg.getDay() + 6) % 7]}</b> <span>${gg.getDate()}</span>`;
+    col.appendChild(testa);
+
+    if (scoperto) {
+      // Da un giorno vuoto si pubblica in un tocco: e' il criterio del cantiere, ed
+      // e' anche l'unica ragione per cui vale la pena guardare i buchi.
+      const cta = document.createElement('button');
+      cta.type = 'button';
+      cta.className = 'week-vuoto';
+      cta.textContent = 'Nessuno · metti la tua auto';
+      cta.addEventListener('click', () => {
+        setDate(giorno);
+        if (offerCard.classList.contains('hidden')) offerToggle.click();
+        offerCard.scrollIntoView({ block: 'center', behavior: 'smooth' });
+      });
+      col.appendChild(cta);
+    } else {
+      for (const r of elenco) {
+        const liberi = r.seats - r.seat_claims.length;
+        const riga = document.createElement('button');
+        riga.type = 'button';
+        riga.className = 'week-auto' + (r.driver_id === currentUser.id ? ' mia' : '') + (liberi === 0 ? ' pieno' : '');
+        riga.innerHTML = `<b>${escapeHtml((r.depart_time || '').slice(0, 5) || '—')}</b>`
+          + `<span>${escapeHtml(nomeDi(r.driver))}</span>`
+          + `<em>${liberi > 0 ? `${liberi} ${liberi === 1 ? 'libero' : 'liberi'}` : 'completo'}</em>`;
+        riga.title = `${r.origin || '—'} → ${r.destination || ''}`;
+        riga.addEventListener('click', () => setDate(giorno));
+        col.appendChild(riga);
+      }
+      if (passato) col.classList.add('finito');
+    }
+    box.appendChild(col);
+  }
+
+  const piede = document.createElement('p');
+  piede.className = 'form-hint week-piede';
+  const scoperti = [...perGiorno.values()].filter(v => v.length === 0).length;
+  piede.textContent = scoperti === 0
+    ? 'Sette giorni tutti coperti.'
+    : `${scoperti} ${scoperti === 1 ? 'giorno scoperto' : 'giorni scoperti'} su sette: tocca un giorno vuoto per pubblicare.`;
+  box.appendChild(piede);
 }
 
 // Prenotando o pubblicando, la richiesta "cerco un passaggio" si toglie da sola
@@ -2851,6 +2969,10 @@ let retryCount = 0;
 async function loadRides(silent = false) {
   // Senza comitiva non c'e' niente da caricare: la Home mostra il benvenuto (vedi loadGroups).
   if (!currentGroupId) return;
+  // C37: guardando la settimana, «ricarica i passaggi» vuol dire ricaricare quella.
+  // Senza questa riga il realtime riempirebbe una lista nascosta e `updateDayCta`
+  // rimetterebbe in pagina i bottoni del giorno sopra la griglia dei sette.
+  if (vistaSettimana) { loadWeek(); return; }
   const token = ++loadToken;
   if (!silent) {
     ridesList.innerHTML = '<div class="skeleton"></div><div class="skeleton"></div>';
