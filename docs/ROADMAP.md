@@ -40,7 +40,20 @@ policy troppo larghe.
 
 ---
 
-## Dove siamo (27/07/2026, sera)
+## Dove siamo (05/08/2026)
+
+**La Fase 7 è scritta per intero: tredici cantieri su quattordici, e il quattordicesimo (C29) è
+stato scartato invece che rimandato.** Con loro le migrazioni `026`-`033`, verdi in CI e **da
+applicare a mano** come tutte le altre. Non cambia però la frase che conta, che è la stessa del
+27/07: quello che separa «T1 tecnico» da T1 non è codice, ed è sotto.
+
+Due cose sono ferme e vanno dette qui, perché da sole non si sbloccano:
+
+- **C13, le notifiche.** C28 e C30 accodano, e la coda non la svuota nessuno: mancano le chiavi
+  VAPID, il deploy della Edge Function e `pg_cron`. Con la Fase 7 la coda ha adesso **cinque**
+  tipi di evento invece di tre, quindi il valore di accendere C13 è cresciuto e il costo è
+  rimasto lo stesso — mezz'ora di lavoro fuori dal repo.
+- **Il collaudo a video.** Non è mai stato fatto, e adesso c'è più roba da guardare.
 
 **Fasi 0-3 chiuse, e della Fase 4 mancano solo le chiavi delle notifiche.** `main` è al merge
 della PR #9: le sei PR aperte in giornata sono state pubblicate tutte, e con loro le migrazioni
@@ -57,7 +70,8 @@ segue:
 | C21 coordinate nel payload | **fatto e applicato** (`015` + `016`), nell'ordine giusto |
 | C22 la zona nel profilo | **scritto** (`018` + `019`), da pubblicare e applicare — è lo stesso buco di C21, sull'altra tabella |
 | C23 permessi delle funzioni | **scritto** (`020`), da applicare — `grant execute to public` è il default di Postgres, e si vedeva solo andando a cercarlo |
-| C24 codici invito indovinabili | **aperto, non affrontato**: la `020` chiude la parte che riguarda chi non ha un account, resta quella che riguarda chi ce l'ha. Si affronta dopo la Fase A |
+| C24 codici invito indovinabili | **aperto, non affrontato**: la `020` chiude la parte che riguarda chi non ha un account, resta quella che riguarda chi ce l'ha. Si affronta dopo la Fase A. C38 ci si è appoggiato sopra e l'ha lasciato dov'era: il ragionamento sta nel suo cantiere |
+| Fase 7, le funzioni della comitiva | **scritta il 05/08/2026**: tredici cantieri su quattordici, migrazioni `026`-`033` da applicare. La tabella cantiere per cantiere è nella Fase 7 |
 
 **T1 è raggiunto sul piano tecnico.** Quello che manca per dire "pronta per la comitiva" non è
 codice: è **gente vera che la usa**, e un collaudo a video che non è mai stato fatto. Sotto, cosa
@@ -89,6 +103,13 @@ account veri in due comitive diverse:
 - **Fase 3 intera:** segnalazione (il segnalato non deve saperlo), blocco nei due sensi,
   sospensione, esportazione, e **la cancellazione di un account che possiede una comitiva**, che è
   il controllo più importante perché un errore lì danneggia gli altri
+- **Fase 7 intera** (05/08/2026). Le viste nuove sono state rese in un browser vero con un finto
+  Supabase — e quella passata ha trovato un difetto che nessun test aveva visto: in vista
+  settimana restava «Metti la tua auto», che avrebbe pubblicato per il giorno di prima. Resta da
+  guardare con gente vera: l'ospite (il posto deve risultare occupato **all'altro account**), la
+  coppia andata/ritorno presa da un passeggero, il ritardo annunciato da un telefono e visto
+  sull'altro **senza ricaricare**, e la quota proposta su un tragitto vero — è l'unico numero di
+  questa fase che si può giudicare solo sapendo quanto costa davvero quella strada
 
 ### Le quattro cose che il repo non può fare da solo
 
@@ -903,25 +924,86 @@ Cercare "wetransport" su GitHub non trova niente.
 
 ## Fase 7 — Le funzioni della comitiva (T1)
 
-Quattordici cantieri decisi il **01/08/2026**. Nascono da un elenco di sedici idee, ognuna
-verificata contro il codice prima di proporla — il controllo serviva, perché due delle prime
-proposte erano cose che esistevano già (le ricorrenze, che sono il selettore «Ripeti» del modulo
-dell'auto, e la lista d'attesa, che ha la sua interfaccia completa dal 006).
+Quattordici cantieri decisi il **01/08/2026**, **tredici fatti il 05/08/2026**. Nascono da un
+elenco di sedici idee, ognuna verificata contro il codice prima di proporla — il controllo
+serviva, perché due delle prime proposte erano cose che esistevano già (le ricorrenze, che sono
+il selettore «Ripeti» del modulo dell'auto, e la lista d'attesa, che ha la sua interfaccia
+completa dal 006).
 
-**Due idee sono state scartate dal proprietario, e non tornano:**
+**Tre idee sono state scartate dal proprietario, e non tornano:**
 
 - *i turni come moneta invece degli euro* — un secondo modo di saldare accanto a `pagamenti`,
   cioè due verità sullo stesso debito;
 - *la pagina del giorno condivisibile senza account* — apre un confine verso l'esterno mentre
-  C24 è ancora aperto.
+  C24 è ancora aperto;
+- **C29, «è comparsa l'auto che avevi chiesto»** — scartato il 05/08/2026, prima di scriverlo.
+  Era l'unico dei tre avvisi che nessuno aveva chiesto: gli altri due dicono che un piano è
+  cambiato, questo dice che *potrebbe* esserci un'occasione. La differenza conta perché è la
+  stessa che D5 usa per tenere fuori i commenti e le auto nuove — sono la maggior parte del
+  traffico, e un'app che notifica troppo viene silenziata. Il numero del cantiere non si
+  riusa: i cantieri sono nomi, non posti liberi.
 
-**Il vincolo d'ordine di questa fase**: C28, C29 e C30 non esistono finché non è acceso **C13**.
-La tabella `notifiche` c'è dalla `017` e i trigger la riempiono a ogni prenotazione, ma
+**Il vincolo d'ordine di questa fase**: C28 e C30 scrivono nella coda ma **arrivano sul telefono
+solo con C13 acceso**. La tabella `notifiche_coda` c'è dalla `017` e i trigger la riempiono, ma
 `VAPID_PUBLIC_KEY` è vuota, `supabase/functions/notifiche/` non è mai stato eseguito, `pg_cron`
 è spento, e nel client non c'è una riga che legga quella tabella. La coda si riempie e nessuno la
-svuota. Non è un cantiere di questa fase: è il suo prerequisito.
+svuota. Non è un cantiere di questa fase: è il suo prerequisito, e finché manca i due cantieri
+sono fatti a metà — la metà che il repo può fare. Il client lo dice invece di prometterlo: la
+conferma di annullamento promette l'avviso soltanto se le chiavi esistono.
 
-### C25 — Saldare tutti i conti in un colpo
+### Dove sono finiti, in una riga per cantiere
+
+| Cantiere | Migrazione | Stato |
+|---|---|---|
+| C25 saldare tutto in un colpo | — | **fatto** |
+| C26 il conto mostra da cosa nasce | — | **fatto** |
+| C27 storico filtrato | — | **fatto** |
+| C28 avviso di annullamento | `026` | **fatto**, arriva con C13 |
+| ~~C29~~ | — | **scartato**, vedi sopra |
+| C30 «sono in ritardo» | `027` | **fatto**, arriva con C13 |
+| C31 andata e ritorno legati | `028` | **fatto** |
+| C32 le fermate della comitiva | `029` | **fatto** |
+| C33 l'auto ha un profilo | `030` | **fatto** |
+| C34 la quota calcolata | — | **fatto** |
+| C35 il posto per un ospite | `031` | **fatto** |
+| C36 le regole della comitiva | `032` | **fatto** |
+| C37 la settimana invece del giorno | — | **fatto** |
+| C38 la comitiva a tempo | `033` | **fatto** |
+
+**Le migrazioni `026`-`033` sono scritte e verdi in CI, ma vanno applicate a mano** come tutte le
+altre: il SQL editor non è raggiungibile dal repo. Nessuna ha un ordine rispetto al deploy del
+codice tranne quelle che **aggiungono** colonne che il codice nuovo legge — cioè `027`, `028`,
+`030`, `031`, `032`, `033` — vanno **prima**. È la regola della Fase 3, quella che allora era
+stata sbagliata: *si applica per prima la metà che l'altra non può ignorare*.
+
+### Quello che si è imparato facendoli, e che vale più dei cantieri
+
+1. **Un controllo che gira nel momento sbagliato non misura niente.** La CI applica le
+   migrazioni **due** volte per verificarne la ripetibilità, e dalla `016` il permesso su `rides`
+   è per colonna e viene ricalcolato da `blinda_coordinate()`: una colonna aggiunta dopo nasce
+   invisibile al client, e la **seconda** passata rimediava. In produzione si applica una volta
+   sola, e lì la Home sarebbe andata in errore per tutti con un `42501`. Misurato, non supposto.
+   Ora `verifica-colonne-leggibili.sql` gira **fra la prima e la seconda passata**, che è l'unica
+   posizione in cui misura lo stato che gli utenti vedrebbero.
+2. **Ripartire dal file più vecchio riporta indietro i difetti già pagati.** La `check_claim`
+   della `004` fa `select * into r`; la `016` aveva già tolto quel `select *` perché con le
+   coordinate ristrette per colonna prenotare falliva per chiunque. Riscrivendola per C31 sono
+   ripartito dalla `004`. L'ha ripreso `verifica-coordinate.sql`, come la prima volta.
+3. **Un `null` in più attraversa mezzo schema, e i punti che rompe non danno errori.** Rendere
+   `passenger_id` facoltativo (C35) ha reso false tre cose in silenzio: blocco e sospensione
+   diventavano domande su nessuno, un evento restava senza attore, e il guidatore riceveva
+   «qualcuno sale sulla tua auto». Un test che guardasse solo «l'ospite si siede» sarebbe stato
+   verde.
+4. **Cambiare la firma di una funzione rompe i posti che la nominano per firma.** `blinda_funzioni()`
+   (`020`) richiude i permessi elencando `create_group(text)`: cancellata quella firma per C38,
+   la prima cosa che la chiamava moriva. Un `revoke` è un riferimento come un altro, ma non
+   assomiglia a un riferimento e non lo si va a cercare.
+5. **La tentazione di raccogliere coordinate si ripresenta ogni volta.** Copiare
+   `rides.origin_lat/lon` nelle fermate (C32) avrebbe dato a C34 i numeri gratis: è C21 e C22 per
+   la terza volta, su una terza tabella. Il controllo 7 di `verifica-fermate.sql` non prova cosa
+   la tabella fa, prova cosa non deve fare, e il messaggio nomina C21.
+
+### C25 — Saldare tutti i conti in un colpo — *fatto (05/08/2026)*
 
 Oggi si chiude un conto per volta, con un dialogo ciascuno. Con quattro persone in sospeso sono
 quattro giri. Un comando che salda tutti gli aperti con una persona, e uno che li salda tutti,
@@ -930,7 +1012,11 @@ sono N insert in `pagamenti`: nessuna migrazione, nessuna policy nuova.
 *Fatto quando*: dal riquadro «Conti in sospeso» si azzera l'intero saldo con una conferma sola, e
 il totale in cima torna a zero senza ricaricare.
 
-### C26 — Il conto mostra da cosa nasce
+**Fatto.** Le N righe vanno in `pagamenti` con **un** insert, non con N: o passano tutte o non
+passa nessuna. Con una riga per volta un rifiuto a metà strada lascerebbe il saldo per aria,
+cioè proprio lo stato che il bottone deve chiudere.
+
+### C26 — Il conto mostra da cosa nasce — *fatto (05/08/2026)*
 
 Adesso si legge «Sara · 6 passaggi · dal 28 giu · + 16,50 €» e ci si deve fidare. Manca l'unica
 cosa che serve nel momento in cui qualcuno contesta la cifra, che è l'unico momento in cui un
@@ -942,7 +1028,11 @@ un'interrogazione nuova.
 *Fatto quando*: toccando una riga dei conti si aprono le voci che la compongono, e la loro somma è
 esattamente l'importo mostrato sopra.
 
-### C27 — Lo storico filtrato
+**Fatto.** «Esattamente» non è controllato: è vero **per costruzione**. Il segno di ogni voce si
+prende nello stesso giro che produce il totale, quindi la somma *è* il netto e non un secondo
+conto che può divergere dal primo.
+
+### C27 — Lo storico filtrato — *fatto (05/08/2026)*
 
 Lo storico è l'elenco indistinto di tutto il gruppo. Due interruttori — «solo i miei passaggi»,
 «solo quando ho guidato io» — rispondono alla domanda che ci si fa davvero («quante volte ci ho
@@ -951,7 +1041,11 @@ messo l'auto?») senza contare a mano. Filtro su dati già in memoria.
 *Fatto quando*: i due interruttori esistono, si combinano, e lo stato scelto sopravvive al
 cambio di vista.
 
-### C28 — Avviso di annullamento *(richiede C13)*
+**Fatto**, con due precisazioni. Lo stato sta in due variabili di modulo, che è l'unico modo
+perché sopravviva al cambio di vista senza scriverlo da nessuna parte. E «solo i miei» comprende
+i passaggi su cui si è portato un ospite (C35): il posto l'hai preso tu e nel conto risulta a te.
+
+### C28 — Avviso di annullamento *(richiede C13)* — *fatto: `026`, la coda si riempie; arriva con C13*
 
 Se chi guida cancella, **oggi il passaggio sparisce e basta**. I tipi previsti dalla `017` sono
 `posto_prenotato`, `posto_libero` e `partenza_vicina`: l'annullamento non c'è. È l'evento con la
@@ -964,16 +1058,17 @@ sulla cancellazione, che avvisi chi aveva un posto e chi era in lista d'attesa.
 *Fatto quando*: cancellando un passaggio con due passeggeri a bordo, quei due ricevono l'avviso, e
 chi non c'entra no.
 
-### C29 — «È comparsa l'auto che avevi chiesto» *(richiede C13)*
+**Fatto nella `026`**, più due cose che il criterio non nominava e che si sono scoperte
+scrivendolo. La lista d'attesa riceve l'avviso come chi aveva un posto: aspettava quell'auto. E
+lo riceve **chi guidava**, se a cancellare è stato un amministratore — è il caso in cui serve di
+più, perché altrimenti si presenta al ritrovo con l'auto.
 
-Chiude il giro della richiesta con l'ora (`025`): hai chiesto un passaggio per le 7:40, qualcuno
-pubblica per quel giorno, te lo dice. Senza, la richiesta resta una cosa che chi guida deve
-ricordarsi di guardare, e il verso resta a senso unico.
+La decisione che vale la pena ricordare: `ride_id` resta **nullo** sull'avviso. Quella colonna
+cascata su `rides`, quindi una notifica che nomina il passaggio appena cancellato viene portata
+via dalla stessa cascata che l'ha generata. Rimettendo `old.id` al posto di `null` il test torna
+rosso, e la coda resta vuota senza che niente lo dica.
 
-*Fatto quando*: chi ha una richiesta aperta per un giorno riceve l'avviso alla prima auto
-pubblicata per quel giorno nella sua comitiva, una volta sola.
-
-### C30 — «Sono in ritardo di cinque minuti» *(richiede C13)*
+### C30 — «Sono in ritardo di cinque minuti» *(richiede C13)* — *fatto: `027`; arriva con C13*
 
 Un tocco da chi guida che arriva a chi è a bordo. È la cosa che nei passaggi veri si risolve con
 dieci messaggi in chat, e costa un tipo di notifica in più più un bottone sulla scheda del
@@ -982,7 +1077,16 @@ passaggio, visibile solo a chi guida e solo il giorno stesso.
 *Fatto quando*: chi guida può segnalare un ritardo, chi ha un posto lo riceve, e il ritardo si
 vede sulla scheda del passaggio anche a chi apre l'app in quel momento.
 
-### C31 — Andata e ritorno legati
+**Fatto nella `027`**, e si vede anche a chi la scheda ce l'ha già aperta: il realtime ora
+ascolta gli `UPDATE` su `rides`, che era l'unico verso che mancava.
+
+Due conseguenze che non erano nel criterio e che sarebbero state difetti veri. `hasDeparted()`
+conta il ritardo, altrimenti la lista d'attesa si chiudeva mentre l'auto era ancora ferma sotto
+casa e il conto alla rovescia diceva «Partita» a un'auto che sta arrivando. E i minuti stanno
+dentro la chiave della notifica: «cinque» e poi «venti» sono due informazioni diverse, e con la
+chiave ferma sul passaggio la seconda sarebbe sparita nell'indice unico.
+
+### C31 — Andata e ritorno legati — *fatto: `028`*
 
 Un passaggio è di sola andata, e il viaggio vero quasi sempre è A/R: «7:40 casa → università,
 13:30 università → casa». Oggi in `rides` non esiste **nessun legame fra due righe**, quindi chi
@@ -991,7 +1095,16 @@ prende il posto all'andata non sa se ha anche il ritorno, e chi guida ripubblica
 *Fatto quando*: pubblicando si può indicare il ritorno nella stessa operazione, le due schede si
 riconoscono come coppia, e prenotare l'una propone l'altra.
 
-### C32 — Le fermate della comitiva
+**Fatto nella `028`, e la colonna era il pezzo facile.** Due vincoli della `004` rendevano il
+caso impossibile, ed erano nati giusti quando un passaggio era di sola andata:
+`rides_one_per_day` (un'auto per guidatore al giorno) e «hai già un posto su un'altra auto per
+quel giorno» — che è esattamente ciò che si vuole fare prendendo A/R. Il primo si **precisa**
+invece di toglierlo, con `(ritorno_di is not null)` come discriminante: due andate restano
+vietate, ed è il controllo che si perde per primo allargando l'indice a mano. Il secondo cade
+**solo** fra le due metà di una coppia: senza quel «solo», uno tiene un posto su tre auto e ne
+lascia due vuote.
+
+### C32 — Le fermate della comitiva — *fatto: `029`*
 
 Origine e destinazione sono testo libero ridigitato ogni volta: «Piazza Dante», «piazza dante» e
 «P.za Dante» diventano tre posti diversi, e le statistiche li contano separati. Una rubrica di
@@ -1000,7 +1113,18 @@ punti di ritrovo del gruppo, da **scegliere** invece che da scrivere.
 *Fatto quando*: le fermate usate di recente si scelgono da un elenco, scriverne una nuova la
 aggiunge alla rubrica del gruppo, e due passaggi dallo stesso posto contano come lo stesso posto.
 
-### C33 — L'auto ha un profilo
+**Fatto nella `029`.** La rubrica la riempie un trigger e non il client: una rubrica da compilare
+prima di poterla usare resta vuota per sempre, perché il primo che pubblica non ha niente da
+scegliere. Cosa rende «lo stesso posto» lo stesso posto è una colonna generata dal database —
+se lo calcolasse il client, due versioni dello stesso client potrebbero non essere d'accordo, e
+l'unicità si appoggia proprio su quella.
+
+**Le coordinate di una fermata non si raccolgono dalle pubblicazioni**, e la tentazione era
+forte perché avrebbe dato a C34 i numeri gratis. Il punto di «Parto da qui» è dove si trovava una
+persona, quasi sempre casa sua al metro, e questa tabella la legge tutto il gruppo: è C21 e C22
+per la terza volta. Si mettono con un gesto che dice a parole cosa sta facendo.
+
+### C33 — L'auto ha un profilo — *fatto: `030`*
 
 I posti si ridigitano a ogni pubblicazione. Un'auto salvata — quanti posti, che modello e colore
 **per riconoscerla sotto casa al buio**, che è il momento in cui quell'informazione serve
@@ -1009,7 +1133,16 @@ davvero, e quanto consuma — riduce la pubblicazione a scegliere l'auto e l'ora
 *Fatto quando*: chi ha salvato un'auto pubblica senza reinserire i posti, e chi aspetta sa che
 auto cercare.
 
-### C34 — La quota calcolata invece che digitata
+**Fatto nella `030`.** Modello e colore compaiono accanto a chi guida, non fra le pastiglie in
+fondo: rispondono alla stessa domanda — «chi passa a prendermi» — e si leggono nel momento in cui
+si guarda la strada, non la scheda.
+
+Due «no» che una policy da sola non dice: `auto_id` non entra nella policy di scrittura di
+`rides`, quindi senza un controllo nel trigger si attaccherebbe al proprio passaggio l'auto di
+chiunque; e l'indice della predefinita è **parziale**, perché un `unique` normale avrebbe
+impedito al secondo membro di averne una.
+
+### C34 — La quota calcolata invece che digitata — *fatto (05/08/2026)*
 
 `fuel_per_person` è un numero che chi guida inventa ogni volta, quindi **cambia da persona a
 persona per lo stesso tragitto**. Con il consumo dell'auto (C33) e la distanza fra due fermate
@@ -1020,7 +1153,21 @@ persona per lo stesso tragitto**. Con il consumo dell'auto (C33) e la distanza f
 *Fatto quando*: il campo «€ a testa» arriva precompilato con un valore che si può correggere, e la
 proposta è la stessa per lo stesso tragitto indipendentemente da chi guida.
 
-### C35 — Il posto per un ospite
+**Fatto**, con una deroga dichiarata al secondo mezzo criterio. La proposta è identica per tutti
+finché nessuno ha dichiarato il consumo della propria auto: prezzo, consumo di riferimento e modo
+di dividere sono costanti, e cambia solo la distanza. Se chi guida ha salvato un consumo (C33) la
+proposta usa quello, perché **un'auto che beve di più costa davvero di più**, e fingere di no
+vorrebbe dire che il numero derivato è meno vero di quello inventato. La nota sotto il campo dice
+sempre quale dei due conti ha fatto — un numero precompilato senza la sua derivazione è un numero
+da accettare per fiducia, cioè la cosa che C26 ha appena tolto ai conti.
+
+**Una scoperta, facendo il conto vero:** le cifre sono piccole. Dodici chilometri divisi per
+cinque fanno mezzo euro, non i cinque euro che si scrivono a mano — quelli comprendono usura e
+pedaggi, che non sono benzina e che il campo non nomina. Sotto i cinquanta centesimi non si
+propone niente: un minimo messo lì per avere sempre un numero sarebbe una cifra inventata, per
+giunta più alta del dovuto.
+
+### C35 — Il posto per un ospite — *fatto: `031`*
 
 Un sedile è un utente registrato. Prenotare due posti perché porti un amico che non ha l'app **non
 si può fare**, e nella vita succede di continuo. Serve un sedile con un nome libero invece di un
@@ -1030,7 +1177,15 @@ si può fare**, e nella vita succede di continuo. Serve un sedile con un nome li
 tutti, e la sua quota compare nel conto di chi lo ha invitato — non in un conto suo, che non
 esiste.
 
-### C36 — Le regole della comitiva
+**Fatto nella `031`, ed è il cantiere che ha attraversato più schema.** La quota è una riga in
+`saldo_con`: `coalesce(passenger_id, invitato_da)`. Nel client la stessa regola sta in
+`chiRisponde()`, e deve essere la stessa — due regole diverse qui e nel database vorrebbero dire
+due totali diversi per la stessa cosa.
+
+Le tre cose che un `null` in più rompeva **senza errori** sono nel punto 3 dell'elenco in testa
+alla fase. Vale la pena rileggerle prima di rendere facoltativa qualsiasi altra colonna.
+
+### C36 — Le regole della comitiva — *fatto: `032`*
 
 Ogni passaggio è deciso da capo. Un gruppo dovrebbe poter fissare le sue una volta: «chi guida non
 paga», «quota fissa 5 €», «massimo quattro a bordo». Da lì la quota si precompila, e le eccezioni
@@ -1039,7 +1194,16 @@ si vedono perché sono eccezioni.
 *Fatto quando*: un amministratore imposta le regole del gruppo, la pubblicazione le rispetta senza
 che nessuno le ridigiti, e chi le infrange lo vede scritto prima di confermare.
 
-### C37 — La settimana invece del giorno
+**Fatto nella `032`, e il database non le fa rispettare.** È la decisione del cantiere, e sta
+scritta in cinque parole nel criterio qui sopra: *le eccezioni si vedono perché sono eccezioni*.
+Una regola di comitiva non è un vincolo di integrità — «chi guida non paga» è una convenzione fra
+amici, e la sera che qualcuno fa un'eccezione deve poterla fare; altrimenti l'unica strada è
+cambiare la regola per tutti, che è un modo di mentire al database per fare una cosa normale. Un
+vincolo che si aggira spegnendolo non è un vincolo, è un ostacolo che insegna a spegnere i
+vincoli. Il controllo 4 di `verifica-regole.sql` verifica quindi che un passaggio contro le
+regole **entri**, e il messaggio spiega perché, così che nessuno lo «ripari».
+
+### C37 — La settimana invece del giorno — *fatto (05/08/2026)*
 
 La Home guarda un giorno per volta, e la domanda vera della domenica sera è «come siamo messi
 questa settimana». Sette colonne con chi guida e quanti posti, dove i buchi si vedono a colpo
@@ -1048,7 +1212,13 @@ d'occhio. Il riepilogo **calcola già** i giorni scoperti: manca la forma in cui
 *Fatto quando*: dalla Home si passa alla settimana e ritorno, i giorni scoperti si distinguono
 senza leggere, e da un giorno vuoto si pubblica in un tocco.
 
-### C38 — La comitiva a tempo
+**Fatto**, senza toccare lo schema: i dati c'erano tutti. «Senza leggere» vale con **due**
+segnali e non uno — fondo e bordo tratteggiato — perché non deve valere solo per chi distingue i
+colori. Nella settimana si contano solo i passaggi della comitiva aperta: uno di fuori (C9) è
+un'occasione per una persona, non copertura per il gruppo, e contarlo direbbe che martedì è
+coperto quando la comitiva martedì non ha nessuno.
+
+### C38 — La comitiva a tempo — *fatto: `033`*
 
 Un gruppo oggi è permanente. Un concerto, un matrimonio, un weekend fuori vogliono una comitiva
 che nasce, serve tre giorni e si chiude da sola, con un codice che scade. È un caso d'uso diverso
@@ -1059,6 +1229,19 @@ Va fatto dopo, o insieme.
 
 *Fatto quando*: si crea una comitiva con una data di fine, dopo quella data non ci si entra più col
 codice, e i dati restano leggibili a chi c'era.
+
+**Fatto nella `033`.** «Si chiude» vuol dire due cose — non ci si entra col codice, non si
+pubblica — e non una terza: nessuna policy cambia, perché `is_member()` guarda l'appartenenza e
+non la data. Chi ha diviso una macchina per tre giorni deve poter ancora vedere chi c'era e
+**saldare quello che deve**; chiudere anche i conti vorrebbe dire che chi deve cinque euro non ha
+più modo di registrarli. Una comitiva scaduta è un album, non un buco.
+
+**Sul rapporto con C24**, che l'avvertenza qui sopra chiedeva di guardare: dire «questa comitiva
+è chiusa» invece di «codice non valido» regala l'informazione che quel codice esiste — che però
+chi indovina un codice valido ottiene già oggi, e in forma peggiore, perché entra. La terza
+risposta è meno invasiva della seconda, non più. Tacere costerebbe invece a chi ha in mano un
+codice legittimo: lo manderebbe a ricontrollare le lettere di un codice giusto. C24 si chiude
+limitando i tentativi, che è il rimedio vero e non riguarda questa colonna.
 
 ---
 
