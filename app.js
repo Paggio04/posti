@@ -1601,6 +1601,30 @@ function schedaRegole(g) {
   cambia.textContent = detto.length ? 'Cambia le regole' : 'Fissa le regole';
   cambia.addEventListener('click', () => modificaRegole(g));
   azioni.appendChild(cambia);
+
+  // C38 — la data di fine si sceglie creando la comitiva, ma una data sbagliata
+  // dev'essere correggibile: senza questo bottone l'unico rimedio sarebbe rifare la
+  // comitiva, cioe' perdere i membri e i conti. Sta qui e non fra le regole perche'
+  // non e' una convenzione del gruppo — e' un fatto che il database fa rispettare.
+  const data = document.createElement('button');
+  data.className = 'btn btn-ghost btn-small';
+  data.textContent = g.scade_il ? 'Cambia la data di fine' : 'Falla chiudere da sola';
+  data.addEventListener('click', async () => {
+    const fine = await ask('Quando finisce la comitiva?', {
+      text: 'Dopo quel giorno non ci si entra più col codice e non si pubblica. Quello che c\'è resta leggibile a chi c\'era. Lascia vuoto perché non finisca.',
+      value: g.scade_il ?? '', type: 'date',
+    });
+    if (fine === null) return;
+    if (fine && fine < todayISO()) { toast('Una comitiva non può chiudere prima di oggi.'); return; }
+    const { error } = await supabase.from('groups').update({ scade_il: fine || null }).eq('id', g.id);
+    if (error) { toast(friendlyError(error)); return; }
+    toast(fine ? `La comitiva si chiude il ${dataBreve(fine)}.` : 'La comitiva non finisce più.');
+    await loadGroups();
+    renderGroupsView();
+    loadRides();
+  });
+  azioni.appendChild(data);
+
   box.appendChild(azioni);
   return box;
 }
@@ -2614,6 +2638,7 @@ function setDate(date) {
   dayWeek.classList.remove('active');
   dayPicker.value = date;
   document.getElementById('week-grid').classList.add('hidden');
+  document.querySelector('.day-cta').classList.remove('hidden');
   ridesList.classList.remove('hidden');
   // il canale realtime filtra sul giorno visualizzato: cambiato giorno, ci si riabbona
   if (realtimeChannel) subscribeRealtime();
@@ -2648,6 +2673,11 @@ dayWeek.addEventListener('click', () => {
   document.getElementById('turn-hint').classList.add('hidden');
   walkersCard.classList.add('hidden');
   offerCard.classList.add('hidden');
+  // Anche i due bottoni del giorno, e questo non e' pulizia: «Metti la tua auto»
+  // pubblicherebbe per `currentDate`, cioe' per il giorno che si stava guardando
+  // prima — mentre a schermo ci sono sette giorni e nessuno di essi e' evidenziato.
+  // Nella settimana l'azione e' un'altra ed e' scritta dentro i buchi.
+  document.querySelector('.day-cta').classList.add('hidden');
   document.getElementById('week-grid').classList.remove('hidden');
   loadWeek();
 });

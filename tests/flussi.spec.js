@@ -28,6 +28,16 @@ async function rispondiAlDialogo(page, testo) {
   await expect(page.locator('#app-dialog')).toBeHidden();
 }
 
+// C38: creare una comitiva fa due domande — il nome e, facoltativa, la data di fine.
+// Qui la seconda si salta lasciando il campo vuoto, che e' il caso normale: una
+// comitiva permanente. E' anche il modo in cui il test verifica che sia davvero
+// facoltativa — se un giorno diventasse obbligatoria, questa riga diventerebbe rossa.
+async function creaGruppo(page, nome) {
+  await page.locator('#group-create').click();
+  await rispondiAlDialogo(page, nome);
+  await rispondiAlDialogo(page, '');
+}
+
 async function vaiA(page, vista) {
   await page.locator(`.nav-item[data-view="${vista}"]`).click();
   await expect(page.locator(`#view-${vista}`)).toBeVisible();
@@ -56,8 +66,7 @@ test('due utenti, una comitiva: pubblicare, entrare col codice, prenotare un sed
 
   // --- Ada crea la comitiva ---
   await vaiA(ada, 'groups');
-  await ada.locator('#group-create').click();
-  await rispondiAlDialogo(ada, nomeGruppo);
+  await creaGruppo(ada, nomeGruppo);
   const cardGruppo = ada.locator('.group-card', { hasText: nomeGruppo });
   await expect(cardGruppo).toBeVisible({ timeout: 15000 });
   const codice = (await cardGruppo.locator('.group-code').textContent()).trim();
@@ -145,8 +154,7 @@ test('segnalare e bloccare: il dialogo, la lista dei bloccati, e la vista che ca
 
   // --- Ada crea la comitiva e pubblica l'auto, Bruno entra col codice ---
   await vaiA(ada, 'groups');
-  await ada.locator('#group-create').click();
-  await rispondiAlDialogo(ada, nomeGruppo);
+  await creaGruppo(ada, nomeGruppo);
   const cardGruppo = ada.locator('.group-card', { hasText: nomeGruppo });
   await expect(cardGruppo).toBeVisible({ timeout: 15000 });
   const codice = (await cardGruppo.locator('.group-code').textContent()).trim();
