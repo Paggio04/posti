@@ -81,6 +81,7 @@ begin
   ('accoda_partenze_imminenti',  '',                    'nessuno'),
   ('notifica_annullamento',      '',                    'nessuno'),   -- 026, lo chiama il trigger
   ('notifica_ritardo',           '',                    'nessuno'),   -- 027, idem
+  ('registra_fermate',           '',                    'nessuno'),   -- 029, idem
   ('blinda_coordinate',          '',                    'nessuno'),
   ('blinda_funzioni',            '',                    'nessuno'),
   ('blinda_profilo',             '',                    'nessuno'),
@@ -97,6 +98,7 @@ begin
   -- --- Aperte a chiunque, e voluto: trigger e funzioni ancorate ad auth.uid() ---
   -- Il perche', funzione per funzione, sta nell'intestazione di questo file.
   ('check_claim',                '',                    'anon'),
+  ('chiave_fermata',             'nome text',           'anon'),   -- 029, puro testo: non legge niente
   ('check_ride',                 '',                    'anon'),
   ('condivide_gruppo',           'altro uuid',          'anon'),
   ('controlla_persone',          '',                    'anon'),

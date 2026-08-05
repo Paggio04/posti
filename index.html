@@ -315,8 +315,13 @@
           <h2>La tua auto</h2>
           <form id="ride-form">
             <div class="form-row">
-              <input type="text" id="ride-origin" maxlength="60" placeholder="Punto di partenza" aria-label="Partenza" />
-              <input type="text" id="ride-destination" maxlength="60" placeholder="Destinazione *" required aria-label="Destinazione" />
+              <input type="text" id="ride-origin" maxlength="60" placeholder="Punto di partenza" aria-label="Partenza" list="fermate-lista" autocomplete="off" />
+              <input type="text" id="ride-destination" maxlength="60" placeholder="Destinazione *" required aria-label="Destinazione" list="fermate-lista" autocomplete="off" />
+              <!-- La rubrica delle fermate del gruppo (C32): si sceglie invece di
+                   riscrivere, e scrivendone una nuova la si aggiunge. Il contenuto lo
+                   riempie l'app; la riempie il database, che e' l'unico a sapere quali
+                   grafie sono lo stesso posto. -->
+              <datalist id="fermate-lista"></datalist>
               <input type="time" id="ride-time" aria-label="Orario di partenza" />
             </div>
             <div class="form-row form-row-end">

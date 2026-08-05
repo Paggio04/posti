@@ -1163,6 +1163,15 @@ input:focus-visible, select:focus-visible, textarea:focus-visible {
 .group-card-head { display: flex; justify-content: space-between; align-items: center; gap: 10px; flex-wrap: wrap; margin-bottom: 10px; }
 .group-card-name { font-weight: 700; font-size: 1.02rem; }
 .group-card-members { display: flex; gap: 6px; flex-wrap: wrap; margin: 10px 0 14px; }
+
+/* ---- la rubrica delle fermate (C32) ----
+   Sta dentro la scheda della comitiva, separata da una riga: e' roba del gruppo
+   come i membri, ma di un'altra specie, e senza lo stacco le due liste di
+   pastiglie si leggevano come una sola. */
+.fermate-box { border-top: 1px solid var(--border); margin: 14px 0 0; padding: 12px 0 0; }
+.fermate-titolo { font-size: 0.82rem; font-weight: 600; color: var(--ink); margin-bottom: 8px; }
+.fermate-elenco { display: flex; gap: 6px; flex-wrap: wrap; margin-bottom: 8px; }
+.fermate-box .form-hint { margin: 0; }
 .group-card-actions { display: flex; gap: 8px; flex-wrap: wrap; }
 
 /* ================= STATISTICHE ================= */

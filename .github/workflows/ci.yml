@@ -114,6 +114,9 @@ jobs:
       - name: Andata e ritorno sono un viaggio, e due andate restano vietate
         run: psql -v ON_ERROR_STOP=1 -q -f supabase/test/verifica-andata-ritorno.sql
 
+      - name: Tre grafie della stessa fermata sono un posto solo
+        run: psql -v ON_ERROR_STOP=1 -q -f supabase/test/verifica-fermate.sql
+
       - name: Un ritardo annunciato arriva a chi e' a bordo, e una volta per numero
         run: psql -v ON_ERROR_STOP=1 -q -f supabase/test/verifica-ritardo.sql
 

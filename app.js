@@ -1003,6 +1003,7 @@ async function loadGroups() {
     offerCard.classList.add('hidden');
   }
   renderGroupBar();
+  caricaFermate();
 }
 
 function renderGroupBar() {
@@ -1020,10 +1021,53 @@ function selectGroup(groupId) {
   currentGroupId = groupId;
   if (groupId) localStorage.setItem(ULTIMO_GRUPPO, groupId);
   renderGroupBar();
+  // La rubrica (C32) e' del gruppo: cambiando comitiva cambia, e i suggerimenti
+  // sotto i campi devono essere quelli della comitiva che si sta guardando.
+  caricaFermate();
   loadRides();
 }
 
 // --- Vista Gruppi ---
+// ══════════════════════════════════════════════════════════════════════════
+// C32 — La rubrica delle fermate.
+//
+// La riempie il trigger `registra_fermate` (029), non questo codice: qui si
+// legge e si sceglie. Le fermate stanno in memoria perche' servono in due posti
+// che non si parlano — l'elenco sotto i campi del modulo e la scheda nella
+// vista Comitiva — e perche' C34 ci cerca dentro le coordinate per la quota.
+// ══════════════════════════════════════════════════════════════════════════
+let fermate = [];
+
+async function caricaFermate() {
+  fermate = [];
+  if (!currentGroupId) { riempiElencoFermate(); return; }
+  const { data, error } = await supabase
+    .from('fermate')
+    .select('id, nome, chiave, lat, lon, usi, usata_il')
+    .eq('group_id', currentGroupId)
+    .order('usi', { ascending: false })
+    .limit(60);
+  // Un errore qui non rompe niente: senza rubrica i campi tornano a essere quello che
+  // erano prima di C32, cioe' testo libero. Degrada, non rompe.
+  if (error) { console.error('fermate:', error); }
+  fermate = data ?? [];
+  riempiElencoFermate();
+}
+
+function riempiElencoFermate() {
+  const lista = document.getElementById('fermate-lista');
+  lista.innerHTML = '';
+  for (const f of fermate) {
+    const o = document.createElement('option');
+    o.value = f.nome;
+    // `<option>` in un datalist mostra il testo come suggerimento accanto al valore:
+    // quante volte si e' partiti di li' e' l'unica cosa che aiuta a scegliere fra due
+    // nomi simili.
+    o.label = f.usi > 1 ? `${f.usi} volte` : '';
+    lista.appendChild(o);
+  }
+}
+
 async function renderGroupsView() {
   const list = document.getElementById('groups-list');
   document.getElementById('groups-empty').classList.toggle('hidden', myGroups.length > 0);
@@ -1125,9 +1169,102 @@ async function renderGroupsView() {
     });
     actions.appendChild(leave);
 
+    // ── C32: le fermate, ma solo della comitiva aperta ──────────────────
+    // `fermate` in memoria e' quella di `currentGroupId`: mostrarla sotto tutte
+    // le schede direbbe che i posti di un gruppo sono anche quelli dell'altro,
+    // che e' il contrario di cio' che questa app tiene separato.
+    if (g.id === currentGroupId) card.appendChild(schedaFermate(g));
+
     card.appendChild(actions);
     list.appendChild(card);
   }
+}
+
+// Le fermate stanno nella vista Comitiva perche' sono **del gruppo**: e' la
+// rubrica condivisa, non una preferenza di chi guarda.
+function schedaFermate(g) {
+  const box = document.createElement('div');
+  box.className = 'fermate-box';
+  const titolo = document.createElement('div');
+  titolo.className = 'fermate-titolo';
+  titolo.textContent = fermate.length
+    ? `Fermate della comitiva (${fermate.length})`
+    : 'Fermate della comitiva';
+  box.appendChild(titolo);
+  if (!fermate.length) {
+    const p = document.createElement('p');
+    p.className = 'form-hint';
+    p.textContent = 'Si riempie da sola: ogni partenza e ogni destinazione che scrivete pubblicando entra qui, e dalla volta dopo si sceglie invece di riscriverla.';
+    box.appendChild(p);
+    return box;
+  }
+  const elenco = document.createElement('div');
+  elenco.className = 'fermate-elenco';
+  for (const f of fermate) {
+    const riga = document.createElement('span');
+    riga.className = 'history-chip' + (f.lat != null ? ' driver' : '');
+    riga.textContent = `${f.nome} · ${f.usi}`;
+    riga.title = f.lat != null
+      ? 'Ha un punto sulla mappa: serve a proporre la quota della benzina.'
+      : 'Senza punto sulla mappa.';
+
+    const punta = document.createElement('button');
+    punta.className = 'chip-kick';
+    punta.textContent = f.lat != null ? '↺' : '⌖';
+    punta.title = f.lat != null ? 'Rimisura il punto stando qui' : 'Segna il punto stando qui';
+    punta.addEventListener('click', () => segnaPuntoFermata(f));
+    riga.appendChild(punta);
+
+    if (g.owner_id === currentUser.id) {
+      const via = document.createElement('button');
+      via.className = 'chip-kick';
+      via.textContent = '✕';
+      via.title = `Togli "${f.nome}" dalla rubrica`;
+      via.addEventListener('click', async () => {
+        if (!await conferma(`Togliere "${f.nome}" dalla rubrica?`, {
+          testo: 'Sparisce dai suggerimenti. I passaggi già pubblicati non cambiano, e se qualcuno la riscrive torna.',
+          azione: 'Togli dalla rubrica',
+          pericolo: true,
+        })) return;
+        const { error } = await supabase.from('fermate').delete().eq('id', f.id);
+        if (error) { toast(friendlyError(error)); return; }
+        await caricaFermate();
+        renderGroupsView();
+      });
+      riga.appendChild(via);
+    }
+    elenco.appendChild(riga);
+  }
+  box.appendChild(elenco);
+  const nota = document.createElement('p');
+  nota.className = 'form-hint';
+  nota.textContent = 'Il numero è quante volte è stata usata. Il punto sulla mappa si segna stando sul posto, e lo vede tutta la comitiva: mettilo su un ritrovo, non su casa tua.';
+  box.appendChild(nota);
+  return box;
+}
+
+// Il punto di una fermata **non** si raccoglie di nascosto dalle pubblicazioni:
+// e' la decisione scritta nella 029, ed e' C21 per la terza volta. Si mette con
+// un gesto che dice cosa sta facendo, e la conferma lo dice a parole.
+async function segnaPuntoFermata(f) {
+  if (bloccaSeSospeso('segnare una fermata')) return;
+  if (!await conferma(`Segnare qui "${f.nome}"?`, {
+    testo: 'Prende la posizione di adesso e la salva sulla fermata. La vede tutta la comitiva, quindi vale per un punto di ritrovo — non per il posto da cui parti tu.',
+    azione: 'Sono alla fermata',
+  })) return;
+  let punto;
+  try {
+    punto = await posizione();
+  } catch (err) {
+    toast(err.message);
+    return;
+  }
+  const { error } = await supabase.from('fermate')
+    .update({ lat: punto.lat, lon: punto.lon }).eq('id', f.id);
+  if (error) { toast(friendlyError(error)); return; }
+  toast(`"${f.nome}" ha il suo punto sulla mappa.`);
+  await caricaFermate();
+  renderGroupsView();
 }
 
 // --- Vista Storico ---
@@ -2094,6 +2231,10 @@ rideForm.addEventListener('submit', async (e) => {
     : ritorni === 0 ? `${quanti} Il ritorno però non è passato: ne avevi già uno per quel giorno.`
     : `${quanti} Ritorno pubblicato ${ritorni} volte su ${published}.`);
   await clearMyRequest();
+  // C32: il trigger ha appena messo in rubrica partenza e destinazione. Ricaricarla
+  // qui e' l'unico modo perche' la seconda pubblicazione trovi da scegliere cio' che
+  // la prima ha scritto, senza ricaricare la pagina.
+  caricaFermate();
   loadRides();
 });
 
