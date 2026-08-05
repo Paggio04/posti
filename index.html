@@ -354,8 +354,12 @@
               </select>
             </label>
             <label class="rating-label" for="ride-fuel">€ a testa
-              <input type="number" id="ride-fuel" min="0" max="100" step="0.5" placeholder="—" aria-label="Contributo benzina a testa in euro" class="fuel-input" />
+              <input type="number" id="ride-fuel" min="0" max="100" step="0.5" placeholder="—" aria-label="Contributo benzina a testa in euro" class="fuel-input" aria-describedby="ride-quota-nota" />
             </label>
+            <!-- C34: da dove esce la cifra proposta. Un numero precompilato senza il
+                 suo conto è un numero da accettare per fiducia, cioè la stessa cosa
+                 che C26 ha tolto ai conti. -->
+            <span id="ride-quota-nota" class="form-hint"></span>
             <input type="text" id="ride-note" maxlength="200" placeholder="Nota (facoltativa)" aria-label="Nota" class="note-input" />
               <button type="submit" id="save-place-btn" class="btn btn-primary">Pubblica</button>
             </div>

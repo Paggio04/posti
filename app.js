@@ -567,6 +567,10 @@ function autoScelta() {
 function applicaAutoScelta() {
   const a = autoScelta();
   if (a) document.getElementById('ride-seats').value = String(a.posti);
+  // Cambiare auto cambia i posti e puo' cambiare il consumo: la quota proposta
+  // (C34) dipende da entrambi, e ricalcolarla qui e' l'unico modo perche' non
+  // resti indietro di un'auto quando il menu si riempie da solo.
+  proponiQuota();
 }
 
 document.getElementById('ride-auto').addEventListener('change', applicaAutoScelta);
@@ -1254,6 +1258,123 @@ function riempiElencoFermate() {
     o.label = f.usi > 1 ? `${f.usi} volte` : '';
     lista.appendChild(o);
   }
+}
+
+// La stessa normalizzazione della 029, nella stessa forma. Sono due copie e va
+// detto: quella che conta e' la SQL, perche' e' lei a decidere l'unicita'. Questa
+// serve solo a ritrovare in memoria la fermata che il campo nomina, e se le due
+// divergessero il peggio che succede e' che la quota non si precompila (C34).
+function chiaveFermata(nome) {
+  const piegato = String(nome ?? '').toLowerCase()
+    .replace(/[àáâä]/g, 'a').replace(/[èéêë]/g, 'e').replace(/[ìíîï]/g, 'i')
+    .replace(/[òóôö]/g, 'o').replace(/[ùúûü]/g, 'u').replace(/ç/g, 'c');
+  return piegato.replace(/[^a-z0-9]+/g, ' ').trim() || null;
+}
+
+function fermataDi(nome) {
+  const k = chiaveFermata(nome);
+  return k ? fermate.find(f => f.chiave === k) ?? null : null;
+}
+
+// ══════════════════════════════════════════════════════════════════════════
+// C34 — La quota proposta invece che inventata.
+//
+// `fuel_per_person` era un numero che chi guida sceglie ogni volta, quindi
+// **cambia da persona a persona per lo stesso tragitto**: e' l'unica trattativa
+// rimasta nell'app. Qui la cifra si ricava, e sopra il campo c'e' scritto da
+// dove esce — un numero precompilato senza il suo conto e' un numero da
+// accettare per fiducia, che e' la cosa che C26 ha appena tolto ai conti.
+//
+// ── Le due costanti, e perche' sono costanti ──────────────────────────────
+// Il prezzo del carburante e il consumo di riferimento stanno qui, in due righe
+// sole, come `raggio_zona_km()` per il raggio della zona. Un campo da compilare
+// per il prezzo del gasolio sarebbe una cosa in piu' da tenere aggiornata che
+// nessuno aggiorna; una chiamata a un servizio dei prezzi sarebbe un terzo che
+// guarda dove va la gente (D6). Il numero invecchia, e va bene: la proposta si
+// corregge, e sbagliare di dieci centesimi su una cifra che oggi si inventa di
+// sana pianta non e' un peggioramento.
+//
+// ── «La stessa proposta per lo stesso tragitto», e cosa vuol dire ─────────
+// Il criterio della roadmap e' che due persone che fanno la stessa strada
+// propongano la stessa cifra. Vale **per costruzione** finche' nessuno ha
+// dichiarato il consumo della propria auto: prezzo, consumo di riferimento e
+// modo di dividere sono uguali per tutti, e cambia solo la distanza.
+// Se chi guida ha salvato un consumo (C33) la proposta usa quello, ed e' una
+// deroga voluta: un'auto che beve di piu' costa davvero di piu', e fingere di
+// no vorrebbe dire che il numero derivato e' meno vero di quello inventato.
+// La nota sotto il campo dice sempre quale dei due conti ha fatto.
+const PREZZO_CARBURANTE = 1.75;      // €/litro, benzina, ordine di grandezza 2026
+const CONSUMO_RIFERIMENTO = 15;      // km/l di un'utilitaria qualsiasi
+
+// Haversine, la stessa formula di `distanza_km()` (014). Qui in JS perche' i
+// due punti sono gia' in pagina: chiedere al database la distanza fra due
+// fermate che si stanno guardando sarebbe un giro di rete per un'aritmetica.
+function distanzaKm(a, b) {
+  const R = 6371;
+  const rad = (g) => (g * Math.PI) / 180;
+  const dLat = rad(b.lat - a.lat);
+  const dLon = rad(b.lon - a.lon);
+  const h = Math.sin(dLat / 2) ** 2
+    + Math.cos(rad(a.lat)) * Math.cos(rad(b.lat)) * Math.sin(dLon / 2) ** 2;
+  return 2 * R * Math.asin(Math.sqrt(h));
+}
+
+let quotaProposta = null;   // l'ultima cifra scritta da qui, per non sovrascrivere quella di chi guida
+
+function proponiQuota() {
+  const nota = document.getElementById('ride-quota-nota');
+  const campo = document.getElementById('ride-fuel');
+  const da = fermataDi(document.getElementById('ride-origin').value);
+  const a = fermataDi(document.getElementById('ride-destination').value);
+  if (!da || !a || da.lat == null || a.lat == null || da.id === a.id) {
+    // Niente proposta e **niente scusa**: dire «non posso calcolare» sotto un campo
+    // facoltativo sarebbe rumore. Chi vuole capire perche' lo trova nella scheda
+    // delle fermate, dove si vede quali hanno un punto e quali no.
+    nota.textContent = '';
+    return;
+  }
+  const km = distanzaKm(da, a);
+  if (!(km > 0.3)) { nota.textContent = ''; return; }
+  const auto = autoScelta();
+  const consumo = auto?.consumo_km_l ? Number(auto.consumo_km_l) : CONSUMO_RIFERIMENTO;
+  // Diviso per chi c'e' in macchina, guidatore compreso: e' la convenzione con cui
+  // si divide una spesa fra chi la fa insieme. «Chi guida non paga» e' una regola
+  // che una comitiva puo' darsi, non l'impostazione naturale — e infatti e' C36.
+  const persone = Number(document.getElementById('ride-seats').value || 4) + 1;
+  const costo = (km / consumo) * PREZZO_CARBURANTE;
+  // A mezzi euro, come lo scatto del campo: proporre 1,37 € a testa e' un numero
+  // che nessuno tira fuori dal portafoglio.
+  const quota = Math.round((costo / persone) * 2) / 2;
+  const base = `${km.toFixed(1)} km · ${consumo} km/l`
+    + (auto?.consumo_km_l ? ` (${auto.nome})` : ' (riferimento)')
+    + ` · ${PREZZO_CARBURANTE.toFixed(2)} €/l · diviso ${persone}`;
+
+  const vuoto = campo.value === '';
+  const miaProposta = quotaProposta !== null && Number(campo.value) === quotaProposta;
+
+  // **Sotto i cinquanta centesimi non si propone niente, e non e' un dettaglio.**
+  // Il conto vero di un tragitto corto diviso per cinque fa venti centesimi: un
+  // minimo di mezzo euro messo li' per avere un numero da mostrare sarebbe una
+  // cifra inventata, cioe' esattamente cio' che questo cantiere toglie — e per
+  // giunta piu' alta del dovuto. Un campo vuoto qui vuol dire «non si paga», che
+  // per due chilometri e' la risposta giusta.
+  if (quota < 0.5) {
+    if (miaProposta) { campo.value = ''; quotaProposta = null; }
+    nota.textContent = `${base} · meno di 50 centesimi a testa: non vale un contributo`;
+    return;
+  }
+
+  if (vuoto || miaProposta) {
+    campo.value = String(quota);
+    quotaProposta = quota;
+  }
+  nota.textContent = base
+    + (vuoto || miaProposta ? '' : ` · proposta: ${quota.toFixed(2)} €`);
+}
+
+for (const id of ['ride-origin', 'ride-destination', 'ride-seats', 'ride-auto']) {
+  document.getElementById(id).addEventListener('input', proponiQuota);
+  document.getElementById(id).addEventListener('change', proponiQuota);
 }
 
 async function renderGroupsView() {
@@ -2332,6 +2453,9 @@ offerToggle.addEventListener('click', async () => {
       document.getElementById('ride-seats').value = String(data.seats);
       document.getElementById('ride-fuel').value = data.fuel_per_person ?? '';
       document.getElementById('ride-note').value = data.note ?? '';
+      // La nota di C34 va aggiornata anche qui: i campi sono cambiati senza che
+      // nessuno li abbia toccati, quindi nessun evento `input` e' partito.
+      proponiQuota();
       toast('Modulo precompilato con il tuo ultimo viaggio: cambia quello che vuoi.');
     }
   }
@@ -2409,6 +2533,11 @@ rideForm.addEventListener('submit', async (e) => {
   // reset() non tocca le variabili: senza questo, la posizione segnata resterebbe
   // appiccicata alla pubblicazione successiva, che magari parte da un'altra parte.
   partenza = null;
+  // C34: `reset()` svuota il campo ma non questa variabile. Senza, la pubblicazione
+  // dopo crederebbe che la cifra scritta a mano sia una vecchia proposta e la
+  // sovrascriverebbe.
+  quotaProposta = null;
+  document.getElementById('ride-quota-nota').textContent = '';
   document.getElementById('ride-posizione').textContent = '';
   offerCard.classList.add('hidden');
   // Il ritorno si conta a parte: se le andate passano e i ritorni no — succede se
