@@ -99,6 +99,9 @@ jobs:
       - name: Le notifiche si accodano quando devono, e una volta sola
         run: psql -v ON_ERROR_STOP=1 -q -f supabase/test/verifica-notifiche.sql
 
+      - name: Chi aveva un posto sa che il passaggio e' stato annullato
+        run: psql -v ON_ERROR_STOP=1 -q -f supabase/test/verifica-annullamento.sql
+
       - name: Cancellare il proprio account non danneggia gli altri
         run: psql -v ON_ERROR_STOP=1 -q -f supabase/test/verifica-cancellazione.sql
 

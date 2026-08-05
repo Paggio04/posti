@@ -2763,8 +2763,13 @@ function renderRides(rides) {
       del.innerHTML = '<svg width="16" height="16"><use href="#i-x"/></svg>';
       del.title = 'Annulla passaggio';
       del.addEventListener('click', async () => {
+        // C28: l'avviso si accoda comunque (026), ma arriva sul telefono solo con le
+        // chiavi delle notifiche in piedi. Prometterlo quando non puo' partire sarebbe
+        // la stessa mezza verita' di un test che si salta da solo.
         if (!await conferma('Annullare il passaggio?', {
-          testo: 'Chi aveva un posto sopra questa auto lo perde, e per oggi resta a piedi.',
+          testo: notifichePossibili()
+            ? 'Chi aveva un posto sopra questa auto lo perde. Riceve un avviso, e lo riceve anche chi era in lista d\'attesa.'
+            : 'Chi aveva un posto sopra questa auto lo perde, e per oggi resta a piedi.',
           azione: 'Annulla il passaggio',
           pericolo: true,
         })) return;

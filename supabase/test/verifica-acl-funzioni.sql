@@ -79,6 +79,7 @@ begin
   ('registra_evento_pagamento',  '',                    'nessuno'),
   ('accoda_notifica',            'p_destinatario uuid, p_tipo text, p_ride uuid, p_titolo text, p_corpo text, p_chiave text', 'nessuno'),
   ('accoda_partenze_imminenti',  '',                    'nessuno'),
+  ('notifica_annullamento',      '',                    'nessuno'),   -- 026, lo chiama il trigger
   ('blinda_coordinate',          '',                    'nessuno'),
   ('blinda_funzioni',            '',                    'nessuno'),
   ('blinda_profilo',             '',                    'nessuno'),
