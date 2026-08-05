@@ -82,9 +82,11 @@ ospita, se hai un posto su quell'auto, se è aperto alla tua zona (25 km dal pun
 
 ## Brand Commitments
 
-- **Il nome è una decisione aperta.** Nel frattempo il nome in uso è **WeTransport**, applicato
-  ovunque (titoli, manifest, pagine, README); "Posti" resta solo il nome della cartella. Futuro
-  lavoro non deve trattare WeTransport come definitivo né reintrodurre "Posti" di sua iniziativa.
+- **Il nome è WeTransport**, deciso il 20/07/2026 rinominando `Posti`. Vale ovunque: titoli,
+  manifest, pagine, README, dominio `wetransport.netlify.app`. Non va reintrodotto "Posti".
+  Quello che resta aperto è **solo la rinomina del repo GitHub** (`Paggio04/posti`) e della
+  cartella locale: finché non si fa, lo stesso prodotto ha tre nomi e cercare "wetransport" su
+  GitHub non trova niente.
 - Tagline in uso: **"chi guida oggi?"**.
 - L'app è senza scopo di lucro e lo dichiara nella privacy: niente linguaggio da prodotto
   commerciale, niente promesse di scala.
