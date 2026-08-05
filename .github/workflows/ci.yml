@@ -29,6 +29,13 @@ jobs:
       - name: Validazione HTML (bloccante)
         run: npm run validate
 
+      # I rapporti di contrasto stavano scritti nei commenti del foglio di stile, cioe'
+      # erano veri il giorno in cui qualcuno li aveva calcolati e mai piu' verificati.
+      # Il tema scuro era finito sotto la soglia AA su nove coppie senza che niente lo
+      # dicesse. Questo legge i token da style.css: se un colore si sposta, si sa qui.
+      - name: Contrasto AA nei due temi (bloccante)
+        run: npm run contrasto
+
       - name: Nessun segreto committato
         run: |
           ! grep -rEn "sb_secret|service_role|SUPABASE_SERVICE" --include='*.js' --include='*.html' --include='*.toml' . || (echo "Trovata chiave segreta nel repo" && exit 1)
