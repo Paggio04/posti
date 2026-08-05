@@ -52,7 +52,7 @@ segue:
 | C12 PWA | fatto nel codice, icone `maskable` comprese, **da installare su un telefono vero** |
 | C13 notifiche a scheda chiusa | **metà fatta**: coda, trigger, iscrizioni e interruttore ci sono e sono verificati in CI; restano le chiavi VAPID, il deploy della Edge Function e `pg_cron`, che il repo non può fare |
 | C14 servizi esterni | **chiuso** (Web Share, `.ics`, navigazione sul punto vero) |
-| C15 estetica | fatto al secondo tentativo, carattere compreso; il giudizio finale è di chi la usa |
+| C15 estetica | fatto al secondo tentativo, carattere compreso; il giudizio finale è di chi la usa. **L'accesso non era compreso**: rifatto in C39 il 05/08/2026, insieme alle regole di C15 rimaste inapplicate altrove |
 | C18 standard dello Starter | **chiuso nei due versi**: il 27/07/2026 le lezioni sono tornate nello Starter del vault (`Permissions-Policy`, migrazioni numerate, ordine codice/schema, «provalo al contrario») |
 | C21 coordinate nel payload | **fatto e applicato** (`015` + `016`), nell'ordine giusto |
 | C22 la zona nel profilo | **scritto** (`018` + `019`), da pubblicare e applicare — è lo stesso buco di C21, sull'altra tabella |
@@ -1061,6 +1061,72 @@ Va fatto dopo, o insieme.
 codice, e i dati restano leggibili a chi c'era.
 
 ---
+
+## Fase 8 — Il ripasso del front-end (05/08/2026)
+
+### C39 — L'accesso, e le regole di C15 applicate ovunque — *fatto*
+
+C15 aveva rifatto l'app. **Non aveva mai toccato l'accesso**, che è l'unica schermata che si vede
+prima di sapere cosa sia WeTransport, ed era rimasta quella di partenza: aurora animata dietro il
+pannello, logo che galleggiava all'infinito, pastiglie di vetro, il pannello che scivolava di
+820 ms al cambio di modo, il titolo «Bentornato». Cioè l'elenco degli anti-riferimenti di
+PRODUCT.md, quasi voce per voce, sulla prima schermata.
+
+**Il difetto peggiore però non era estetico.** Sul telefono il pannello del marchio era la prima
+colonna e occupava tutto il primo schermo: a 360×780 la casella dell'email cominciava sotto la
+piega. Il contesto d'uso scritto in PRODUCT.md è «in piedi, di corsa, con una mano sola, spesso al
+buio davanti a un portone»: lì, chi apre l'app per entrarci doveva scorrere per trovare dove si
+entra. Ora email, password e «Accedi» chiudono a 579 px su 780, e c'è un test che lo misura invece
+di fidarsi.
+
+Al posto del pannello c'è **il cartello**: l'auto vera dell'app, la stessa geometria di
+`buildCar()`, con due sedili presi e due liberi, e sotto la riga «Restano due posti». È la risposta
+alla prova del nove di D7 — coperto il nome, si capisce lo stesso che app è — e sul telefono non
+c'è affatto, perché lì lo spazio verticale è del modulo.
+
+**Poi le stesse regole, applicate dove C15 non era arrivato:**
+
+| | Cosa | Dov'era |
+|---|---|---|
+| Molla | `--spring` aveva un superamento a 1.4: gli elementi andavano oltre il punto d'arrivo e tornavano indietro | su **venti** regole, dai bottoni ai sedili al tondo della navigazione |
+| Gradienti | nove riempimenti decorativi (bottoni, schede, avatar, barre, il tondo, i riquadri scuri) più due macchie sfocate sotto tutta la pagina | ovunque |
+| Movimento infinito | il cerchio degli stati vuoti galleggiava per sempre, la pastiglia di chi cerca un passaggio pulsava per sempre | Home, stati vuoti |
+| Alone | `--glow`, un bagliore colorato sotto ogni bottone primario | tutti i primari |
+
+**Quattro difetti veri, trovati guardando invece di leggere:**
+
+1. **Le finestre si aprivano nell'angolo in alto a sinistra.** `* { margin: 0 }` in cima al foglio
+   spegne il `margin: auto` con cui il browser centra un `<dialog>` aperto con `showModal()`.
+   Valeva per tutte: chiedi un nome, conferma, segnala qualcuno. Una riga, e nessuno l'aveva mai
+   fotografata.
+2. **Sette conferme distruttive passavano da `confirm()` del browser**, accanto a un dialogo
+   disegnato usato per l'altra metà dei casi. Quello nativo non si può scrivere: diceva «OK» dove
+   serviva «Esci dall'account». Mostra l'indirizzo del sito in cima, che dentro un'app installata
+   sembra la finestra di un altro programma. E in qualche browser dentro un'altra app arriva
+   soppresso, cioè l'azione parte o non parte senza che nessuno abbia risposto. Ora è uno solo, il
+   bottone dice cosa fa, e il fuoco parte da «Annulla».
+3. **Il tema scuro era sotto la soglia AA su nove coppie**, e nessuno poteva accorgersene perché i
+   rapporti stavano nei commenti, scritti a mano una volta. Un token solo faceva due lavori con
+   contrasti opposti: bianco sopra (3,97:1) e se stesso come testo (4,36:1). Sdoppiato in
+   `--primary` / `--primary-testo`, e lo stesso per `--danger` e `--ok`.
+4. **`var(--primary-bright)` restava scritto in `app.js`** dopo che il token era sparito coi
+   gradienti: due barre del riepilogo con un colore invalido.
+
+Più: il pavimento tipografico portato a 0,68 rem (nel riepilogo c'erano etichette da 9 px), i
+collegamenti che non avevano una regola e restavano blu di sistema — illeggibili al buio su
+`404.html` e `offline.html`, che sono pagine il cui unico scopo è portare da un'altra parte — e
+`color-scheme` dichiarato anche lì.
+
+**Il controllo che nasce da qui.** `tests/contrasto.mjs` legge i token **da `style.css`** e verifica
+53 coppie nei due temi; gira in `npm run check`, quindi un token che si sposta lo dice subito
+invece di aspettare un anno. PRODUCT.md chiede AA «come soglia verificata, non dichiarata»: prima
+era dichiarata.
+
+**Fatto quando:** il giudizio resta di chi la usa, su un telefono in mano. Quello che qui si può
+dire chiuso è che la prima schermata non ha più niente di generico, che nessun contrasto è sotto
+soglia, e che due dei difetti sopra erano rotture vere, non gusto.
+
+---
 ## Revisione integrale del 27/07/2026 — cosa è uscito
 
 Lettura riga per riga di `app.js` (2103 righe), delle 17 migrazioni, del guscio (`sw.js`,
@@ -1127,3 +1193,4 @@ seconda volta che ripaga: il difetto peggiore era **fuori** dal file che stavo g
 | **D6** | Servizi esterni (C14) | Solo API native del browser: Web Share per l'invito, `.ics` per il calendario, link Maps con coordinate vere (dentro C9). Nessun SDK di terzi, nessuna analytics. |
 | **D7** | Estetica (C15) | Il difetto è che sembra generata dall'AI, non che sia brutta. Si tolgono gli effetti generici, si sceglie una tipografia vera, l'auto SVG diventa protagonista. Prova del nove: coperto il logo, si riconosce lo stesso. |
 | **D8** | Nome e dominio (C20) | Repo rinominato in `wetransport`; dominio proprio al momento dell'apertura al pubblico, non prima. |
+| **D9** | Contrasto (C39) | Si calcola, non si stima. I rapporti nei commenti valgono finché nessuno tocca un token, cioè non valgono: `tests/contrasto.mjs` legge i token dal foglio di stile e sta dentro `npm run check`. Un colore che deve reggere due contrasti opposti (bianco sopra, se stesso come testo) è due token, non uno. |

@@ -80,43 +80,25 @@
     </defs>
   </svg>
 
-  <!-- AUTH -->
+  <!-- AUTH
+
+       **Il modulo per primo, a ogni larghezza.** Prima il pannello del marchio era la
+       prima colonna e sul telefono occupava lo schermo intero: la casella dell'email
+       cominciava sotto la piega, cioe' chi apre l'app per entrarci doveva scorrere per
+       trovare il posto dove si entra. Ora il cartello sta *accanto* al modulo da 1280px
+       in su, e sotto quella soglia non c'e' affatto.
+
+       Il cartello e' l'auto vera dell'app, disegnata con la stessa geometria di
+       `buildCar()` (viewBox 190x250, quattro posti, il guidatore a sinistra): due
+       sedili presi, due liberi. E' la schermata di casa in miniatura, ed e' la risposta
+       alla prova del nove -- coperto il nome, si capisce lo stesso che app e'. -->
   <section id="auth-view" class="auth-view">
-    <div class="auth-brand-panel">
-      <div class="auth-brand-inner">
-        <div class="auth-logo"><svg width="44" height="44"><use href="#i-car"/></svg></div>
-        <div class="brand-testo">
-          <div class="t-accedi">
-            <h1>WeTransport</h1>
-            <p class="auth-tagline">Organizzazione dei passaggi in auto per gruppi ricorrenti.</p>
-            <ul class="auth-steps">
-              <li>Pubblicazione dei passaggi e prenotazione dei posti</li>
-              <li>Ripartizione dei costi di carburante</li>
-              <li>Gestione dei gruppi tramite codice di invito</li>
-            </ul>
-          </div>
-          <div class="t-registra" aria-hidden="true">
-            <h1>Accesso</h1>
-            <p class="auth-tagline">Se disponi gi&agrave; di un account, accedi con le tue credenziali.</p>
-            <ul class="auth-steps">
-              <li>Passaggi e prenotazioni in corso</li>
-              <li>Gruppi di cui fai parte</li>
-              <li>Riepilogo dei posti di domani</li>
-            </ul>
-          </div>
-        </div>
-        <div class="auth-switch" role="tablist">
-          <button id="mode-login" class="auth-switch-btn active" role="tab" aria-selected="true">Accedi</button>
-          <button id="mode-signup" class="auth-switch-btn" role="tab" aria-selected="false">Crea un account</button>
-          <span class="auth-switch-slider" aria-hidden="true"></span>
-        </div>
-      </div>
-    </div>
     <div class="auth-form-panel">
 
       <div class="auth-card" id="auth-card">
-        <h2 id="auth-title">Bentornato</h2>
-        <p id="auth-subtitle" class="auth-subtitle">Accedi per vedere chi guida oggi.</p>
+        <p class="auth-marchio"><svg width="19" height="19"><use href="#i-car"/></svg> WeTransport</p>
+        <h2 id="auth-title">Chi guida oggi?</h2>
+        <p id="auth-subtitle" class="auth-subtitle">Accedi e vedi i posti liberi della comitiva.</p>
 
         <div class="oauth-buttons">
           <button type="button" id="oauth-google" class="btn btn-oauth">
@@ -142,6 +124,18 @@
           <button type="button" id="forgot-btn" class="link-btn">Hai dimenticato la password?</button>
         </form>
         <p id="auth-message" class="auth-message" role="alert"></p>
+
+        <!-- Il passaggio fra i due modi sta qui, sotto il modulo, dove si guarda quando
+             il modulo non e' quello giusto. Prima era un bottone solo su un pannello
+             scuro sopra la piega, senza dire di cosa fosse l'alternativa.
+             `app.js` mette `.signup` su `.auth-switch`: le due frasi si scambiano di
+             conseguenza, e quella nascosta esce anche dall'ordine di tabulazione. -->
+        <p class="auth-switch">
+          <span class="t-accedi">Non hai ancora un account?
+            <button type="button" id="mode-signup" class="link-inline">Creane uno</button></span>
+          <span class="t-registra">Hai gi&agrave; un account?
+            <button type="button" id="mode-login" class="link-inline">Accedi</button></span>
+        </p>
       </div>
 
       <div class="auth-card auth-success hidden" id="auth-success">
@@ -149,9 +143,81 @@
         <h2>Controlla la posta</h2>
         <p class="auth-subtitle">Abbiamo inviato un link di conferma a<br /><strong id="success-email"></strong></p>
         <p class="auth-subtitle">Aprilo per attivare l'account, poi torna qui e accedi.</p>
-        <button id="success-back" class="btn btn-secondary btn-full">Torna all'accesso</button>
+        <button type="button" id="success-back" class="btn btn-secondary btn-full">Torna all'accesso</button>
       </div>
 
+    </div>
+
+    <!-- Il cartello. Compare solo da 1280px in su (vedi style.css): sotto quella
+         soglia lo spazio verticale serve tutto al modulo.
+         L'auto e' `role="img"` con la sua etichetta: chi la ascolta sente cosa
+         mostra, invece di sentire cinque rettangoli. -->
+    <div class="auth-cartello">
+      <svg class="car-svg" viewBox="0 0 190 250" role="img"
+           aria-label="Un'auto con quattro posti: due presi, due liberi.">
+        <defs>
+          <linearGradient id="lamiera-auth" x1="0" y1="0" x2="0.35" y2="1">
+            <stop offset="0" class="lamiera-alto"/>
+            <stop offset="0.55" class="lamiera-mezzo"/>
+            <stop offset="1" class="lamiera-basso"/>
+          </linearGradient>
+          <linearGradient id="vetro-auth" x1="0" y1="0" x2="1" y2="1">
+            <stop offset="0" class="vetro-chiaro"/>
+            <stop offset="0.5" class="vetro-scuro"/>
+            <stop offset="1" class="vetro-chiaro"/>
+          </linearGradient>
+        </defs>
+        <ellipse cx="95" cy="244" rx="74" ry="7" class="car-ombra"/>
+        <rect x="10" y="10" width="170" height="230" rx="46" class="car-body" fill="url(#lamiera-auth)"/>
+        <path d="M 56 11 Q 95 11 134 11" class="car-luce"/>
+        <rect x="30" y="44" width="130" height="16" rx="8" class="car-glass" fill="url(#vetro-auth)"/>
+        <path d="M 40 58 L 58 46 L 74 46 L 56 58 Z" class="car-riflesso"/>
+        <rect x="34" y="208" width="122" height="12" rx="6" class="car-glass" fill="url(#vetro-auth)"/>
+        <rect x="2" y="60" width="12" height="34" rx="5" class="car-wheel"/>
+        <rect x="176" y="60" width="12" height="34" rx="5" class="car-wheel"/>
+        <rect x="2" y="156" width="12" height="34" rx="5" class="car-wheel"/>
+        <rect x="176" y="156" width="12" height="34" rx="5" class="car-wheel"/>
+        <rect x="0" y="46" width="14" height="6" rx="3" class="car-wheel"/>
+        <rect x="176" y="46" width="14" height="6" rx="3" class="car-wheel"/>
+
+        <g class="seat seat-driver">
+          <rect x="38" y="66" width="40" height="14" rx="7" class="seat-back"/>
+          <rect x="36" y="78" width="44" height="40" rx="12" class="seat-base"/>
+          <path d="M 45 86 L 71 86" class="seat-piega"/>
+          <text x="58" y="104" class="seat-text">MA</text>
+        </g>
+        <circle cx="58" cy="60" r="8" class="car-wheel-steer"/>
+
+        <g class="seat seat-taken">
+          <rect x="112" y="66" width="40" height="14" rx="7" class="seat-back"/>
+          <rect x="110" y="78" width="44" height="40" rx="12" class="seat-base"/>
+          <path d="M 119 86 L 145 86" class="seat-piega"/>
+          <text x="132" y="104" class="seat-text">GI</text>
+        </g>
+        <g class="seat seat-taken">
+          <rect x="23" y="118" width="40" height="14" rx="7" class="seat-back"/>
+          <rect x="21" y="130" width="44" height="40" rx="12" class="seat-base"/>
+          <path d="M 30 138 L 56 138" class="seat-piega"/>
+          <text x="43" y="156" class="seat-text">SA</text>
+        </g>
+        <g class="seat seat-free">
+          <rect x="75" y="118" width="40" height="14" rx="7" class="seat-back"/>
+          <rect x="73" y="130" width="44" height="40" rx="12" class="seat-base"/>
+          <path d="M 82 138 L 108 138" class="seat-piega"/>
+          <text x="95" y="156" class="seat-text">+</text>
+        </g>
+        <g class="seat seat-free">
+          <rect x="127" y="118" width="40" height="14" rx="7" class="seat-back"/>
+          <rect x="125" y="130" width="44" height="40" rx="12" class="seat-base"/>
+          <path d="M 134 138 L 160 138" class="seat-piega"/>
+          <text x="147" y="156" class="seat-text">+</text>
+        </g>
+      </svg>
+      <div class="cartello-testo">
+        <p class="cartello-riga"><b>Restano due posti.</b></p>
+        <p class="cartello-riga cartello-sotto">Chi guida mette la sua auto, gli altri toccano un
+          sedile e sono a bordo. Niente da chiedere in chat.</p>
+      </div>
     </div>
   </section>
 
@@ -214,13 +280,13 @@
           <h2>Benvenuto su WeTransport</h2>
           <p>Qui si organizzano i passaggi della tua comitiva. Per iniziare serve un gruppo:</p>
           <div class="welcome-actions">
-            <button id="welcome-create" class="btn btn-primary btn-big"><svg width="16" height="16"><use href="#i-plus"/></svg> Crea il tuo gruppo</button>
-            <button id="welcome-join" class="btn btn-secondary btn-big"><svg width="16" height="16"><use href="#i-link"/></svg> Ho un codice invito</button>
+            <button type="button" id="welcome-create" class="btn btn-primary btn-big"><svg width="16" height="16"><use href="#i-plus"/></svg> Crea il tuo gruppo</button>
+            <button type="button" id="welcome-join" class="btn btn-secondary btn-big"><svg width="16" height="16"><use href="#i-link"/></svg> Ho un codice invito</button>
           </div>
         </div>
 
         <div id="howto" class="howto hidden">
-          <button id="howto-close" class="howto-close" aria-label="Chiudi"><svg width="14" height="14"><use href="#i-x"/></svg></button>
+          <button type="button" id="howto-close" class="howto-close" aria-label="Chiudi"><svg width="14" height="14"><use href="#i-x"/></svg></button>
           <div class="howto-step"><span class="howto-icon"><svg width="18" height="18"><use href="#i-users"/></svg></span>Crea un gruppo e condividi il codice con gli amici</div>
           <div class="howto-step"><span class="howto-icon"><svg width="18" height="18"><use href="#i-key"/></svg></span>Chi guida tocca "Metti la tua auto"</div>
           <div class="howto-step"><span class="howto-icon"><svg width="18" height="18"><use href="#i-car"/></svg></span>Gli altri toccano un sedile libero e sono a bordo</div>
@@ -232,13 +298,13 @@
 
         <div class="day-bar" id="day-bar">
           <div class="day-tabs">
-            <button id="day-today" class="tab active">Oggi</button>
-            <button id="day-tomorrow" class="tab">Domani</button>
+            <button type="button" id="day-today" class="tab active">Oggi</button>
+            <button type="button" id="day-tomorrow" class="tab">Domani</button>
             <input type="date" id="day-picker" class="day-picker" aria-label="Scegli un giorno" />
           </div>
           <div class="day-cta">
-            <button id="request-toggle" class="btn btn-secondary"><svg width="15" height="15"><use href="#i-walk"/></svg> Cerco un passaggio</button>
-            <button id="offer-toggle" class="btn btn-primary btn-big"><svg width="17" height="17"><use href="#i-car"/></svg> Metti la tua auto</button>
+            <button type="button" id="request-toggle" class="btn btn-secondary"><svg width="15" height="15"><use href="#i-walk"/></svg> Cerco un passaggio</button>
+            <button type="button" id="offer-toggle" class="btn btn-primary btn-big"><svg width="17" height="17"><use href="#i-car"/></svg> Metti la tua auto</button>
           </div>
         </div>
 
@@ -323,8 +389,8 @@
         <h2 class="view-title"><svg width="20" height="20"><use href="#i-users"/></svg> Le tue comitive</h2>
         <p class="view-subtitle">Crea una comitiva, invita gli amici col codice, gestisci i membri.</p>
         <div class="group-actions-row">
-          <button id="group-create" class="btn btn-primary"><svg width="15" height="15"><use href="#i-plus"/></svg> Crea gruppo</button>
-          <button id="group-join" class="btn btn-secondary"><svg width="15" height="15"><use href="#i-link"/></svg> Entra con un codice</button>
+          <button type="button" id="group-create" class="btn btn-primary"><svg width="15" height="15"><use href="#i-plus"/></svg> Crea gruppo</button>
+          <button type="button" id="group-join" class="btn btn-secondary"><svg width="15" height="15"><use href="#i-link"/></svg> Entra con un codice</button>
         </div>
         <div id="groups-list" class="groups-list"></div>
         <div id="groups-empty" class="empty hidden">
@@ -352,9 +418,9 @@
           </div>
         </div>
         <div class="profile-actions">
-          <button id="profile-rename" class="btn btn-secondary btn-full"><svg width="15" height="15"><use href="#i-edit"/></svg> Cambia nome</button>
+          <button type="button" id="profile-rename" class="btn btn-secondary btn-full"><svg width="15" height="15"><use href="#i-edit"/></svg> Cambia nome</button>
           <button type="button" id="profile-export" class="btn btn-secondary btn-full">Scarica i miei dati</button>
-          <button id="profile-logout" class="btn btn-secondary btn-full btn-danger-full"><svg width="15" height="15"><use href="#i-logout"/></svg> Esci dall'account</button>
+          <button type="button" id="profile-logout" class="btn btn-secondary btn-full btn-danger-full"><svg width="15" height="15"><use href="#i-logout"/></svg> Esci dall'account</button>
           <button type="button" id="profile-delete" class="btn btn-secondary btn-full btn-danger-full">Elimina il mio account</button>
         </div>
 
@@ -401,11 +467,11 @@
     </div>
 
     <nav class="bottom-nav" aria-label="Navigazione principale">
-      <button class="nav-item" data-view="history" aria-label="Storico"><svg width="21" height="21"><use href="#i-history"/></svg><span>Storico</span></button>
-      <button class="nav-item" data-view="groups" aria-label="Comitive"><svg width="21" height="21"><use href="#i-users"/></svg><span>Comitive</span></button>
-      <button class="nav-item active" data-view="home" aria-label="Passaggi" aria-current="page"><svg width="21" height="21"><use href="#i-car"/></svg><span>Passaggi</span></button>
-      <button class="nav-item" data-view="stats" aria-label="Riepilogo"><svg width="21" height="21"><use href="#i-chart"/></svg><span>Riepilogo</span></button>
-      <button class="nav-item" data-view="profile" aria-label="Profilo"><svg width="21" height="21"><use href="#i-user"/></svg><span>Profilo</span></button>
+      <button type="button" class="nav-item" data-view="history" aria-label="Storico"><svg width="21" height="21"><use href="#i-history"/></svg><span>Storico</span></button>
+      <button type="button" class="nav-item" data-view="groups" aria-label="Comitive"><svg width="21" height="21"><use href="#i-users"/></svg><span>Comitive</span></button>
+      <button type="button" class="nav-item active" data-view="home" aria-label="Passaggi" aria-current="page"><svg width="21" height="21"><use href="#i-car"/></svg><span>Passaggi</span></button>
+      <button type="button" class="nav-item" data-view="stats" aria-label="Riepilogo"><svg width="21" height="21"><use href="#i-chart"/></svg><span>Riepilogo</span></button>
+      <button type="button" class="nav-item" data-view="profile" aria-label="Profilo"><svg width="21" height="21"><use href="#i-user"/></svg><span>Profilo</span></button>
     </nav>
   </div>
 

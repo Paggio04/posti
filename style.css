@@ -60,15 +60,36 @@
   --border-strong: oklch(0.8 0.018 250);
   --ink: oklch(0.24 0.03 260);
   --ink-soft: oklch(0.46 0.025 260);
+  /* Il segnaposto ha bisogno degli stessi 4.5:1 del testo: il grigio chiaro "che si
+     vede che e' un suggerimento" e' testo illeggibile con una scusa. */
+  --segnaposto: oklch(0.52 0.015 255);
+
+  /* **Due token per il primario, e la ragione e' aritmetica.** Un colore solo deve
+     reggere due contrasti opposti: bianco sopra (quando e' un riempimento) e se
+     stesso sopra il fondo (quando e' testo o icona). Nel tema chiaro un valore
+     scuro li soddisfa entrambi. Nel tema scuro no, ed e' esattamente cosa
+     succedeva: bianco sul primario 3.97:1 e primario come testo 4.36:1, cioe' due
+     bocciature con lo stesso token. Da qui in avanti:
+       --primary        riempimenti, e ci va sopra il bianco;
+       --primary-testo  testo, icone e bordi sulle superfici chiare dell'app. */
   --primary: oklch(0.42 0.11 258);
-  --primary-bright: oklch(0.52 0.13 255);
+  --primary-testo: oklch(0.42 0.11 258);
   --primary-hover: oklch(0.36 0.11 258);
   --primary-soft: oklch(0.93 0.025 258);
   --navy-deep: oklch(0.26 0.06 260);
   --navy-deeper: oklch(0.18 0.05 262);
+  /* Stesso sdoppiamento del primario, per la stessa ragione: `--danger` e' il rosso
+     che fa da *testo* sui veli chiari, `--danger-pieno` e' quello che sta *sotto* il
+     bianco. Nel tema chiaro coincidono; nel tema scuro il primo si schiarisce per
+     leggersi sul fondo e il secondo deve restare scuro per reggere il bianco sopra. */
   --danger: oklch(0.5 0.17 25);
+  --danger-pieno: oklch(0.5 0.17 25);
   --danger-soft: oklch(0.95 0.025 25);
   --ok: oklch(0.52 0.11 165);
+  /* Il verde che porta il bianco sopra. Come `--primary` e `--danger`: nel tema
+     scuro `--ok` si schiarisce per leggersi sul fondo, e a quel punto il bianco
+     sopra non ci sta piu' (3.7:1). Questo resta fermo nei due temi. */
+  --ok-pieno: oklch(0.52 0.11 165);
   --ok-deep: oklch(0.42 0.1 165);
   --ok-soft: oklch(0.94 0.03 165);
 
@@ -81,7 +102,10 @@
   --shadow-1: 0 1px 2px oklch(0.30 0.06 258 / 0.10), 0 6px 16px -4px oklch(0.30 0.06 258 / 0.12);
   --shadow-2: 0 2px 4px oklch(0.30 0.06 258 / 0.10), 0 12px 28px -6px oklch(0.30 0.06 258 / 0.18),
               0 32px 60px -20px oklch(0.30 0.06 258 / 0.20);
-  --glow: 0 6px 22px oklch(0.42 0.11 258 / 0.38);
+  /* L'ombra del primario e' tinta del primario, non un alone: la stessa geometria
+     di --shadow-1, solo con il colore del bottone invece che del navy. Un bagliore
+     colorato sotto ogni bottone e' la firma piu' riconoscibile del genere. */
+  --ombra-primario: 0 1px 2px oklch(0.42 0.11 258 / 0.22), 0 6px 14px -6px oklch(0.42 0.11 258 / 0.34);
 
   /* Ottone: il secondo colore, e usato poco per scelta. Solo dove una cosa e'
      **tua** -- il tuo sedile, il tuo codice, il tuo ruolo. Il navy resta il
@@ -112,10 +136,14 @@
   /* E al passaggio, misurato dal bordo alto della scheda. */
   --nav-centro-sopra: calc(var(--nav-item-pad) + var(--nav-icona) / 2 - var(--nav-salita-sopra));
 
+  /* Una curva sola, ed e' una decelerazione. Al suo posto c'era `--spring`, con il
+     terzo numero sopra 1: quello e' un superamento, cioe' l'elemento va oltre il punto
+     d'arrivo e torna indietro. E' la "animazione a molla" che sta fra gli
+     anti-riferimenti di PRODUCT.md, e stava su venti regole: bottoni, schede, sedili,
+     il tondo della navigazione. Le cose vere rallentano, non rimbalzano. */
   --ease-out: cubic-bezier(0.22, 1, 0.36, 1);
-  --spring: cubic-bezier(0.34, 1.4, 0.44, 1);
   --t-fast: 160ms;
-  --t-med: 280ms;
+  --t-med: 240ms;
 
   font-family: 'IBM Plex Sans', system-ui, sans-serif;
 }
@@ -124,12 +152,12 @@
 
 html, body { height: 100%; }
 
+/* Il fondo e' una tinta piatta. Prima erano due macchie sfocate da 1200 e 900px
+   ancorate agli angoli: la stessa aurora del pannello d'accesso, spalmata sotto
+   tutta l'app. La profondita' qui la fanno le superfici e le due ombre tinte, che
+   e' il modo in cui la fa un oggetto vero appoggiato sulla carta. */
 body {
-  background:
-    radial-gradient(1200px 600px at 85% -10%, oklch(0.93 0.03 258 / 0.7), transparent 60%),
-    radial-gradient(900px 500px at -10% 110%, oklch(0.93 0.025 200 / 0.55), transparent 60%),
-    var(--bg);
-  background-attachment: fixed;
+  background: var(--bg);
   color: var(--ink);
   font-size: 0.95rem;
   line-height: 1.55;
@@ -141,266 +169,149 @@ h1, h2, h3 { text-wrap: balance; letter-spacing: -0.015em; }
 
 svg { vertical-align: -0.15em; }
 
-/* ================= AUTH ================= */
+/* **I collegamenti non avevano una regola.** Dentro l'app quasi tutti i link erano
+   bottoni, quindi non si notava; ma `404.html`, `offline.html` e l'informativa hanno
+   link veri, e li' restava il blu predefinito del browser. Al buio quel blu (#0000EE)
+   finisce sopra un fondo quasi nero: un collegamento che non si vede su una pagina il
+   cui unico scopo e' portare da un'altra parte. */
+a { color: var(--primary-testo); text-underline-offset: 3px; }
+a:hover { color: var(--primary-hover); }
+
+/* ================= AUTH =================
+
+   L'accesso e' l'unica schermata che si vede **prima** di sapere cos'e' l'app, e
+   fino a oggi era l'unica rimasta com'era nata: aurora animata, logo che
+   galleggiava, pastiglie di vetro, pannello che scivolava di 820ms. Cioe' la lista
+   degli anti-riferimenti di PRODUCT.md, quasi voce per voce, sulla prima schermata.
+
+   Due decisioni, e tutto il resto discende da queste.
+
+   1. **Il modulo per primo.** Il contesto d'uso e' in piedi, di corsa, cinque minuti
+      prima di partire: la prima cosa sullo schermo e' il posto dove si entra. Il
+      cartello e' *accanto* da 1280px in su, e sotto quella soglia non c'e'.
+   2. **Il cartello e' l'auto, non un logo.** L'unica cosa qui dentro che nessun
+      altro ha e' l'auto coi sedili, ed e' quella che risponde alla prova del nove.
+      Il cartello resta navy nei due temi perche' e' un oggetto stampato, non una
+      superficie dell'interfaccia: un cartello non cambia colore con il sistema. */
 
 .auth-view {
-  min-height: 100vh;
+  min-height: 100dvh;
   display: grid;
-  grid-template-columns: 1fr 1.1fr;
-}
-
-/* Pannello brand: aurora animata */
-.auth-brand-panel {
-  position: relative;
-  overflow: hidden;
-  background: linear-gradient(165deg, var(--navy-deep), var(--navy-deeper));
-  color: oklch(0.97 0.005 250);
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  padding: 48px;
-}
-
-.auth-brand-panel::before,
-.auth-brand-panel::after {
-  content: '';
-  position: absolute;
-  width: 520px; height: 520px;
-  border-radius: 50%;
-  filter: blur(70px);
-  opacity: 0.5;
-  pointer-events: none;
-}
-.auth-brand-panel::before {
-  background: oklch(0.5 0.14 255);
-  top: -180px; left: -140px;
-  animation: aurora-a 16s ease-in-out infinite alternate;
-}
-.auth-brand-panel::after {
-  background: oklch(0.55 0.12 210);
-  bottom: -220px; right: -160px;
-  animation: aurora-b 20s ease-in-out infinite alternate;
-}
-
-@keyframes aurora-a {
-  from { transform: translate(0, 0) scale(1); }
-  to { transform: translate(120px, 90px) scale(1.25); }
-}
-@keyframes aurora-b {
-  from { transform: translate(0, 0) scale(1.15); }
-  to { transform: translate(-110px, -70px) scale(0.9); }
-}
-
-.auth-brand-inner { position: relative; max-width: 380px; }
-
-.auth-logo {
-  width: 72px; height: 72px;
-  border-radius: 24px;
-  background: oklch(1 0 0 / 0.12);
-  backdrop-filter: blur(8px);
-  border: 1px solid oklch(1 0 0 / 0.18);
-  display: grid;
-  place-items: center;
-  margin-bottom: 22px;
-  animation: float 5s ease-in-out infinite;
-}
-
-@keyframes float {
-  0%, 100% { transform: translateY(0); }
-  50% { transform: translateY(-9px); }
-}
-
-.auth-brand-panel h1 {
-  font-size: 2.8rem;
-  font-weight: 800;
-  margin-bottom: 12px;
-  animation: rise 600ms var(--spring) both;
-}
-
-.auth-tagline {
-  font-size: 1.02rem;
-  line-height: 1.6;
-  margin-bottom: 30px;
-  color: oklch(0.85 0.02 255);
-  animation: rise 600ms var(--spring) 80ms both;
-}
-
-.auth-steps { list-style: none; padding: 0; display: grid; gap: 12px; }
-
-.auth-steps li {
-  display: flex;
-  align-items: center;
-  gap: 12px;
-  background: oklch(1 0 0 / 0.08);
-  border: 1px solid oklch(1 0 0 / 0.12);
-  backdrop-filter: blur(6px);
-  border-radius: var(--radius-sm);
-  padding: 13px 17px;
-  font-weight: 500;
-  font-size: 0.92rem;
-  animation: rise 600ms var(--spring) both;
-  transition: transform var(--t-med) var(--spring), background var(--t-fast) var(--ease-out);
-}
-.auth-steps li:nth-child(1) { animation-delay: 160ms; }
-.auth-steps li:nth-child(2) { animation-delay: 240ms; }
-.auth-steps li:nth-child(3) { animation-delay: 320ms; }
-.auth-steps li:hover { transform: translateX(6px); background: oklch(1 0 0 / 0.13); }
-
-.auth-steps li span {
-  background: oklch(1 0 0 / 0.16);
-  color: #fff;
-  width: 28px; height: 28px;
-  border-radius: 50%;
-  display: grid;
-  place-items: center;
-  font-weight: 700;
-  font-size: 0.85rem;
-  flex: 0 0 auto;
-}
-
-@keyframes rise {
-  from { opacity: 0; transform: translateY(18px); }
-  to { opacity: 1; transform: none; }
+  grid-template-columns: minmax(0, 1fr);
+  align-content: center;
 }
 
 .auth-form-panel {
   display: flex;
   align-items: center;
   justify-content: center;
-  padding: 32px;
+  padding: 32px 20px 48px;
 }
 
 .auth-card {
   width: 100%;
-  max-width: 424px;
+  max-width: 420px;
   background: var(--surface);
   border: 1px solid var(--border);
   border-radius: var(--radius-xl);
-  box-shadow: var(--shadow-2), var(--luce-interna);
-  padding: 32px;
-  animation: card-pop 500ms var(--spring) both;
+  box-shadow: var(--shadow-1), var(--luce-interna);
+  padding: 28px;
 }
 
-@keyframes card-pop {
-  from { opacity: 0; transform: translateY(24px) scale(0.97); }
-  to { opacity: 1; transform: none; }
+/* Il marchio in piccolo sopra il titolo: il nome dell'app c'e' a ogni larghezza,
+   anche dove il cartello non arriva, e costa una riga invece di mezzo schermo. */
+.auth-marchio {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-bottom: 18px;
+  font-weight: 700;
+  font-size: 0.9rem;
+  letter-spacing: -0.02em;
+  color: var(--ink-soft);
 }
+.auth-marchio svg { color: var(--primary-testo); }
 
-.auth-card h2 { font-size: 1.45rem; font-weight: 700; margin-bottom: 4px; }
+.auth-card h2 { font-size: 1.5rem; font-weight: 700; margin-bottom: 4px; }
 .auth-subtitle { color: var(--ink-soft); font-size: 0.92rem; margin-bottom: 20px; line-height: 1.55; }
 
-/* Switch Accedi / Registrati — slider elastico */
+/* Il richiamo all'altro modo. Due frasi nella stessa riga, ne vive una sola:
+   `display: none` la toglie anche dalla tabulazione, che e' il motivo per cui non
+   basta l'opacita'. */
 .auth-switch {
-  position: relative;
-  display: grid;
-  grid-template-columns: 1fr 1fr;
-  background: var(--surface-2);
-  border-radius: var(--pill);
-  padding: 5px;
-  margin-bottom: 24px;
-}
-
-.auth-switch-btn {
-  position: relative;
-  z-index: 1;
-  background: none;
-  border: none;
-  font: inherit;
-  font-weight: 600;
-  font-size: 0.92rem;
+  margin-top: 18px;
+  padding-top: 16px;
+  border-top: 1px solid var(--border);
+  font-size: 0.88rem;
   color: var(--ink-soft);
-  padding: 10px 0;
-  border-radius: var(--pill);
-  cursor: pointer;
-  touch-action: manipulation;
-  transition: color var(--t-med) var(--ease-out);
+  text-align: center;
 }
-.auth-switch-btn.active { color: #fff; }
-.auth-switch-btn:focus-visible { outline: 2px solid var(--primary); outline-offset: 2px; }
+.auth-switch .t-registra { display: none; }
+.auth-switch.signup .t-accedi { display: none; }
+.auth-switch.signup .t-registra { display: inline; }
 
-.auth-switch-slider {
-  position: absolute;
-  top: 5px; bottom: 5px;
-  left: 5px;
-  width: calc(50% - 5px);
-  background: linear-gradient(135deg, var(--primary-bright), var(--primary));
-  border-radius: var(--pill);
-  box-shadow: 0 3px 10px oklch(0.42 0.11 258 / 0.35);
-  transition: transform 380ms var(--spring);
-}
-.auth-switch.signup .auth-switch-slider { transform: translateX(100%); }
+/* ---- Il cartello ----
+   Sulla fascia mobile non c'e', e la ragione e' misurata: a 360x780 la scheda occupa
+   625px dei 784 disponibili. Qualunque cosa le si metta sopra spinge la casella
+   dell'email sotto la piega, che e' il difetto da cui e' partito tutto questo.
+   Da 768px in su lo spazio verticale avanza, e allora il cartello c'e': in fascia
+   sotto la scheda sul tablet — il modulo resta la prima cosa, il cartello e' il
+   contorno — e in colonna accanto sul desktop.
 
-/* ── Il pannello che scivola ──────────────────────────────────────────────
-   `setAuthMode` in app.js mette gia' `.signup` su `.auth-switch`: ci si
-   aggancia con `:has()` invece di toccare app.js. Se `:has()` mancasse, la
-   pagina resta ferma e usabile -- degrada, non si rompe.
-   Le due colonne devono essere uguali, altrimenti `translateX(100%)` non
-   atterra sull'altra meta'. */
-.auth-view { position: relative; grid-template-columns: 1fr 1fr; }
+   `--car-hue` va dichiarato qui. L'auto dell'app lo prende dalla scheda del
+   passaggio (ogni guidatore ha la sua tinta) e senza un valore `oklch(0.97 0.015
+   var(--car-hue))` non e' un colore: il browser scarta la dichiarazione e disegna
+   la scocca **nera**. E' esattamente com'era al primo colpo. */
 
-.auth-brand-panel {
-  grid-area: 1 / 1;
-  z-index: 3;
-  padding: 48px calc(14% + 34px) 48px 48px;
-  clip-path: polygon(0 0, 100% 0, 86% 100%, 0 100%);
-  transition: transform 820ms cubic-bezier(.77, 0, .18, 1),
-              clip-path 820ms cubic-bezier(.77, 0, .18, 1),
-              padding   820ms cubic-bezier(.77, 0, .18, 1);
-}
-.auth-view:has(.auth-switch.signup) .auth-brand-panel {
-  transform: translateX(100%);
-  clip-path: polygon(14% 0, 100% 0, 100% 100%, 0 100%);
-  padding: 48px 48px 48px calc(14% + 34px);
-}
+.auth-cartello { display: none; }
 
-.auth-form-panel { grid-area: 1 / 2; }
-.auth-view:has(.auth-switch.signup) .auth-form-panel { grid-area: 1 / 1; }
-
-/* I due testi occupano la stessa cella: ne e' leggibile uno solo per volta. */
-.brand-testo { display: grid; }
-.brand-testo > div {
-  grid-area: 1 / 1;
-  transition: opacity 340ms ease, transform 340ms cubic-bezier(.77, 0, .18, 1);
-}
-.brand-testo .t-registra { opacity: 0; transform: translateY(10px); pointer-events: none; }
-.auth-view:has(.auth-switch.signup) .brand-testo .t-accedi {
-  opacity: 0; transform: translateY(-10px); pointer-events: none;
-}
-.auth-view:has(.auth-switch.signup) .brand-testo .t-registra {
-  opacity: 1; transform: none; pointer-events: auto;
-}
-
-/* Lo switch non e' piu' due schede: e' il richiamo all'altro modo, quindi si
-   mostra il bottone NON attivo -- quello che porta dove non sei. */
-.auth-brand-panel .auth-switch {
-  display: block; background: none; padding: 0; margin-top: 26px; position: static;
-}
-.auth-brand-panel .auth-switch-slider { display: none; }
-.auth-brand-panel .auth-switch-btn {
-  flex: none; width: auto; color: #fff; font-weight: 600; font-size: 0.94rem;
-  padding: 11px 24px; border: 1px solid oklch(1 0 0 / 0.45); border-radius: var(--pill);
-  background: transparent; cursor: pointer;
-  transition: background 180ms ease, border-color 180ms ease, transform 180ms ease;
-}
-.auth-brand-panel .auth-switch-btn.active { display: none; }
-.auth-brand-panel .auth-switch-btn:hover { background: oklch(1 0 0 / 0.12); border-color: #fff; }
-.auth-brand-panel .auth-switch-btn:active { transform: translateY(1px); }
-.auth-brand-panel .auth-switch-btn:focus-visible { outline: 3px solid var(--ottone); outline-offset: 3px; }
-
-/* Sul telefono non ci sono due meta': niente scivolamento. */
-@media (max-width: 1279px) {
-  .auth-view, .auth-view:has(.auth-switch.signup) { grid-template-columns: 1fr; }
-  .auth-brand-panel,
-  .auth-view:has(.auth-switch.signup) .auth-brand-panel {
-    grid-area: 1 / 1; transform: none; clip-path: none; padding: 38px 28px 30px;
+@media (min-width: 768px) {
+  .auth-cartello {
+    --car-hue: 258;
+    display: flex;
+    align-items: center;
+    gap: 26px;
+    width: min(560px, 100%);
+    margin: 0 auto;
+    padding: 22px 28px;
+    background: var(--navy-deeper);
+    border-radius: var(--radius-xl);
+    box-shadow: var(--shadow-2), var(--luce-interna-scura);
+    color: oklch(0.93 0.01 258);
   }
-  .auth-form-panel,
-  .auth-view:has(.auth-switch.signup) .auth-form-panel { grid-area: 2 / 1; }
-  .auth-brand-panel .auth-steps { display: none; }
+  .auth-cartello .car-svg { flex: none; width: 116px; margin: 0; }
+  .cartello-testo { min-width: 0; }
+  .cartello-riga { font-size: 0.98rem; line-height: 1.5; }
+  .cartello-riga b { font-weight: 600; }
+  .cartello-sotto {
+    margin-top: 6px;
+    color: oklch(0.79 0.02 258);
+    font-size: 0.88rem;
+    text-wrap: pretty;
+  }
+  .auth-form-panel { padding-top: 22px; }
 }
 
-@media (prefers-reduced-motion: reduce) {
-  .auth-brand-panel, .brand-testo > div { transition-duration: 1ms; }
+@media (min-width: 1280px) {
+  .auth-view {
+    grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+    align-items: center;
+  }
+  /* Il cartello e' scritto dopo il modulo nel markup — cosi' chi arriva con la
+     tastiera o con un lettore di schermo incontra prima il campo dell'email — e la
+     griglia lo rimette a sinistra, dove l'occhio parte. L'ordine visivo e quello di
+     lettura non devono per forza coincidere; l'ordine di *tabulazione* si'. */
+  .auth-cartello {
+    grid-area: 1 / 1;
+    flex-direction: column;
+    justify-self: end;
+    width: min(330px, 100%);
+    margin: 48px;
+    padding: 34px 30px 28px;
+    text-align: center;
+  }
+  .auth-cartello .car-svg { width: 168px; margin-bottom: 4px; }
+  .auth-form-panel { grid-area: 1 / 2; justify-content: flex-start; padding: 48px; }
 }
 
 /* Accesso con Google / Apple */
@@ -454,15 +365,15 @@ input, select, textarea {
   color: var(--ink);
   font: inherit;
   font-size: 0.95rem;
-  transition: border-color var(--t-fast) var(--ease-out), box-shadow var(--t-med) var(--ease-out), transform var(--t-med) var(--spring);
+  transition: border-color var(--t-fast) var(--ease-out), box-shadow var(--t-med) var(--ease-out), transform var(--t-med) var(--ease-out);
 }
 
-input::placeholder, textarea::placeholder { color: oklch(0.55 0.015 255); }
+input::placeholder, textarea::placeholder { color: var(--segnaposto); }
 input:hover, select:hover, textarea:hover { border-color: oklch(0.68 0.03 255); }
 
 input:focus-visible, select:focus-visible, textarea:focus-visible {
   outline: none;
-  border-color: var(--primary);
+  border-color: var(--primary-testo);
   box-shadow: 0 0 0 4px var(--primary-soft);
   transform: translateY(-1px);
 }
@@ -491,7 +402,7 @@ input:focus-visible, select:focus-visible, textarea:focus-visible {
   transition: background var(--t-fast) var(--ease-out), color var(--t-fast) var(--ease-out);
 }
 .pw-toggle:hover { background: var(--surface-2); color: var(--ink); }
-.pw-toggle:focus-visible { outline: 2px solid var(--primary); }
+.pw-toggle:focus-visible { outline: 2px solid var(--primary-testo); }
 
 /* ================= BOTTONI ================= */
 
@@ -508,21 +419,21 @@ input:focus-visible, select:focus-visible, textarea:focus-visible {
   font-size: 0.92rem;
   cursor: pointer;
   touch-action: manipulation;
-  transition: transform var(--t-med) var(--spring), box-shadow var(--t-med) var(--ease-out),
+  transition: transform var(--t-med) var(--ease-out), box-shadow var(--t-med) var(--ease-out),
               background var(--t-fast) var(--ease-out), border-color var(--t-fast) var(--ease-out),
               color var(--t-fast) var(--ease-out);
 }
 
-.btn:focus-visible { outline: 2px solid var(--primary); outline-offset: 2px; }
+.btn:focus-visible { outline: 2px solid var(--primary-testo); outline-offset: 2px; }
 .btn:disabled { opacity: 0.5; cursor: default; }
 .btn:active:not(:disabled) { transform: scale(0.95); }
 
 .btn-primary {
-  background: linear-gradient(135deg, var(--primary-bright), var(--primary));
+  background: var(--primary);
   color: #fff;
-  box-shadow: var(--glow);
+  box-shadow: var(--ombra-primario);
 }
-.btn-primary:hover:not(:disabled) { transform: translateY(-2px); box-shadow: 0 10px 28px oklch(0.42 0.11 258 / 0.45); }
+.btn-primary:hover:not(:disabled) { background: var(--primary-hover); }
 .btn-primary:active:not(:disabled) { transform: scale(0.95); }
 
 .btn-big { font-size: 0.98rem; padding: 14px 26px; }
@@ -535,6 +446,12 @@ input:focus-visible, select:focus-visible, textarea:focus-visible {
 .btn-ghost:hover { color: var(--ink); border-color: var(--border-strong); transform: translateY(-1px); }
 
 .btn-small { padding: 7px 14px; font-size: 0.82rem; }
+
+/* Il bottone che conferma un'azione distruttiva. Pieno come il primario, perche' e'
+   comunque il bottone da premere se si e' scelto di farlo, ma del colore che dice
+   cosa succede. Il testo bianco ci sta sopra a 5.4:1. */
+.btn-pericolo { background: var(--danger-pieno); color: #fff; }
+.btn-pericolo:hover:not(:disabled) { filter: brightness(0.9); }
 .btn-danger:hover { color: var(--danger); border-color: var(--danger); }
 
 .link-btn {
@@ -542,7 +459,7 @@ input:focus-visible, select:focus-visible, textarea:focus-visible {
   margin: 12px auto 0;
   background: none;
   border: none;
-  color: var(--primary);
+  color: var(--primary-testo);
   font: inherit;
   font-size: 0.87rem;
   font-weight: 500;
@@ -551,6 +468,19 @@ input:focus-visible, select:focus-visible, textarea:focus-visible {
   text-underline-offset: 3px;
 }
 .link-btn:hover { color: var(--primary-hover); }
+
+.link-inline {
+  background: none;
+  border: none;
+  padding: 0;
+  font: inherit;
+  font-weight: 600;
+  color: var(--primary-testo);
+  cursor: pointer;
+  text-decoration: underline;
+  text-underline-offset: 3px;
+}
+.link-inline:hover { color: var(--primary-hover); }
 
 .auth-message {
   margin-top: 16px;
@@ -565,7 +495,7 @@ input:focus-visible, select:focus-visible, textarea:focus-visible {
   animation: shake 400ms var(--ease-out);
 }
 .auth-message:empty { display: none; animation: none; }
-.auth-message.ok { color: var(--ok-deep); background: var(--ok-soft); border-color: oklch(0.85 0.05 165); animation: rise 300ms var(--ease-out); }
+.auth-message.ok { color: var(--ok-deep); background: var(--ok-soft); border-color: oklch(0.85 0.05 165); animation: view-in var(--t-med) var(--ease-out); }
 
 @keyframes shake {
   0%, 100% { transform: translateX(0); }
@@ -581,15 +511,10 @@ input:focus-visible, select:focus-visible, textarea:focus-visible {
   margin: 0 auto 16px;
   border-radius: 50%;
   background: var(--primary-soft);
-  color: var(--primary);
+  color: var(--primary-testo);
   display: grid;
   place-items: center;
-  animation: pop-bounce 600ms var(--spring) both;
-}
-@keyframes pop-bounce {
-  0% { opacity: 0; transform: scale(0.4); }
-  70% { transform: scale(1.12); }
-  100% { opacity: 1; transform: scale(1); }
+  animation: view-in var(--t-med) var(--ease-out) both;
 }
 .auth-success h2 { margin-bottom: 10px; }
 .auth-success .btn { margin-top: 8px; }
@@ -677,7 +602,7 @@ input:focus-visible, select:focus-visible, textarea:focus-visible {
   .side-chi { min-width: 0; }
   .side-chi b, .side-chi small { display: block; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
   .side-chi b { font-size: 0.82rem; }
-  .side-chi small { font-size: 0.62rem; color: oklch(0.66 0.03 258); }
+  .side-chi small { font-size: 0.68rem; color: oklch(0.66 0.03 258); }
 
 }
 
@@ -706,7 +631,7 @@ input:focus-visible, select:focus-visible, textarea:focus-visible {
   cursor: pointer;
   padding: 8px 16px;
   border-radius: var(--pill);
-  transition: background var(--t-fast) var(--ease-out), transform var(--t-med) var(--spring);
+  transition: background var(--t-fast) var(--ease-out), transform var(--t-med) var(--ease-out);
 }
 .user-name-btn:hover { background: oklch(1 0 0 / 0.2); transform: translateY(-1px); }
 
@@ -719,7 +644,7 @@ input:focus-visible, select:focus-visible, textarea:focus-visible {
 }
 
 /* Transizione tra viste */
-.view { animation: view-in 320ms var(--spring) both; }
+.view { animation: view-in var(--t-med) var(--ease-out) both; }
 @keyframes view-in {
   from { opacity: 0; transform: translateY(14px); }
   to { opacity: 1; transform: none; }
@@ -733,7 +658,7 @@ input:focus-visible, select:focus-visible, textarea:focus-visible {
   font-weight: 700;
   margin-bottom: 4px;
 }
-.view-title svg { color: var(--primary); }
+.view-title svg { color: var(--primary-testo); }
 .view-subtitle { color: var(--ink-soft); font-size: 0.92rem; margin-bottom: 20px; }
 
 /* ================= COME FUNZIONA / BENVENUTO ================= */
@@ -747,12 +672,12 @@ input:focus-visible, select:focus-visible, textarea:focus-visible {
   border-radius: var(--radius);
   padding: 18px 46px 18px 18px;
   margin-bottom: 20px;
-  animation: view-in 320ms var(--spring) both;
+  animation: view-in var(--t-med) var(--ease-out) both;
 }
 
 .howto-step { display: flex; align-items: center; gap: 12px; font-weight: 500; font-size: 0.9rem; color: var(--ink); }
 .howto-icon {
-  color: var(--primary);
+  color: var(--primary-testo);
   background: var(--surface);
   width: 40px; height: 40px;
   border-radius: 14px;
@@ -773,12 +698,12 @@ input:focus-visible, select:focus-visible, textarea:focus-visible {
   cursor: pointer;
   display: grid;
   place-items: center;
-  transition: transform var(--t-med) var(--spring), color var(--t-fast) var(--ease-out);
+  transition: transform var(--t-med) var(--ease-out), color var(--t-fast) var(--ease-out);
 }
 .howto-close:hover { color: var(--ink); transform: rotate(90deg); }
 
 .welcome {
-  background: linear-gradient(150deg, var(--navy-deep), var(--navy-deeper));
+  background: var(--navy-deep);
   color: #fff;
   border-radius: var(--radius-xl);
   box-shadow: var(--shadow-2);
@@ -787,17 +712,6 @@ input:focus-visible, select:focus-visible, textarea:focus-visible {
   text-align: center;
   position: relative;
   overflow: hidden;
-}
-.welcome::before {
-  content: '';
-  position: absolute;
-  width: 380px; height: 380px;
-  border-radius: 50%;
-  background: oklch(0.5 0.14 255);
-  filter: blur(70px);
-  opacity: 0.45;
-  top: -160px; right: -120px;
-  animation: aurora-a 14s ease-in-out infinite alternate;
 }
 .welcome h2 { position: relative; font-size: 1.35rem; font-weight: 800; margin-bottom: 6px; }
 .welcome p { position: relative; color: oklch(0.85 0.02 255); font-size: 0.93rem; margin-bottom: 18px; }
@@ -833,17 +747,16 @@ input:focus-visible, select:focus-visible, textarea:focus-visible {
   font-weight: 600;
   cursor: pointer;
   touch-action: manipulation;
-  transition: all var(--t-med) var(--spring);
+  transition: all var(--t-med) var(--ease-out);
 }
 
 .tab:hover { color: var(--ink); border-color: var(--border-strong); transform: translateY(-1px); }
-.tab:focus-visible { outline: 2px solid var(--primary); outline-offset: 2px; }
+.tab:focus-visible { outline: 2px solid var(--primary-testo); outline-offset: 2px; }
 .tab:active { transform: scale(0.95); }
 .tab.active {
-  background: linear-gradient(135deg, var(--primary-bright), var(--primary));
-  border-color: transparent;
+  background: var(--primary);
+  border-color: var(--primary);
   color: #fff;
-  box-shadow: 0 4px 14px oklch(0.42 0.11 258 / 0.3);
 }
 
 .day-picker {
@@ -854,7 +767,7 @@ input:focus-visible, select:focus-visible, textarea:focus-visible {
   font-size: 0.87rem;
   color: var(--ink-soft);
 }
-.day-picker.active { border-color: var(--primary); color: var(--ink); }
+.day-picker.active { border-color: var(--primary-testo); color: var(--ink); }
 
 .group-info {
   display: flex;
@@ -875,7 +788,7 @@ input:focus-visible, select:focus-visible, textarea:focus-visible {
   font-weight: 500;
   font-variant-numeric: tabular-nums;
   letter-spacing: 0.1em;
-  color: var(--primary);
+  color: var(--primary-testo);
   background: var(--primary-soft);
   padding: 5px 12px;
   border-radius: var(--pill);
@@ -897,9 +810,9 @@ input:focus-visible, select:focus-visible, textarea:focus-visible {
   font-size: 0.86rem;
   font-weight: 500;
   color: var(--ink-soft);
-  animation: view-in 320ms var(--spring) both;
+  animation: view-in var(--t-med) var(--ease-out) both;
 }
-.stat-chip svg { color: var(--primary); }
+.stat-chip svg { color: var(--primary-testo); }
 .stat-chip strong { color: var(--ink); font-weight: 700; }
 
 /* ================= FORM AUTO ================= */
@@ -911,7 +824,7 @@ input:focus-visible, select:focus-visible, textarea:focus-visible {
   box-shadow: var(--shadow-2);
   padding: 24px;
   margin-bottom: 24px;
-  animation: card-pop 420ms var(--spring) both;
+  animation: view-in var(--t-med) var(--ease-out) both;
 }
 
 .add-card h2 { font-size: 1.05rem; font-weight: 700; margin-bottom: 16px; }
@@ -956,25 +869,20 @@ input:focus-visible, select:focus-visible, textarea:focus-visible {
 }
 .walker-chip.request {
   background: var(--primary-soft);
-  color: var(--primary);
+  color: var(--primary-testo);
   font-weight: 600;
-  animation: pulse-soft 2.4s ease-in-out infinite;
 }
 /* Per chi guida la pastiglia e' un bottone: apre il modulo dell'auto con dentro l'ora
    chiesta. Si vede che si tocca dal bordo, non da una scritta in piu'. */
 .walker-chip.offribile {
-  border: 1px solid var(--primary);
+  border: 1px solid var(--primary-testo);
   font: inherit;
   font-size: 0.84rem;
   font-weight: 600;
   cursor: pointer;
 }
 .walker-chip.offribile:hover { background: var(--primary); color: #fff; }
-.walker-chip.offribile:focus-visible { outline: 2px solid var(--primary); outline-offset: 2px; }
-@keyframes pulse-soft {
-  0%, 100% { box-shadow: 0 0 0 0 oklch(0.42 0.11 258 / 0.25); }
-  50% { box-shadow: 0 0 0 6px oklch(0.42 0.11 258 / 0); }
-}
+.walker-chip.offribile:focus-visible { outline: 2px solid var(--primary-testo); outline-offset: 2px; }
 
 /* ================= AUTO ================= */
 
@@ -997,9 +905,9 @@ input:focus-visible, select:focus-visible, textarea:focus-visible {
   display: flex;
   flex-direction: column;
   gap: 10px;
-  animation: card-pop 460ms var(--spring) both;
+  animation: view-in var(--t-med) var(--ease-out) both;
   animation-delay: calc(var(--i) * 60ms);
-  transition: box-shadow var(--t-med) var(--ease-out), transform var(--t-med) var(--spring);
+  transition: box-shadow var(--t-med) var(--ease-out), transform var(--t-med) var(--ease-out);
 }
 .ride-card:hover { box-shadow: var(--shadow-2); transform: translateY(-4px); }
 
@@ -1028,11 +936,11 @@ input:focus-visible, select:focus-visible, textarea:focus-visible {
   border-radius: 50%;
   display: grid;
   place-items: center;
-  transition: all var(--t-med) var(--spring);
+  transition: all var(--t-med) var(--ease-out);
 }
 .place-delete:hover { color: var(--danger); background: var(--danger-soft); transform: scale(1.12); }
-.place-delete.share:hover { color: var(--primary); background: var(--primary-soft); }
-.place-delete:focus-visible { outline: 2px solid var(--primary); outline-offset: 1px; }
+.place-delete.share:hover { color: var(--primary-testo); background: var(--primary-soft); }
+.place-delete:focus-visible { outline: 2px solid var(--primary-testo); outline-offset: 1px; }
 
 .place-badge {
   font-size: 0.78rem;
@@ -1078,7 +986,7 @@ input:focus-visible, select:focus-visible, textarea:focus-visible {
   fill: var(--surface);
   stroke: oklch(0.72 0.05 var(--car-hue));
   stroke-width: 1.5;
-  transition: transform 240ms var(--spring), filter var(--t-fast) var(--ease-out);
+  transition: transform 240ms var(--ease-out), filter var(--t-fast) var(--ease-out);
 }
 .seat-text {
   text-anchor: middle;
@@ -1095,10 +1003,10 @@ input:focus-visible, select:focus-visible, textarea:focus-visible {
 
 .seat-free .seat-base {
   stroke-dasharray: 5 4;
-  stroke: var(--primary);
+  stroke: var(--primary-testo);
   fill: var(--primary-soft);
 }
-.seat-free .seat-text { fill: var(--primary); font-size: 18px; font-weight: 600; }
+.seat-free .seat-text { fill: var(--primary-testo); font-size: 18px; font-weight: 600; }
 
 .seat-taken .seat-base { fill: var(--primary); stroke: var(--primary-hover); }
 .seat-taken .seat-back { fill: var(--primary-hover); }
@@ -1115,7 +1023,7 @@ input:focus-visible, select:focus-visible, textarea:focus-visible {
 /* La piega del cuscino, scura sui sedili pieni e chiara su quelli vuoti. */
 .seat-piega { fill: none; stroke: oklch(0.30 0.03 260 / 0.16); stroke-width: 1.5; stroke-linecap: round; }
 .seat-taken .seat-piega, .seat-driver .seat-piega { stroke: oklch(1 0 0 / 0.22); }
-.seat-free .seat-piega { stroke: var(--primary); opacity: 0.28; }
+.seat-free .seat-piega { stroke: var(--primary-testo); opacity: 0.28; }
 
 .seat-click { cursor: pointer; }
 .seat-click:hover .seat-base { transform: scale(1.12); transform-box: fill-box; transform-origin: center; }
@@ -1125,7 +1033,7 @@ input:focus-visible, select:focus-visible, textarea:focus-visible {
 
 /* Commenti */
 .comments-btn { align-self: flex-start; }
-.comments-panel { display: grid; gap: 8px; border-top: 1px solid var(--border); padding-top: 12px; animation: view-in 260ms var(--spring) both; }
+.comments-panel { display: grid; gap: 8px; border-top: 1px solid var(--border); padding-top: 12px; animation: view-in var(--t-med) var(--ease-out) both; }
 .comments-list { display: grid; gap: 6px; }
 
 .comment {
@@ -1166,7 +1074,7 @@ input:focus-visible, select:focus-visible, textarea:focus-visible {
   border-radius: var(--radius);
   padding: 15px 18px;
   margin-bottom: 8px;
-  transition: transform var(--t-med) var(--spring), box-shadow var(--t-med) var(--ease-out);
+  transition: transform var(--t-med) var(--ease-out), box-shadow var(--t-med) var(--ease-out);
 }
 .history-ride:hover { transform: translateX(4px); box-shadow: var(--shadow-1); }
 
@@ -1210,7 +1118,7 @@ input:focus-visible, select:focus-visible, textarea:focus-visible {
   border-radius: var(--radius-xl);
   box-shadow: var(--shadow-1);
   padding: 20px;
-  transition: box-shadow var(--t-med) var(--ease-out), transform var(--t-med) var(--spring);
+  transition: box-shadow var(--t-med) var(--ease-out), transform var(--t-med) var(--ease-out);
 }
 .group-card:hover { box-shadow: var(--shadow-2); transform: translateY(-2px); }
 
@@ -1237,10 +1145,10 @@ input:focus-visible, select:focus-visible, textarea:focus-visible {
   border-radius: var(--radius);
   padding: 18px;
   text-align: center;
-  transition: transform var(--t-med) var(--spring), box-shadow var(--t-med) var(--ease-out);
+  transition: transform var(--t-med) var(--ease-out), box-shadow var(--t-med) var(--ease-out);
 }
 .stat-box:hover { transform: translateY(-3px); box-shadow: var(--shadow-1); }
-.stat-box strong { display: block; font-size: 1.7rem; font-weight: 800; color: var(--primary); }
+.stat-box strong { display: block; font-size: 1.7rem; font-weight: 800; color: var(--primary-testo); }
 .stat-box span { font-size: 0.82rem; color: var(--ink-soft); font-weight: 500; }
 
 .stats-row { display: flex; align-items: center; gap: 10px; margin-bottom: 8px; }
@@ -1248,14 +1156,14 @@ input:focus-visible, select:focus-visible, textarea:focus-visible {
 .stats-row-bar-wrap { flex: 1; background: var(--surface-2); border-radius: var(--pill); height: 24px; overflow: hidden; }
 .stats-row-bar {
   height: 100%;
-  background: linear-gradient(90deg, var(--primary), var(--primary-bright));
+  background: var(--primary);
   border-radius: var(--pill);
   min-width: 10px;
-  animation: bar-grow 700ms var(--spring) both;
+  animation: bar-grow var(--t-med) var(--ease-out) both;
   transform-origin: left;
 }
 @keyframes bar-grow { from { transform: scaleX(0); } to { transform: scaleX(1); } }
-.stats-row.alt .stats-row-bar { background: linear-gradient(90deg, var(--ok-deep), var(--ok)); }
+.stats-row.alt .stats-row-bar { background: var(--ok-deep); }
 .stats-row-count { flex: 0 0 26px; text-align: right; font-size: 0.88rem; font-weight: 700; }
 
 /* ================= PROFILO ================= */
@@ -1275,14 +1183,13 @@ input:focus-visible, select:focus-visible, textarea:focus-visible {
 .profile-avatar {
   width: 62px; height: 62px;
   border-radius: 50%;
-  background: linear-gradient(135deg, var(--primary-bright), var(--primary));
+  background: var(--primary);
   color: #fff;
   display: grid;
   place-items: center;
-  font-weight: 800;
+  font-weight: 700;
   font-size: 1.3rem;
   flex: 0 0 auto;
-  box-shadow: var(--glow);
   /* Il cerchio c'era, il ritaglio no. L'avatar di Google arriva alla sua dimensione
      naturale (96, 128, 256px a seconda del profilo) e senza queste tre righe si
      disegnava per intero, quadrato, sfondando la scheda dal basso. Era visibile solo
@@ -1314,7 +1221,7 @@ input:focus-visible, select:focus-visible, textarea:focus-visible {
 .btn-danger-full { color: var(--danger); border-color: oklch(0.85 0.06 25); }
 .btn-danger-full:hover { background: var(--danger-soft); }
 .profile-hint { color: var(--ink-soft); font-size: 0.85rem; margin-top: 20px; max-width: 55ch; }
-.profile-hint a { color: var(--primary); }
+.profile-hint a { color: var(--primary-testo); }
 
 /* ================= BOTTOM NAV — pillola flottante ================= */
 
@@ -1347,10 +1254,12 @@ input:focus-visible, select:focus-visible, textarea:focus-visible {
   width: var(--nav-tondo); height: var(--nav-tondo);
   margin-left: calc(var(--nav-tondo) / -2);
   border-radius: 50%;
-  background: linear-gradient(150deg, var(--primary-bright), var(--primary));
-  border: 4px solid var(--bg);
-  box-shadow: var(--glow);
-  transition: left 420ms var(--spring);
+  background: var(--primary);
+  border: 4px solid var(--surface);
+  box-shadow: var(--ombra-primario);
+  /* 420ms erano troppi per un cambio di vista: il tondo arrivava dopo il contenuto.
+     240ms e' il tempo in cui l'occhio lo segue senza aspettarlo. */
+  transition: left var(--t-med) var(--ease-out);
   pointer-events: none;
 }
 
@@ -1362,34 +1271,40 @@ input:focus-visible, select:focus-visible, textarea:focus-visible {
   background: none;
   border: none;
   font: inherit;
-  font-size: 0.66rem;
+  font-size: 0.68rem;
   font-weight: 600;
   color: var(--ink-soft);
   padding: 7px 2px 4px;
   border-radius: var(--radius-sm);
   cursor: pointer;
   touch-action: manipulation;
-  transition: color var(--t-fast) var(--ease-out), transform var(--t-med) var(--spring);
+  transition: color var(--t-fast) var(--ease-out), transform var(--t-med) var(--ease-out);
 }
 .nav-item:hover { color: var(--ink); }
-.nav-item.active { color: var(--primary); font-weight: 700; }
+.nav-item.active { color: var(--primary-testo); font-weight: 700; }
 .nav-item svg {
   position: relative;
   z-index: 1;
-  transition: transform 420ms var(--spring), color var(--t-fast) var(--ease-out);
+  transition: transform 420ms var(--ease-out), color var(--t-fast) var(--ease-out);
 }
 .nav-item.active svg { transform: translateY(calc(-1 * var(--nav-salita))); color: #fff; }
 /* L'etichetta non si muove: alzandola finiva sotto il tondo. Al posto dell'icona
    che e' salita resta un vuoto, ed e' giusto che si veda -- e' quel vuoto a dire
    che l'icona e' quella dentro il tondo. */
-.nav-item.active span { color: var(--primary); }
+.nav-item.active span { color: var(--primary-testo); }
 .nav-item:active { transform: scale(0.92); }
-.nav-item:focus-visible { outline: 2px solid var(--primary); outline-offset: -2px; }
+.nav-item:focus-visible { outline: 2px solid var(--primary-testo); outline-offset: -2px; }
 
 
 /* ================= DIALOG / TOAST / VUOTI ================= */
 
+/* `margin: auto` va riscritto qui, e non e' pignoleria: e' il modo in cui il browser
+   centra un `<dialog>` aperto con `showModal()`. La riga `* { margin: 0 }` in cima al
+   foglio lo spegneva, quindi ogni finestra di questa app — chiedi un nome, conferma,
+   segnala qualcuno — si apriva **incollata all'angolo in alto a sinistra**. Si vedeva
+   solo aprendone una, e nessuno l'aveva mai fotografata. */
 .app-dialog {
+  margin: auto;
   border: 1px solid var(--border);
   border-radius: var(--radius-xl);
   background: var(--surface);
@@ -1398,13 +1313,20 @@ input:focus-visible, select:focus-visible, textarea:focus-visible {
   width: min(92vw, 390px);
   box-shadow: var(--shadow-2);
 }
-.app-dialog[open] { animation: card-pop 340ms var(--spring) both; }
+.app-dialog[open] { animation: view-in var(--t-med) var(--ease-out) both; }
 .app-dialog::backdrop { background: oklch(0.1 0.02 260 / 0.55); backdrop-filter: blur(3px); }
 .app-dialog h3 { font-size: 1.1rem; font-weight: 700; margin-bottom: 4px; }
 .app-dialog .auth-subtitle { margin-bottom: 12px; }
 .app-dialog input { margin-top: 0; }
 .dialog-actions { display: flex; gap: 10px; margin-top: 18px; }
 .dialog-actions .btn { flex: 1; }
+/* Su 360px due bottoni affiancati costringono le etichette ad andare a capo, e
+   «Esci dall'account» diventa due righe dentro una pastiglia. In colonna ci stanno
+   per intero; `column-reverse` tiene l'azione sopra e l'uscita sotto, che e'
+   l'ordine in cui si legge un telefono con una mano sola. */
+@media (max-width: 767px) {
+  .dialog-actions { flex-direction: column-reverse; }
+}
 
 .skeleton {
   height: 150px;
@@ -1415,7 +1337,7 @@ input:focus-visible, select:focus-visible, textarea:focus-visible {
 }
 @keyframes shimmer { to { background-position: -200% 0; } }
 
-.empty { text-align: center; padding: 48px 20px; animation: view-in 320ms var(--spring) both; }
+.empty { text-align: center; padding: 48px 20px; animation: view-in var(--t-med) var(--ease-out) both; }
 .empty-icon {
   width: 80px; height: 80px;
   margin: 0 auto 14px;
@@ -1426,7 +1348,6 @@ input:focus-visible, select:focus-visible, textarea:focus-visible {
   display: grid;
   place-items: center;
   box-shadow: var(--shadow-1);
-  animation: float 5s ease-in-out infinite;
 }
 .empty-title { font-weight: 700; font-size: 1.08rem; margin-bottom: 8px; }
 .empty-hint { color: var(--ink-soft); font-size: 0.92rem; max-width: 46ch; margin: 0 auto; line-height: 1.6; }
@@ -1437,7 +1358,7 @@ input:focus-visible, select:focus-visible, textarea:focus-visible {
 .offline-bar {
   position: sticky; top: 0; z-index: 60;
   padding: 8px 14px;
-  background: var(--danger); color: #fff;
+  background: var(--danger-pieno); color: #fff;
   font-size: 0.85rem; font-weight: 500; text-align: center;
 }
 .offline-bar[hidden] { display: none; }
@@ -1455,7 +1376,7 @@ input:focus-visible, select:focus-visible, textarea:focus-visible {
   border-radius: var(--pill);
   box-shadow: var(--shadow-2);
   z-index: 100;
-  animation: toast-in 340ms var(--spring);
+  animation: toast-in var(--t-med) var(--ease-out);
   max-width: min(92vw, 440px);
   text-align: center;
 }
@@ -1499,20 +1420,26 @@ input:focus-visible, select:focus-visible, textarea:focus-visible {
     --border-strong: oklch(0.42 0.02 260);
     --ink: oklch(0.93 0.01 250);
     --ink-soft: oklch(0.72 0.015 250);
-    --primary: oklch(0.6 0.12 258);
-    --primary-bright: oklch(0.68 0.13 255);
+    /* Nel tema scuro il primario si sdoppia davvero: 0.50 perche' sopra ci va il
+       bianco (6.1:1), 0.72 per quando e' lui a essere il testo (6.9:1 sulla
+       superficie). Con un valore solo, come prima, si perdevano tutti e due. */
+    --primary: oklch(0.50 0.13 258);
+    --primary-testo: oklch(0.72 0.10 258);
+    --segnaposto: oklch(0.66 0.015 255);
+    --ombra-primario: 0 1px 2px oklch(0 0 0 / 0.35), 0 6px 14px -6px oklch(0 0 0 / 0.4);
     --primary-hover: oklch(0.67 0.12 258);
     --primary-soft: oklch(0.3 0.05 258);
     --navy-deep: oklch(0.2 0.04 260);
     --navy-deeper: oklch(0.14 0.03 262);
     --danger: oklch(0.68 0.15 25);
+    --danger-pieno: oklch(0.52 0.19 25);
     --danger-soft: oklch(0.27 0.06 25);
     --ok: oklch(0.6 0.11 165);
+    --ok-pieno: oklch(0.52 0.11 165);
     --ok-deep: oklch(0.72 0.1 165);
     --ok-soft: oklch(0.26 0.05 165);
     --shadow-1: 0 2px 8px oklch(0 0 0 / 0.35), 0 8px 24px oklch(0 0 0 / 0.35);
     --shadow-2: 0 4px 14px oklch(0 0 0 / 0.4), 0 18px 44px oklch(0 0 0 / 0.45);
-    --glow: 0 6px 22px oklch(0.6 0.12 258 / 0.4);
     /* L'ottone al buio: il velo chiaro su fondo scuro diventava un blocco color panna
        (i sedili "tuoi", i riquadri del riepilogo). Si ridefinisce il token, mai il
        componente, e cambiano insieme tutti i posti che lo usano. */
@@ -1523,13 +1450,6 @@ input:focus-visible, select:focus-visible, textarea:focus-visible {
     --luce-interna: inset 0 1px 0 oklch(1 0 0 / 0.06);
     --luce-interna-scura: inset 0 1px 0 oklch(1 0 0 / 0.05);
   }
-  body {
-    background:
-      radial-gradient(1200px 600px at 85% -10%, oklch(0.24 0.05 258 / 0.8), transparent 60%),
-      radial-gradient(900px 500px at -10% 110%, oklch(0.22 0.04 210 / 0.7), transparent 60%),
-      var(--bg);
-    background-attachment: fixed;
-  }
   .auth-message { border-color: oklch(0.4 0.08 25); }
   .auth-message.ok { border-color: oklch(0.4 0.06 165); }
   .car-glass { fill: oklch(0.4 0.02 240); }
@@ -1539,6 +1459,21 @@ input:focus-visible, select:focus-visible, textarea:focus-visible {
   .seat-text { fill: var(--ink-soft); }
   .car-wheel { fill: oklch(0.55 0.01 260); }
   .car-wheel-steer { stroke: oklch(0.55 0.01 260); }
+  .auth-cartello .car-body { fill: url(#lamiera-auth); stroke: oklch(0.70 0.06 258); }
+  .auth-cartello .car-glass { fill: url(#vetro-auth); }
+  .auth-cartello .seat .seat-base { fill: oklch(0.97 0.005 258); stroke: oklch(0.72 0.05 258); }
+  .auth-cartello .seat .seat-back { fill: oklch(0.82 0.02 258); }
+  .auth-cartello .seat-text { fill: var(--ink); }
+  .auth-cartello .seat-driver .seat-base { fill: oklch(0.26 0.06 260); stroke: oklch(0.18 0.05 262); }
+  .auth-cartello .seat-driver .seat-back { fill: oklch(0.18 0.05 262); }
+  .auth-cartello .seat-driver .seat-text { fill: #fff; }
+  .auth-cartello .seat-taken .seat-base { fill: oklch(0.42 0.11 258); stroke: oklch(0.36 0.11 258); }
+  .auth-cartello .seat-taken .seat-back { fill: oklch(0.36 0.11 258); }
+  .auth-cartello .seat-taken .seat-text { fill: #fff; }
+  .auth-cartello .seat-free .seat-base { fill: oklch(0.93 0.025 258); stroke: oklch(0.42 0.11 258); }
+  .auth-cartello .seat-free .seat-text { fill: oklch(0.42 0.11 258); }
+  .auth-cartello .car-wheel { fill: oklch(0.35 0.02 260); }
+  .auth-cartello .car-wheel-steer { stroke: oklch(0.35 0.02 260); }
   .howto { border-color: var(--border-strong); }
   .toast { background: var(--surface-2); color: var(--ink); }
   .bottom-nav { background: var(--surface); }
@@ -1656,7 +1591,7 @@ input:focus-visible, select:focus-visible, textarea:focus-visible {
 /* Un anello di focus che fa parte del disegno invece di quello del browser:
    doppio, cosi' si vede sia sul chiaro sia sullo scuro. */
 :where(button, a, input, select, textarea):focus-visible {
-  outline: 2px solid var(--primary);
+  outline: 2px solid var(--primary-testo);
   outline-offset: 2px;
   border-radius: var(--radius-sm);
 }
@@ -1683,11 +1618,11 @@ input:focus-visible, select:focus-visible, textarea:focus-visible {
     background: var(--primary-soft);
     opacity: 0;
     transform: scale(0.7);
-    transition: opacity var(--t-fast) var(--ease-out), transform var(--t-med) var(--spring);
+    transition: opacity var(--t-fast) var(--ease-out), transform var(--t-med) var(--ease-out);
     pointer-events: none;
   }
   .nav-item:not(.active):hover::after { opacity: 1; transform: scale(1); }
-  .nav-item:not(.active):hover svg { transform: translateY(calc(-1 * var(--nav-salita-sopra))); color: var(--primary); }
+  .nav-item:not(.active):hover svg { transform: translateY(calc(-1 * var(--nav-salita-sopra))); color: var(--primary-testo); }
   .nav-item:not(.active):hover span { color: var(--ink); }
 
   /* Le schede dei passaggi: si alzano un po' di piu' e l'ombra si approfondisce,
@@ -1696,7 +1631,7 @@ input:focus-visible, select:focus-visible, textarea:focus-visible {
 
   /* I pulsanti: un pixel in su, non una molla. */
   .btn:hover:not(:disabled) { transform: translateY(-1px); }
-  .btn-primary:hover:not(:disabled) { box-shadow: var(--glow), var(--luce-interna); }
+  .btn-primary:hover:not(:disabled) { box-shadow: var(--ombra-primario), var(--luce-interna); }
 
   /* Il codice del gruppo si copia con un tocco: che sia toccabile lo dice
      l'ottone che si scalda, non un'istruzione scritta accanto. */
@@ -1770,9 +1705,9 @@ input:focus-visible, select:focus-visible, textarea:focus-visible {
   box-shadow: var(--shadow-1), var(--luce-interna);
   min-width: 0;
 }
-.dash .k .lab { font-size: 0.63rem; color: var(--ink-soft); overflow-wrap: anywhere; }
+.dash .k .lab { font-size: 0.68rem; color: var(--ink-soft); overflow-wrap: anywhere; }
 .dash .k .val { font-size: 1.2rem; font-weight: 600; margin-top: 3px; letter-spacing: -0.02em; overflow-wrap: anywhere; }
-.dash .k .nota { font-size: 0.6rem; color: var(--ink-soft); margin-top: 1px; overflow-wrap: anywhere; }
+.dash .k .nota { font-size: 0.68rem; color: var(--ink-soft); margin-top: 1px; overflow-wrap: anywhere; }
 .dash .k.mio { background: var(--ottone-velo); border: 1px solid var(--ottone-bordo); }
 .dash .k.mio .val { color: var(--ottone-scuro); }
 .dash .k.allerta { background: var(--danger-soft); }
@@ -1833,7 +1768,7 @@ input:focus-visible, select:focus-visible, textarea:focus-visible {
   border: 0;
 }
 .dash .card h3 { margin: 0; font-size: 0.79rem; font-weight: 600; overflow-wrap: anywhere; }
-.dash .sub { color: var(--ink-soft); font-size: 0.66rem; overflow-wrap: anywhere; }
+.dash .sub { color: var(--ink-soft); font-size: 0.68rem; overflow-wrap: anywhere; }
 .dash .head {
   display: flex;
   align-items: center;
@@ -1847,7 +1782,7 @@ input:focus-visible, select:focus-visible, textarea:focus-visible {
   background: var(--surface-2);
   border-radius: var(--pill);
   padding: 3px 9px;
-  font-size: 0.63rem;
+  font-size: 0.68rem;
   color: var(--ink-soft);
   white-space: nowrap;
 }
@@ -1858,7 +1793,7 @@ input:focus-visible, select:focus-visible, textarea:focus-visible {
   border: 1px solid var(--ottone-bordo);
   border-radius: var(--pill);
   padding: 0 7px;
-  font-size: 0.56rem;
+  font-size: 0.68rem;
   font-weight: 700;
   letter-spacing: 0.03em;
   vertical-align: 1px;
@@ -1867,7 +1802,7 @@ input:focus-visible, select:focus-visible, textarea:focus-visible {
 
 /* ---- i due riquadri scuri ---- */
 .dash .hero {
-  background: linear-gradient(160deg, var(--navy-deep), var(--navy-deeper));
+  background: var(--navy-deep);
   color: oklch(0.94 0.01 258);
   box-shadow: var(--shadow-1), var(--luce-interna-scura);
 }
@@ -1875,7 +1810,7 @@ input:focus-visible, select:focus-visible, textarea:focus-visible {
 .dash .hero h3 { color: oklch(0.94 0.01 258); }
 .dash .hero .pill { background: oklch(1 0 0 / 0.10); color: oklch(0.78 0.02 258); }
 .dash .hero .big { font-size: clamp(1.35rem, 2.1vw, 1.7rem); font-weight: 600; margin: 4px 0 2px; letter-spacing: -0.03em; }
-.dash .hero .d { color: oklch(0.72 0.03 258); font-size: 0.66rem; overflow-wrap: anywhere; }
+.dash .hero .d { color: oklch(0.72 0.03 258); font-size: 0.68rem; overflow-wrap: anywhere; }
 .dash .hero .cta {
   display: inline-flex;
   align-items: center;
@@ -1898,18 +1833,18 @@ input:focus-visible, select:focus-visible, textarea:focus-visible {
 
 /* ---- il prossimo passaggio ---- */
 .dash .next {
-  background: radial-gradient(120% 100% at 88% 108%, oklch(0.88 0.05 258) 0%, var(--primary-soft) 55%);
+  background: var(--primary-soft);
   position: relative;
   border: 1px solid oklch(0.86 0.04 258);
   box-shadow: var(--shadow-1), var(--luce-interna);
 }
-.dash .next .sub { color: var(--primary); }
+.dash .next .sub { color: var(--primary-testo); }
 .dash .next .titolo {
   font-size: clamp(0.9rem, 1.3vw, 1rem);
   font-weight: 600;
   line-height: 1.25;
   margin: 4px 0 10px;
-  color: var(--primary);
+  color: var(--primary-testo);
   padding-right: 38px;
   overflow-wrap: anywhere;
 }
@@ -1944,7 +1879,7 @@ input:focus-visible, select:focus-visible, textarea:focus-visible {
   z-index: 2;
   cursor: pointer;
 }
-.dash .next .go:focus-visible { outline: 2px solid var(--primary); outline-offset: 2px; }
+.dash .next .go:focus-visible { outline: 2px solid var(--primary-testo); outline-offset: 2px; }
 
 /* ---- calendario e agenda ---- */
 .dash .cal .dows, .dash .cal .days {
@@ -1953,7 +1888,7 @@ input:focus-visible, select:focus-visible, textarea:focus-visible {
   gap: 2px;
   text-align: center;
 }
-.dash .cal .dows span { color: var(--ink-soft); font-size: 0.58rem; padding-bottom: 4px; }
+.dash .cal .dows span { color: var(--ink-soft); font-size: 0.68rem; padding-bottom: 4px; }
 .dash .cal .days span {
   padding: 5px 0;
   border-radius: var(--pill);
@@ -1963,7 +1898,7 @@ input:focus-visible, select:focus-visible, textarea:focus-visible {
   font-variant-numeric: tabular-nums;
 }
 .dash .cal .days .fuori { color: var(--ink-soft); opacity: 0.45; }
-.dash .cal .days .ha { background: var(--primary-soft); color: var(--primary); font-weight: 600; }
+.dash .cal .days .ha { background: var(--primary-soft); color: var(--primary-testo); font-weight: 600; }
 .dash .cal .days .mio {
   background: var(--ottone-velo);
   color: var(--ottone-scuro);
@@ -1975,14 +1910,14 @@ input:focus-visible, select:focus-visible, textarea:focus-visible {
 .dash .ag .h {
   flex: none;
   width: 40px;
-  font-size: 0.6rem;
+  font-size: 0.68rem;
   color: var(--ink-soft);
   font-family: 'IBM Plex Mono', ui-monospace, monospace;
 }
 .dash .ag .t { flex: 1 1 auto; min-width: 0; font-size: 0.7rem; font-weight: 600; line-height: 1.25; overflow-wrap: anywhere; }
-.dash .ag .t small { display: block; font-weight: 400; color: var(--ink-soft); font-size: 0.6rem; }
+.dash .ag .t small { display: block; font-weight: 400; color: var(--ink-soft); font-size: 0.68rem; }
 .dash .ag .chip { flex: none; width: 24px; height: 24px; border-radius: 8px; display: grid; place-items: center; }
-.dash .ag .chip svg { width: 13px; height: 13px; color: var(--primary); }
+.dash .ag .chip svg { width: 13px; height: 13px; color: var(--primary-testo); }
 .dash .ag .chip.mia svg { color: var(--ottone-scuro); }
 
 /* ---- la colonna di destra, le azioni, la fascia larga ---- */
@@ -2002,17 +1937,17 @@ input:focus-visible, select:focus-visible, textarea:focus-visible {
   transition: transform var(--t-fast) var(--ease-out), box-shadow var(--t-fast) var(--ease-out);
 }
 .dash .az:hover { transform: translateY(-2px); box-shadow: var(--shadow-2), var(--luce-interna); }
-.dash .az:focus-visible { outline: 2px solid var(--primary); outline-offset: 2px; }
+.dash .az:focus-visible { outline: 2px solid var(--primary-testo); outline-offset: 2px; }
 .dash .az .o {
   width: 30px; height: 30px;
   border-radius: 50%;
   background: var(--primary-soft);
-  color: var(--primary);
+  color: var(--primary-testo);
   display: grid; place-items: center;
   margin: 0 auto 5px;
 }
 .dash .az .o svg { width: 15px; height: 15px; }
-.dash .az .t { font-size: 0.62rem; color: var(--ink-soft); line-height: 1.25; overflow-wrap: anywhere; }
+.dash .az .t { font-size: 0.68rem; color: var(--ink-soft); line-height: 1.25; overflow-wrap: anywhere; }
 
 /* ---- barre di riempimento ---- */
 .dash .riemp { display: flex; align-items: center; gap: 8px; margin-bottom: 7px; }
@@ -2025,7 +1960,7 @@ input:focus-visible, select:focus-visible, textarea:focus-visible {
   flex: none;
   width: 30px;
   text-align: right;
-  font-size: 0.63rem;
+  font-size: 0.68rem;
   color: var(--ink-soft);
   font-family: 'IBM Plex Mono', ui-monospace, monospace;
 }
@@ -2033,7 +1968,7 @@ input:focus-visible, select:focus-visible, textarea:focus-visible {
   border-top: 1px solid var(--border);
   margin-top: 9px;
   padding-top: 9px;
-  font-size: 0.66rem;
+  font-size: 0.68rem;
   color: var(--ink-soft);
   overflow-wrap: anywhere;
 }
@@ -2046,15 +1981,15 @@ input:focus-visible, select:focus-visible, textarea:focus-visible {
   width: 26px; height: 26px;
   border-radius: 50%;
   display: grid; place-items: center;
-  font-size: 0.63rem; font-weight: 700;
+  font-size: 0.68rem; font-weight: 700;
   color: #fff;
 }
-.dash .att .txt { flex: 1 1 auto; min-width: 0; font-size: 0.66rem; line-height: 1.35; overflow-wrap: anywhere; }
-.dash .att .txt small { display: block; color: var(--ink-soft); font-size: 0.6rem; margin-top: 1px; }
-.dash .att .when { flex: none; font-size: 0.57rem; color: var(--ink-soft); white-space: nowrap; padding-top: 2px; }
+.dash .att .txt { flex: 1 1 auto; min-width: 0; font-size: 0.68rem; line-height: 1.35; overflow-wrap: anywhere; }
+.dash .att .txt small { display: block; color: var(--ink-soft); font-size: 0.68rem; margin-top: 1px; }
+.dash .att .when { flex: none; font-size: 0.68rem; color: var(--ink-soft); white-space: nowrap; padding-top: 2px; }
 
 /* ---- legenda della ciambella ---- */
-.dash .leg { display: flex; flex-direction: column; gap: 6px; font-size: 0.66rem; flex: 1 1 auto; min-width: 0; color: oklch(0.82 0.02 258); }
+.dash .leg { display: flex; flex-direction: column; gap: 6px; font-size: 0.68rem; flex: 1 1 auto; min-width: 0; color: oklch(0.82 0.02 258); }
 .dash .leg > div { display: flex; align-items: center; gap: 6px; }
 .dash .leg i { flex: none; width: 7px; height: 7px; border-radius: 50%; }
 .dash .leg .nm { flex: 1 1 auto; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
@@ -2070,11 +2005,11 @@ input:focus-visible, select:focus-visible, textarea:focus-visible {
   width: 24px; height: 24px;
   border-radius: 50%;
   display: grid; place-items: center;
-  font-size: 0.6rem; font-weight: 700;
+  font-size: 0.68rem; font-weight: 700;
   color: #fff;
 }
 .dash .conto .chi { flex: 1 1 auto; min-width: 0; overflow-wrap: anywhere; }
-.dash .conto .chi small { display: block; color: var(--ink-soft); font-size: 0.6rem; }
+.dash .conto .chi small { display: block; color: var(--ink-soft); font-size: 0.68rem; }
 .dash .conto .imp { flex: none; font-weight: 600; font-family: 'IBM Plex Mono', ui-monospace, monospace; white-space: nowrap; }
 .dash .conto .imp.dare { color: var(--danger); }
 .dash .conto .imp.avere { color: var(--ok-deep); }
@@ -2101,7 +2036,7 @@ input:focus-visible, select:focus-visible, textarea:focus-visible {
   padding-right: 26px;
 }
 .dash .turno .bar i { display: block; height: 100%; border-radius: 8px; flex: none; }
-.dash .turno .bar em { position: absolute; right: 7px; font-size: 0.6rem; color: var(--ink-soft); font-style: normal; }
+.dash .turno .bar em { position: absolute; right: 7px; font-size: 0.68rem; color: var(--ink-soft); font-style: normal; }
 
 .dash .vuoto { color: var(--ink-soft); font-size: 0.7rem; }
 
@@ -2170,8 +2105,8 @@ input:focus-visible, select:focus-visible, textarea:focus-visible {
   padding: 7px 14px;
   cursor: pointer;
 }
-.dash .cta-vuoto:hover { background: var(--primary-soft); border-color: var(--primary); color: var(--primary); }
-.dash .cta-vuoto:focus-visible { outline: 2px solid var(--primary); outline-offset: 2px; }
+.dash .cta-vuoto:hover { background: var(--primary-soft); border-color: var(--primary-testo); color: var(--primary-testo); }
+.dash .cta-vuoto:focus-visible { outline: 2px solid var(--primary-testo); outline-offset: 2px; }
 
 /* Dentro una scheda stirata, le righe che si ripetono si dividono lo spazio avanzato
    invece di lasciarlo tutto in fondo. E' la differenza fra un grafico a quattro barre
@@ -2199,10 +2134,10 @@ input:focus-visible, select:focus-visible, textarea:focus-visible {
   background: transparent;
   color: var(--ink-soft);
   font: inherit;
-  font-size: 0.62rem;
+  font-size: 0.68rem;
   font-weight: 600;
   padding: 3px 9px;
   cursor: pointer;
 }
 .dash .conto .salda:hover { background: var(--ok-soft); border-color: var(--ok); color: var(--ok-deep); }
-.dash .conto .salda:focus-visible { outline: 2px solid var(--primary); outline-offset: 2px; }
+.dash .conto .salda:focus-visible { outline: 2px solid var(--primary-testo); outline-offset: 2px; }

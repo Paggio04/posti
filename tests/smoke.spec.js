@@ -8,7 +8,7 @@ test('la pagina di accesso si carica e funziona', async ({ page }) => {
   page.on('pageerror', (e) => errors.push(e.message));
   await page.goto('/');
   await expect(page.locator('#auth-card')).toBeVisible();
-  await expect(page.locator('#auth-title')).toHaveText('Bentornato');
+  await expect(page.locator('#auth-title')).toHaveText('Chi guida oggi?');
 
   await page.locator('#mode-signup').click();
   await expect(page.locator('#name-label')).toBeVisible();
@@ -17,6 +17,39 @@ test('la pagina di accesso si carica e funziona', async ({ page }) => {
   await page.locator('#mode-login').click();
   await expect(page.locator('#name-label')).toBeHidden();
   expect(errors).toEqual([]);
+});
+
+// Il difetto che ha fatto rifare questa schermata: sul telefono il pannello del
+// marchio occupava tutto il primo schermo e la casella dell'email cominciava sotto la
+// piega. Chi apre l'app per entrarci doveva scorrere per trovare dove si entra.
+// Questo test non guarda com'e' fatta la pagina, guarda che quella cosa non torni.
+test('sul telefono si entra senza scorrere', async ({ page }) => {
+  await page.setViewportSize({ width: 360, height: 780 });
+  await page.goto('/');
+  for (const id of ['#email', '#password', '#auth-submit']) {
+    const riquadro = await page.locator(id).boundingBox();
+    expect(riquadro, `${id} non e' sulla pagina`).not.toBeNull();
+    expect(riquadro.y + riquadro.height, `${id} finisce sotto la piega`).toBeLessThanOrEqual(780);
+  }
+});
+
+// Le conferme distruttive passavano da `confirm()` del browser: non si puo' scrivere
+// sopra («OK» dove serve «Esci dall'account»), mostra l'indirizzo del sito in cima, e
+// in qualche browser dentro un'altra app arriva soppressa. Ora e' il dialogo dell'app.
+test('uscire dall\'account chiede conferma con un bottone che dice cosa fa', async ({ page }) => {
+  await page.goto('/');
+  // Nessun accesso vero: si scopre il guscio e si tocca il bottone, che e' quanto
+  // basta perche' il dialogo sia quello dell'app e non quello del browser.
+  await page.evaluate(() => {
+    document.getElementById('auth-view').classList.add('hidden');
+    document.getElementById('app-shell').classList.remove('hidden');
+    document.getElementById('view-profile').classList.remove('hidden');
+  });
+  await page.locator('#profile-logout').click();
+  await expect(page.locator('#app-dialog')).toBeVisible();
+  await expect(page.locator('#dialog-ok')).toHaveText('Esci dall\'account');
+  // Il campo di testo non c'entra niente con una conferma e non deve comparire.
+  await expect(page.locator('#dialog-input')).toBeHidden();
 });
 
 test('login con credenziali sbagliate mostra errore chiaro', async ({ page }) => {

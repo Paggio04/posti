@@ -5,6 +5,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>Privacy — WeTransport</title>
   <meta name="description" content="Come WeTransport tratta i tuoi dati: quali raccoglie, perché, per quanto li conserva e come esportarli o cancellarli." />
+  <meta name="color-scheme" content="light dark" />
   <link rel="stylesheet" href="style.css" />
   <link rel="icon" href="icon.svg" type="image/svg+xml" />
   <!-- Questa pagina risponde a due indirizzi (/privacy e /privacy.html): il canonico e'
@@ -17,10 +18,12 @@
   <style>
     .privacy { max-width: 68ch; margin: 0 auto; padding: 40px 20px 80px; }
     .privacy h1 { margin-bottom: 8px; }
-    .privacy h2 { font-size: 1.05rem; margin: 24px 0 8px; }
+    /* 1.05rem contro 0.95rem di corpo: due misure quasi uguali non fanno una
+       gerarchia, e su una pagina lunga di sole intestazioni e paragrafi la
+       gerarchia e' l'unica cosa che la rende scorribile. */
+    .privacy h2 { font-size: 1.25rem; font-weight: 700; margin: 32px 0 8px; }
     .privacy p, .privacy li { color: var(--ink-soft); font-size: 0.95rem; }
     .privacy ul { padding-left: 20px; }
-    .privacy a { color: var(--primary); }
     .privacy table { width: 100%; border-collapse: collapse; margin: 12px 0; font-size: 0.9rem; }
     .privacy th, .privacy td { text-align: left; padding: 8px 10px; border-bottom: 1px solid var(--border); color: var(--ink-soft); vertical-align: top; }
     .privacy th { color: var(--ink); font-weight: 600; }

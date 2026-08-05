@@ -7,7 +7,8 @@
     "lint": "eslint app.js config.js sw.js rete.js",
     "validate": "html-validate index.html privacy.html 404.html offline.html",
     "test:e2e": "playwright test",
-    "check": "npm run lint && npm run validate"
+    "contrasto": "node tests/contrasto.mjs",
+    "check": "npm run lint && npm run validate && npm run contrasto"
   },
   "devDependencies": {
     "@playwright/test": "^1.62.0",
