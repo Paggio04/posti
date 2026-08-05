@@ -91,19 +91,24 @@ const modeSignup = document.getElementById('mode-signup');
 const authSwitch = document.querySelector('.auth-switch');
 let authMode = 'login';
 
+// Accedi / crea un account. `.signup` su `.auth-switch` e' l'unico interruttore: il
+// CSS ci appende quale delle due frasi in fondo alla scheda si legge.
+//
+// Sparito da qui: `aria-selected` sui due bottoni. Erano marcati `role="tab"` senza
+// che esistesse nessun pannello a schede — due bottoni che dicevano a un lettore di
+// schermo di essere qualcos'altro. Ora sono due bottoni e basta, e quello che non
+// serve e' tolto dal documento, quindi nemmeno dalla tabulazione.
 function setAuthMode(mode) {
   authMode = mode;
   const signup = mode === 'signup';
   authSwitch.classList.toggle('signup', signup);
-  modeLogin.classList.toggle('active', !signup);
-  modeSignup.classList.toggle('active', signup);
-  modeLogin.setAttribute('aria-selected', String(!signup));
-  modeSignup.setAttribute('aria-selected', String(signup));
   nameLabel.classList.toggle('hidden', !signup);
-  authTitle.textContent = signup ? 'Crea il tuo account' : 'Bentornato';
+  // «Bentornato» era il registro da prodotto che PRODUCT.md nomina per non usarlo.
+  // La domanda a cui l'app risponde e' scritta sul titolo, dove si guarda per prima.
+  authTitle.textContent = signup ? 'Crea il tuo account' : 'Chi guida oggi?';
   authSubtitle.textContent = signup
-    ? 'Bastano nome, email e una password.'
-    : 'Accedi per vedere chi guida oggi.';
+    ? 'Nome, email e una password. Poi ti serve il codice di una comitiva, o ne crei una tua.'
+    : 'Accedi e vedi i posti liberi della comitiva.';
   authSubmit.textContent = signup ? 'Crea account' : 'Accedi';
   document.getElementById('forgot-btn').classList.toggle('hidden', signup);
   document.getElementById('password').setAttribute('autocomplete', signup ? 'new-password' : 'current-password');
@@ -191,8 +196,11 @@ authForm.addEventListener('submit', async (e) => {
   authSuccess.classList.remove('hidden');
 });
 
-document.getElementById('profile-logout').addEventListener('click', () => {
-  if (confirm('Vuoi uscire dall\'account?')) supabase.auth.signOut();
+document.getElementById('profile-logout').addEventListener('click', async () => {
+  if (await conferma('Uscire dall\'account?', {
+    testo: 'I tuoi passaggi e le tue prenotazioni restano dove sono. Per rientrare servono email e password.',
+    azione: 'Esci dall\'account',
+  })) supabase.auth.signOut();
 });
 
 function credentials() {
@@ -336,7 +344,11 @@ document.getElementById('persona-blocca').addEventListener('click', async () => 
     if (error) { toast(friendlyError(error)); return; }
     toast(`${p.nome} è di nuovo visibile.`);
   } else {
-    if (!confirm(`Bloccare ${p.nome}? Non vedrete più i passaggi l'uno dell'altra, e non potrete salire in macchina insieme. I posti già presi restano.`)) return;
+    if (!await conferma(`Bloccare ${p.nome}?`, {
+      testo: 'Non vedrete più i passaggi l\'uno dell\'altra, e non potrete salire in macchina insieme. I posti già presi restano.',
+      azione: 'Blocca',
+      pericolo: true,
+    })) return;
     if (bloccaSeSospeso('bloccare')) return;
     const { error } = await supabase.from('user_blocks')
       .insert({ blocker_id: currentUser.id, blocked_id: p.id });
@@ -601,12 +613,16 @@ async function esportaDati() {
 document.getElementById('profile-export').addEventListener('click', esportaDati);
 
 document.getElementById('profile-delete').addEventListener('click', async () => {
-  if (!confirm('Eliminare l\'account? Spariscono profilo, auto, prenotazioni, richieste e commenti. Non si torna indietro.')) return;
-  const conferma = await ask('Conferma l\'eliminazione', {
+  if (!await conferma('Eliminare il tuo account?', {
+    testo: 'Spariscono profilo, auto, prenotazioni, richieste e commenti. Non si torna indietro.',
+    azione: 'Continua',
+    pericolo: true,
+  })) return;
+  const scritto = await ask('Conferma l\'eliminazione', {
     text: 'Scrivi ELIMINA per confermare. Se possiedi una comitiva passerà a un altro membro; se non ce ne sono, sparisce anche quella.',
     placeholder: 'ELIMINA',
   });
-  if (conferma !== 'ELIMINA') { toast('Eliminazione annullata.'); return; }
+  if (scritto !== 'ELIMINA') { toast('Eliminazione annullata.'); return; }
   const { error } = await supabase.rpc('elimina_account');
   if (error) { toast(friendlyError(error)); return; }
   await supabase.auth.signOut();
@@ -631,30 +647,62 @@ async function condividi(testo, url) {
   window.open('https://wa.me/?text=' + encodeURIComponent(testo), '_blank', 'noopener');
 }
 
-function ask(title, { text = '', placeholder = '', value = '', type = 'text' } = {}) {
-  document.getElementById('dialog-title').textContent = title;
-  document.getElementById('dialog-text').textContent = text;
-  document.getElementById('dialog-text').style.display = text ? '' : 'none';
+// **Una finestra sola per chiedere.** `ask()` usava questo dialogo disegnato, e le
+// sette conferme usavano `confirm()` del browser: due vocabolari nella stessa app,
+// e quello nativo e' il peggiore dei due. Non si puo' scrivere sopra, quindi il
+// bottone dice «OK» dove servirebbe «Elimina l'account»; mostra l'indirizzo del sito
+// in cima («wetransport.netlify.app dice…»), che dentro un'app installata sembra la
+// finestra di un altro programma; e nel browser dentro Instagram o WhatsApp puo'
+// arrivare soppresso, cioe' l'azione distruttiva parte o non parte senza che nessuno
+// abbia risposto. Ora ce n'e' una, e il suo bottone dice cosa fa.
+const dialogTesto = document.getElementById('dialog-text');
+const dialogOk = document.getElementById('dialog-ok');
+
+function apriDialogo({ titolo, testo = '', campo = false, azione = 'Conferma', pericolo = false, placeholder = '', value = '', type = 'text' }) {
+  document.getElementById('dialog-title').textContent = titolo;
+  dialogTesto.textContent = testo;
+  dialogTesto.style.display = testo ? '' : 'none';
+  dialogInput.classList.toggle('hidden', !campo);
   dialogInput.type = type;
   dialogInput.placeholder = placeholder;
   dialogInput.value = value;
+  dialogOk.textContent = azione;
+  // Un'azione che distrugge non ha lo stesso bottone di una che salva.
+  dialogOk.classList.toggle('btn-primary', !pericolo);
+  dialogOk.classList.toggle('btn-pericolo', pericolo);
   appDialog.showModal();
-  dialogInput.focus();
+  // Il fuoco va sul campo se c'e', altrimenti su «Annulla»: su una conferma
+  // distruttiva la prima cosa che si tocca a occhi chiusi dev'essere l'uscita.
+  (campo ? dialogInput : document.getElementById('dialog-cancel')).focus();
   return new Promise((resolve) => { dialogResolve = resolve; });
+}
+
+function ask(title, { text = '', placeholder = '', value = '', type = 'text' } = {}) {
+  return apriDialogo({ titolo: title, testo: text, campo: true, placeholder, value, type });
+}
+
+// Torna `true` solo se si e' scelto davvero: chiudere con Esc o toccare fuori vale no.
+function conferma(titolo, { testo = '', azione = 'Conferma', pericolo = false } = {}) {
+  return apriDialogo({ titolo, testo, campo: false, azione, pericolo });
+}
+
+function chiudiDialogo(esito) {
+  appDialog.close();
+  dialogResolve?.(esito);
+  dialogResolve = null;
 }
 
 document.getElementById('dialog-form').addEventListener('submit', (e) => {
   e.preventDefault();
-  appDialog.close();
-  dialogResolve?.(dialogInput.value.trim());
-  dialogResolve = null;
+  chiudiDialogo(dialogInput.classList.contains('hidden') ? true : dialogInput.value.trim());
 });
 document.getElementById('dialog-cancel').addEventListener('click', () => {
-  appDialog.close();
-  dialogResolve?.(null);
+  chiudiDialogo(dialogInput.classList.contains('hidden') ? false : null);
+});
+appDialog.addEventListener('cancel', () => {
+  dialogResolve?.(dialogInput.classList.contains('hidden') ? false : null);
   dialogResolve = null;
 });
-appDialog.addEventListener('cancel', () => { dialogResolve?.(null); dialogResolve = null; });
 
 // --- Navigazione a schede ---
 const VIEWS = ['home', 'history', 'groups', 'stats', 'profile'];
@@ -995,7 +1043,11 @@ async function renderGroupsView() {
             kick.textContent = '✕';
             kick.title = `Rimuovi ${nome} dal gruppo`;
             kick.addEventListener('click', async () => {
-              if (!confirm(`Rimuovere ${nome} dal gruppo "${g.name}"?`)) return;
+              if (!await conferma(`Rimuovere ${nome} dal gruppo?`, {
+                testo: `${nome} esce da "${g.name}" e non vede più i passaggi della comitiva. I posti già presi restano.`,
+                azione: 'Rimuovi dal gruppo',
+                pericolo: true,
+              })) return;
               const { error } = await supabase.from('group_members').delete()
                 .eq('group_id', g.id).eq('user_id', m.user_id);
               if (error) { toast(friendlyError(error)); return; }
@@ -1032,7 +1084,11 @@ async function renderGroupsView() {
     leave.className = 'btn btn-ghost btn-small btn-danger';
     leave.textContent = 'Esci dal gruppo';
     leave.addEventListener('click', async () => {
-      if (!confirm(`Vuoi uscire dal gruppo "${g.name}"?`)) return;
+      if (!await conferma(`Uscire da "${g.name}"?`, {
+        testo: 'Non vedrai più i passaggi di questa comitiva. Per rientrare serve di nuovo il codice.',
+        azione: 'Esci dal gruppo',
+        pericolo: true,
+      })) return;
       const { error } = await supabase.from('group_members').delete()
         .eq('group_id', g.id).eq('user_id', currentUser.id);
       if (error) { toast(friendlyError(error)); return; }
@@ -1514,7 +1570,7 @@ async function disegnaRiepilogo(box) {
         return `<div class="riemp">
           <span class="n">${suo ? `<span class="tu">${escapeHtml(et)}</span>` : escapeHtml(et)}</span>
           <span class="bar"><i style="width:${perc.toFixed(0)}%;background:${
-            !g.posti ? 'transparent' : perc >= 100 ? 'var(--ok)' : suo ? 'var(--ottone)' : 'var(--primary-bright)'}"></i></span>
+            !g.posti ? 'transparent' : perc >= 100 ? 'var(--ok)' : suo ? 'var(--ottone)' : 'var(--primary)'}"></i></span>
           <span class="p">${g.posti ? `${g.presi}/${g.posti}` : '—'}</span>
         </div>`;
       }).join('')}
@@ -1532,7 +1588,7 @@ async function disegnaRiepilogo(box) {
         const suo = mio(id);
         return `<div class="turno">
           <span class="n">${suo ? '<b>Tu</b>' : escapeHtml(v.name)}</span>
-          <span class="bar"><i style="width:${totTurni ? ((v.n / turni[0][1].n) * 100).toFixed(0) : 0}%;background:${suo ? 'var(--ottone)' : 'var(--primary-bright)'}"></i><em>${v.n}</em></span>
+          <span class="bar"><i style="width:${totTurni ? ((v.n / turni[0][1].n) * 100).toFixed(0) : 0}%;background:${suo ? 'var(--ottone)' : 'var(--primary)'}"></i><em>${v.n}</em></span>
         </div>`;
       }).join('')}
       <div class="piede"><b style="color:var(--ottone-scuro)">${totTurni ? Math.round((mieiTurni / totTurni) * 100) : 0}%</b> dei turni a tuo carico</div>
@@ -1662,7 +1718,12 @@ async function disegnaRiepilogo(box) {
 // Il tondo colorato accanto a un nome. Deriva dall'id, quindi la stessa persona
 // ha lo stesso colore in tutti i riquadri e fra una visita e l'altra — senza
 // tenere da nessuna parte una tabella di colori.
-const COLORI_AV = ['var(--primary)', 'var(--ok)', 'oklch(0.6 0.03 258)',
+// Sei tinte, e tutte e sei portano il bianco delle iniziali ad almeno 4.5:1 nei due
+// temi (`npm run contrasto`). Due non ce la facevano: il verde `--ok`, che al buio si
+// schiarisce fino a 3.7:1, e il grigio a 0.6 di luminosita', fermo a 3.9:1 in
+// entrambi. Un avatar e' un cerchio con due lettere dentro: e' testo, e vale la
+// stessa soglia del testo.
+const COLORI_AV = ['var(--primary)', 'var(--ok-pieno)', 'oklch(0.50 0.03 258)',
   'oklch(0.55 0.14 300)', 'oklch(0.55 0.13 30)', 'oklch(0.5 0.1 200)'];
 function coloreDi(id) {
   let h = 0;
@@ -2437,8 +2498,13 @@ async function claimSeat(ride, seatIndex) {
 }
 
 async function releaseSeat(ride, claim, mine) {
-  const who = mine ? 'Vuoi scendere da questa auto?' : `Vuoi liberare il posto di ${nomeDi(claim.passenger)}?`;
-  if (!confirm(who)) return;
+  const titolo = mine ? 'Scendere da questa auto?' : `Liberare il posto di ${nomeDi(claim.passenger)}?`;
+  if (!await conferma(titolo, {
+    testo: mine
+      ? 'Il posto torna libero e chiunque della comitiva può prenderlo.'
+      : 'Il posto torna libero e chiunque della comitiva può prenderlo. Chi ci stava non riceve un avviso.',
+    azione: mine ? 'Scendi' : 'Libera il posto',
+  })) return;
   const { error } = await supabase.from('seat_claims').delete()
     .eq('ride_id', ride.id).eq('seat_index', claim.seat_index);
   if (error) { toast(friendlyError(error)); return; }
@@ -2558,7 +2624,11 @@ function renderRides(rides) {
       del.innerHTML = '<svg width="16" height="16"><use href="#i-x"/></svg>';
       del.title = 'Annulla passaggio';
       del.addEventListener('click', async () => {
-        if (!confirm('Annullare il passaggio? I passeggeri perderanno il posto.')) return;
+        if (!await conferma('Annullare il passaggio?', {
+          testo: 'Chi aveva un posto sopra questa auto lo perde, e per oggi resta a piedi.',
+          azione: 'Annulla il passaggio',
+          pericolo: true,
+        })) return;
         const { error } = await supabase.from('rides').delete().eq('id', ride.id);
         if (error) { toast(friendlyError(error)); return; }
         toast('Passaggio annullato.');
