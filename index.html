@@ -325,6 +325,12 @@
               <input type="time" id="ride-time" aria-label="Orario di partenza" />
             </div>
             <div class="form-row form-row-end">
+              <!-- C33: nasce nascosta e compare solo a chi ha salvato un'auto. Un
+                   menu a tendina con una voce sola («Nessuna auto salvata») sarebbe un
+                   campo in più che non fa niente. -->
+              <label class="rating-label hidden" id="ride-auto-label" for="ride-auto">Auto
+                <select id="ride-auto"></select>
+              </label>
               <label class="rating-label" for="ride-seats">Posti
                 <select id="ride-seats">
                   <option value="4" selected>4</option>
@@ -436,6 +442,17 @@
           <button type="button" id="profile-logout" class="btn btn-secondary btn-full btn-danger-full"><svg width="15" height="15"><use href="#i-logout"/></svg> Esci dall'account</button>
           <button type="button" id="profile-delete" class="btn btn-secondary btn-full btn-danger-full">Elimina il mio account</button>
         </div>
+
+        <!-- Le auto (C33). Il testo dice il momento in cui l'informazione serve, che
+             è l'unico argomento per cui valga la pena compilare un campo in più. -->
+        <section id="auto-card" class="card">
+          <h3 class="card-title">Le tue auto</h3>
+          <p class="card-sub">Salvane una e pubblichi scegliendo l'auto e l'ora, senza reinserire i posti. Modello e colore servono a chi ti aspetta sotto casa al buio: è l'unico momento in cui quell'informazione conta davvero.</p>
+          <div id="auto-list" class="auto-list"></div>
+          <div class="group-card-actions">
+            <button type="button" id="auto-nuova" class="btn btn-ghost btn-small"><svg width="14" height="14"><use href="#i-plus"/></svg> Aggiungi un'auto</button>
+          </div>
+        </section>
 
         <section id="zona-card" class="card">
           <h3 class="card-title">La mia zona</h3>

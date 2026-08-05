@@ -515,6 +515,193 @@ document.getElementById('ride-qui').addEventListener('click', async () => {
   }
 });
 
+// ══════════════════════════════════════════════════════════════════════════
+// C33 — Il garage.
+//
+// Le auto sono di una persona, non di una comitiva: la stessa Panda porta gente
+// in due gruppi diversi. Stanno quindi nel Profilo e non nella Comitiva, e le
+// legge chi condivide un gruppo — la regola dei profili (D2).
+// ══════════════════════════════════════════════════════════════════════════
+let mieAuto = [];
+
+async function caricaAuto() {
+  const { data, error } = await supabase
+    .from('auto')
+    .select('id, nome, posti, modello, colore, consumo_km_l, predefinita')
+    .eq('user_id', currentUser.id)
+    .order('predefinita', { ascending: false })
+    .order('creata_il', { ascending: true });
+  if (error) { console.error('auto:', error); }
+  mieAuto = data ?? [];
+  riempiSceltaAuto();
+}
+
+// Il menu nel modulo di pubblicazione. Scegliere un'auto porta con se' i posti:
+// e' tutto il senso del cantiere, e farlo qui invece che a mano evita la
+// combinazione senza senso «la Panda da 4, con 6 posti».
+function riempiSceltaAuto() {
+  const sel = document.getElementById('ride-auto');
+  const lab = document.getElementById('ride-auto-label');
+  lab.classList.toggle('hidden', mieAuto.length === 0);
+  sel.innerHTML = '';
+  if (!mieAuto.length) return;
+  const vuota = document.createElement('option');
+  vuota.value = '';
+  vuota.textContent = 'Nessuna';
+  sel.appendChild(vuota);
+  for (const a of mieAuto) {
+    const o = document.createElement('option');
+    o.value = a.id;
+    o.textContent = a.nome;
+    if (a.predefinita) o.selected = true;
+    sel.appendChild(o);
+  }
+  applicaAutoScelta();
+}
+
+function autoScelta() {
+  const id = document.getElementById('ride-auto')?.value;
+  return id ? mieAuto.find(a => a.id === id) ?? null : null;
+}
+
+function applicaAutoScelta() {
+  const a = autoScelta();
+  if (a) document.getElementById('ride-seats').value = String(a.posti);
+}
+
+document.getElementById('ride-auto').addEventListener('change', applicaAutoScelta);
+
+function descriviAuto(a) {
+  return [a.modello, a.colore].filter(Boolean).join(' ') || null;
+}
+
+function renderAuto() {
+  const box = document.getElementById('auto-list');
+  box.innerHTML = '';
+  if (!mieAuto.length) {
+    const p = document.createElement('p');
+    p.className = 'form-hint';
+    p.textContent = 'Nessuna auto salvata: pubblichi come prima, scrivendo i posti ogni volta.';
+    box.appendChild(p);
+    return;
+  }
+  for (const a of mieAuto) {
+    const riga = document.createElement('div');
+    riga.className = 'auto-riga';
+    const testo = document.createElement('div');
+    testo.className = 'auto-testo';
+    const nome = document.createElement('b');
+    nome.textContent = a.nome + (a.predefinita ? ' · predefinita' : '');
+    testo.appendChild(nome);
+    const sotto = document.createElement('small');
+    sotto.textContent = [
+      `${a.posti} ${a.posti === 1 ? 'posto' : 'posti'}`,
+      descriviAuto(a),
+      a.consumo_km_l ? `${a.consumo_km_l} km/l` : null,
+    ].filter(Boolean).join(' · ');
+    testo.appendChild(sotto);
+    riga.appendChild(testo);
+
+    if (!a.predefinita) {
+      const pred = document.createElement('button');
+      pred.className = 'btn btn-ghost btn-small';
+      pred.textContent = 'Predefinita';
+      pred.addEventListener('click', async () => {
+        // Due passaggi e non uno: l'indice parziale ammette **una** predefinita per
+        // persona, quindi accenderne una senza prima spegnere l'altra viene rifiutato.
+        await supabase.from('auto').update({ predefinita: false })
+          .eq('user_id', currentUser.id).eq('predefinita', true);
+        const { error } = await supabase.from('auto').update({ predefinita: true }).eq('id', a.id);
+        if (error) { toast(friendlyError(error)); return; }
+        await caricaAuto();
+        renderAuto();
+      });
+      riga.appendChild(pred);
+    }
+
+    const mod = document.createElement('button');
+    mod.className = 'btn btn-ghost btn-small';
+    mod.textContent = 'Modifica';
+    mod.addEventListener('click', () => modificaAuto(a));
+    riga.appendChild(mod);
+
+    const via = document.createElement('button');
+    via.className = 'btn btn-ghost btn-small btn-danger';
+    via.textContent = 'Togli';
+    via.addEventListener('click', async () => {
+      if (!await conferma(`Togliere "${a.nome}" dal garage?`, {
+        // `on delete set null` sulla colonna di `rides`: e' il motivo per cui questa
+        // frase si puo' scrivere, e va detta perche' altrimenti nessuno la crede.
+        testo: 'I passaggi già pubblicati con questa auto restano, e restano i conti della benzina. Sparisce solo dal menu quando pubblichi.',
+        azione: 'Togli l\'auto',
+        pericolo: true,
+      })) return;
+      const { error } = await supabase.from('auto').delete().eq('id', a.id);
+      if (error) { toast(friendlyError(error)); return; }
+      await caricaAuto();
+      renderAuto();
+    });
+    riga.appendChild(via);
+    box.appendChild(riga);
+  }
+}
+
+// Una domanda per volta, con i dialoghi che l'app ha gia'. Un modulo intero per
+// cinque campi facoltativi sarebbe una schermata in piu' da disegnare e mantenere
+// per una cosa che si compila una volta nella vita dell'auto.
+async function modificaAuto(a) {
+  const nuova = !a;
+  const nome = await ask(nuova ? 'Come la chiami?' : 'Nome dell\'auto', {
+    text: 'Il nome che vedi tu nel menu quando pubblichi. «La mia», «Panda», «Quella di papà».',
+    value: a?.nome ?? '', placeholder: 'Panda',
+  });
+  if (!nome) return;
+  const posti = await ask('Quanti posti per i passeggeri?', {
+    text: 'Senza contare il tuo. È il numero di sedili che si possono prenotare.',
+    value: String(a?.posti ?? 4), type: 'number',
+    scelte: [[3, '3'], [4, '4'], [5, '5']],
+  });
+  if (posti === null) return;
+  const n = Number(posti);
+  if (!(n >= 1 && n <= 6)) { toast('Da 1 a 6 posti.'); return; }
+  const modello = await ask('Che modello è?', {
+    text: 'Facoltativo, e serve a chi ti aspetta: è metà di «cerca la Panda blu».',
+    value: a?.modello ?? '', placeholder: 'Fiat Panda',
+  });
+  if (modello === null) return;
+  const colore = await ask('Di che colore?', {
+    text: 'Facoltativo. È l\'altra metà, ed è quella che si vede da lontano.',
+    value: a?.colore ?? '', placeholder: 'blu',
+  });
+  if (colore === null) return;
+  const consumo = await ask('Quanti chilometri con un litro?', {
+    text: 'Facoltativo. Serve solo a farti proporre il «€ a testa» invece di inventarlo ogni volta.',
+    value: a?.consumo_km_l ? String(a.consumo_km_l) : '', placeholder: '15', type: 'number',
+  });
+  if (consumo === null) return;
+  const km = consumo === '' ? null : Number(String(consumo).replace(',', '.'));
+  if (km !== null && !(km >= 3 && km <= 40)) { toast('Un consumo fra 3 e 40 km/l.'); return; }
+
+  const riga = {
+    nome: nome.slice(0, 30),
+    posti: n,
+    modello: modello.trim().slice(0, 40) || null,
+    colore: colore.trim().slice(0, 20) || null,
+    consumo_km_l: km,
+  };
+  const { error } = nuova
+    ? await supabase.from('auto').insert({
+        ...riga, user_id: currentUser.id, predefinita: mieAuto.length === 0,
+      })
+    : await supabase.from('auto').update(riga).eq('id', a.id);
+  if (error) { toast(friendlyError(error)); return; }
+  toast(nuova ? `"${riga.nome}" è nel garage.` : 'Auto aggiornata.');
+  await caricaAuto();
+  renderAuto();
+}
+
+document.getElementById('auto-nuova').addEventListener('click', () => modificaAuto(null));
+
 function renderZona() {
   const stato = document.getElementById('zona-stato');
   stato.textContent = miaZona
@@ -845,6 +1032,7 @@ function renderProfile() {
     + (sospeso ? ' · Sospeso' : '');
   document.getElementById('profile-email').textContent = currentUser?.email ?? '';
   renderZona();
+  renderAuto();
   renderNotifiche();
   renderBlocked();
   renderReports();
@@ -2164,6 +2352,9 @@ rideForm.addEventListener('submit', async (e) => {
     seats: Number(document.getElementById('ride-seats').value),
     fuel_per_person: Number(document.getElementById('ride-fuel').value) || null,
     note: document.getElementById('ride-note').value.trim() || null,
+    // C33: quale auto. Il database rifiuta l'auto di un altro (`check_ride`), quindi
+    // qui basta dire quale si e' scelta.
+    auto_id: document.getElementById('ride-auto').value || null,
   };
   if (base.visibilita === 'zona' && base.origin_lat === null) {
     toast('Per aprire il passaggio a chi è in zona serve "Parto da qui": senza, non lo vedrebbe nessuno.');
@@ -2336,7 +2527,7 @@ let loadToken = 0;
 // `016_coordinate_riservate.sql` un client non ha il permesso di leggere origin_lat,
 // origin_lon, dest_lat e dest_lon, quindi `select('*')` verrebbe rifiutato in blocco.
 // Aggiungendo una colonna a `rides`, va aggiunta anche qui.
-const COLONNE_RIDE = 'id, driver_id, ride_date, depart_time, origin, destination, seats, note, created_at, group_id, fuel_per_person, visibilita, ritardo_min, ritorno_di';
+const COLONNE_RIDE = 'id, driver_id, ride_date, depart_time, origin, destination, seats, note, created_at, group_id, fuel_per_person, visibilita, ritardo_min, ritorno_di, auto_id';
 
 // C31 — l'altra meta' del viaggio, cercata fra i passaggi gia' in pagina.
 // Il legame in `rides` va dal ritorno all'andata, quindi la ricerca e' nei due
@@ -2372,7 +2563,7 @@ async function loadRides(silent = false) {
   }
   let query = supabase
     .from('rides')
-    .select(`${COLONNE_RIDE}, driver:profiles!rides_driver_id_fkey(display_name, avatar_url), seat_claims(seat_index, passenger_id, passenger:profiles!seat_claims_passenger_id_fkey(display_name, avatar_url)), ride_comments(count), ride_waitlist(user_id, created_at, profile:profiles(display_name))`)
+    .select(`${COLONNE_RIDE}, driver:profiles!rides_driver_id_fkey(display_name, avatar_url), seat_claims(seat_index, passenger_id, passenger:profiles!seat_claims_passenger_id_fkey(display_name, avatar_url)), ride_comments(count), ride_waitlist(user_id, created_at, profile:profiles(display_name)), auto(nome, modello, colore)`)
     .eq('ride_date', currentDate)
     .order('depart_time', { ascending: true, nullsFirst: false });
   // Niente piu' filtro sul gruppo qui: da C9 la policy fa uscire anche i passaggi aperti
@@ -2993,7 +3184,11 @@ function renderRides(rides) {
     info.appendChild(sub);
     const drv = document.createElement('div');
     drv.className = 'ride-sub';
-    drv.textContent = `Guida ${nomeDi(ride.driver)}`;
+    // C33: che auto cercare. Sta accanto a chi guida e non fra le pastiglie in
+    // fondo, perche' risponde alla stessa domanda — «chi passa a prendermi» — e
+    // perche' si legge nel momento in cui si guarda la strada, non la scheda.
+    const targa = ride.auto ? descriviAuto(ride.auto) : null;
+    drv.textContent = `Guida ${nomeDi(ride.driver)}` + (targa ? ` · ${targa}` : '');
     // Da C9 in Home arrivano anche passaggi di comitive a cui non appartengo: senza
     // dirlo, sembrerebbero della propria e non si capirebbe chi sia chi guida.
     if (ride.group_id !== currentGroupId) {
@@ -3290,6 +3485,10 @@ async function render() {
     await loadBlocked();
     applicaSospensione();
     await loadGroups();
+    // Prima di renderProfile(), che disegna il garage, e prima che il modulo di
+    // pubblicazione possa aprirsi: senza, il menu delle auto resta vuoto fino al
+    // primo giro nel Profilo.
+    await caricaAuto();
     renderProfile();
     askNotifyPermission();
     subscribeRealtime();

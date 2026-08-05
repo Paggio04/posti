@@ -1172,6 +1172,20 @@ input:focus-visible, select:focus-visible, textarea:focus-visible {
 .fermate-titolo { font-size: 0.82rem; font-weight: 600; color: var(--ink); margin-bottom: 8px; }
 .fermate-elenco { display: flex; gap: 6px; flex-wrap: wrap; margin-bottom: 8px; }
 .fermate-box .form-hint { margin: 0; }
+
+/* ---- il garage (C33) ----
+   Una riga per auto, con le azioni in fondo: sono poche e si toccano di rado,
+   quindi stanno scritte invece che nascoste dietro un'icona da indovinare. */
+.auto-list { display: grid; gap: 8px; margin: 10px 0; }
+.auto-riga {
+  display: flex; align-items: center; gap: 8px; flex-wrap: wrap;
+  padding: 10px 12px;
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  background: var(--surface-2);
+}
+.auto-testo { flex: 1 1 160px; min-width: 0; font-size: 0.85rem; }
+.auto-testo small { display: block; color: var(--ink-soft); font-size: 0.76rem; margin-top: 2px; }
 .group-card-actions { display: flex; gap: 8px; flex-wrap: wrap; }
 
 /* ================= STATISTICHE ================= */

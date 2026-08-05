@@ -117,6 +117,9 @@ jobs:
       - name: Tre grafie della stessa fermata sono un posto solo
         run: psql -v ON_ERROR_STOP=1 -q -f supabase/test/verifica-fermate.sql
 
+      - name: L'auto ha un profilo, e non si pubblica con quella di un altro
+        run: psql -v ON_ERROR_STOP=1 -q -f supabase/test/verifica-auto.sql
+
       - name: Un ritardo annunciato arriva a chi e' a bordo, e una volta per numero
         run: psql -v ON_ERROR_STOP=1 -q -f supabase/test/verifica-ritardo.sql
 
