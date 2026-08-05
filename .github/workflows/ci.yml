@@ -102,6 +102,9 @@ jobs:
       - name: Chi aveva un posto sa che il passaggio e' stato annullato
         run: psql -v ON_ERROR_STOP=1 -q -f supabase/test/verifica-annullamento.sql
 
+      - name: Un ritardo annunciato arriva a chi e' a bordo, e una volta per numero
+        run: psql -v ON_ERROR_STOP=1 -q -f supabase/test/verifica-ritardo.sql
+
       - name: Cancellare il proprio account non danneggia gli altri
         run: psql -v ON_ERROR_STOP=1 -q -f supabase/test/verifica-cancellazione.sql
 

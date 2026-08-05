@@ -61,7 +61,19 @@ function hasDeparted(ride) {
   if (ride.ride_date !== todayISO() || !ride.depart_time) return false;
   const [h, m] = ride.depart_time.split(':').map(Number);
   const now = new Date();
-  return h * 60 + m <= now.getHours() * 60 + now.getMinutes();
+  // Con un ritardo annunciato (C30) l'auto non e' partita: e' quello il senso
+  // dell'annuncio. Senza questo termine la lista d'attesa si chiuderebbe mentre
+  // l'auto e' ancora ferma sotto casa.
+  return h * 60 + m + (ride.ritardo_min || 0) <= now.getHours() * 60 + now.getMinutes();
+}
+
+// «07:40» + 15 -> «07:55». Somma in minuti e non con una Date: una Date vuole un
+// giorno, e qui il giorno non c'entra — un ritardo che scavalca la mezzanotte
+// rientra dall'altra parte del quadrante, come su un orologio vero.
+function oraPiu(hhmm, minuti) {
+  const [h, m] = String(hhmm).split(':').map(Number);
+  const t = (((h * 60 + m + (minuti || 0)) % 1440) + 1440) % 1440;
+  return `${String(Math.floor(t / 60)).padStart(2, '0')}:${String(t % 60).padStart(2, '0')}`;
 }
 
 // --- Auth ---
@@ -658,10 +670,25 @@ async function condividi(testo, url) {
 const dialogTesto = document.getElementById('dialog-text');
 const dialogOk = document.getElementById('dialog-ok');
 
-function apriDialogo({ titolo, testo = '', campo = false, azione = 'Conferma', pericolo = false, placeholder = '', value = '', type = 'text' }) {
+// `scelte` e' un elenco di [valore, etichetta]: le risposte che si danno quasi
+// sempre diventano un tocco solo, e il campo resta li' sotto per tutte le altre.
+// Serve dove la risposta si da' col telefono in mano e di fretta — annunciare un
+// ritardo mentre si esce di casa in ritardo (C30) e' il caso limite.
+function apriDialogo({ titolo, testo = '', campo = false, azione = 'Conferma', pericolo = false, placeholder = '', value = '', type = 'text', scelte = [] }) {
   document.getElementById('dialog-title').textContent = titolo;
   dialogTesto.textContent = testo;
   dialogTesto.style.display = testo ? '' : 'none';
+  const boxScelte = document.getElementById('dialog-scelte');
+  boxScelte.innerHTML = '';
+  boxScelte.classList.toggle('hidden', scelte.length === 0);
+  for (const [val, etichetta] of scelte) {
+    const b = document.createElement('button');
+    b.type = 'button';
+    b.className = 'filtro';
+    b.textContent = etichetta;
+    b.addEventListener('click', () => chiudiDialogo(String(val)));
+    boxScelte.appendChild(b);
+  }
   dialogInput.classList.toggle('hidden', !campo);
   dialogInput.type = type;
   dialogInput.placeholder = placeholder;
@@ -677,8 +704,8 @@ function apriDialogo({ titolo, testo = '', campo = false, azione = 'Conferma', p
   return new Promise((resolve) => { dialogResolve = resolve; });
 }
 
-function ask(title, { text = '', placeholder = '', value = '', type = 'text' } = {}) {
-  return apriDialogo({ titolo: title, testo: text, campo: true, placeholder, value, type });
+function ask(title, { text = '', placeholder = '', value = '', type = 'text', scelte = [] } = {}) {
+  return apriDialogo({ titolo: title, testo: text, campo: true, placeholder, value, type, scelte });
 }
 
 // Torna `true` solo se si e' scelto davvero: chiudere con Esc o toccare fuori vale no.
@@ -2070,6 +2097,10 @@ function subscribeRealtime() {
       loadRides(true);
     })
     .on('postgres_changes', { event: 'DELETE', schema: 'public', table: 'rides' }, () => loadRides(true))
+    // C30: un ritardo annunciato mentre si guarda la scheda deve comparire senza che
+    // nessuno ricarichi. E' l'unico caso in cui una riga di `rides` cambia dopo essere
+    // stata pubblicata, ed e' il caso in cui i secondi contano.
+    .on('postgres_changes', { event: 'UPDATE', schema: 'public', table: 'rides', filter: `ride_date=eq.${currentDate}` }, () => loadRides(true))
     .on('postgres_changes', { event: '*', schema: 'public', table: 'ride_waitlist' }, () => loadRides(true))
     .on('postgres_changes', { event: '*', schema: 'public', table: 'ride_requests', filter: `ride_date=eq.${currentDate}` }, () => loadRides(true))
     .subscribe();
@@ -2128,7 +2159,7 @@ let loadToken = 0;
 // `016_coordinate_riservate.sql` un client non ha il permesso di leggere origin_lat,
 // origin_lon, dest_lat e dest_lon, quindi `select('*')` verrebbe rifiutato in blocco.
 // Aggiungendo una colonna a `rides`, va aggiunta anche qui.
-const COLONNE_RIDE = 'id, driver_id, ride_date, depart_time, origin, destination, seats, note, created_at, group_id, fuel_per_person, visibilita';
+const COLONNE_RIDE = 'id, driver_id, ride_date, depart_time, origin, destination, seats, note, created_at, group_id, fuel_per_person, visibilita, ritardo_min';
 
 // Le coordinate del ritrovo arrivano a parte, e solo per i passaggi a cui si ha diritto:
 // e' il database a decidere quali (`coordinate_passaggi`), non il client. Chi resta senza
@@ -2636,6 +2667,35 @@ async function claimSeat(ride, seatIndex) {
   loadRides();
 }
 
+// --- C30: annunciare un ritardo ---
+// Zero non e' un ritardo di zero minuti: e' «ho sbagliato, sono in orario». Il
+// database tiene `null` per quello, cosi' il vincolo resta «da 1 a 180» e non
+// esiste una seconda maniera di dire la stessa cosa.
+async function annunciaRitardo(ride) {
+  if (bloccaSeSospeso('annunciare un ritardo')) return;
+  const risposta = await ask('Di quanto sei in ritardo?', {
+    text: ride.ritardo_min > 0
+      ? `Adesso dice ${ride.ritardo_min} minuti. Scrivi 0 per dire che sei di nuovo in orario.`
+      : 'Chi ha un posto sulla tua auto lo vede subito, senza ricaricare.',
+    value: String(ride.ritardo_min || ''), placeholder: '10', type: 'number',
+    scelte: [[5, '5 min'], [10, '10 min'], [15, '15 min'], [30, '30 min']],
+  });
+  if (risposta === null) return;
+  const minuti = Math.round(Number(String(risposta).replace(',', '.')));
+  if (!Number.isFinite(minuti) || minuti < 0 || minuti > 180) {
+    toast('Da 1 a 180 minuti, oppure 0 per dire che sei in orario.');
+    return;
+  }
+  const { error } = await supabase.from('rides')
+    .update({ ritardo_min: minuti || null, ritardo_alle: minuti ? new Date().toISOString() : null })
+    .eq('id', ride.id);
+  if (error) { toast(friendlyError(error)); return; }
+  toast(minuti
+    ? `Annunciato: ${minuti} minuti di ritardo, si parte verso le ${oraPiu(ride.depart_time || '00:00', minuti)}.`
+    : 'Ritardo tolto: risulti di nuovo in orario.');
+  loadRides(true);
+}
+
 async function releaseSeat(ride, claim, mine) {
   const titolo = mine ? 'Scendere da questa auto?' : `Liberare il posto di ${nomeDi(claim.passenger)}?`;
   if (!await conferma(titolo, {
@@ -2820,13 +2880,25 @@ function renderRides(rides) {
     if (ride.depart_time && currentDate === todayISO()) {
       const [h, m] = ride.depart_time.split(':').map(Number);
       const now = new Date();
-      const mins = h * 60 + m - (now.getHours() * 60 + now.getMinutes());
+      // C30: annunciato un ritardo, il conto alla rovescia deve contare verso l'ora
+      // vera. Lasciarlo sull'ora pubblicata direbbe «Partita» a un'auto che sta
+      // ancora arrivando, cioe' la cosa esattamente sbagliata da dire a chi aspetta.
+      const mins = h * 60 + m + (ride.ritardo_min || 0) - (now.getHours() * 60 + now.getMinutes());
       const t = document.createElement('span');
       t.className = 'place-badge' + (mins > 0 && mins <= 60 ? ' mine' : '');
       t.textContent = mins <= 0 ? 'Partita'
         : mins < 60 ? `Parte tra ${mins} min`
         : `Parte tra ${Math.floor(mins / 60)} h ${mins % 60} min`;
       foot.appendChild(t);
+    }
+    // Il ritardo si vede a tutti, sempre: chi apre l'app in quel momento deve
+    // trovarlo scritto, non dedurlo dal conto alla rovescia.
+    if (ride.ritardo_min > 0) {
+      const rit = document.createElement('span');
+      rit.className = 'place-badge ritardo';
+      rit.textContent = `In ritardo di ${ride.ritardo_min} min`
+        + (ride.depart_time ? ` · verso le ${oraPiu(ride.depart_time, ride.ritardo_min)}` : '');
+      foot.appendChild(rit);
     }
     if (ride.fuel_per_person > 0) {
       const fuel = document.createElement('span');
@@ -2841,6 +2913,20 @@ function renderRides(rides) {
       foot.appendChild(note);
     }
     card.appendChild(foot);
+
+    // ── C30: «sono in ritardo» ───────────────────────────────────────────
+    // Solo a chi guida e solo il giorno stesso: annunciare un ritardo per
+    // dopodomani non vuol dire niente, e il bottone in piu' su ogni scheda
+    // renderebbe illeggibili le altre azioni. La cifra si sceglie da un elenco
+    // corto invece che scriverla, perche' si preme col telefono in mano mentre
+    // si esce di casa in ritardo — che e' l'unico momento in cui serve.
+    if (ride.driver_id === currentUser.id && ride.ride_date === todayISO() && !sospeso) {
+      const rBtn = document.createElement('button');
+      rBtn.className = 'btn btn-ghost btn-small';
+      rBtn.textContent = ride.ritardo_min > 0 ? `In ritardo di ${ride.ritardo_min} min · cambia` : 'Sono in ritardo';
+      rBtn.addEventListener('click', () => annunciaRitardo(ride));
+      card.appendChild(rBtn);
+    }
 
     // Lista d'attesa: quando l'auto è piena ci si mette in coda,
     // il primo in lista prende il posto appena qualcuno scende (trigger DB)

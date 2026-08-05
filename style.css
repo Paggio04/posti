@@ -959,6 +959,16 @@ input:focus-visible, select:focus-visible, textarea:focus-visible {
   border-color: var(--ottone-bordo);
 }
 
+/* Un ritardo annunciato (C30) non e' un errore, ma e' la cosa che cambia i piani
+   di chi legge: prende il rosso perche' e' l'unica pastiglia del piede che
+   qualcuno deve **notare** senza cercarla. */
+.place-badge.ritardo { color: var(--danger); background: var(--danger-soft); }
+
+/* Le risposte da un tocco nel dialogo (C30): stanno sopra il campo, che resta
+   per tutte le altre. Riusano `.filtro`, che e' gia' la forma «pastiglia che si
+   preme» di questa interfaccia. */
+.dialog-scelte { display: flex; flex-wrap: wrap; gap: 8px; margin: 0 0 12px; }
+
 /* Auto SVG. Materiali, non tinte piatte (C15): la lamiera prende luce dall'alto,
    il vetro ha un riflesso, e sotto c'e' un'ombra che appoggia l'auto a terra.
    Ogni guidatore ha la sua tinta (--car-hue), quindi la luce deve funzionare su
