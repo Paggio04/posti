@@ -82,6 +82,7 @@ begin
   ('notifica_annullamento',      '',                    'nessuno'),   -- 026, lo chiama il trigger
   ('notifica_ritardo',           '',                    'nessuno'),   -- 027, idem
   ('registra_fermate',           '',                    'nessuno'),   -- 029, idem
+  ('check_ospite',               '',                    'nessuno'),   -- 031, idem
   ('blinda_coordinate',          '',                    'nessuno'),
   ('blinda_funzioni',            '',                    'nessuno'),
   ('blinda_profilo',             '',                    'nessuno'),

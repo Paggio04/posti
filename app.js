@@ -57,6 +57,22 @@ function addDaysISO(iso, days) {
 // nello storico. Senza questa rete, l'incorporamento nullo mandava in errore la pagina.
 function nomeDi(profilo) { return profilo?.display_name ?? 'Ex membro'; }
 
+// C35 — un sedile puo' essere di una persona con un account o di un ospite con un
+// nome. Da qui in giu' non si legge piu' `claim.passenger` a mano: il posto ha un
+// occupante, e queste tre funzioni sono l'unico modo di chiedere chi sia.
+function nomeOccupante(claim) {
+  return claim.passenger_id ? nomeDi(claim.passenger) : (claim.ospite_nome ?? 'Ospite');
+}
+// Chi risponde di quel posto: e' l'ospite stesso a non esistere come persona, e la
+// sua quota sta nel conto di chi lo ha portato (031, `saldo_con`). La stessa regola
+// vale nei conti del riepilogo, o le due somme direbbero cose diverse.
+function chiRisponde(claim) {
+  return claim.passenger_id ?? claim.invitato_da ?? null;
+}
+function mioPosto(claim) {
+  return claim.passenger_id === currentUser.id;
+}
+
 function hasDeparted(ride) {
   if (ride.ride_date !== todayISO() || !ride.depart_time) return false;
   const [h, m] = ride.depart_time.split(':').map(Number);
@@ -766,7 +782,11 @@ async function esportaDati() {
   const [profilo, auto, posti, richieste, commenti, attesa, gruppi, segnalazioni, blocchi] = await Promise.all([
     supabase.rpc('mio_profilo'),
     mieAuto(),
-    mio('seat_claims', 'passenger_id'),
+    // Il proprio posto **e quelli presi per un ospite**: sono righe che questa
+    // persona ha scritto e di cui paga la quota (C35). Lasciarle fuori vorrebbe
+    // dire che «tutto quello che il database ha su di te» non e' vero.
+    supabase.from('seat_claims').select('*')
+      .or(`passenger_id.eq.${currentUser.id},invitato_da.eq.${currentUser.id}`),
     mio('ride_requests', 'user_id'),
     mio('ride_comments', 'user_id'),
     mio('ride_waitlist', 'user_id'),
@@ -1628,7 +1648,7 @@ async function loadHistory() {
   list.innerHTML = '<div class="skeleton"></div>';
   let hq = supabase
     .from('rides')
-    .select('ride_date, origin, destination, depart_time, driver_id, driver:profiles!rides_driver_id_fkey(display_name), seat_claims(passenger_id, passenger:profiles!seat_claims_passenger_id_fkey(display_name))')
+    .select('ride_date, origin, destination, depart_time, driver_id, driver:profiles!rides_driver_id_fkey(display_name), seat_claims(passenger_id, ospite_nome, invitato_da, passenger:profiles!seat_claims_passenger_id_fkey(display_name))')
     .lt('ride_date', todayISO());
   hq = hq.eq('group_id', currentGroupId);
   const { data: tutti, error } = await hq
@@ -1644,9 +1664,11 @@ async function loadHistory() {
 
   // I due filtri si combinano, e insieme valgono il piu' stretto dei due: chi
   // chiede «i miei» **e** «guidati da me» chiede i suoi turni alla guida.
-  const mioPosto = (r) => r.seat_claims.some(c => c.passenger_id === currentUser.id);
+  // «I miei passaggi» comprende quelli su cui ho portato un ospite: il posto l'ho
+  // preso io, e nel conto della benzina risulta a me (C35).
+  const cEroIo = (r) => r.seat_claims.some(c => chiRisponde(c) === currentUser.id);
   const data = tutti.filter(r =>
-    (!storicoSoloMiei || r.driver_id === currentUser.id || mioPosto(r))
+    (!storicoSoloMiei || r.driver_id === currentUser.id || cEroIo(r))
     && (!storicoSoloGuidati || r.driver_id === currentUser.id));
 
   // Il conteggio e' la risposta alla domanda, e va detto anche quando il filtro
@@ -1705,7 +1727,7 @@ async function loadHistory() {
     for (const c of r.seat_claims) {
       const chip = document.createElement('span');
       chip.className = 'history-chip';
-      chip.textContent = nomeDi(c.passenger);
+      chip.textContent = nomeOccupante(c);
       people.appendChild(chip);
     }
     item.appendChild(people);
@@ -1767,7 +1789,7 @@ async function disegnaRiepilogo(box) {
 
   let sq = supabase
     .from('rides')
-    .select('id, ride_date, depart_time, origin, destination, seats, driver_id, fuel_per_person, driver:profiles!rides_driver_id_fkey(display_name), seat_claims(passenger_id, passenger:profiles!seat_claims_passenger_id_fkey(display_name))');
+    .select('id, ride_date, depart_time, origin, destination, seats, driver_id, fuel_per_person, driver:profiles!rides_driver_id_fkey(display_name), seat_claims(passenger_id, ospite_nome, invitato_da, passenger:profiles!seat_claims_passenger_id_fkey(display_name))');
   sq = sq.eq('group_id', currentGroupId);
   const { data, error } = await sq;
   // Non si scrive un messaggio a mano: si lascia salire, cosi' l'errore vero finisce
@@ -1803,9 +1825,15 @@ async function disegnaRiepilogo(box) {
       d30.n++; drives30.set(r.driver_id, d30);
     }
     for (const c of r.seat_claims) {
-      nomePer.set(c.passenger_id, nomeDi(c.passenger));
-      const p = ridesTaken.get(c.passenger_id) ?? { name: nomeDi(c.passenger), n: 0 };
-      p.n++; ridesTaken.set(c.passenger_id, p);
+      // Un ospite non e' una persona di questa applicazione: il posto si conta a
+      // chi lo ha portato, che e' la stessa regola con cui `saldo_con` gli mette
+      // addosso la quota (031). Due regole diverse qui e nel database vorrebbero
+      // dire due totali diversi per la stessa cosa.
+      const chi = chiRisponde(c);
+      if (!chi) continue;
+      nomePer.set(chi, c.passenger_id ? nomeDi(c.passenger) : (nomePer.get(chi) ?? 'Qualcuno'));
+      const p = ridesTaken.get(chi) ?? { name: nomePer.get(chi) ?? 'Qualcuno', n: 0 };
+      p.n++; ridesTaken.set(chi, p);
     }
   }
   const futuri = data
@@ -1862,14 +1890,16 @@ async function disegnaRiepilogo(box) {
     const q = Number(r.fuel_per_person) || 0;
     if (!q) continue;
     for (const c of r.seat_claims) {
-      if (c.passenger_id === currentUser.id && r.driver_id !== currentUser.id) {
+      const chi = chiRisponde(c);
+      if (chi === currentUser.id && r.driver_id !== currentUser.id) {
         dovutoDaMe.set(r.driver_id, (dovutoDaMe.get(r.driver_id) || 0) + q);
         segna(r.driver_id, r.ride_date);
         voce(r.driver_id, r.ride_date, `Posto sulla sua auto · ${tratta(r)}`, -q);
-      } else if (r.driver_id === currentUser.id && c.passenger_id !== currentUser.id) {
-        dovutoAMe.set(c.passenger_id, (dovutoAMe.get(c.passenger_id) || 0) + q);
-        segna(c.passenger_id, r.ride_date);
-        voce(c.passenger_id, r.ride_date, `Posto sulla tua auto · ${tratta(r)}`, q);
+      } else if (r.driver_id === currentUser.id && chi && chi !== currentUser.id) {
+        dovutoAMe.set(chi, (dovutoAMe.get(chi) || 0) + q);
+        segna(chi, r.ride_date);
+        voce(chi, r.ride_date, `Posto sulla tua auto · ${tratta(r)}`
+          + (c.passenger_id ? '' : ` (ospite: ${c.ospite_nome})`), q);
       }
     }
   }
@@ -1992,7 +2022,7 @@ async function disegnaRiepilogo(box) {
       <div class="riga"><span>Ritrovo</span><b>${escapeHtml(prossimo.origin || 'da concordare')}</b></div>
       <div class="riga"><span>${prossimo.seat_claims.length === 1 ? 'Passeggero' : 'Passeggeri'}</span><b>${
         prossimo.seat_claims.length
-          ? prossimo.seat_claims.map(c => escapeHtml(nomeCorto(c.passenger_id))).join(' · ')
+          ? prossimo.seat_claims.map(c => escapeHtml(c.passenger_id ? nomeCorto(c.passenger_id) : `${c.ospite_nome} (ospite)`)).join(' · ')
           : 'nessuno, per ora'}</b></div>
       <button type="button" class="go" data-vai="home" aria-label="Vai al passaggio">→</button>
     </section>` : `
@@ -2692,7 +2722,7 @@ async function loadRides(silent = false) {
   }
   let query = supabase
     .from('rides')
-    .select(`${COLONNE_RIDE}, driver:profiles!rides_driver_id_fkey(display_name, avatar_url), seat_claims(seat_index, passenger_id, passenger:profiles!seat_claims_passenger_id_fkey(display_name, avatar_url)), ride_comments(count), ride_waitlist(user_id, created_at, profile:profiles(display_name)), auto(nome, modello, colore)`)
+    .select(`${COLONNE_RIDE}, driver:profiles!rides_driver_id_fkey(display_name, avatar_url), seat_claims(seat_index, passenger_id, ospite_nome, invitato_da, passenger:profiles!seat_claims_passenger_id_fkey(display_name, avatar_url)), ride_comments(count), ride_waitlist(user_id, created_at, profile:profiles(display_name)), auto(nome, modello, colore)`)
     .eq('ride_date', currentDate)
     .order('depart_time', { ascending: true, nullsFirst: false });
   // Niente piu' filtro sul gruppo qui: da C9 la policy fa uscire anche i passaggi aperti
@@ -2784,7 +2814,7 @@ function updateDayCta(rides) {
   if (past || sospeso) offerCard.classList.add('hidden');
   const reqBtn = document.getElementById('request-toggle');
   const iDrive = rides.some(r => r.driver_id === currentUser.id);
-  const iSit = rides.some(r => r.seat_claims.some(c => c.passenger_id === currentUser.id));
+  const iSit = rides.some(r => r.seat_claims.some(mioPosto));
   const myReq = currentRequests.some(r => r.user_id === currentUser.id);
   reqBtn.classList.toggle('hidden', past || iDrive || iSit);
   reqBtn.innerHTML = myReq
@@ -2827,7 +2857,9 @@ async function renderWalkers(rides) {
   const seated = new Set();
   for (const r of rides) {
     seated.add(r.driver_id);
-    for (const c of r.seat_claims) seated.add(c.passenger_id);
+    // Un ospite non e' un membro: non compare fra chi e' «ancora senza passaggio»,
+    // e chi lo ha portato ci compare solo se non ha un posto suo.
+    for (const c of r.seat_claims) if (c.passenger_id) seated.add(c.passenger_id);
   }
   const requesters = new Map(currentRequests.map(r => [r.user_id, r.ora || null]));
 
@@ -3092,7 +3124,7 @@ function buildCar(ride) {
   }
 
   const claims = new Map(ride.seat_claims.map(c => [c.seat_index, c]));
-  const myClaim = ride.seat_claims.find(c => c.passenger_id === currentUser.id);
+  const myClaim = ride.seat_claims.find(mioPosto);
   const isDriver = ride.driver_id === currentUser.id;
   const past = isPastDay() || hasDeparted(ride);
 
@@ -3104,19 +3136,35 @@ function buildCar(ride) {
     const claim = claims.get(idx);
     const pos = layout[idx];
     if (claim) {
-      const mine = claim.passenger_id === currentUser.id;
+      const mine = mioPosto(claim);
+      // Il posto di un ospite lo libera anche chi ce l'ha portato: e' la policy di
+      // 031, e senza questo ramo un ospite messo per sbaglio resterebbe li' finche'
+      // il guidatore non se ne accorge.
+      const mioOspite = claim.invitato_da === currentUser.id;
+      const nome = nomeOccupante(claim);
       const seat = drawSeat(svg, pos, {
         kind: mine ? 'mine' : 'taken',
-        label: initials(nomeDi(claim.passenger)),
-        name: nomeDi(claim.passenger),
+        label: initials(nome),
+        name: claim.passenger_id ? nome : `${nome} · ospite`,
         avatar: claim.passenger?.avatar_url ?? null,
-        clickable: !past && (mine || isDriver || isAdmin),
+        clickable: !past && (mine || mioOspite || isDriver || isAdmin),
       });
-      if (!past && (mine || isDriver || isAdmin)) seat.addEventListener('click', () => releaseSeat(ride, claim, mine));
+      if (!past && (mine || mioOspite || isDriver || isAdmin)) {
+        seat.addEventListener('click', () => releaseSeat(ride, claim, mine));
+      }
     } else {
+      // Con un posto gia' preso resta possibile aggiungere un ospite: e' tutto il
+      // senso di C35, e chi ha gia' il suo sedile e' proprio la persona che porta
+      // qualcuno. Chi guida puo' farlo anche lui — e' la sua auto.
       const canClaim = !past && !isDriver && !myClaim;
-      const seat = drawSeat(svg, pos, { kind: 'free', label: '+', name: 'Posto libero', clickable: canClaim });
+      const canOspite = !past && !sospeso && (isDriver || Boolean(myClaim));
+      const seat = drawSeat(svg, pos, {
+        kind: 'free', label: '+',
+        name: canOspite && !canClaim ? 'Posto libero: aggiungi un ospite' : 'Posto libero',
+        clickable: canClaim || canOspite,
+      });
       if (canClaim) seat.addEventListener('click', () => claimSeat(ride, idx));
+      else if (canOspite) seat.addEventListener('click', () => aggiungiOspite(ride, idx));
     }
   }
   return svg;
@@ -3183,7 +3231,7 @@ async function claimSeat(ride, seatIndex) {
 async function proponiGemello(ride) {
   const g = gemelloDi(ride);
   if (!g) return;
-  if (g.seat_claims.some(c => c.passenger_id === currentUser.id)) return;
+  if (g.seat_claims.some(mioPosto)) return;
   if (g.driver_id === currentUser.id) return;
   const occupati = new Set(g.seat_claims.map(c => c.seat_index));
   const libero = [...Array(g.seats).keys()].map(i => i + 1).find(i => !occupati.has(i));
@@ -3200,6 +3248,30 @@ async function proponiGemello(ride) {
   });
   if (error) { toast(friendlyError(error)); return; }
   toast(versoCasa ? 'Preso anche il ritorno.' : 'Presa anche l\'andata.');
+}
+
+// --- C35: il posto per un ospite ---
+// Un sedile con un nome libero invece di un `user_id`. Il database sa gia' dire di
+// no a tutto il resto (031): che chi invita sia della comitiva, che non ci siano due
+// ospiti con lo stesso nome, che un sospeso o un bloccato non passino. Qui si chiede
+// il nome e si scrive.
+async function aggiungiOspite(ride, seatIndex) {
+  if (bloccaSeSospeso('portare un ospite')) return;
+  const nome = await ask('Chi porti?', {
+    text: 'Il nome di chi sale senza avere l\'app. Il posto risulta occupato a tutti, e la sua quota finisce nel tuo conto — non in uno suo, che non esiste.',
+    placeholder: 'Enrico',
+  });
+  if (!nome) return;
+  const { error } = await supabase.from('seat_claims').insert({
+    ride_id: ride.id, seat_index: seatIndex,
+    ospite_nome: nome.trim().slice(0, 40), invitato_da: currentUser.id,
+  });
+  if (error) {
+    toast(error.code === '23505' ? 'Posto già occupato.' : friendlyError(error));
+  } else {
+    toast(`${nome.trim()} è a bordo come tuo ospite.`);
+  }
+  loadRides();
 }
 
 // --- C30: annunciare un ritardo ---
@@ -3232,11 +3304,18 @@ async function annunciaRitardo(ride) {
 }
 
 async function releaseSeat(ride, claim, mine) {
-  const titolo = mine ? 'Scendere da questa auto?' : `Liberare il posto di ${nomeDi(claim.passenger)}?`;
+  // Tre casi e non due: il proprio posto, quello di una persona, quello di un
+  // proprio ospite. Il terzo non e' il secondo con un nome diverso — «non riceve un
+  // avviso» sarebbe una frase senza senso per chi non ha l'app.
+  const ospite = !claim.passenger_id;
+  const nome = nomeOccupante(claim);
+  const titolo = mine ? 'Scendere da questa auto?' : `Liberare il posto di ${nome}?`;
   if (!await conferma(titolo, {
     testo: mine
       ? 'Il posto torna libero e chiunque della comitiva può prenderlo.'
-      : 'Il posto torna libero e chiunque della comitiva può prenderlo. Chi ci stava non riceve un avviso.',
+      : ospite
+        ? `Il posto torna libero e la quota di ${nome} esce dal conto di chi lo ha portato.`
+        : 'Il posto torna libero e chiunque della comitiva può prenderlo. Chi ci stava non riceve un avviso.',
     azione: mine ? 'Scendi' : 'Libera il posto',
   })) return;
   const { error } = await supabase.from('seat_claims').delete()
@@ -3276,7 +3355,7 @@ function renderRides(rides) {
         lines.push('');
         lines.push(`🚗 ${nomeDi(r.driver)} → ${r.destination}`
           + (r.depart_time ? ` (ore ${r.depart_time.slice(0, 5)})` : ''));
-        lines.push('A bordo: ' + (r.seat_claims.map(c => nomeDi(c.passenger)).join(', ') || 'nessuno'));
+        lines.push('A bordo: ' + (r.seat_claims.map(nomeOccupante).join(', ') || 'nessuno'));
         lines.push(freeN > 0 ? `Liberi: ${freeN} → prenota su ${SITE_URL}` : 'Al completo');
       }
       condividi(lines.join('\n'));
@@ -3393,8 +3472,8 @@ function renderRides(rides) {
       aboard.className = 'history-passengers';
       for (const c of ride.seat_claims) {
         const chip = document.createElement('span');
-        chip.className = 'history-chip' + (c.passenger_id === currentUser.id ? ' driver' : '');
-        chip.textContent = nomeDi(c.passenger);
+        chip.className = 'history-chip' + (mioPosto(c) ? ' driver' : '');
+        chip.textContent = nomeOccupante(c) + (c.passenger_id ? '' : ' · ospite');
         aboard.appendChild(chip);
       }
       card.appendChild(aboard);
@@ -3413,7 +3492,7 @@ function renderRides(rides) {
       meBadge.className = 'place-badge mine';
       meBadge.textContent = 'La tua auto';
       foot.appendChild(meBadge);
-    } else if (ride.seat_claims.some(c => c.passenger_id === currentUser.id)) {
+    } else if (ride.seat_claims.some(mioPosto)) {
       const meBadge = document.createElement('span');
       meBadge.className = 'place-badge mine';
       meBadge.textContent = 'Sei a bordo';
@@ -3487,7 +3566,7 @@ function renderRides(rides) {
     // il primo in lista prende il posto appena qualcuno scende (trigger DB)
     const waitlist = [...(ride.ride_waitlist ?? [])].sort((a, b) => a.created_at.localeCompare(b.created_at));
     const ridePast = isPastDay() || hasDeparted(ride);
-    const imAboard = ride.seat_claims.some(c => c.passenger_id === currentUser.id);
+    const imAboard = ride.seat_claims.some(mioPosto);
     const imWaiting = waitlist.some(w => w.user_id === currentUser.id);
     if (waitlist.length > 0) {
       const wl = document.createElement('div');
