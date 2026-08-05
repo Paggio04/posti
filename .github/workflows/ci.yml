@@ -72,6 +72,15 @@ jobs:
             psql -v ON_ERROR_STOP=1 -q -f "$f"
           done
 
+      # **Fra la prima e la seconda passata, e non altrove.** Dalla 016 il permesso su
+      # `rides` e' per colonna e viene ricalcolato da `blinda_coordinate()`: una colonna
+      # aggiunta dopo, senza richiamarla, nasce invisibile al client. La seconda passata
+      # rimedia da sola — ma in produzione si applica **una** volta, e li' la Home
+      # andrebbe in errore per tutti. Un controllo messo dopo sarebbe sempre verde e non
+      # misurerebbe lo stato che gli utenti vedono.
+      - name: Le colonne nuove di `rides` restano leggibili (dopo UNA passata)
+        run: psql -v ON_ERROR_STOP=1 -q -f supabase/test/verifica-colonne-leggibili.sql
+
       - name: Riapplicale (devono essere ripetibili)
         run: |
           for f in supabase/migrations/*.sql; do
@@ -101,6 +110,9 @@ jobs:
 
       - name: Chi aveva un posto sa che il passaggio e' stato annullato
         run: psql -v ON_ERROR_STOP=1 -q -f supabase/test/verifica-annullamento.sql
+
+      - name: Andata e ritorno sono un viaggio, e due andate restano vietate
+        run: psql -v ON_ERROR_STOP=1 -q -f supabase/test/verifica-andata-ritorno.sql
 
       - name: Un ritardo annunciato arriva a chi e' a bordo, e una volta per numero
         run: psql -v ON_ERROR_STOP=1 -q -f supabase/test/verifica-ritardo.sql

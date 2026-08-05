@@ -963,6 +963,9 @@ input:focus-visible, select:focus-visible, textarea:focus-visible {
    di chi legge: prende il rosso perche' e' l'unica pastiglia del piede che
    qualcuno deve **notare** senza cercarla. */
 .place-badge.ritardo { color: var(--danger); background: var(--danger-soft); }
+/* La coppia andata/ritorno (C31): e' un'informazione, non un allarme — prende il
+   blu di servizio, non il rosso. */
+.place-badge.coppia { color: var(--primary-testo); background: var(--primary-soft); }
 
 /* Le risposte da un tocco nel dialogo (C30): stanno sopra il campo, che resta
    per tutte le altre. Riusano `.filtro`, che e' gia' la forma «pastiglia che si

@@ -79,4 +79,17 @@ create trigger rides_notifica_ritardo after update of ritardo_min on public.ride
 
 revoke execute on function public.notifica_ritardo() from public, anon, authenticated;
 
+-- ── E il permesso per colonna va ricalcolato, o la colonna nasce invisibile ──
+-- La 016 non concede `select` sulla tabella: lo concede **colonna per colonna**, e
+-- calcola l'elenco dal catalogo nel momento in cui gira. Una colonna aggiunta dopo di
+-- lei non e' in quell'elenco, quindi il client la chiede e si prende un 42501 — cioe'
+-- la Home in errore, per tutti, appena pubblicato.
+--
+-- Non e' teoria: senza questa riga, dopo **una** passata delle migrazioni
+-- `has_column_privilege('authenticated', 'rides', 'ritardo_min', 'select')` risponde
+-- `false`. In CI non si vedeva perche' le migrazioni girano due volte e la seconda
+-- passata di 016 rimedia — ma una passata sola e' esattamente cio' che succede in
+-- produzione. Ora c'e' anche un controllo apposta, subito dopo la prima passata.
+select public.blinda_coordinate();
+
 insert into public.schema_migrations (version) values ('027_ritardo') on conflict do nothing;

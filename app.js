@@ -2032,15 +2032,44 @@ rideForm.addEventListener('submit', async (e) => {
     toast('Per aprire il passaggio a chi è in zona serve "Parto da qui": senza, non lo vedrebbe nessuno.');
     return;
   }
+  // C31 — il ritorno, se c'e'. E' la stessa auto che rifa' la strada al contrario:
+  // origine e destinazione si scambiano, i posti e la quota restano quelli. Non si
+  // ricopiano le coordinate della partenza: il punto misurato e' dove si e' adesso,
+  // e alle 13:30 si parte dall'altra parte — un punto sbagliato e' peggio di nessun
+  // punto, perche' il navigatore ci porta davvero.
+  const oraRitorno = document.getElementById('ride-ritorno').value || null;
+  if (oraRitorno && !base.destination) {
+    toast('Per il ritorno serve la destinazione: è da lì che si riparte.');
+    return;
+  }
   const weeks = Number(document.getElementById('ride-repeat').value) || 1;
   let published = 0;
+  let ritorni = 0;
   let firstError = null;
   for (let w = 0; w < weeks; w++) {
-    const { error } = await supabase.from('rides').insert({
+    const giorno = addDaysISO(currentDate, w * 7);
+    // `select().single()` invece di un semplice insert: senza l'id dell'andata il
+    // ritorno non ha a cosa legarsi, e due righe scollegate sono lo stato di prima.
+    const { data: andata, error } = await supabase.from('rides')
+      .insert({ ...base, ride_date: giorno }).select('id').single();
+    if (error || !andata) { firstError = firstError ?? error; continue; }
+    published++;
+    if (!oraRitorno) continue;
+    const { error: erroreRitorno } = await supabase.from('rides').insert({
       ...base,
-      ride_date: addDaysISO(currentDate, w * 7),
+      ride_date: giorno,
+      depart_time: oraRitorno,
+      origin: base.destination,
+      destination: base.origin || 'Ritorno',
+      // Il ritorno parte da dove si e' arrivati, non da dove si e' misurato.
+      origin_lat: null,
+      origin_lon: null,
+      // Un ritorno aperto alla zona senza coordinate non lo vedrebbe nessuno (014):
+      // resta della comitiva, che e' il default e la cosa che non sorprende.
+      visibilita: base.visibilita === 'zona' ? 'gruppo' : base.visibilita,
+      ritorno_di: andata.id,
     });
-    if (error) { firstError = firstError ?? error; } else { published++; }
+    if (erroreRitorno) { firstError = firstError ?? erroreRitorno; } else { ritorni++; }
   }
   if (published === 0) {
     toast(firstError?.code === '23505'
@@ -2054,9 +2083,16 @@ rideForm.addEventListener('submit', async (e) => {
   partenza = null;
   document.getElementById('ride-posizione').textContent = '';
   offerCard.classList.add('hidden');
-  toast(published === 1
+  // Il ritorno si conta a parte: se le andate passano e i ritorni no — succede se
+  // per quel giorno un ritorno c'era gia' — dirlo e' l'unico modo perche' chi
+  // pubblica non scopra sul posto di avere meta' viaggio.
+  const quanti = published === 1
     ? 'Auto pubblicata: ora gli amici possono prenotare il posto.'
-    : `Auto pubblicata per ${published} settimane.`);
+    : `Auto pubblicata per ${published} settimane.`;
+  toast(!oraRitorno ? quanti
+    : ritorni === published ? `${quanti} Anche il ritorno delle ${oraRitorno}.`
+    : ritorni === 0 ? `${quanti} Il ritorno però non è passato: ne avevi già uno per quel giorno.`
+    : `${quanti} Ritorno pubblicato ${ritorni} volte su ${published}.`);
   await clearMyRequest();
   loadRides();
 });
@@ -2159,7 +2195,17 @@ let loadToken = 0;
 // `016_coordinate_riservate.sql` un client non ha il permesso di leggere origin_lat,
 // origin_lon, dest_lat e dest_lon, quindi `select('*')` verrebbe rifiutato in blocco.
 // Aggiungendo una colonna a `rides`, va aggiunta anche qui.
-const COLONNE_RIDE = 'id, driver_id, ride_date, depart_time, origin, destination, seats, note, created_at, group_id, fuel_per_person, visibilita, ritardo_min';
+const COLONNE_RIDE = 'id, driver_id, ride_date, depart_time, origin, destination, seats, note, created_at, group_id, fuel_per_person, visibilita, ritardo_min, ritorno_di';
+
+// C31 — l'altra meta' del viaggio, cercata fra i passaggi gia' in pagina.
+// Il legame in `rides` va dal ritorno all'andata, quindi la ricerca e' nei due
+// versi: da un ritorno si risale, da un'andata si scende.
+let passaggiVisibili = [];
+function gemelloDi(ride) {
+  if (!ride) return null;
+  if (ride.ritorno_di) return passaggiVisibili.find(r => r.id === ride.ritorno_di) ?? null;
+  return passaggiVisibili.find(r => r.ritorno_di === ride.id) ?? null;
+}
 
 // Le coordinate del ritrovo arrivano a parte, e solo per i passaggi a cui si ha diritto:
 // e' il database a decidere quali (`coordinate_passaggi`), non il client. Chi resta senza
@@ -2660,11 +2706,39 @@ async function claimSeat(ride, seatIndex) {
   if (error) {
     if (error.code === '23505') toast('Posto già occupato, oppure sei già su questa auto.');
     else toast(friendlyError(error));
-  } else {
-    toast('Posto prenotato: sei a bordo.');
-    await clearMyRequest();
+    loadRides();
+    return;
   }
+  toast('Posto prenotato: sei a bordo.');
+  await clearMyRequest();
+  await proponiGemello(ride);
   loadRides();
+}
+
+// C31 — preso il posto all'andata, la domanda successiva e' sempre la stessa.
+// Si chiede invece di farlo da soli: prenotare per conto di qualcuno e' la cosa
+// che poi si scopre di aver fatto, e un posto occupato per sbaglio lo perde
+// qualcun altro. Si chiede **una volta** e la risposta e' un tocco.
+async function proponiGemello(ride) {
+  const g = gemelloDi(ride);
+  if (!g) return;
+  if (g.seat_claims.some(c => c.passenger_id === currentUser.id)) return;
+  if (g.driver_id === currentUser.id) return;
+  const occupati = new Set(g.seat_claims.map(c => c.seat_index));
+  const libero = [...Array(g.seats).keys()].map(i => i + 1).find(i => !occupati.has(i));
+  if (!libero) return;
+  const versoCasa = Boolean(ride.ritorno_di) === false;
+  if (!await conferma(versoCasa ? 'Prendi anche il ritorno?' : 'Prendi anche l\'andata?', {
+    testo: `${g.origin || '—'} → ${g.destination || ''}`
+      + (g.depart_time ? ` alle ${g.depart_time.slice(0, 5)}` : '')
+      + `, con ${nomeDi(g.driver)}. È l'altra metà dello stesso viaggio.`,
+    azione: 'Sì, prendo il posto',
+  })) return;
+  const { error } = await supabase.from('seat_claims').insert({
+    ride_id: g.id, seat_index: libero, passenger_id: currentUser.id,
+  });
+  if (error) { toast(friendlyError(error)); return; }
+  toast(versoCasa ? 'Preso anche il ritorno.' : 'Presa anche l\'andata.');
 }
 
 // --- C30: annunciare un ritardo ---
@@ -2715,6 +2789,9 @@ async function releaseSeat(ride, claim, mine) {
 function renderRides(rides) {
   ridesList.innerHTML = '';
   emptyMessage.classList.toggle('hidden', rides.length > 0);
+  // C31: `gemelloDi()` cerca qui dentro. Va assegnato prima di disegnare, perche'
+  // le schede lo interrogano mentre si costruiscono.
+  passaggiVisibili = rides;
 
   // Riepilogo del giorno
   const statsEl = document.getElementById('day-stats');
@@ -2890,6 +2967,19 @@ function renderRides(rides) {
         : mins < 60 ? `Parte tra ${mins} min`
         : `Parte tra ${Math.floor(mins / 60)} h ${mins % 60} min`;
       foot.appendChild(t);
+    }
+    // C31: le due meta' si riconoscono a colpo d'occhio. Il legame si dice sulla
+    // scheda e non in una vista a parte, perche' la domanda («e per tornare?»)
+    // nasce guardando l'andata.
+    const gemello = gemelloDi(ride);
+    if (gemello) {
+      const par = document.createElement('span');
+      par.className = 'place-badge coppia';
+      par.textContent = ride.ritorno_di
+        ? `Ritorno · andata alle ${(gemello.depart_time || '').slice(0, 5) || '—'}`
+        : `Andata · ritorno alle ${(gemello.depart_time || '').slice(0, 5) || '—'}`;
+      par.title = 'Andata e ritorno dello stesso viaggio: puoi prenderli entrambi.';
+      foot.appendChild(par);
     }
     // Il ritardo si vede a tutti, sempre: chi apre l'app in quel momento deve
     // trovarlo scritto, non dedurlo dal conto alla rovescia.
