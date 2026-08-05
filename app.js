@@ -1189,7 +1189,7 @@ document.getElementById('welcome-join').addEventListener('click', joinGroupFlow)
 async function loadGroups() {
   const { data, error } = await supabase
     .from('group_members')
-    .select('group:groups(id, name, code, owner_id)')
+    .select('group:groups(id, name, code, owner_id, regola_quota, regola_guida_non_paga, regola_max_posti)')
     .eq('user_id', currentUser.id);
   if (error) { console.error(error); return; }
   myGroups = (data ?? []).map(r => r.group).filter(Boolean);
@@ -1344,6 +1344,23 @@ let quotaProposta = null;   // l'ultima cifra scritta da qui, per non sovrascriv
 function proponiQuota() {
   const nota = document.getElementById('ride-quota-nota');
   const campo = document.getElementById('ride-fuel');
+  const regole = regoleGruppo();
+
+  // C36 — la quota fissa della comitiva vince sul calcolo, e non e' un'eccezione al
+  // principio di C34: e' ancora un numero che non si inventa ogni volta. La comitiva
+  // l'ha deciso una volta, e questo e' il posto in cui quella decisione si applica
+  // senza che nessuno la ridigiti.
+  if (regole.quota != null) {
+    const fissa = regole.quota;
+    if (campo.value === '' || (quotaProposta !== null && Number(campo.value) === quotaProposta)) {
+      campo.value = String(fissa);
+      quotaProposta = fissa;
+    }
+    nota.textContent = `Quota fissa della comitiva: ${fissa.toFixed(2)} €`
+      + (regole.guidaNonPaga ? ' · chi guida non paga' : '');
+    return;
+  }
+
   const da = fermataDi(document.getElementById('ride-origin').value);
   const a = fermataDi(document.getElementById('ride-destination').value);
   if (!da || !a || da.lat == null || a.lat == null || da.id === a.id) {
@@ -1358,16 +1375,19 @@ function proponiQuota() {
   const auto = autoScelta();
   const consumo = auto?.consumo_km_l ? Number(auto.consumo_km_l) : CONSUMO_RIFERIMENTO;
   // Diviso per chi c'e' in macchina, guidatore compreso: e' la convenzione con cui
-  // si divide una spesa fra chi la fa insieme. «Chi guida non paga» e' una regola
-  // che una comitiva puo' darsi, non l'impostazione naturale — e infatti e' C36.
-  const persone = Number(document.getElementById('ride-seats').value || 4) + 1;
+  // si divide una spesa fra chi la fa insieme. Se la comitiva ha deciso che chi
+  // guida non paga (C36), il conto e' lo stesso e cambia solo in quante parti si
+  // divide — la benzina costa uguale.
+  const posti = Number(document.getElementById('ride-seats').value || 4);
+  const persone = regole.guidaNonPaga ? Math.max(1, posti) : posti + 1;
   const costo = (km / consumo) * PREZZO_CARBURANTE;
   // A mezzi euro, come lo scatto del campo: proporre 1,37 € a testa e' un numero
   // che nessuno tira fuori dal portafoglio.
   const quota = Math.round((costo / persone) * 2) / 2;
   const base = `${km.toFixed(1)} km · ${consumo} km/l`
     + (auto?.consumo_km_l ? ` (${auto.nome})` : ' (riferimento)')
-    + ` · ${PREZZO_CARBURANTE.toFixed(2)} €/l · diviso ${persone}`;
+    + ` · ${PREZZO_CARBURANTE.toFixed(2)} €/l · diviso ${persone}`
+    + (regole.guidaNonPaga ? ' (chi guida non paga)' : '');
 
   const vuoto = campo.value === '';
   const miaProposta = quotaProposta !== null && Number(campo.value) === quotaProposta;
@@ -1498,6 +1518,11 @@ async function renderGroupsView() {
     });
     actions.appendChild(leave);
 
+    // ── C36: le regole, a chi possiede la comitiva ──────────────────────
+    // Sotto ai membri e sopra alle fermate: sono la cosa che vale per tutti
+    // quelli scritti sopra, e si leggono nell'ordine in cui si ragiona.
+    card.appendChild(schedaRegole(g));
+
     // ── C32: le fermate, ma solo della comitiva aperta ──────────────────
     // `fermate` in memoria e' quella di `currentGroupId`: mostrarla sotto tutte
     // le schede direbbe che i posti di un gruppo sono anche quelli dell'altro,
@@ -1507,6 +1532,85 @@ async function renderGroupsView() {
     card.appendChild(actions);
     list.appendChild(card);
   }
+}
+
+// C36 — le regole si leggono sempre, si cambiano solo se la comitiva e' tua.
+// Leggerle vale per tutti: una regola che vedi solo se puoi cambiarla non e' una
+// regola, e' una preferenza di chi comanda.
+function schedaRegole(g) {
+  const box = document.createElement('div');
+  box.className = 'fermate-box';
+  const titolo = document.createElement('div');
+  titolo.className = 'fermate-titolo';
+  titolo.textContent = 'Le regole della comitiva';
+  box.appendChild(titolo);
+
+  const detto = [
+    g.regola_quota != null ? `Quota fissa: ${Number(g.regola_quota).toFixed(2)} € a testa` : null,
+    g.regola_guida_non_paga ? 'Chi guida non paga' : null,
+    g.regola_max_posti != null ? `Massimo ${g.regola_max_posti} passeggeri` : null,
+  ].filter(Boolean);
+
+  const p = document.createElement('p');
+  p.className = 'form-hint';
+  p.textContent = detto.length
+    ? detto.join(' · ')
+    : 'Nessuna regola fissata: ogni passaggio si decide da capo.';
+  box.appendChild(p);
+
+  if (g.owner_id !== currentUser.id) return box;
+
+  const azioni = document.createElement('div');
+  azioni.className = 'group-card-actions';
+  const cambia = document.createElement('button');
+  cambia.className = 'btn btn-ghost btn-small';
+  cambia.textContent = detto.length ? 'Cambia le regole' : 'Fissa le regole';
+  cambia.addEventListener('click', () => modificaRegole(g));
+  azioni.appendChild(cambia);
+  box.appendChild(azioni);
+  return box;
+}
+
+async function modificaRegole(g) {
+  // Vuoto vuol dire «nessuna regola», e va detto a parole in ogni domanda: senza,
+  // l'unico modo di togliere una regola gia' messa sarebbe indovinarlo.
+  const quota = await ask('Quota fissa a testa', {
+    text: 'In euro. Lascia vuoto perché la quota resti libera: chi guida la sceglie ogni volta, o la fa proporre dal tragitto.',
+    value: g.regola_quota != null ? String(Number(g.regola_quota)) : '',
+    placeholder: '5', type: 'number',
+  });
+  if (quota === null) return;
+  const q = quota === '' ? null : Math.round(Number(String(quota).replace(',', '.')) * 100) / 100;
+  if (q !== null && !(q >= 0 && q <= 100)) { toast('Una quota fra 0 e 100 €.'); return; }
+
+  const guida = await ask('Chi guida partecipa alla spesa?', {
+    text: 'Rispondi "no" se nella tua comitiva chi mette l\'auto non paga la benzina.',
+    value: g.regola_guida_non_paga ? 'no' : 'sì',
+    scelte: [['sì', 'Sì, divide con gli altri'], ['no', 'No, chi guida non paga']],
+  });
+  if (guida === null) return;
+  const nonPaga = /^n/i.test(guida.trim());
+
+  const posti = await ask('Massimo passeggeri', {
+    text: 'Senza contare chi guida. Lascia vuoto per nessun limite.',
+    value: g.regola_max_posti != null ? String(g.regola_max_posti) : '',
+    placeholder: '4', type: 'number',
+    scelte: [['3', '3'], ['4', '4'], ['5', '5']],
+  });
+  if (posti === null) return;
+  const mp = posti === '' ? null : Number(posti);
+  if (mp !== null && !(mp >= 1 && mp <= 6)) { toast('Da 1 a 6 passeggeri.'); return; }
+
+  const { error } = await supabase.from('groups').update({
+    regola_quota: q, regola_guida_non_paga: nonPaga, regola_max_posti: mp,
+  }).eq('id', g.id);
+  if (error) { toast(friendlyError(error)); return; }
+  toast('Regole della comitiva aggiornate.');
+  await loadGroups();
+  renderGroupsView();
+  // La quota proposta (C34) dipende da queste: senza, il modulo continuerebbe a
+  // proporre la cifra di prima fino al ricaricamento.
+  proponiQuota();
 }
 
 // Le fermate stanno nella vista Comitiva perche' sono **del gruppo**: e' la
@@ -1606,6 +1710,18 @@ function groupLabel() {
 
 // Il solo nome, senza etichetta davanti: nella testata del riepilogo sta accanto alla
 // parola «Riepilogo» e in un contesto che non lascia dubbi su cosa sia.
+// C36 — le regole della comitiva aperta. Sempre un oggetto, mai `undefined`: chi le
+// legge non deve chiedersi se c'e' una comitiva, e «nessuna regola» e' un caso
+// normale, non un errore.
+function regoleGruppo() {
+  const g = myGroups.find(x => x.id === currentGroupId);
+  return {
+    quota: g?.regola_quota != null ? Number(g.regola_quota) : null,
+    guidaNonPaga: Boolean(g?.regola_guida_non_paga),
+    maxPosti: g?.regola_max_posti ?? null,
+  };
+}
+
 function nomeComitiva() {
   return myGroups.find(x => x.id === currentGroupId)?.name ?? 'Nessuna comitiva';
 }
@@ -2514,6 +2630,26 @@ rideForm.addEventListener('submit', async (e) => {
     toast('Per aprire il passaggio a chi è in zona serve "Parto da qui": senza, non lo vedrebbe nessuno.');
     return;
   }
+  // ── C36: chi infrange una regola lo vede scritto prima di confermare ────
+  // Un avviso, non un rifiuto. Una regola di comitiva e' una convenzione fra amici,
+  // e la sera che qualcuno fa un'eccezione deve poterla fare: il database infatti non
+  // la fa rispettare (032), e bloccare qui sarebbe rimettere il vincolo dalla parte
+  // sbagliata — quella che si aggira cambiando la regola per tutti.
+  const regole = regoleGruppo();
+  const infrazioni = [];
+  if (regole.maxPosti != null && base.seats > regole.maxPosti) {
+    infrazioni.push(`la comitiva sta al massimo in ${regole.maxPosti + 1} (tu compreso), e tu offri ${base.seats} posti`);
+  }
+  if (regole.quota != null && Number(base.fuel_per_person || 0) !== regole.quota) {
+    infrazioni.push(base.fuel_per_person
+      ? `la quota fissa è ${regole.quota.toFixed(2)} €, tu hai messo ${Number(base.fuel_per_person).toFixed(2)} €`
+      : `la quota fissa è ${regole.quota.toFixed(2)} € e tu non ne chiedi nessuna`);
+  }
+  if (infrazioni.length && !await conferma('Va contro le regole della comitiva', {
+    testo: infrazioni.join('; ') + '. Puoi pubblicare lo stesso: le eccezioni si vedono perché sono eccezioni.',
+    azione: 'Pubblica lo stesso',
+  })) return;
+
   // C31 — il ritorno, se c'e'. E' la stessa auto che rifa' la strada al contrario:
   // origine e destinazione si scambiano, i posti e la quota restano quelli. Non si
   // ricopiano le coordinate della partenza: il punto misurato e' dove si e' adesso,

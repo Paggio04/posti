@@ -123,6 +123,9 @@ jobs:
       - name: Un ospite occupa un posto, e la sua quota e' di chi lo ha portato
         run: psql -v ON_ERROR_STOP=1 -q -f supabase/test/verifica-ospite.sql
 
+      - name: Le regole della comitiva si leggono, e non bloccano un'eccezione
+        run: psql -v ON_ERROR_STOP=1 -q -f supabase/test/verifica-regole.sql
+
       - name: Un ritardo annunciato arriva a chi e' a bordo, e una volta per numero
         run: psql -v ON_ERROR_STOP=1 -q -f supabase/test/verifica-ritardo.sql
 
