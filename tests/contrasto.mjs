@@ -126,8 +126,12 @@ const COPPIE = [
 
   // Testi scritti a mano sui pannelli navy: non sono token, ma sono testo lo stesso.
   ['didascalia del cartello', 'oklch(0.79 0.02 258)', '--navy-deeper', 4.5],
-  ['voce spenta della barra laterale', 'oklch(0.78 0.02 258)', '--navy-deeper', 4.5],
-  ['ruolo sotto il nome (barra laterale)', 'oklch(0.66 0.03 258)', '--navy-deeper', 4.5],
+  // Le voci della barra in alto stanno su un rilievo piu' chiaro della fascia
+  // (`--navy-deep` dentro `--navy-deeper`): il fondo da verificare e' il rilievo,
+  // non la fascia, altrimenti si misura un contrasto che nessuno guarda.
+  ['voce spenta della barra in alto', 'oklch(0.78 0.02 258)', '--navy-deep', 4.5],
+  ['nome nella scheda del profilo', 'oklch(0.93 0.01 258)', '--navy-deeper', 4.5],
+  ['ruolo sotto il nome (barra in alto)', 'oklch(0.66 0.03 258)', '--navy-deeper', 4.5],
   ['sottotitolo dei riquadri scuri', 'oklch(0.72 0.03 258)', '--navy-deep', 4.5],
   ['legenda della ciambella', 'oklch(0.82 0.02 258)', '--navy-deep', 4.5],
   ['pastiglia sui riquadri scuri', 'oklch(0.78 0.02 258)', '--navy-deep', 4.5],

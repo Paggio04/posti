@@ -49,6 +49,11 @@
 
    Regola: **una regola responsive nuova usa una di queste due soglie.** Se sembra
    servirne una terza, il problema e' il componente, non la soglia.
+
+   Una sola eccezione, ed e' su un altro asse: `min-height: 700px`, dove il riepilogo
+   smette di scorrere e si incastra nell'altezza della finestra. Non e' una fascia in
+   piu' — e' la condizione che dice se quella promessa si puo' mantenere, e quando non
+   si puo' la vista torna a scorrere invece di consegnare nove riquadri da 150px.
    ═══════════════════════════════════════════════════════════════════════════ */
 
 :root {
@@ -524,73 +529,132 @@ input:focus-visible, select:focus-visible, textarea:focus-visible {
 .app-shell { min-height: 100vh; display: flex; flex-direction: column; }
 .shell-col { display: flex; flex-direction: column; flex: 1; min-width: 0; }
 
-/* ---- Barra laterale (fascia desktop, >= 1280px) ----
+/* ---- Barra in alto (da 768px in su) ----
    Nasce spenta e si accende con la media query: cosi' se il CSS nuovo non arrivasse
-   per intero, la pagina resta quella di prima invece di mostrare una colonna navy
-   senza posizione. */
-.side-nav { display: none; }
+   per intero, sul telefono resta la navigazione di prima invece di una fascia navy
+   senza posizione.
 
-.side-item {
-  display: flex;
-  align-items: center;
-  gap: 10px;
-  width: 100%;
-  padding: 8px 11px;
-  border: 0;
-  border-radius: var(--radius-sm);
-  background: transparent;
-  color: oklch(0.78 0.02 258);
-  font: inherit;
-  font-size: 0.8rem;
-  text-align: left;
-  cursor: pointer;
-  transition: background var(--t-fast) var(--ease-out), color var(--t-fast) var(--ease-out);
+   Non e' la pillola flottante della foto di riferimento — quella sta fra gli
+   anti-riferimenti di PRODUCT.md, e una lastra di vetro sospesa su un fondo scuro e'
+   la cosa che questa app ha deciso di non essere. E' una **fascia piena**, dello
+   stesso navy della fascia scura che sostituisce, larga quanto la pagina: un cartello
+   in cima, non un oggetto che galleggia. Della foto resta cio' che serviva davvero,
+   cioe' il tondo che scivola. */
+.top-nav { display: none; }
+
+/* Il tondo. Sta sotto le voci (`z-index` non serve: e' scritto prima nel markup e le
+   voci hanno `position: relative`), e non intercetta il puntatore, altrimenti sarebbe
+   lui a ricevere il `pointerenter` della voce su cui e' appena arrivato.
+   `--tondo-x` e `--tondo-w` li scrive `app.js`, che le voci le misura. */
+.nav-tondo {
+  position: absolute;
+  top: 4px;
+  bottom: 4px;
+  left: 0;
+  width: var(--tondo-w, 0);
+  transform: translateX(var(--tondo-x, 0));
+  border-radius: var(--pill);
+  background: var(--primary);
+  box-shadow: var(--ombra-primario);
+  opacity: 0;
+  pointer-events: none;
+  transition: transform var(--t-med) var(--ease-out),
+              width var(--t-med) var(--ease-out),
+              opacity var(--t-fast) var(--ease-out);
 }
-.side-item:hover { background: oklch(1 0 0 / 0.06); color: #fff; }
-.side-item:focus-visible { outline: 2px solid var(--ottone); outline-offset: 2px; }
-.side-item.on { background: oklch(1 0 0 / 0.10); color: #fff; font-weight: 600; box-shadow: var(--luce-interna-scura); }
-.side-item.on .side-ic { color: var(--ottone); }
-.side-ic { flex: none; width: 15px; height: 15px; display: grid; place-items: center; color: inherit; }
-.side-et { flex: 1 1 auto; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.top-list.tondo-acceso .nav-tondo { opacity: 1; }
 
-@media (min-width: 1280px) {
-  .app-shell:not(.hidden) {
+@media (min-width: 768px) {
+  /* Griglia e non riga flessibile: le due colonne laterali sono `1fr` uguali, quindi
+     il gruppo delle voci sta al centro **della pagina** e non a meta' fra un marchio
+     corto e una scheda lunga. Con il flex la scheda si stirava per pareggiare, e a
+     destra restava una pastiglia scura mezza vuota. */
+  .top-nav {
     display: grid;
-    grid-template-columns: 206px minmax(0, 1fr);
-    align-items: start;
-  }
-  .side-nav {
-    display: flex;
-    flex-direction: column;
-    gap: 16px;
-    position: sticky;
-    top: 0;
-    height: 100vh;
-    padding: 20px 14px;
+    grid-template-columns: minmax(0, 1fr) auto minmax(0, 1fr);
+    align-items: center;
+    gap: 18px;
+    padding: 10px 22px;
     background: var(--navy-deeper);
     color: oklch(0.93 0.01 258);
-    border-radius: 0 var(--radius-xl) var(--radius-xl) 0;
+    position: sticky;
+    top: 0;
+    z-index: 20;
   }
-  .side-logo b { font-size: 1.15rem; letter-spacing: -0.02em; }
-  .side-list { display: flex; flex-direction: column; gap: 2px; flex: 1 1 auto; }
-  .side-me {
+  .top-brand {
+    min-width: 0;
     display: flex;
     align-items: center;
     gap: 9px;
-    width: 100%;
-    padding: 8px;
+    font-size: 1rem;
+    letter-spacing: -0.03em;
+    overflow: hidden;
+    white-space: nowrap;
+  }
+  .top-brand b { font-weight: 800; }
+  .top-brand svg { flex: none; color: var(--ottone); }
+
+  /* Il gruppo delle voci: un solo rilievo, appena piu' chiaro della fascia, cosi' si
+     legge come un blocco unico e non come quattro bottoni sparsi. */
+  .top-list {
+    position: relative;
+    display: flex;
+    gap: 2px;
+    padding: 4px;
+    border-radius: var(--pill);
+    background: var(--navy-deep);
+    box-shadow: var(--luce-interna-scura);
+  }
+  .top-item {
+    position: relative;
+    display: flex;
+    align-items: center;
+    gap: 7px;
+    padding: 8px 16px;
     border: 0;
-    border-radius: var(--radius-sm);
+    border-radius: var(--pill);
+    background: none;
+    color: oklch(0.78 0.02 258);
+    font: inherit;
+    font-size: 0.8rem;
+    font-weight: 600;
+    white-space: nowrap;
+    cursor: pointer;
+    transition: color var(--t-fast) var(--ease-out);
+  }
+  .top-item svg { flex: none; color: inherit; }
+  .top-item:hover { color: #fff; }
+  /* Sopra il tondo ci va il bianco, e ci va **anche quando il tondo e' solo di
+     passaggio**: senza questa riga la voce sotto il puntatore resta grigia su fondo
+     primario mentre il tondo la copre. */
+  .top-item.on, .top-list.tondo-acceso .top-item:hover { color: #fff; }
+  .top-item.on { font-weight: 700; }
+  .top-item:focus-visible { outline: 2px solid var(--ottone); outline-offset: 2px; }
+  .top-item:active { transform: scale(0.97); }
+
+  /* La scheda con la faccia. Il nome basta a riconoscerla; il ruolo e il conto delle
+     comitive compaiono dove c'e' la riga per scriverli senza stringere le voci. */
+  .top-me {
+    justify-self: end;
+    max-width: 100%;
+    display: flex;
+    align-items: center;
+    gap: 9px;
+    padding: 5px 12px 5px 5px;
+    border: 0;
+    border-radius: var(--pill);
     background: oklch(1 0 0 / 0.07);
     box-shadow: var(--luce-interna-scura);
     color: inherit;
     font: inherit;
     text-align: left;
     cursor: pointer;
+    transition: background var(--t-fast) var(--ease-out);
   }
-  .side-me:hover { background: oklch(1 0 0 / 0.12); }
-  .side-me:focus-visible { outline: 2px solid var(--ottone); outline-offset: 2px; }
-  .side-av {
+  .top-me:hover { background: oklch(1 0 0 / 0.14); }
+  .top-me:focus-visible { outline: 2px solid var(--ottone); outline-offset: 2px; }
+  .top-me.on { background: oklch(1 0 0 / 0.14); box-shadow: inset 0 0 0 1px var(--ottone-bordo), var(--luce-interna-scura); }
+  .top-av {
     flex: none;
     width: 30px; height: 30px;
     border-radius: 50%;
@@ -599,11 +663,24 @@ input:focus-visible, select:focus-visible, textarea:focus-visible {
     display: grid; place-items: center;
     font-weight: 700; font-size: 0.75rem;
   }
-  .side-chi { min-width: 0; }
-  .side-chi b, .side-chi small { display: block; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-  .side-chi b { font-size: 0.82rem; }
-  .side-chi small { font-size: 0.68rem; color: oklch(0.66 0.03 258); }
+  .top-chi { min-width: 0; }
+  .top-chi b, .top-chi small { display: block; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .top-chi b { font-size: 0.82rem; }
+  .top-chi small { display: none; font-size: 0.68rem; color: oklch(0.66 0.03 258); }
 
+  /* La fascia scura di prima e la pillola in basso si spengono in fondo al foglio,
+     dove sono dichiarate: a parita' di specificita' vince l'ultima regola scritta. */
+}
+
+@media (min-width: 1280px) {
+  .top-nav { padding: 10px 30px; }
+  .top-item { padding: 8px 20px; font-size: 0.83rem; }
+  .top-chi small { display: block; }
+}
+
+/* Chi ha chiesto meno movimento vede il tondo comparire dove sei, senza il viaggio. */
+@media (prefers-reduced-motion: reduce) {
+  .nav-tondo { transition: opacity var(--t-fast) linear; }
 }
 
 .topbar {
@@ -1820,30 +1897,35 @@ input:focus-visible, select:focus-visible, textarea:focus-visible {
 .dash .k.allerta { background: var(--danger-soft); }
 .dash .k.allerta .val { color: var(--danger); }
 
-/* ---- la griglia: due colonne di contenuto piu' la colonna di destra ---- */
+/* ---- la griglia: quattro colonne sullo schermo largo, due o una piu' sotto ---- */
 /* ── La composizione ──────────────────────────────────────────────────────
    Prima la colonna di destra era una pila a se' (`grid-row: 1 / span 4`) alta quanto
    il suo contenuto, accanto a due colonne alte quanto il loro: due misure indipendenti,
    e sotto quella piu' corta restava un vuoto grande quanto la differenza. Nessun
    valore di spaziatura poteva chiuderlo, perche' non era spaziatura.
 
-   Ora e' **una griglia sola di quattro righe**, e ogni scheda occupa un'area con un
-   nome. L'altezza di una riga e' quella della scheda piu' alta che contiene, e le
-   altre si stirano fino a lei: il bordo inferiore del blocco e' a filo per
-   costruzione, con qualsiasi quantita' di dati. Le tre soglie ridisegnano le aree,
-   non le spostano.
+   Ora e' **una griglia sola**, e ogni scheda occupa un'area con un nome. L'altezza di
+   una riga e' quella della scheda piu' alta che contiene, e le altre si stirano fino a
+   lei: il bordo inferiore del blocco e' a filo per costruzione, con qualsiasi quantita'
+   di dati. Le tre soglie ridisegnano le aree, non le spostano.
+
+   Sullo schermo largo le colonne sono **quattro** e le righe **tre**. Erano tre e
+   quattro finche' la vista stava dentro 1180px; ora che il riepilogo prende tutta la
+   pagina, la larghezza avanzata si spende in una colonna in piu' invece che in schede
+   piu' larghe, e una riga in meno e' esattamente cio' che serve per stare dentro
+   l'altezza della finestra senza scorrere. Calendario e attivita' — le due piu' alte,
+   341 e 250px di contenuto misurati — occupano due righe: e' li' che il posto serve.
 
    Il patto che rende vero tutto questo: **ogni cella ha sempre la sua scheda.** Se una
    sparisse quando manca il dato lascerebbe un buco in mezzo, che e' il difetto di
    prima spostato. Le schede senza dati dicono cosa mostrerebbero. */
 .dash .grid {
   display: grid;
-  grid-template-columns: minmax(0, 1fr) minmax(0, 1fr) minmax(0, 286px);
+  grid-template-columns: repeat(4, minmax(0, 1fr));
   grid-template-areas:
-    "carburante prossimo   calendario"
-    "azioni     azioni     calendario"
-    "settimana  turni      attivita"
-    "conti      conti      domani";
+    "carburante prossimo calendario attivita"
+    "azioni     azioni   calendario attivita"
+    "settimana  turni    conti      domani";
   gap: 12px;
   align-items: stretch;
 }
@@ -2218,15 +2300,65 @@ input:focus-visible, select:focus-visible, textarea:focus-visible {
   .dash .az, .dash .az:hover { transition: none; transform: none; }
 }
 
-/* Dove c'e' la barra laterale non servono ne' la pillola in basso ne' la fascia
-   scura in cima: sarebbero due navigazioni per le stesse viste e il nome scritto
-   due volte. Sta in fondo al foglio di proposito — `.bottom-nav` e `.topbar` sono
-   dichiarate piu' sotto di dove nasce la barra laterale, e a parita' di
-   specificita' vince l'ultima regola scritta, non quella piu' vicina al senso. */
-@media (min-width: 1280px) {
+/* Dove c'e' la barra in alto non servono ne' la pillola in basso ne' la fascia scura
+   di prima: sarebbero due navigazioni per le stesse viste e il nome scritto due volte.
+   Sta in fondo al foglio di proposito — `.bottom-nav` e `.topbar` sono dichiarate piu'
+   sotto di dove nasce la barra in alto, e a parita' di specificita' vince l'ultima
+   regola scritta, non quella piu' vicina al senso. */
+@media (min-width: 768px) {
   .bottom-nav { display: none; }
   .topbar { display: none; }
-  .app-view { padding-bottom: 40px; padding-top: 22px; max-width: 1180px; }
+  .app-view { padding-bottom: 40px; padding-top: 22px; }
+}
+@media (min-width: 1280px) {
+  .app-view { max-width: 1180px; }
+}
+
+/* ══════════════════════ IL RIEPILOGO PRENDE LA PAGINA ══════════════════════
+   Le altre viste sono elenchi, e un elenco largo 1600px si legge peggio di uno largo
+   1180: la misura di lettura resta. Il riepilogo no — e' una tabella di riquadri
+   affiancati, e ogni pixel in piu' e' una colonna che smette di andare a capo. Quindi
+   e' l'unico a cui si toglie il tetto, e lo dice l'attributo che `switchView()` scrive
+   sul contenitore: nessuno deve indovinare quale vista e' aperta guardando i figli. */
+.app-view[data-vista="stats"] { max-width: none; }
+
+/* **Niente scorrimento verticale.** Il guscio si ferma all'altezza della finestra, la
+   griglia si prende quello che avanza sotto la testata, e le sue tre righe se lo
+   dividono: il bordo di sotto dell'ultima scheda e' il bordo di sotto della pagina.
+
+   Le due soglie di larghezza del foglio restano quelle di sempre; qui se ne aggiunge
+   **una di altezza**, ed e' l'unica del progetto. Sotto i 700px di finestra nove
+   riquadri in tre righe darebbero 150px a testa, cioe' schede che si scorrono tutte
+   dentro: peggio di una pagina che scorre una volta sola. Li' il riepilogo torna a
+   scorrere come prima, largo ma alto quanto gli serve.
+
+   Le schede piu' cariche (calendario, conti) tengono la barra di scorrimento propria
+   invece di tagliare quello che non entra: un dato nascosto senza dirlo sarebbe una
+   bugia, un dato raggiungibile in un gesto e' una scheda piena. */
+@media (min-width: 1280px) and (min-height: 700px) {
+  .app-shell[data-vista="stats"] { height: 100dvh; min-height: 0; overflow: hidden; }
+  .app-shell[data-vista="stats"] .shell-col { min-height: 0; }
+  .app-shell[data-vista="stats"] .app-view {
+    min-height: 0;
+    overflow: hidden;
+    padding-top: 18px;
+    padding-bottom: 18px;
+  }
+  .app-shell[data-vista="stats"] #view-stats { min-height: 0; height: 100%; }
+  #view-stats .dash { height: 100%; }
+  #view-stats .dash .grid {
+    flex: 1 1 auto;
+    min-height: 0;
+    /* Tre righe uguali: le altezze naturali qui non servono piu', quello che conta e'
+       che la somma faccia esattamente l'altezza rimasta. */
+    grid-template-rows: repeat(3, minmax(0, 1fr));
+  }
+  #view-stats .dash .grid > .card {
+    overflow-y: auto;
+    overscroll-behavior: contain;
+    scrollbar-width: thin;
+    scrollbar-color: var(--border-strong) transparent;
+  }
 }
 
 /* Il bottone dei riquadri vuoti (nessuna comitiva, riepilogo non disponibile). */
@@ -2258,9 +2390,6 @@ input:focus-visible, select:focus-visible, textarea:focus-visible {
 .dash .grid > .card > .riemp,
 .dash .grid > .card > .att,
 .dash .g-prossimo .riga { flex: 1 1 auto; }
-
-/* La scheda con la faccia e' la voce del profilo, quindi si accende come una voce. */
-.side-me.on { background: oklch(1 0 0 / 0.14); box-shadow: inset 0 0 0 1px var(--ottone-bordo), var(--luce-interna-scura); }
 
 /* Segnare un pagamento sta sulla riga del conto: il gesto accanto al numero che
    cambia, non in un'altra pagina. */

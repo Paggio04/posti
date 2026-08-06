@@ -224,40 +224,44 @@
   <!-- APP -->
   <div id="app-shell" class="app-shell hidden">
 
-    <!-- Barra laterale. Compare da 1024px in su e li' prende il posto della pillola in
-         basso: sullo schermo largo la pillola centrata lascia due terzi di riga vuota.
-         Sotto quella soglia sparisce e resta la navigazione di prima, che sul telefono
-         e' migliore.
-
-         **Una voce per vista, e nessuna vista due volte.** Prima erano otto voci per
-         cinque viste: Richieste, Conti e Ricorrenze non aprivano niente di proprio, ma
-         la stessa pagina delle altre, e ci scorrevano dentro. E Profilo era la stessa
-         destinazione della scheda con la faccia qui sotto, a venti centimetri di
-         distanza nello stesso elenco. Restano quattro voci, una per vista, piu' la
-         scheda in fondo che porta al profilo ed e' l'unica cosa che lo fa. -->
-    <aside class="side-nav" aria-label="Sezioni">
-      <div class="side-logo"><b>WeTransport</b></div>
-      <nav class="side-list" aria-label="Sezioni dell'app">
-        <button type="button" class="side-item" data-view="stats" data-key="riepilogo">
-          <span class="side-ic"><svg width="15" height="15"><use href="#i-chart"/></svg></span>
-          <span class="side-et">Riepilogo</span></button>
-        <button type="button" class="side-item" data-view="home" data-key="passaggi">
-          <span class="side-ic"><svg width="15" height="15"><use href="#i-car"/></svg></span>
-          <span class="side-et">Passaggi</span></button>
-        <button type="button" class="side-item" data-view="groups" data-key="comitive">
-          <span class="side-ic"><svg width="15" height="15"><use href="#i-users"/></svg></span>
-          <span class="side-et">Comitive</span></button>
-        <button type="button" class="side-item" data-view="history" data-key="storico">
-          <span class="side-ic"><svg width="15" height="15"><use href="#i-history"/></svg></span>
-          <span class="side-et">Storico</span></button>
-      </nav>
-      <button type="button" class="side-me" id="side-me" title="Vai al profilo" aria-label="Il tuo profilo">
-        <span class="side-av" id="side-av"></span>
-        <span class="side-chi"><b id="side-nome"></b><small id="side-ruolo"></small></span>
-      </button>
-    </aside>
-
     <div class="shell-col">
+
+    <!-- Barra in alto. Da 768px in su prende il posto della fascia scura *e* della
+         pillola in basso: erano due navigazioni per le stesse cinque viste, e la
+         pillola centrata su uno schermo largo lasciava due terzi di riga vuota. Al
+         posto della colonna laterale di prima, che rubava 206px di larghezza proprio
+         al riepilogo — la vista che di larghezza ne vuole quanta gliene dai.
+
+         **Una voce per vista, e nessuna vista due volte.** Quattro voci nel gruppo
+         centrale, una per vista, piu' la scheda con la faccia a destra: e' l'unica
+         cosa che porta al profilo.
+
+         Il tondo (`nav-tondo`) e' un elemento solo che scivola, non quattro sfondi che
+         si accendono a turno: e' il movimento a dire che sei passato da una vista
+         all'altra. Sotto il puntatore anticipa dove andresti, e appena il mouse esce
+         torna dove sei davvero. Lo posiziona `app.js`, perche' le voci hanno larghezze
+         diverse e nessuna griglia di percentuali le indovina. -->
+    <!-- Un `div` e non un `header`: il landmark `banner` della pagina e' uno solo, ed e'
+         la fascia scura qui sotto. Il gruppo delle voci ha gia' il suo `<nav>`. -->
+    <div class="top-nav">
+      <div class="top-brand"><svg width="20" height="20"><use href="#i-car"/></svg> <b>WeTransport</b></div>
+      <nav class="top-list" id="top-list" aria-label="Sezioni dell'app">
+        <span class="nav-tondo" aria-hidden="true"></span>
+        <button type="button" class="top-item on" data-view="home" aria-current="page">
+          <svg width="15" height="15"><use href="#i-car"/></svg><span>Passaggi</span></button>
+        <button type="button" class="top-item" data-view="stats">
+          <svg width="15" height="15"><use href="#i-chart"/></svg><span>Riepilogo</span></button>
+        <button type="button" class="top-item" data-view="groups">
+          <svg width="15" height="15"><use href="#i-users"/></svg><span>Comitive</span></button>
+        <button type="button" class="top-item" data-view="history">
+          <svg width="15" height="15"><use href="#i-history"/></svg><span>Storico</span></button>
+      </nav>
+      <button type="button" class="top-me" id="top-me" title="Vai al profilo" aria-label="Il tuo profilo">
+        <span class="top-av" id="top-av"></span>
+        <span class="top-chi"><b id="top-nome"></b><small id="top-ruolo"></small></span>
+      </button>
+    </div>
+
     <header class="topbar">
       <div class="brand"><svg width="22" height="22"><use href="#i-car"/></svg> WeTransport</div>
       <button type="button" id="user-name" class="user-name-btn" title="Vai al profilo" aria-label="Il tuo profilo"></button>
