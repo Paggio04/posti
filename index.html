@@ -161,7 +161,7 @@
          L'auto e' `role="img"` con la sua etichetta: chi la ascolta sente cosa
          mostra, invece di sentire cinque rettangoli. -->
     <div class="auth-cartello">
-      <svg class="car-svg" viewBox="0 0 190 250" role="img"
+      <svg class="car-svg" viewBox="0 0 150 310" role="img"
            aria-label="Un'auto con quattro posti: due presi, due liberi.">
         <defs>
           <linearGradient id="lamiera-auth" x1="0" y1="0" x2="0.35" y2="1">
@@ -175,54 +175,87 @@
             <stop offset="1" class="vetro-chiaro"/>
           </linearGradient>
         </defs>
-        <ellipse cx="95" cy="244" rx="74" ry="7" class="car-ombra"/>
-        <rect x="10" y="10" width="170" height="230" rx="46" class="car-body" fill="url(#lamiera-auth)"/>
-        <path d="M 56 11 Q 95 11 134 11" class="car-luce"/>
-        <rect x="30" y="44" width="130" height="16" rx="8" class="car-glass" fill="url(#vetro-auth)"/>
-        <path d="M 40 58 L 58 46 L 74 46 L 56 58 Z" class="car-riflesso"/>
-        <rect x="34" y="208" width="122" height="12" rx="6" class="car-glass" fill="url(#vetro-auth)"/>
-        <rect x="2" y="60" width="12" height="34" rx="5" class="car-wheel"/>
-        <rect x="176" y="60" width="12" height="34" rx="5" class="car-wheel"/>
-        <rect x="2" y="156" width="12" height="34" rx="5" class="car-wheel"/>
-        <rect x="176" y="156" width="12" height="34" rx="5" class="car-wheel"/>
-        <rect x="0" y="46" width="14" height="6" rx="3" class="car-wheel"/>
-        <rect x="176" y="46" width="14" height="6" rx="3" class="car-wheel"/>
+        <!-- La sagoma e' la stessa che disegna `sagomaAuto(310)` in app.js: 114 di
+             larghezza per 282 di lunghezza, cioe' 1:2,47, che e' il rapporto di
+             un'utilitaria vera. Prima era un rettangolo 170x230 con gli spigoli a
+             46: largo due terzi della sua lunghezza e con le estremita' quasi
+             semicircolari, cioe' una capsula, non un'auto. -->
+        <ellipse cx="75" cy="306" rx="56" ry="6" class="car-ombra"/>
+        <path d="M 56 10 C 40 12 30 26 25 48 C 20 68 18 88 18 108 L 18 210
+                 C 18 240 20 270 26 286 C 31 298 42 304 60 305 L 90 305
+                 C 108 304 119 298 124 286 C 130 270 132 240 132 210 L 132 108
+                 C 132 88 130 68 125 48 C 120 26 110 12 94 10 Z"
+              class="car-body" fill="url(#lamiera-auth)"/>
+        <path d="M 58 11 Q 75 11 92 11" class="car-luce"/>
+        <rect x="32" y="66" width="86" height="20" rx="7" class="car-glass" fill="url(#vetro-auth)"/>
+        <path d="M 40 84 L 56 68 L 70 68 L 54 84 Z" class="car-riflesso"/>
+        <rect x="34" y="248" width="82" height="16" rx="6" class="car-glass" fill="url(#vetro-auth)"/>
+
+        <!-- Le finiture: le stesse che `finitureAuto()` disegna in app.js.
+             Passaruota, battistrada, fari, cofano, baule, porte, pieghe. -->
+        <rect x="22" y="62" width="106" height="202" rx="16" class="car-abitacolo"/>
+        <path d="M 30 60 Q 75 54 120 60" class="car-cofano"/>
+        <path d="M 32 242 Q 75 248 118 242" class="car-cofano"/>
+        <rect x="5" y="50" width="19" height="54" rx="9" class="car-passaruota"/>
+        <rect x="126" y="50" width="19" height="54" rx="9" class="car-passaruota"/>
+        <rect x="5" y="206" width="19" height="54" rx="9" class="car-passaruota"/>
+        <rect x="126" y="206" width="19" height="54" rx="9" class="car-passaruota"/>
+        <rect x="8" y="54" width="13" height="46" rx="6" class="car-wheel"/>
+        <rect x="129" y="54" width="13" height="46" rx="6" class="car-wheel"/>
+        <rect x="8" y="210" width="13" height="46" rx="6" class="car-wheel"/>
+        <rect x="129" y="210" width="13" height="46" rx="6" class="car-wheel"/>
+        <path d="M 10 66 L 19 66 M 10 77 L 19 77 M 10 88 L 19 88" class="car-battistrada"/>
+        <path d="M 131 66 L 140 66 M 131 77 L 140 77 M 131 88 L 140 88" class="car-battistrada"/>
+        <path d="M 10 222 L 19 222 M 10 233 L 19 233 M 10 244 L 19 244" class="car-battistrada"/>
+        <path d="M 131 222 L 140 222 M 131 233 L 140 233 M 131 244 L 140 244" class="car-battistrada"/>
+        <rect x="36" y="22" width="20" height="8" rx="3" class="car-faro"/>
+        <rect x="94" y="22" width="20" height="8" rx="3" class="car-faro"/>
+        <path d="M 62 26 L 88 26" class="car-griglia"/>
+        <rect x="34" y="282" width="22" height="8" rx="3" class="car-fanale"/>
+        <rect x="94" y="282" width="22" height="8" rx="3" class="car-fanale"/>
+        <path d="M 18 100 L 31 100 M 119 100 L 132 100" class="car-porta"/>
+        <path d="M 18 188 L 31 188 M 119 188 L 132 188" class="car-porta"/>
+        <path d="M 25 92 L 25 234 M 125 92 L 125 234" class="car-piega-scocca"/>
+        <rect x="0" y="70" width="16" height="6" rx="3" class="car-wheel"/>
+        <rect x="134" y="70" width="16" height="6" rx="3" class="car-wheel"/>
 
         <g class="seat seat-driver">
-          <rect x="38" y="66" width="40" height="14" rx="7" class="seat-back"/>
-          <rect x="36" y="78" width="44" height="40" rx="12" class="seat-base"/>
-          <path d="M 45 86 L 71 86" class="seat-piega"/>
-          <text x="58" y="104" class="seat-text">MA</text>
+          <rect x="26" y="94" width="36" height="13" rx="5" class="seat-back"/>
+          <rect x="24" y="107" width="40" height="42" rx="9" class="seat-base"/>
+          <path d="M 31 117 L 57 117" class="seat-piega"/>
+          <text x="44" y="134" class="seat-text">MA</text>
         </g>
-        <circle cx="58" cy="60" r="8" class="car-wheel-steer"/>
+        <circle cx="44" cy="86" r="7" class="car-wheel-steer"/>
 
         <!-- I quattro posti si occupano davanti-dietro, nell'ordine in cui si
              riempie un'auto vera. Lo stato iniziale scritto qui e' quello che si
              vede senza JavaScript e con `prefers-reduced-motion`: due presi, due
-             liberi, cioe' la frase che c'e' scritta accanto. -->
+             liberi, cioe' la frase che c'e' scritta accanto.
+             Davanti i sedili sono larghi 40 e dietro 34: e' cosi' anche in
+             macchina, dietro e' una panchina divisa in tre. -->
         <g class="seat seat-taken" data-posto="1">
-          <rect x="112" y="66" width="40" height="14" rx="7" class="seat-back"/>
-          <rect x="110" y="78" width="44" height="40" rx="12" class="seat-base"/>
-          <path d="M 119 86 L 145 86" class="seat-piega"/>
-          <text x="132" y="104" class="seat-text">GI</text>
+          <rect x="88" y="94" width="36" height="13" rx="5" class="seat-back"/>
+          <rect x="86" y="107" width="40" height="42" rx="9" class="seat-base"/>
+          <path d="M 93 117 L 119 117" class="seat-piega"/>
+          <text x="106" y="134" class="seat-text">GI</text>
         </g>
         <g class="seat seat-taken" data-posto="2">
-          <rect x="23" y="118" width="40" height="14" rx="7" class="seat-back"/>
-          <rect x="21" y="130" width="44" height="40" rx="12" class="seat-base"/>
-          <path d="M 30 138 L 56 138" class="seat-piega"/>
-          <text x="43" y="156" class="seat-text">SA</text>
+          <rect x="23" y="182" width="30" height="13" rx="5" class="seat-back"/>
+          <rect x="21" y="195" width="34" height="42" rx="9" class="seat-base"/>
+          <path d="M 28 205 L 48 205" class="seat-piega"/>
+          <text x="38" y="222" class="seat-text">SA</text>
         </g>
         <g class="seat seat-free" data-posto="3">
-          <rect x="75" y="118" width="40" height="14" rx="7" class="seat-back"/>
-          <rect x="73" y="130" width="44" height="40" rx="12" class="seat-base"/>
-          <path d="M 82 138 L 108 138" class="seat-piega"/>
-          <text x="95" y="156" class="seat-text">+</text>
+          <rect x="60" y="182" width="30" height="13" rx="5" class="seat-back"/>
+          <rect x="58" y="195" width="34" height="42" rx="9" class="seat-base"/>
+          <path d="M 65 205 L 85 205" class="seat-piega"/>
+          <text x="75" y="222" class="seat-text">+</text>
         </g>
         <g class="seat seat-free" data-posto="4">
-          <rect x="127" y="118" width="40" height="14" rx="7" class="seat-back"/>
-          <rect x="125" y="130" width="44" height="40" rx="12" class="seat-base"/>
-          <path d="M 134 138 L 160 138" class="seat-piega"/>
-          <text x="147" y="156" class="seat-text">+</text>
+          <rect x="97" y="182" width="30" height="13" rx="5" class="seat-back"/>
+          <rect x="95" y="195" width="34" height="42" rx="9" class="seat-base"/>
+          <path d="M 102 205 L 122 205" class="seat-piega"/>
+          <text x="112" y="222" class="seat-text">+</text>
         </g>
       </svg>
       <div class="cartello-testo">

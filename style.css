@@ -369,7 +369,7 @@ a:hover { color: var(--primary-hover); }
     border-radius: var(--r-card);
     color: var(--ink);
   }
-  .auth-cartello .car-svg { flex: none; width: 112px; margin: 0; }
+  .auth-cartello .car-svg { flex: none; width: 98px; margin: 0; }
   .cartello-testo { min-width: 0; }
   .cartello-riga { font-size: 1.02rem; line-height: 1.35; letter-spacing: -0.02em; }
   .cartello-riga b { font-weight: 700; }
@@ -403,7 +403,7 @@ a:hover { color: var(--primary-hover); }
     padding: 32px 28px 26px;
     text-align: center;
   }
-  .auth-cartello .car-svg { width: 178px; margin-bottom: 6px; }
+  .auth-cartello .car-svg { width: 142px; margin-bottom: 6px; }
   .auth-form-panel { grid-area: 1 / 2; justify-content: flex-start; padding: 48px; }
 }
 
@@ -1233,7 +1233,10 @@ input[type="time"]::-webkit-calendar-picker-indicator { filter: invert(1) opacit
    · libero  → contorno tratteggiato, dentro un «+»;
    · occupato→ pieno chiaro, dentro le iniziali;
    · tuo     → pieno candy blue, con l'onyx sopra e il bordo doppio.            */
-.car-svg { width: min(220px, 80%); margin: 6px auto 2px; display: block; }
+/* La misura scende da 220 a 150 perche' la sagoma e' cambiata: adesso il viewBox
+   e' 150x310 invece di 190x250, cioe' l'auto e' piu' stretta e piu' lunga. A
+   parita' di larghezza sarebbe diventata mezzo schermo di altezza. */
+.car-svg { width: min(150px, 58%); margin: 6px auto 2px; display: block; }
 /* Il contorno e' candy blue smorzato e non grigio: e' quello che fa leggere la
    sagoma come una cosa disegnata apposta invece che come una macchia piu' chiara
    sul nero. La scocca resta appena sopra il fondo — la protagonista sono i sedili,
@@ -1249,6 +1252,40 @@ input[type="time"]::-webkit-calendar-picker-indicator { filter: invert(1) opacit
    sopra, quella sagoma e' un rettangolo con degli angoli. */
 .car-wheel { fill: var(--ink-soft); }
 .car-wheel-steer { fill: none; stroke: var(--ink-soft); stroke-width: 3; }
+
+/* --- Le finiture della carrozzeria ---------------------------------------
+   Prese dal riferimento della supercar, che pero' e' un'auto **di profilo**: di
+   profilo un sedile non si puo' toccare, e toccare un sedile e' quello che
+   questa app fa. Resta la vista dall'alto, e di quel disegno si prende il
+   vocabolario — passaruota, battistrada, fari, pieghe, porte — non
+   l'inquadratura. E non i colori: rosso metallizzato e ciano al neon sono due
+   tinte che questa palette non ha. */
+
+/* L'arco che chiude la ruota. Un riempimento non si vedrebbe — il fondo della
+   scheda e' gia' l'onyx — quindi e' un contorno. */
+.car-passaruota { fill: none; stroke: var(--border-strong); stroke-width: 1.4; }
+/* Cofano e baule: le due righe che dividono l'auto nelle sue tre parti. */
+.car-cofano { fill: none; stroke: var(--border-strong); stroke-width: 1.4; stroke-linecap: round; }
+/* La presa d'aria fra i fari: una riga, e il muso ha una faccia. */
+.car-griglia { stroke: var(--border-strong); stroke-width: 2.5; stroke-linecap: round; }
+/* Il vano dell'abitacolo, dove il tetto e' tagliato via per far vedere i sedili.
+   Senza, muso e coda sono la stessa superficie nera dei sedili e questi sembrano
+   appoggiati sulla lamiera invece che dentro l'auto. */
+.car-abitacolo { fill: none; stroke: var(--border); stroke-width: 1.2; }
+/* Il battistrada: tre solchi. A 150px di larghezza e' l'unico dettaglio della
+   ruota che si vede davvero, e senza quello una ruota e' una pastiglia grigia. */
+.car-battistrada { stroke: var(--bg); stroke-width: 1.6; stroke-linecap: round; }
+/* I fari sono l'unico punto in cui la carrozzeria porta il colore dell'app:
+   dicono da che parte guarda l'auto, cioe' dove sta chi guida. */
+.car-faro { fill: var(--primary); }
+/* I fanali dietro restano un contorno. Pieni e rossi sarebbero il colore
+   dell'errore su una cosa che non e' un errore. */
+.car-fanale { fill: none; stroke: var(--ink-soft); stroke-width: 1.5; }
+/* Le porte: una riga corta sul fianco all'altezza di ogni fila. E' il segnale
+   piu' economico che esista per far leggere una scocca come una scocca. */
+.car-porta { stroke: var(--border-strong); stroke-width: 1.5; stroke-linecap: round; }
+/* La piega del fianco, che da' spessore alla lamiera. */
+.car-piega-scocca { stroke: var(--primary-bordo); stroke-width: 1.2; opacity: 0.55; stroke-linecap: round; }
 
 .seat .seat-back { fill: var(--surface-2); }
 .seat .seat-base {
@@ -1811,7 +1848,7 @@ input[type="time"]::-webkit-calendar-picker-indicator { filter: invert(1) opacit
   .day-cta > * { flex: 1 1 auto; min-width: 0; }
   .group-pills { justify-content: flex-start; }
   .rides-grid { grid-template-columns: 1fr; }
-  .car-svg { width: min(210px, 78%); }
+  .car-svg { width: min(145px, 56%); }
 }
 
 /* Dove c'e' la barra in alto non servono ne' la fascia in basso ne' quella del
