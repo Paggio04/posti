@@ -4,7 +4,7 @@
 // versionata: stesse regole in locale (npm run lint) e in CI.
 export default [
   {
-    files: ['app.js', 'config.js', 'rete.js'],
+    files: ['app.js', 'config.js', 'rete.js', 'accesso.js'],
     languageOptions: {
       ecmaVersion: 2023,
       sourceType: 'module',
@@ -33,6 +33,11 @@ export default [
         // C13: la chiave VAPID arriva in base64url e il browser la vuole in byte.
         atob: 'readonly',
         Uint8Array: 'readonly',
+        // Il quaderno del riepilogo: quante schermate ci sono lo si sa solo dopo che
+        // il browser ha impaginato, e cambia anche quando cambia il riquadro senza
+        // che cambi la finestra (la fascia in alto che compare a 768px). `resize`
+        // quel caso non lo vede.
+        ResizeObserver: 'readonly',
       },
     },
     rules: {

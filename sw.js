@@ -12,7 +12,7 @@
 //
 // Quello che si mette in cache e' solo il guscio: i file pubblici, identici per tutti.
 
-const VERSIONE = 'wetransport-v10';  // sale quando cambia il GUSCIO qui sotto
+const VERSIONE = 'wetransport-v11';  // sale quando cambia il GUSCIO qui sotto
 // v10 (06/08/2026): la barra laterale diventa una barra in alto con il tondo che
 // scivola, e il riepilogo prende tutta la larghezza senza scorrere. Cambiano
 // `index.html`, `style.css` e `app.js`.
@@ -45,6 +45,7 @@ const GUSCIO = [
   '/style.css',
   '/app.js',
   '/rete.js',
+  '/accesso.js',
   '/config.js',
   '/manifest.json',
   '/icon.svg',

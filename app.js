@@ -1273,7 +1273,7 @@ function renderGroupBar() {
   groupPills.innerHTML = '';
   for (const g of myGroups) {
     const b = document.createElement('button');
-    b.className = 'tab' + (currentGroupId === g.id ? ' active' : '');
+    b.className = 'group-pill' + (currentGroupId === g.id ? ' active' : '');
     b.textContent = g.name;
     b.addEventListener('click', () => selectGroup(g.id));
     groupPills.appendChild(b);
@@ -1997,6 +1997,71 @@ async function loadStats() {
   }
 }
 
+// ── Il quaderno del riepilogo ───────────────────────────────────────────────
+// Il riepilogo non scorre in verticale a nessuna larghezza (vedi style.css). Dove
+// le schede non ci stanno tutte insieme, la griglia diventa una fila di schermate
+// larghe quanto la finestra: qui si contano, si disegnano i pallini e si tiene
+// acceso quello giusto.
+//
+// Quante siano non lo decide questo codice: lo decide il CSS impaginando, e si
+// legge da `scrollWidth`. Cosi' non c'e' un secondo posto che deve sapere quante
+// righe entrano in una schermata, e i due non possono divergere.
+function montaPagine(box) {
+  const griglia = box.querySelector('.grid');
+  const barra = box.querySelector('#dash-pagine');
+  if (!griglia || !barra) return;
+
+  // **Il passo e' una colonna, non una schermata**, e la differenza si vede solo
+  // quando le due non coincidono: sul tablet si vedono tre colonne su quattro,
+  // quindi c'e' una sola posizione in piu' dove fermarsi, non un'altra schermata
+  // intera. Dividere la larghezza totale per quella visibile dava 1,336 e
+  // arrotondava a 1, cioe' «nessun pallino» su una vista che invece scorreva.
+  const passo = () => {
+    const prima = griglia.firstElementChild;
+    return Math.max(1, (prima ? prima.getBoundingClientRect().width : griglia.clientWidth) + 10);
+  };
+  const quante = () =>
+    Math.max(1, Math.round((griglia.scrollWidth - griglia.clientWidth) / passo()) + 1);
+  const attuale = () => Math.round(griglia.scrollLeft / passo());
+
+  function disegna() {
+    const n = quante();
+    barra.classList.toggle('acceso', n > 1);
+    if (n <= 1) { barra.innerHTML = ''; return; }
+    if (barra.children.length !== n) {
+      barra.innerHTML = '';
+      for (let i = 0; i < n; i++) {
+        const b = document.createElement('button');
+        b.type = 'button';
+        b.setAttribute('role', 'tab');
+        // Il pallino e' un bottone vero: con la tastiera si passa da una
+        // schermata all'altra senza dover saper scorrere di lato.
+        b.setAttribute('aria-label', `Schermata ${i + 1} di ${n}`);
+        b.addEventListener('click', () => {
+          griglia.scrollTo({ left: i * passo(), behavior: 'smooth' });
+        });
+        barra.appendChild(b);
+      }
+    }
+    accendi();
+  }
+
+  function accendi() {
+    const i = attuale();
+    [...barra.children].forEach((b, k) => {
+      b.classList.toggle('on', k === i);
+      b.setAttribute('aria-selected', k === i ? 'true' : 'false');
+    });
+  }
+
+  griglia.addEventListener('scroll', accendi, { passive: true });
+  // La larghezza della griglia cambia con la finestra **e** con la fascia in alto
+  // che compare a 768px: `resize` da solo si perde il secondo caso quando il
+  // riquadro cambia senza che cambi la finestra.
+  new ResizeObserver(disegna).observe(griglia);
+  disegna();
+}
+
 async function disegnaRiepilogo(box) {
 
   let sq = supabase
@@ -2163,7 +2228,6 @@ async function disegnaRiepilogo(box) {
   const diDomani = data.filter(r => r.ride_date === domani);
   const postiDom = diDomani.reduce((s, r) => s + (r.seats || 0), 0);
   const occupatiDom = diDomani.reduce((s, r) => s + r.seat_claims.length, 0);
-  const liberiDom = Math.max(0, postiDom - occupatiDom);
 
   // ── Il calendario del mese ───────────────────────────────────────────────
   const conPassaggio = new Set(data.map(r => r.ride_date));
@@ -2217,10 +2281,10 @@ async function disegnaRiepilogo(box) {
            aria-label="Andamento del carburante ripartito negli ultimi sei mesi"
            style="width:100%;height:56px;margin-top:8px;display:block">
         <defs><linearGradient id="grad-carb" x1="0" y1="0" x2="0" y2="1">
-          <stop offset="0" stop-color="oklch(0.74 0.13 78)" stop-opacity=".40"/>
-          <stop offset="1" stop-color="oklch(0.74 0.13 78)" stop-opacity="0"/></linearGradient></defs>
+          <stop offset="0" stop-color="var(--primary)" stop-opacity=".28"/>
+          <stop offset="1" stop-color="var(--primary)" stop-opacity="0"/></linearGradient></defs>
         <path d="${via} L250,56 L0,56 Z" fill="url(#grad-carb)"/>
-        <path d="${via}" fill="none" stroke="oklch(0.74 0.13 78)" stroke-width="2" vector-effect="non-scaling-stroke"/>
+        <path d="${via}" fill="none" stroke="var(--primary)" stroke-width="2" vector-effect="non-scaling-stroke"/>
       </svg>` : ''}
       <button type="button" class="cta" data-vai="conti">Vedi i conti →</button>
     </section>`;
@@ -2267,48 +2331,28 @@ async function disegnaRiepilogo(box) {
       <div class="head"><h3>${escapeHtml(meseInLettere(oggi))}</h3><span class="sub">oggi · tuoi turni · con auto</span></div>
       <div class="dows"><span>L</span><span>M</span><span>M</span><span>G</span><span>V</span><span>S</span><span>D</span></div>
       <div class="days">${celle.join('')}</div>
-      <div style="margin-top:9px">
+    </section>`;
+
+  const cardAgenda = `
+    <section class="card g-agenda">
+      <div class="head"><h3>Prossimi sette giorni</h3>${postiDom > 0
+        ? `<span class="pill">domani · ${diDomani.length} ${diDomani.length === 1 ? 'auto' : 'auto'} · <b>${occupatiDom}/${postiDom}</b> posti</span>`
+        : '<span class="pill">domani · nessuna auto</span>'}</div>
+      <div>
         ${giornoAgenda.rides.length
-          ? giornoAgenda.rides.slice(0, 4).map(r => {
+          ? giornoAgenda.rides.slice(0, 3).map(r => {
               const pieno = r.seat_claims.length >= (r.seats || 0);
               return `<div class="ag">
                 <span class="h">${escapeHtml((r.depart_time || '').slice(0, 5) || '—')}</span>
                 <div class="t">${escapeHtml(r.origin || '—')} → ${escapeHtml(r.destination || '')}
                   <small>${escapeHtml(nomeCorto(r.driver_id))} · ${r.seat_claims.length}/${r.seats}${pieno ? ' completo' : ''}</small></div>
-                <span class="chip${mio(r.driver_id) ? ' mia' : ''}" style="background:${mio(r.driver_id) ? 'var(--ottone-velo)' : 'var(--primary-soft)'}">${ico('car', 13)}</span>
+                <span class="chip${mio(r.driver_id) ? ' mia' : ''}">${ico('car', 13)}</span>
               </div>`;
-            }).join('')
+            }).join('') + (giornoAgenda.rides.length > 3
+              ? `<div class="resto">e altri ${giornoAgenda.rides.length - 3}</div>`
+              : '')
           : '<p class="vuoto" style="margin:0">Nessun passaggio nei prossimi sette giorni.</p>'}
       </div>
-    </section>`;
-
-  // La ciambella si disegna solo se domani esiste qualcosa da ripartire.
-  const cardDomani = postiDom > 0 ? `
-    <section class="card hero g-domani">
-      <div class="head"><h3>Occupazione · domani</h3><span class="sub">${postiDom}</span></div>
-      <div class="ciambella">
-        <svg width="74" height="74" viewBox="0 0 42 42" style="flex:none" role="img"
-             aria-label="${occupatiDom} posti occupati su ${postiDom}">
-          <circle cx="21" cy="21" r="16" fill="none" stroke="oklch(1 0 0/.10)" stroke-width="7"/>
-          <circle cx="21" cy="21" r="16" fill="none" stroke="oklch(0.52 0.11 165)" stroke-width="7"
-                  stroke-dasharray="${((occupatiDom / postiDom) * 100).toFixed(1)} 100" transform="rotate(-90 21 21)"/>
-          <circle cx="21" cy="21" r="16" fill="none" stroke="oklch(0.52 0.13 255)" stroke-width="7"
-                  stroke-dasharray="${((liberiDom / postiDom) * 100).toFixed(1)} 100"
-                  stroke-dashoffset="-${((occupatiDom / postiDom) * 100).toFixed(1)}" transform="rotate(-90 21 21)"/>
-          <text x="21" y="20" text-anchor="middle" font-size="8.5" font-weight="700" fill="#fff">${postiDom}</text>
-          <text x="21" y="26" text-anchor="middle" font-size="3.4" fill="oklch(0.72 0.03 258)">posti</text>
-        </svg>
-        <div class="leg">
-          <div><i style="background:oklch(0.52 0.11 165)"></i><span class="nm">Occupati</span><b>${occupatiDom}</b></div>
-          <div><i style="background:oklch(0.52 0.13 255)"></i><span class="nm">Disponibili</span><b>${liberiDom}</b></div>
-          <div><i style="background:oklch(1 0 0/.18)"></i><span class="nm">Auto in strada</span><b>${diDomani.length}</b></div>
-        </div>
-      </div>
-    </section>` : `
-    <section class="card hero g-domani">
-      <div class="head"><h3>Occupazione · domani</h3></div>
-      <p class="vuoto" style="color:oklch(0.72 0.03 258)">Domani non c'è nessuna auto in programma.
-      Se guidi tu, pubblicala dalla Home.</p>
     </section>`;
 
   const ETICHETTA = {
@@ -2323,10 +2367,10 @@ async function disegnaRiepilogo(box) {
   const cardAttivita = `
     <section class="card g-attivita">
       <div class="head"><h3>Attività recente</h3></div>
-      ${eventi.length ? eventi.map(e => {
+      ${eventi.length ? eventi.slice(0, 5).map(e => {
         const chi = nomeCorto(e.attore);
         return `<div class="att">
-          <div class="av" style="background:${mio(e.attore) ? 'var(--ottone)' : coloreDi(e.attore)};${mio(e.attore) ? 'color:oklch(0.28 0.05 70)' : ''}">${escapeHtml(iniz(chi))}</div>
+          <div class="av" style="background:${mio(e.attore) ? 'var(--tuo)' : coloreDi(e.attore)}">${escapeHtml(iniz(chi))}</div>
           <div class="txt"><b>${escapeHtml(chi)}</b> — ${ETICHETTA[e.tipo] || escapeHtml(e.tipo)}</div>
           <span class="when">${escapeHtml(quandoBreve(e.quando))}</span>
         </div>`;
@@ -2351,8 +2395,7 @@ async function disegnaRiepilogo(box) {
   const nomeGiorno = (iso) => GIORNI[(new Date(iso + 'T00:00:00').getDay() + 6) % 7];
   const cardSettimana = `
     <section class="card g-settimana">
-      <div class="head"><div><h3>Occupazione settimanale</h3>
-        <span class="sub">posti assegnati, giorno per giorno</span></div></div>
+      <div class="head"><h3>Occupazione settimanale</h3></div>
       ${settimana.map(g => {
         // Con piu' di un'auto nello stesso giorno il nome di chi guida la prima
         // sarebbe una mezza verita': si dice quante sono.
@@ -2366,15 +2409,15 @@ async function disegnaRiepilogo(box) {
         return `<div class="riemp">
           <span class="n">${suo ? `<span class="tu">${escapeHtml(et)}</span>` : escapeHtml(et)}</span>
           <span class="bar"><i style="width:${perc.toFixed(0)}%;background:${
-            !g.posti ? 'transparent' : perc >= 100 ? 'var(--ok)' : suo ? 'var(--ottone)' : 'var(--primary)'}"></i></span>
+            !g.posti ? 'transparent' : suo ? 'var(--tuo)' : 'var(--ink-soft)'}"></i></span>
           <span class="p">${g.posti ? `${g.presi}/${g.posti}` : '—'}</span>
         </div>`;
       }).join('')}
-      <div class="piede"><b>${presiSett} / ${postiSett}</b> posti assegnati nei prossimi sette giorni${
-        scoperti ? ` · <b style="color:var(--danger)">${scoperti} ${scoperti === 1 ? 'giorno scoperto' : 'giorni scoperti'}</b>` : ' · nessun giorno scoperto'}</div>
+      <div class="piede"><b>${presiSett}/${postiSett}</b> posti assegnati${
+        scoperti ? ` · <b class="allarme">${scoperti} ${scoperti === 1 ? 'giorno scoperto' : 'giorni scoperti'}</b>` : ' · nessun giorno scoperto'}</div>
     </section>`;
 
-  const turni = [...drives30.entries()].sort((a, b) => b[1].n - a[1].n).slice(0, 6);
+  const turni = [...drives30.entries()].sort((a, b) => b[1].n - a[1].n).slice(0, 5);
   const totTurni = turni.reduce((s, [, v]) => s + v.n, 0);
   const mieiTurni = drives30.get(currentUser.id)?.n ?? 0;
   const cardTurni = turni.length ? `
@@ -2384,10 +2427,10 @@ async function disegnaRiepilogo(box) {
         const suo = mio(id);
         return `<div class="turno">
           <span class="n">${suo ? '<b>Tu</b>' : escapeHtml(v.name)}</span>
-          <span class="bar"><i style="width:${totTurni ? ((v.n / turni[0][1].n) * 100).toFixed(0) : 0}%;background:${suo ? 'var(--ottone)' : 'var(--primary)'}"></i><em>${v.n}</em></span>
+          <span class="bar"><i style="width:${totTurni ? ((v.n / turni[0][1].n) * 100).toFixed(0) : 0}%;background:${suo ? 'var(--tuo)' : 'var(--ink-soft)'}"></i><em>${v.n}</em></span>
         </div>`;
       }).join('')}
-      <div class="piede"><b style="color:var(--ottone-scuro)">${totTurni ? Math.round((mieiTurni / totTurni) * 100) : 0}%</b> dei turni a tuo carico</div>
+      <div class="piede"><b class="tuo">${totTurni ? Math.round((mieiTurni / totTurni) * 100) : 0}%</b> dei turni a tuo carico</div>
     </section>` : `
     <section class="card g-turni">
       <div class="head"><div><h3>Distribuzione turni</h3><span class="sub">ultimi 30 giorni</span></div></div>
@@ -2396,10 +2439,9 @@ async function disegnaRiepilogo(box) {
 
   const cardConti = `
     <section class="card g-conti" id="dash-conti">
-      <div class="head"><div><h3>Conti in sospeso</h3>
-        <span class="sub">quote di carburante non ancora saldate</span></div>
-        <span class="pill">Saldo: <b style="color:${saldo >= 0 ? 'var(--ok-deep)' : 'var(--danger)'}">${saldo >= 0 ? '+ ' : '− '}${escapeHtml(eur(Math.abs(saldo)))}</b></span></div>
-      ${partite.length ? `<div class="conti">${partite.map(p => {
+      <div class="head"><h3>Conti in sospeso</h3>
+        <span class="pill">Saldo: <b class="${saldo >= 0 ? 'avere' : 'dare'}">${saldo >= 0 ? '+ ' : '− '}${escapeHtml(eur(Math.abs(saldo)))}</b></span></div>
+      ${partite.length ? `<div class="conti">${partite.slice(0, 2).map(p => {
         const n = quantiCon.get(p.id) || 0;
         const da = primaCon.get(p.id);
         // Le voci in ordine di tempo, dalla piu' recente: la contestazione parte
@@ -2428,7 +2470,7 @@ async function disegnaRiepilogo(box) {
         </div>`;
       }).join('')}</div>`
       : '<p class="vuoto">Nessun conto in sospeso. Compaiono qui quando chi guida indica un «€ a testa».</p>'}
-      <div class="piede">${partite.length ? `<button type="button" class="cta-vuoto" id="salda-tutto" style="margin:0 12px 0 0">Salda tutto (${partite.length})</button><button type="button" class="cta-vuoto" id="conto-mese" style="margin:0 12px 0 0">Riepilogo del mese</button>` : ''}Gli importi li vedete solo tu e la persona interessata: la policy sulla tabella nomina le due parti, non la comitiva.</div>
+      <div class="piede">${partite.length > 2 ? `<span class="resto">e altri ${partite.length - 2} conti aperti</span>` : ''}${partite.length ? `<button type="button" class="cta-vuoto" id="salda-tutto">Salda tutto (${partite.length})</button><button type="button" class="cta-vuoto" id="conto-mese">Riepilogo del mese</button>` : 'Gli importi li vedete solo tu e la persona interessata.'}</div>
     </section>`;
 
   box.innerHTML =
@@ -2442,9 +2484,8 @@ async function disegnaRiepilogo(box) {
       <span class="dash-av">${escapeHtml(iniz(myName))}</span>
     </div>
 
-    <div class="kpi">${kpi.join('')}</div>
-
     <div class="grid">
+      <div class="g-kpi">${kpi.join('')}</div>
       ${heroCarb}
       ${cardProssimo}
       ${cardCal}
@@ -2452,9 +2493,15 @@ async function disegnaRiepilogo(box) {
       ${cardSettimana}
       ${cardTurni}
       ${cardAttivita}
+      ${cardAgenda}
       ${cardConti}
-      ${cardDomani}
-    </div>`;
+    </div>
+    <div class="dash-pagine" id="dash-pagine" role="tablist" aria-label="Schermate del riepilogo"></div>`;
+
+  // Il quaderno: quante schermate ci sono lo sa solo il browser, dopo aver
+  // impaginato. Se ce n'e' una sola i pallini non compaiono — un indicatore con
+  // un pallino solo non indica niente — e su un monitor e' esattamente il caso.
+  montaPagine(box);
 
   // I riquadri portano da qualche parte: nessun bottone qui sopra e' finto.
   box.querySelectorAll('[data-vai]').forEach(b => b.addEventListener('click', () => {
@@ -2577,8 +2624,8 @@ async function disegnaRiepilogo(box) {
 // schiarisce fino a 3.7:1, e il grigio a 0.6 di luminosita', fermo a 3.9:1 in
 // entrambi. Un avatar e' un cerchio con due lettere dentro: e' testo, e vale la
 // stessa soglia del testo.
-const COLORI_AV = ['var(--primary)', 'var(--ok-pieno)', 'oklch(0.50 0.03 258)',
-  'oklch(0.55 0.14 300)', 'oklch(0.55 0.13 30)', 'oklch(0.5 0.1 200)'];
+const COLORI_AV = ['oklch(0.78 0.030 227)', 'oklch(0.70 0.050 250)', 'oklch(0.72 0.060 200)',
+  'oklch(0.66 0.070 215)', 'oklch(0.74 0.040 265)', 'oklch(0.68 0.040 185)'];
 function coloreDi(id) {
   let h = 0;
   for (const c of String(id || '')) h = (h * 31 + c.charCodeAt(0)) >>> 0;
@@ -3013,12 +3060,6 @@ function escapeHtml(s) {
     ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
 }
 
-function hueFor(id) {
-  let h = 0;
-  for (const c of id) h = (h * 31 + c.charCodeAt(0)) % 360;
-  return h;
-}
-
 function isPastDay() { return currentDate < todayISO(); }
 
 // Messaggi d'errore: i trigger del DB parlano già italiano
@@ -3158,8 +3199,8 @@ async function renderTurnHint() {
   if (maxN - lazyN < 2) return; // turni già equi, niente frecciatine
   const lazyName = nomeDi(members.find(m => m.user_id === lazyId)?.profile);
   el.innerHTML = lazyId === currentUser.id
-    ? `🚗 Nelle ultime 4 settimane hai guidato ${lazyN === 0 ? 'zero volte' : `solo ${lazyN} ${lazyN === 1 ? 'volta' : 'volte'}`}: tocca a te metterci l'auto 👀`
-    : `👀 ${escapeHtml(lazyName)} ha guidato ${lazyN === 0 ? 'zero volte' : `solo ${lazyN} ${lazyN === 1 ? 'volta' : 'volte'}`} nelle ultime 4 settimane… i turni parlano da soli`;
+    ? `Nelle ultime quattro settimane hai guidato ${lazyN === 0 ? 'zero volte' : `solo ${lazyN} ${lazyN === 1 ? 'volta' : 'volte'}`}: tocca a te metterci l'auto.`
+    : `${escapeHtml(lazyName)} ha guidato ${lazyN === 0 ? 'zero volte' : `solo ${lazyN} ${lazyN === 1 ? 'volta' : 'volte'}`} nelle ultime quattro settimane.`;
   el.classList.remove('hidden');
 }
 
@@ -3273,30 +3314,157 @@ async function renderWalkers(rides) {
 }
 
 // --- Macchina SVG ---
-// Layout sedili centrato nella carrozzeria (larghezza 190, centro x = 95).
-// Il guidatore è sempre davanti a sinistra; le posizioni dei passeggeri
-// dipendono da quanti posti offre l'auto.
-// Le tre file sono equidistanti: 92, 176, 260, cioe' 84 di passo. Prima l'ultima
-// era a 252, quindi 84 e poi 76: la terza fila risultava schiacciata verso il
-// lunotto, e su un disegno simmetrico si vede subito anche senza misurarlo.
-const PASSO_FILA = 84;
-const ROW_FRONT = 92, ROW_BACK = ROW_FRONT + PASSO_FILA, ROW_THIRD = ROW_BACK + PASSO_FILA;
+//
+// **Le proporzioni sono quelle di un'auto, e prima non lo erano.** La scocca era
+// un rettangolo 170x230 con gli spigoli arrotondati a 46: cioe' larga quanto due
+// terzi della sua lunghezza (un'auto vera sta a uno a due e mezzo) e con le due
+// estremita' quasi semicircolari. Vista dall'alto non era un'auto, era una
+// capsula. E dentro quella larghezza tre sedili da 44 in fila si toccavano.
+//
+// Adesso il rapporto e' 114 di larghezza per 282 di lunghezza — **1 : 2,47**, che
+// e' quello di un'utilitaria vera (1,75 m per 4,3 m) — la sagoma e' un tracciato
+// con il muso che si stringe e la coda che si chiude, e i sedili sono piu' stretti
+// e piu' alti, come sono i sedili. Quelli di dietro sono piu' stretti di quelli
+// davanti perche' e' cosi' anche in macchina: dietro e' una panchina divisa in
+// tre, davanti sono due poltrone.
+//
+// Le file sono equidistanti: 122, 210, 298, cioe' 88 di passo, e fra il fondo di
+// una fila e la cima della successiva restano 33px di pavimento.
+const PASSO_FILA = 88;
+const ROW_FRONT = 122, ROW_BACK = ROW_FRONT + PASSO_FILA, ROW_THIRD = ROW_BACK + PASSO_FILA;
 
 // La geometria della scocca. Tutto quello che sta a destra si RICAVA da quello che
 // sta a sinistra: scrivere le due coordinate a mano e' esattamente il modo in cui
 // le ruote sono finite fuori di 4px, con quelle di sinistra tagliate dal bordo.
-const CAR_W = 190;
-const CAR_INSET = 10;                       // margine della scocca dal viewBox
+const CAR_W = 150;                          // larghezza del viewBox
+const CAR_INSET = 18;                       // margine della scocca dal viewBox
+const CAR_MID = CAR_W / 2;
 const specchia = (x, w) => CAR_W - x - w;   // riflette un rettangolo sull'asse
-const DRIVER_POS = { x: 58, y: ROW_FRONT };
+// Larghezza di un sedile: poltrona davanti, posto di panchina dietro.
+const W_AVANTI = 40, W_DIETRO = 34;
+const DRIVER_POS = { x: 44, y: ROW_FRONT, w: W_AVANTI };
 const SEAT_LAYOUTS = {
-  1: { 1: { x: 132, y: ROW_FRONT } },
-  2: { 1: { x: 132, y: ROW_FRONT }, 4: { x: 95, y: ROW_BACK } },
-  3: { 1: { x: 132, y: ROW_FRONT }, 2: { x: 58, y: ROW_BACK }, 4: { x: 132, y: ROW_BACK } },
-  4: { 1: { x: 132, y: ROW_FRONT }, 2: { x: 43, y: ROW_BACK }, 3: { x: 95, y: ROW_BACK }, 4: { x: 147, y: ROW_BACK } },
-  5: { 1: { x: 132, y: ROW_FRONT }, 2: { x: 43, y: ROW_BACK }, 3: { x: 95, y: ROW_BACK }, 4: { x: 147, y: ROW_BACK }, 6: { x: 95, y: ROW_THIRD } },
-  6: { 1: { x: 132, y: ROW_FRONT }, 2: { x: 43, y: ROW_BACK }, 3: { x: 95, y: ROW_BACK }, 4: { x: 147, y: ROW_BACK }, 5: { x: 58, y: ROW_THIRD }, 6: { x: 132, y: ROW_THIRD } },
+  1: { 1: { x: 106, y: ROW_FRONT, w: W_AVANTI } },
+  2: { 1: { x: 106, y: ROW_FRONT, w: W_AVANTI }, 4: { x: CAR_MID, y: ROW_BACK, w: W_AVANTI } },
+  3: { 1: { x: 106, y: ROW_FRONT, w: W_AVANTI }, 2: { x: 52, y: ROW_BACK, w: W_AVANTI }, 4: { x: 98, y: ROW_BACK, w: W_AVANTI } },
+  4: { 1: { x: 106, y: ROW_FRONT, w: W_AVANTI }, 2: { x: 38, y: ROW_BACK, w: W_DIETRO }, 3: { x: CAR_MID, y: ROW_BACK, w: W_DIETRO }, 4: { x: 112, y: ROW_BACK, w: W_DIETRO } },
+  5: { 1: { x: 106, y: ROW_FRONT, w: W_AVANTI }, 2: { x: 38, y: ROW_BACK, w: W_DIETRO }, 3: { x: CAR_MID, y: ROW_BACK, w: W_DIETRO }, 4: { x: 112, y: ROW_BACK, w: W_DIETRO }, 6: { x: CAR_MID, y: ROW_THIRD, w: W_AVANTI } },
+  6: { 1: { x: 106, y: ROW_FRONT, w: W_AVANTI }, 2: { x: 38, y: ROW_BACK, w: W_DIETRO }, 3: { x: CAR_MID, y: ROW_BACK, w: W_DIETRO }, 4: { x: 112, y: ROW_BACK, w: W_DIETRO }, 5: { x: 52, y: ROW_THIRD, w: W_AVANTI }, 6: { x: 98, y: ROW_THIRD, w: W_AVANTI } },
 };
+
+// La sagoma, ricavata dall'altezza. Un `path` e non un `rect` con il raggio
+// grande, perche' e' il raggio grande a fare la capsula — e nessun valore di `rx`
+// fa un muso.
+//
+// **Il muso e' schiacciato, non a punta**: fra x=56 e x=94 la linea in cima e'
+// dritta, cioe' 38px di frontale piatto dove stanno i fari. Un'auto vista
+// dall'alto ha un frontale, non una prua; con il muso appuntito la sagoma
+// tornava a somigliare a una capsula pur avendo le proporzioni giuste.
+function sagomaAuto(H) {
+  return `M 56 10
+    C 40 12 30 26 25 48 C 20 68 ${CAR_INSET} 88 ${CAR_INSET} 108
+    L ${CAR_INSET} ${H - 100}
+    C ${CAR_INSET} ${H - 70} 20 ${H - 40} 26 ${H - 24}
+    C 31 ${H - 12} 42 ${H - 6} 60 ${H - 5}
+    L 90 ${H - 5}
+    C 108 ${H - 6} 119 ${H - 12} 124 ${H - 24}
+    C 130 ${H - 40} 132 ${H - 70} 132 ${H - 100}
+    L 132 108
+    C 132 88 130 68 125 48 C 120 26 110 12 94 10 Z`;
+}
+
+// ── Le finiture della carrozzeria ──────────────────────────────────────────
+// Passaruota, battistrada, fari, linee delle porte, pieghe dei fianchi. Prese
+// dal riferimento che mi e' stato dato — che pero' e' un'auto **di profilo**, e
+// di profilo un sedile non si puo' toccare: qui la vista resta dall'alto e di
+// quel disegno si prende il vocabolario, non l'inquadratura. Stessa ragione per
+// cui i fari sono candy blue e non ciano al neon: i colori dell'app sono due.
+//
+// Tutto quello che sta a destra si ricava da quello che sta a sinistra.
+function finitureAuto(svg, H, righe) {
+  // **Le ruote entrano nella scocca di tre pixel.** Tangenti al fianco — com'erano
+  // — si leggevano come quattro pastiglie appoggiate accanto all'auto invece che
+  // come ruote dentro il loro passaruota. Tre pixel bastano, e sono la differenza
+  // fra un mezzo e un disegno di un mezzo.
+  const RUOTA_W = 13, RUOTA_H = 46, RUOTA_X = 8, RUOTA_DAL_BORDO = 54;
+  const ruoteY = [RUOTA_DAL_BORDO, H - RUOTA_DAL_BORDO - RUOTA_H];
+
+  // Il passaruota: l'arco che chiude la ruota sopra e sotto. Un riempimento non
+  // si vedrebbe (il fondo della scheda e' gia' l'onyx), quindi e' un contorno.
+  for (const ry of ruoteY) {
+    for (const ax of [RUOTA_X - 3, specchia(RUOTA_X - 3, RUOTA_W + 6)]) {
+      svg.appendChild(svgEl('rect', {
+        x: ax, y: ry - 4, width: RUOTA_W + 6, height: RUOTA_H + 8, rx: 9, class: 'car-passaruota',
+      }));
+    }
+  }
+  for (const ry of ruoteY) {
+    for (const rx of [RUOTA_X, specchia(RUOTA_X, RUOTA_W)]) {
+      svg.appendChild(svgEl('rect', { x: rx, y: ry, width: RUOTA_W, height: RUOTA_H, rx: 6, class: 'car-wheel' }));
+      // Il battistrada: tre solchi. E' quello che distingue una ruota da una
+      // pastiglia grigia, e a questa scala e' l'unico dettaglio che si vede.
+      for (const d of [12, 23, 34]) {
+        svg.appendChild(svgEl('path', {
+          d: `M ${rx + 2} ${ry + d} L ${rx + RUOTA_W - 2} ${ry + d}`, class: 'car-battistrada',
+        }));
+      }
+    }
+  }
+
+  // I paraurti: la fascia piu' scura all'estremita'. Senza, muso e coda sono due
+  // superfici chiare e vuote, e l'auto sembra un guscio invece di un mezzo.
+  svg.appendChild(svgEl('rect', { x: 40, y: 12, width: 70, height: 22, rx: 11, class: 'car-paraurti' }));
+  svg.appendChild(svgEl('rect', { x: 36, y: H - 34, width: 78, height: 24, rx: 12, class: 'car-paraurti' }));
+
+  // Cofano e baule: la riga dove la lamiera piatta finisce e comincia il vetro.
+  // Sono le due che dividono l'auto nelle sue tre parti — muso, abitacolo, coda —
+  // e senza di loro il muso e' solo spazio vuoto sopra il parabrezza.
+  svg.appendChild(svgEl('path', { d: 'M 30 60 Q 75 54 120 60', class: 'car-cofano' }));
+  svg.appendChild(svgEl('path', { d: `M 32 ${H - 68} Q 75 ${H - 62} 118 ${H - 68}`, class: 'car-cofano' }));
+
+  // I fari: incassati nel frontale, non appoggiati sopra. E' l'unico punto in cui
+  // la carrozzeria porta il colore dell'app: dicono da che parte guarda l'auto,
+  // cioe' dove sta chi guida, cioe' da dove si comincia a leggere.
+  for (const fx of [36, specchia(36, 20)]) {
+    svg.appendChild(svgEl('rect', { x: fx, y: 22, width: 20, height: 8, rx: 3, class: 'car-faro' }));
+  }
+  // La presa d'aria fra i due fari: una riga, e il muso ha una faccia.
+  svg.appendChild(svgEl('path', { d: 'M 62 26 L 88 26', class: 'car-griglia' }));
+  // I fanali dietro: contorno e basta. Pieni sarebbero il rosso dell'errore su
+  // una cosa che non e' un errore.
+  for (const fx of [34, specchia(34, 22)]) {
+    svg.appendChild(svgEl('rect', { x: fx, y: H - 28, width: 22, height: 8, rx: 3, class: 'car-fanale' }));
+  }
+
+  // Le porte, e sono la ragione per cui una scocca vista dall'alto si legge come
+  // una scocca: una riga corta sul fianco all'altezza di ogni fila.
+  const porte = [ROW_FRONT - 22, ROW_BACK - 22];
+  if (righe > 2) porte.push(ROW_THIRD - 22);
+  for (const py of porte) {
+    svg.appendChild(svgEl('path', { d: `M ${CAR_INSET} ${py} L ${CAR_INSET + 13} ${py}`, class: 'car-porta' }));
+    svg.appendChild(svgEl('path', { d: `M ${CAR_W - CAR_INSET - 13} ${py} L ${CAR_W - CAR_INSET} ${py}`, class: 'car-porta' }));
+  }
+
+  // Il vano dell'abitacolo: dove il tetto e' tagliato via per far vedere i sedili.
+  // Senza questo contorno, muso, abitacolo e coda sono la stessa superficie nera e
+  // i sedili sembrano appoggiati sopra la lamiera invece che dentro l'auto.
+  svg.appendChild(svgEl('rect', {
+    x: 22, y: 62, width: CAR_W - 44, height: H - 62 - 46, rx: 16, class: 'car-abitacolo',
+  }));
+
+  // Le due pieghe dei fianchi: danno spessore alla lamiera, come la `body-line`
+  // del riferimento.
+  const y1 = ROW_FRONT - 30, y2 = H - 76;
+  for (const px of [25, CAR_W - 25]) {
+    svg.appendChild(svgEl('path', { d: `M ${px} ${y1} L ${px} ${y2}`, class: 'car-piega-scocca' }));
+  }
+
+  // Gli specchietti, alla stessa altezza del parabrezza.
+  const SPECCHIO_W = 16;
+  for (const mx of [0, specchia(0, SPECCHIO_W)]) {
+    svg.appendChild(svgEl('rect', { x: mx, y: 70, width: SPECCHIO_W, height: 6, rx: 3, class: 'car-wheel' }));
+  }
+}
 
 function initials(name) {
   return name.trim().split(/\s+/).map(w => w[0]).join('').slice(0, 2).toUpperCase();
@@ -3429,10 +3597,12 @@ function scaricaIcs(ride) {
 
 function buildCar(ride) {
   const isLong = ride.seats >= 5;
-  // Altezza della scocca: quanto serve alle file che ci stanno dentro, piu' lo
-  // spazio del lunotto e del baule. Non un numero tondo scelto a occhio.
-  const H = isLong ? 344 : 250;
-  const svg = svgEl('svg', { viewBox: `0 0 190 ${H}`, class: 'car-svg', role: 'img' });
+  // Altezza della scocca: l'ultima fila piu' il lunotto piu' il baule. Non un
+  // numero tondo scelto a occhio — 310 sono i 237 dove finisce la seconda fila
+  // piu' i 73 che servono a lunotto e coda; con tre file la scocca cresce di un
+  // passo di fila esatto.
+  const H = isLong ? 310 + PASSO_FILA : 310;
+  const svg = svgEl('svg', { viewBox: `0 0 ${CAR_W} ${H}`, class: 'car-svg', role: 'img' });
   svg.setAttribute('aria-label', `Auto di ${nomeDi(ride.driver)}`);
 
   // Materiali (C15). L'auto e' l'unica cosa qui dentro che nessun altro ha, quindi
@@ -3455,36 +3625,18 @@ function buildCar(ride) {
   svg.appendChild(defs);
 
   // L'ombra a terra: appoggia l'auto invece di lasciarla galleggiare.
-  svg.appendChild(svgEl('ellipse', { cx: 95, cy: H - 6, rx: 74, ry: 7, class: 'car-ombra' }));
+  svg.appendChild(svgEl('ellipse', { cx: CAR_MID, cy: H - 4, rx: 56, ry: 6, class: 'car-ombra' }));
 
-  svg.appendChild(svgEl('rect', {
-    x: 10, y: 10, width: 170, height: H - 20, rx: 46,
-    class: 'car-body', fill: `url(#lamiera-${uid})`,
-  }));
+  svg.appendChild(svgEl('path', { d: sagomaAuto(H), class: 'car-body', fill: `url(#lamiera-${uid})` }));
   // Il filo di luce sul bordo alto: un pixel, ed e' quello che da' lo spessore.
-  svg.appendChild(svgEl('path', {
-    d: `M 56 11 Q 95 11 134 11`, class: 'car-luce',
-  }));
-  svg.appendChild(svgEl('rect', { x: 30, y: 44, width: 130, height: 16, rx: 8, class: 'car-glass', fill: `url(#vetro-${uid})` }));
+  svg.appendChild(svgEl('path', { d: `M 58 11 Q ${CAR_MID} 11 92 11`, class: 'car-luce' }));
+  // Parabrezza e lunotto. Il parabrezza sta fra il cofano e la prima fila; il
+  // lunotto fra l'ultima fila e la coda.
+  svg.appendChild(svgEl('rect', { x: 32, y: 66, width: 86, height: 20, rx: 7, class: 'car-glass', fill: `url(#vetro-${uid})` }));
   // Riflesso sul parabrezza: una striscia sola, di sbieco.
-  svg.appendChild(svgEl('path', { d: 'M 40 58 L 58 46 L 74 46 L 56 58 Z', class: 'car-riflesso' }));
-  svg.appendChild(svgEl('rect', { x: 34, y: H - 42, width: 122, height: 12, rx: 6, class: 'car-glass', fill: `url(#vetro-${uid})` }));
-  // Ruote: due coppie, e ogni coppia si specchia sui due assi. La distanza dal
-  // bordo alto della scocca e' la stessa di quella dal bordo basso, quindi le
-  // anteriori e le posteriori sono simmetriche invece di essere sfasate di 4px.
-  const RUOTA_W = 12, RUOTA_H = 34, RUOTA_X = 2, RUOTA_DAL_BORDO = 50;
-  const corpoAlto = CAR_INSET, corpoBasso = H - CAR_INSET;
-  const ruoteY = [corpoAlto + RUOTA_DAL_BORDO, corpoBasso - RUOTA_DAL_BORDO - RUOTA_H];
-  for (const ry of ruoteY) {
-    for (const rx of [RUOTA_X, specchia(RUOTA_X, RUOTA_W)]) {
-      svg.appendChild(svgEl('rect', { x: rx, y: ry, width: RUOTA_W, height: RUOTA_H, rx: 5, class: 'car-wheel' }));
-    }
-  }
-  // Gli specchietti, alla stessa altezza del parabrezza.
-  const SPECCHIO_X = 0, SPECCHIO_W = 14;
-  for (const mx of [SPECCHIO_X, specchia(SPECCHIO_X, SPECCHIO_W)]) {
-    svg.appendChild(svgEl('rect', { x: mx, y: 46, width: SPECCHIO_W, height: 6, rx: 3, class: 'car-wheel' }));
-  }
+  svg.appendChild(svgEl('path', { d: 'M 40 84 L 56 68 L 70 68 L 54 84 Z', class: 'car-riflesso' }));
+  svg.appendChild(svgEl('rect', { x: 34, y: H - 62, width: 82, height: 16, rx: 6, class: 'car-glass', fill: `url(#vetro-${uid})` }));
+  finitureAuto(svg, H, isLong ? 3 : 2);
 
   const claims = new Map(ride.seat_claims.map(c => [c.seat_index, c]));
   const myClaim = ride.seat_claims.find(mioPosto);
@@ -3492,7 +3644,7 @@ function buildCar(ride) {
   const past = isPastDay() || hasDeparted(ride);
 
   drawSeat(svg, DRIVER_POS, { kind: 'driver', label: initials(nomeDi(ride.driver)), name: nomeDi(ride.driver), avatar: ride.driver?.avatar_url ?? null });
-  svg.appendChild(svgEl('circle', { cx: DRIVER_POS.x, cy: DRIVER_POS.y - 32, r: 8, class: 'car-wheel-steer' }));
+  svg.appendChild(svgEl('circle', { cx: DRIVER_POS.x, cy: DRIVER_POS.y - 36, r: 7, class: 'car-wheel-steer' }));
 
   const layout = SEAT_LAYOUTS[ride.seats];
   for (const idx of Object.keys(layout).map(Number)) {
@@ -3535,22 +3687,28 @@ function buildCar(ride) {
 
 let avatarClipId = 0;
 let carGradId = 0;
+// Un sedile e' piu' alto che largo, come i sedili: 42 di seduta contro 34-40 di
+// larghezza. Prima erano 44 per 40, cioe' quadrati, e tre quadrati in fila si
+// leggevano come una griglia invece che come una panchina.
 function drawSeat(svg, pos, { kind, label, name, avatar = null, clickable = false }) {
+  const w = pos.w ?? W_AVANTI;
   const g = svgEl('g', { class: `seat seat-${kind}${clickable ? ' seat-click' : ''}`, tabindex: clickable ? 0 : -1 });
   const title = svgEl('title', {});
   title.textContent = name;
   g.appendChild(title);
-  g.appendChild(svgEl('rect', { x: pos.x - 20, y: pos.y - 26, width: 40, height: 14, rx: 7, class: 'seat-back' }));
-  g.appendChild(svgEl('rect', { x: pos.x - 22, y: pos.y - 14, width: 44, height: 40, rx: 12, class: 'seat-base' }));
-  // La piega del cuscino: due linee, e il sedile smette di sembrare una tessera.
-  g.appendChild(svgEl('path', { d: `M ${pos.x - 13} ${pos.y - 6} L ${pos.x + 13} ${pos.y - 6}`, class: 'seat-piega' }));
+  g.appendChild(svgEl('rect', { x: pos.x - (w - 4) / 2, y: pos.y - 28, width: w - 4, height: 13, rx: 5, class: 'seat-back' }));
+  g.appendChild(svgEl('rect', { x: pos.x - w / 2, y: pos.y - 15, width: w, height: 42, rx: 9, class: 'seat-base' }));
+  // La piega del cuscino: e' quella che fa leggere il sedile come imbottitura.
+  g.appendChild(svgEl('path', { d: `M ${pos.x - (w / 2 - 7)} ${pos.y - 5} L ${pos.x + (w / 2 - 7)} ${pos.y - 5}`, class: 'seat-piega' }));
   if (avatar) {
+    // Il tondo della foto non puo' sfondare il sedile piu' stretto.
+    const r = Math.min(15, w / 2 - 3);
     const clipId = 'seat-av-' + (++avatarClipId);
     const clip = svgEl('clipPath', { id: clipId });
-    clip.appendChild(svgEl('circle', { cx: pos.x, cy: pos.y + 6, r: 16 }));
+    clip.appendChild(svgEl('circle', { cx: pos.x, cy: pos.y + 6, r }));
     svg.appendChild(clip);
     const img = svgEl('image', {
-      x: pos.x - 16, y: pos.y - 10, width: 32, height: 32,
+      x: pos.x - r, y: pos.y + 6 - r, width: r * 2, height: r * 2,
       'clip-path': `url(#${clipId})`, preserveAspectRatio: 'xMidYMid slice',
     });
     img.setAttribute('href', avatar);
@@ -3716,7 +3874,7 @@ function renderRides(rides) {
       for (const r of rides) {
         const freeN = r.seats - r.seat_claims.length;
         lines.push('');
-        lines.push(`🚗 ${nomeDi(r.driver)} → ${r.destination}`
+        lines.push(`${nomeDi(r.driver)} → ${r.destination}`
           + (r.depart_time ? ` (ore ${r.depart_time.slice(0, 5)})` : ''));
         lines.push('A bordo: ' + (r.seat_claims.map(nomeOccupante).join(', ') || 'nessuno'));
         lines.push(freeN > 0 ? `Liberi: ${freeN} → prenota su ${SITE_URL}` : 'Al completo');
@@ -3727,8 +3885,7 @@ function renderRides(rides) {
   }
   for (const [idx, ride] of rides.entries()) {
     const card = document.createElement('article');
-    card.className = 'ride-card';
-    card.style.setProperty('--car-hue', hueFor(ride.driver_id));
+    card.className = 'ride-card' + (ride.driver_id === currentUser.id ? ' mia' : '');
     card.style.setProperty('--i', idx); // stagger dell'entrata
 
     const head = document.createElement('div');
@@ -3934,7 +4091,7 @@ function renderRides(rides) {
     if (waitlist.length > 0) {
       const wl = document.createElement('div');
       wl.className = 'ride-sub waitlist-row';
-      wl.textContent = '⏳ In attesa: ' + waitlist.map((w, i) =>
+      wl.textContent = 'In attesa: ' + waitlist.map((w, i) =>
         `${i + 1}. ${nomeDi(w.profile)}${w.user_id === currentUser.id ? ' (tu)' : ''}`).join(' · ');
       card.appendChild(wl);
     }

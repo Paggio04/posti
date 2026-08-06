@@ -14,6 +14,13 @@
 // Cosa non fa: non guarda la pagina viva, quindi non vede un testo appoggiato su una
 // superficie che qui non e' elencata. Le coppie vanno aggiunte quando nasce il
 // componente che le usa.
+//
+// **Un tema solo.** Prima ce n'erano due e questo file li leggeva tutti e due: il
+// blocco `:root` e quello dentro `prefers-color-scheme: dark`. Adesso l'app e' onyx
+// e basta, quindi il secondo blocco non esiste piu' e il giro e' uno. Il candy blue
+// non si sdoppia come si sdoppiava il navy — chiaro com'e', regge il testo sul buio
+// **e** l'onyx sopra di se' con lo stesso valore — quindi i token `--primary` e
+// `--primary-testo` hanno lo stesso colore e restano due nomi per due mestieri.
 
 import { readFileSync } from 'node:fs';
 import { fileURLToPath } from 'node:url';
@@ -80,8 +87,7 @@ function token(testo) {
   return mappa;
 }
 
-const chiaro = token(blocco(':root'));
-const scuro = { ...chiaro, ...token(blocco('@media (prefers-color-scheme: dark)')) };
+const tema = token(blocco(':root'));
 const BIANCO = [1, 1, 1, 1];
 
 // --- le coppie che devono reggere ----------------------------------------------
@@ -92,65 +98,90 @@ const BIANCO = [1, 1, 1, 1];
 // portano informazione senza essere testo (bordi, tracciati, anelli di fuoco).
 const COPPIE = [
   ['testo normale su carta', '--ink', '--surface', 4.5],
+  ['testo normale sul fondo', '--ink', '--bg', 4.5],
   ['testo tenue su carta', '--ink-soft', '--surface', 4.5],
   ['testo tenue sul fondo pagina', '--ink-soft', '--bg', 4.5],
   ['testo tenue sulla superficie 2', '--ink-soft', '--surface-2', 4.5],
+  ['testo tenue sul rilievo', '--ink-soft', '--rilievo', 4.5],
   ['segnaposto dei campi', '--segnaposto', '--surface', 4.5],
+  ['segnaposto dei campi, sul fondo', '--segnaposto', '--bg', 4.5],
 
-  ['primario come testo, su carta', '--primary-testo', '--surface', 4.5],
-  ['primario come testo, sul fondo', '--primary-testo', '--bg', 4.5],
-  ['primario come testo, sul suo velo', '--primary-testo', '--primary-soft', 4.5],
-  ['bianco sul primario pieno', BIANCO, '--primary', 4.5],
+  // Il bordo di un campo dice **dove si scrive**: e' un elemento non testuale che
+  // porta informazione, quindi vale la 1.4.11 e la soglia e' 3. Il bordo tenue
+  // (--border) non c'e' qui apposta: quello separa e basta, non dice niente.
+  ['bordo di un campo, sulla carta', '--border-strong', '--surface', 3],
+  ['bordo di un campo, sul fondo', '--border-strong', '--bg', 3],
+
+  ['candy blue come testo, su carta', '--primary-testo', '--surface', 4.5],
+  ['candy blue come testo, sul fondo', '--primary-testo', '--bg', 4.5],
+  ['candy blue come testo, sul suo velo', '--primary-testo', '--primary-soft', 4.5],
+  ['candy blue come testo, sul rilievo', '--primary-testo', '--rilievo', 4.5],
+  ['onyx sul candy blue pieno', '--su-primario', '--primary', 4.5],
+  ['onyx sul candy blue al passaggio', '--su-primario', '--primary-hover', 4.5],
   ['anello di fuoco sul fondo pagina', '--primary-testo', '--bg', 3],
+  ['contorno del candy blue, sulla carta', '--primary-bordo', '--surface', 3],
 
-  ['ottone come testo, sul suo velo', '--ottone-scuro', '--ottone-velo', 4.5],
-  ['ottone come testo, su carta', '--ottone-scuro', '--surface', 4.5],
+  // «Questo e' tuo»: pieno con l'onyx sopra, e il contorno che lo circonda.
+  ['onyx su cio\' che e\' tuo', '--tuo-su', '--tuo', 4.5],
+  ['cio\' che e\' tuo, come testo su carta', '--tuo-testo', '--surface', 4.5],
+  ['cio\' che e\' tuo, come testo sul suo velo', '--tuo-testo', '--tuo-velo', 4.5],
+  ['contorno di cio\' che e\' tuo, sulla carta', '--tuo-bordo', '--surface', 3],
+
   ['errore sul suo velo', '--danger', '--danger-soft', 4.5],
+  ['errore su carta', '--danger', '--surface', 4.5],
   ['bianco sul bottone distruttivo', BIANCO, '--danger-pieno', 4.5],
   ['bianco sulla barra senza rete', BIANCO, '--danger-pieno', 4.5],
-  ['conferma sul suo velo', '--ok-deep', '--ok-soft', 4.5],
+  ['conferma sul suo velo', '--ok', '--ok-soft', 4.5],
+  ['conferma su carta', '--ok', '--surface', 4.5],
 
   // Le sei tinte degli avatar (COLORI_AV in app.js): un cerchio con due lettere
-  // dentro e' testo, e vale la soglia del testo.
-  ['iniziali sull\'avatar primario', BIANCO, '--primary', 4.5],
-  ['iniziali sull\'avatar verde', BIANCO, '--ok-pieno', 4.5],
-  ['iniziali sull\'avatar grigio', BIANCO, 'oklch(0.50 0.03 258)', 4.5],
-  ['iniziali sull\'avatar viola', BIANCO, 'oklch(0.55 0.14 300)', 4.5],
-  ['iniziali sull\'avatar rosso', BIANCO, 'oklch(0.55 0.13 30)', 4.5],
-  ['iniziali sull\'avatar azzurro', BIANCO, 'oklch(0.5 0.1 200)', 4.5],
-  ['iniziali sull\'avatar ottone', 'oklch(0.28 0.05 70)', '--ottone', 4.5],
+  // dentro e' testo, e vale la soglia del testo. Sono sei perche' servono a
+  // distinguere sei persone, ma stanno tutte nella famiglia del candy blue e
+  // portano tutte l'onyx sopra: cambiano di luminosita' prima che di tinta.
+  ['iniziali sull\'avatar 1', '--su-primario', 'oklch(0.78 0.030 227)', 4.5],
+  ['iniziali sull\'avatar 2', '--su-primario', 'oklch(0.70 0.050 250)', 4.5],
+  ['iniziali sull\'avatar 3', '--su-primario', 'oklch(0.72 0.060 200)', 4.5],
+  ['iniziali sull\'avatar 4', '--su-primario', 'oklch(0.66 0.070 215)', 4.5],
+  ['iniziali sull\'avatar 5', '--su-primario', 'oklch(0.74 0.040 265)', 4.5],
+  ['iniziali sull\'avatar 6', '--su-primario', 'oklch(0.68 0.040 185)', 4.5],
+  ['iniziali sull\'avatar tuo', '--tuo-su', '--tuo', 4.5],
 
-  ['bianco sul navy chiaro', BIANCO, '--navy-deep', 4.5],
-  ['bianco sul navy scuro', BIANCO, '--navy-deeper', 4.5],
-  ['ottone sul navy scuro', '--ottone', '--navy-deeper', 4.5],
+  // L'auto. La scocca e' un elemento non testuale che porta informazione — se non
+  // si vede, non si vede che c'e' un'auto — quindi vale la 1.4.11 e la soglia e'
+  // 3:1, su **tutti e due** i fondi su cui l'auto compare: il pannello
+  // dell'accesso e la scheda di un passaggio. E' la coppia che avrebbe fermato le
+  // prime due stesure: scocca riempita di `--surface` faceva 1,42:1.
+  ['scocca dell\'auto, sul fondo pagina', '--scocca', '--bg', 3],
+  ['scocca dell\'auto, sulla scheda del passaggio', '--scocca', '--surface', 3],
+  ['il vuoto di un posto, sulla scocca', '--posto', '--scocca', 3],
+  ['il posto tuo, sulla scocca', '--tuo', '--scocca', 3],
+  ['contorno di un posto, sul suo vuoto', '--posto-bordo', '--posto', 3],
+  ['contorno di un posto libero, sul suo vuoto', '--primary', '--posto', 3],
+  ['iniziali dentro un posto', '--ink', '--posto', 4.5],
+  ['iniziali dentro il posto tuo', '--tuo-su', '--tuo', 4.5],
+  ['gomma sulla scocca', '--gomma', '--scocca', 3],
 
-  // Testi scritti a mano sui pannelli navy: non sono token, ma sono testo lo stesso.
-  ['didascalia del cartello', 'oklch(0.79 0.02 258)', '--navy-deeper', 4.5],
-  // Le voci della barra in alto stanno su un rilievo piu' chiaro della fascia
-  // (`--navy-deep` dentro `--navy-deeper`): il fondo da verificare e' il rilievo,
-  // non la fascia, altrimenti si misura un contrasto che nessuno guarda.
-  ['voce spenta della barra in alto', 'oklch(0.78 0.02 258)', '--navy-deep', 4.5],
-  ['nome nella scheda del profilo', 'oklch(0.93 0.01 258)', '--navy-deeper', 4.5],
-  ['ruolo sotto il nome (barra in alto)', 'oklch(0.66 0.03 258)', '--navy-deeper', 4.5],
-  ['sottotitolo dei riquadri scuri', 'oklch(0.72 0.03 258)', '--navy-deep', 4.5],
-  ['legenda della ciambella', 'oklch(0.82 0.02 258)', '--navy-deep', 4.5],
-  ['pastiglia sui riquadri scuri', 'oklch(0.78 0.02 258)', '--navy-deep', 4.5],
+  // Il benvenuto e' l'unico riquadro dove il candy blue prende tutta la superficie:
+  // il testo sotto il titolo e' un onyx schiarito, non l'onyx pieno, e va misurato.
+  ['testo del benvenuto', 'oklch(0.30 0.03 227)', '--primary', 4.5],
+  ['bottone scuro dentro il benvenuto', '--primary', '--su-primario', 4.5],
+
+  // La striscia dei numeri quando e' tua: etichetta e nota sono onyx schiarito
+  // sopra il candy blue pieno.
+  ['etichetta di un numero tuo', 'oklch(0.30 0.03 227)', '--tuo', 4.5],
 ];
 
 let bocciate = 0;
-for (const [nomeTema, tema] of [['chiaro', chiaro], ['scuro', scuro]]) {
-  console.log(`\n  tema ${nomeTema}`);
-  for (const [etichetta, pp, fondo, soglia] of COPPIE) {
-    const rgbFondo = steso(leggiOklch(tema[fondo] ?? fondo), [1, 1, 1]);
-    const rgbPp = steso(
-      pp === BIANCO ? BIANCO : leggiOklch(tema[pp] ?? pp),
-      rgbFondo,
-    );
-    const r = rapporto(rgbPp, rgbFondo);
-    const passa = r >= soglia;
-    if (!passa) bocciate++;
-    console.log(`  ${passa ? '  ok' : '  NO'}  ${r.toFixed(2).padStart(5)}:1  (min ${soglia})  ${etichetta}`);
-  }
+// Il fondo su cui si stende un colore semitrasparente e' il nero della pagina, non
+// il bianco: qui sotto non c'e' piu' un foglio.
+const SOTTO = leggiOklch(tema['--bg']).slice(0, 3);
+for (const [etichetta, pp, fondo, soglia] of COPPIE) {
+  const rgbFondo = steso(leggiOklch(tema[fondo] ?? fondo), SOTTO);
+  const rgbPp = steso(pp === BIANCO ? BIANCO : leggiOklch(tema[pp] ?? pp), rgbFondo);
+  const r = rapporto(rgbPp, rgbFondo);
+  const passa = r >= soglia;
+  if (!passa) bocciate++;
+  console.log(`  ${passa ? '  ok' : '  NO'}  ${r.toFixed(2).padStart(5)}:1  (min ${soglia})  ${etichetta}`);
 }
 
 if (bocciate) {

@@ -50,105 +50,170 @@
    Regola: **una regola responsive nuova usa una di queste due soglie.** Se sembra
    servirne una terza, il problema e' il componente, non la soglia.
 
-   Una sola eccezione, ed e' su un altro asse: `min-height: 700px`, dove il riepilogo
-   smette di scorrere e si incastra nell'altezza della finestra. Non e' una fascia in
-   piu' — e' la condizione che dice se quella promessa si puo' mantenere, e quando non
-   si puo' la vista torna a scorrere invece di consegnare nove riquadri da 150px.
+   Una sola eccezione, ed e' su un altro asse: `max-height: 520px`, dove il riepilogo
+   passa da due riquadri per schermata a uno. Non e' una fascia in piu' — e' il numero
+   di righe che ci stanno in un telefono girato, e lo dice l'altezza perche' e'
+   l'altezza a decidere.
+   ═══════════════════════════════════════════════════════════════════════════ */
+
+/* ═══════════════════════════════════════════════════════════════════════════
+   IL TABELLONE
+
+   Due colori, e sono quelli scelti: **onyx** #020202 e **candy blue** #B2D5E5.
+   Il riferimento fisico non e' un cruscotto ne' un terminale: e' una targa
+   smaltata nera con le lettere chiare sopra — un tabellone degli orari, il
+   cartello di una fermata. Da li' vengono le tre regole che tengono insieme
+   tutto il foglio.
+
+   1. **Il buio e' il materiale, non un tema.** Non c'e' un tema chiaro e uno
+      scuro: c'e' l'onyx. Il contesto d'uso di PRODUCT.md e' in piedi al buio
+      davanti a un portone, e uno schermo che spara bianco addosso li' e' una
+      scelta contro chi lo usa. `color-scheme: dark` lo dice anche al browser,
+      cosi' i controlli nativi — la data, l'ora, le tendine — nascono neri
+      invece di essere l'unica cosa bianca della pagina.
+
+   2. **Il candy blue vuol dire due cose sole**: «questo si tocca» e «questo e'
+      tuo». Le due non si confondono perche' si distinguono per **forma**, non
+      per tinta: cio' che si tocca e' il colore *scritto* o un contorno, cio'
+      che e' tuo e' un blocco *pieno* con l'onyx sopra. Niente di decorativo e'
+      candy blue. Il resto della pagina e' onyx, grigi freddi e una riga di
+      bordo.
+
+   3. **La profondita' la fanno le righe, non le ombre.** Su un fondo quasi nero
+      un'ombra e' invisibile o e' sporco: due schede si separano con un bordo da
+      un pixel e mezzo tono di fondo, come due pannelli avvitati sulla stessa
+      lamiera. Le ombre restano solo dove una cosa **galleggia davvero** sopra
+      un'altra: la finestra di dialogo e il messaggio che compare.
+
+   I raggi sono quattro e diversi fra loro, di proposito: «tutto arrotondato
+   allo stesso raggio» sta fra gli anti-riferimenti di PRODUCT.md, ed era vero —
+   ventidue pixel su qualsiasi cosa, dalla scheda alla pastiglia. Un oggetto
+   piccolo e uno grande non hanno lo stesso spigolo nemmeno nel mondo vero.
    ═══════════════════════════════════════════════════════════════════════════ */
 
 :root {
-  /* Palette navy — OKLCH */
-  --bg: oklch(0.965 0.008 250);
-  --surface: oklch(1 0 0);
-  --surface-2: oklch(0.94 0.01 250);
-  --border: oklch(0.9 0.012 250);
-  --border-strong: oklch(0.8 0.018 250);
-  --ink: oklch(0.24 0.03 260);
-  --ink-soft: oklch(0.46 0.025 260);
-  /* Il segnaposto ha bisogno degli stessi 4.5:1 del testo: il grigio chiaro "che si
-     vede che e' un suggerimento" e' testo illeggibile con una scusa. */
-  --segnaposto: oklch(0.52 0.015 255);
+  color-scheme: dark;
 
-  /* **Due token per il primario, e la ragione e' aritmetica.** Un colore solo deve
-     reggere due contrasti opposti: bianco sopra (quando e' un riempimento) e se
-     stesso sopra il fondo (quando e' testo o icona). Nel tema chiaro un valore
-     scuro li soddisfa entrambi. Nel tema scuro no, ed e' esattamente cosa
-     succedeva: bianco sul primario 3.97:1 e primario come testo 4.36:1, cioe' due
-     bocciature con lo stesso token. Da qui in avanti:
-       --primary        riempimenti, e ci va sopra il bianco;
-       --primary-testo  testo, icone e bordi sulle superfici chiare dell'app. */
-  --primary: oklch(0.42 0.11 258);
-  --primary-testo: oklch(0.42 0.11 258);
-  --primary-hover: oklch(0.36 0.11 258);
-  --primary-soft: oklch(0.93 0.025 258);
-  --navy-deep: oklch(0.26 0.06 260);
-  --navy-deeper: oklch(0.18 0.05 262);
-  /* Stesso sdoppiamento del primario, per la stessa ragione: `--danger` e' il rosso
-     che fa da *testo* sui veli chiari, `--danger-pieno` e' quello che sta *sotto* il
-     bianco. Nel tema chiaro coincidono; nel tema scuro il primo si schiarisce per
-     leggersi sul fondo e il secondo deve restare scuro per reggere il bianco sopra. */
-  --danger: oklch(0.5 0.17 25);
-  --danger-pieno: oklch(0.5 0.17 25);
-  --danger-soft: oklch(0.95 0.025 25);
-  --ok: oklch(0.52 0.11 165);
-  /* Il verde che porta il bianco sopra. Come `--primary` e `--danger`: nel tema
-     scuro `--ok` si schiarisce per leggersi sul fondo, e a quel punto il bianco
-     sopra non ci sta piu' (3.7:1). Questo resta fermo nei due temi. */
-  --ok-pieno: oklch(0.52 0.11 165);
-  --ok-deep: oklch(0.42 0.1 165);
-  --ok-soft: oklch(0.94 0.03 165);
+  /* ---- i fondi -------------------------------------------------------- */
+  /* --bg e' l'onyx esatto della foto: oklch(0.085 0 0) e' #020202 al pixel.
+     Le superfici sopra non sono grigi neutri, sono onyx spostato verso il blu
+     del marchio di pochissima crominanza: e' quello che fa sembrare le schede
+     dello stesso materiale del fondo invece che appoggiate sopra. */
+  --bg: oklch(0.085 0 0);
+  --surface: oklch(0.165 0.012 227);
+  --surface-2: oklch(0.235 0.016 227);
+  /* Il riquadro che riassume: un gradino piu' chiaro e piu' tinto della scheda
+     normale. Prende il posto dei due pannelli navy di prima, che qui sarebbero
+     stati piu' scuri del fondo, cioe' un buco invece di un rilievo. */
+  --rilievo: oklch(0.205 0.030 227);
 
-  /* Forme: tutto tondo */
-  --radius-xl: 28px;
-  --radius: 22px;
-  --radius-sm: 16px;
+  /* ---- le righe ------------------------------------------------------- */
+  /* --border separa e basta: non porta informazione, quindi non deve reggere
+     3:1. --bordo-forte invece disegna il **campo** — dice dove si scrive, e per
+     la 1.4.11 vale la soglia degli elementi non testuali. Misurato: 3.24:1
+     sulla scheda, 3.49:1 sul fondo. */
+  --border: oklch(0.30 0.018 227);
+  --border-strong: oklch(0.54 0.030 227);
+
+  /* ---- l'inchiostro --------------------------------------------------- */
+  --ink: oklch(0.965 0.008 227);
+  --ink-soft: oklch(0.745 0.018 227);
+  /* Il segnaposto ha bisogno degli stessi 4.5:1 del testo: il grigio chiaro «che
+     si vede che e' un suggerimento» e' testo illeggibile con una scusa. */
+  --segnaposto: oklch(0.68 0.018 227);
+
+  /* ---- il candy blue --------------------------------------------------- */
+  /* Un token solo per il colore, e uno per cio' che ci sta sopra. Nel tema
+     chiaro di prima ne servivano due — uno per i riempimenti sotto il bianco,
+     uno per il testo — perche' un blu scuro non poteva fare entrambe le cose.
+     Qui il problema non esiste: il candy blue e' chiaro, quindi come testo sul
+     buio fa 12.4:1 e come riempimento porta sopra l'onyx a 13:1. Lo stesso
+     valore, i due versi. */
+  --primary: oklch(0.853 0.043 227);
+  --primary-testo: oklch(0.853 0.043 227);
+  --primary-hover: oklch(0.925 0.032 227);
+  /* Quello che sta **sopra** il candy blue pieno: onyx, non nero puro, cosi' e'
+     lo stesso inchiostro dell'icona dell'app e non un secondo nero. */
+  --su-primario: oklch(0.130 0.012 227);
+  /* Il velo: candy blue steso finche' regge come fondo di un testo chiaro. */
+  --primary-soft: oklch(0.245 0.032 227);
+  /* Il contorno del candy blue: 0.52 e non 0.42, ed e' una misura non un gusto.
+     Un sedile libero si riconosce dal suo tratteggio, cioe' quel contorno **porta
+     informazione**: vale la 1.4.11 e la soglia e' 3:1 sulla superficie. A 0.42
+     faceva 2.30, e il controllo del contrasto in CI l'ha fermato. Ora 3.56. */
+  --primary-bordo: oklch(0.52 0.060 227);
+
+  /* ---- «questo e' tuo» -------------------------------------------------- */
+  /* Stesso colore dell'interattivo, trattamento opposto: pieno con l'onyx
+     sopra. Sono token separati e non un alias scritto a mano nei componenti,
+     cosi' il giorno in cui «tuo» e «toccabile» dovessero separarsi si cambia
+     una riga invece di quaranta. */
+  --tuo: oklch(0.853 0.043 227);
+  --tuo-testo: oklch(0.853 0.043 227);
+  --tuo-su: oklch(0.130 0.012 227);
+  --tuo-velo: oklch(0.245 0.032 227);
+  --tuo-bordo: oklch(0.54 0.055 227);
+
+  /* ---- gli stati ------------------------------------------------------- */
+  /* Rosso e verde non sono un terzo e un quarto colore del marchio: sono due
+     stati, e stanno solo dove qualcosa e' andato storto o e' andato a buon
+     fine. PRODUCT.md chiede che non siano **soli** a dirlo, e infatti ogni
+     posto in cui compaiono ha anche una parola o una forma. */
+  --danger: oklch(0.72 0.16 25);
+  --danger-pieno: oklch(0.53 0.20 25);
+  --danger-soft: oklch(0.245 0.070 25);
+  --ok: oklch(0.80 0.13 165);
+  --ok-deep: oklch(0.80 0.13 165);
+  --ok-pieno: oklch(0.55 0.12 165);
+  --ok-soft: oklch(0.235 0.050 165);
+
+  /* ---- la carrozzeria --------------------------------------------------- */
+  /* **La scocca e' una superficie piena, non un contorno.** Fino a ieri era
+     riempita di `--surface`, cioe' quasi lo stesso nero del pannello sotto:
+     1,42:1. La sagoma esisteva solo grazie a due pixel di bordo, e l'occhio non
+     vedeva un'auto — vedeva cinque macchie chiare, i sedili, che galleggiavano
+     nel buio. Figura e sfondo erano invertiti.
+     Adesso e' il contrario, ed e' come funziona una mappa dei posti vera (un
+     aereo, un cinema): **l'oggetto e' solido e i posti sono buchi scavati
+     dentro**. Misurato: 4,12:1 sul pannello dell'accesso, 3,83:1 sulla scheda di
+     un passaggio, cioe' sopra soglia su entrambi i fondi su cui l'auto compare. */
+  --scocca: oklch(0.54 0.020 227);
+  --scocca-luce: oklch(0.64 0.022 227);
+  --scocca-ombra: oklch(0.46 0.020 227);
+  --scocca-riga: oklch(0.34 0.018 227);
+  --vetro: oklch(0.36 0.030 227);
+  --gomma: oklch(0.11 0.010 227);
+  /* Il vuoto di un sedile: un buco nella lamiera, quindi piu' scuro di tutto. */
+  --posto: oklch(0.13 0.015 227);
+  --pavimento: oklch(0.22 0.016 227);
+  --posto-bordo: oklch(0.72 0.015 227);
+
+  /* ---- le forme -------------------------------------------------------- */
+  /* Quattro raggi, uno per classe di oggetto. Il piccolo e' quasi vivo perche'
+     una pastiglia da venti pixel arrotondata a otto e' una caramella. */
+  --r-chip: 3px;
+  --r-btn: 6px;
+  --r-card: 10px;
+  --r-panel: 14px;
+  /* Resta per le cose che sono cerchi davvero: le facce, i pallini, gli anelli. */
   --pill: 999px;
 
-  --shadow-1: 0 1px 2px oklch(0.30 0.06 258 / 0.10), 0 6px 16px -4px oklch(0.30 0.06 258 / 0.12);
-  --shadow-2: 0 2px 4px oklch(0.30 0.06 258 / 0.10), 0 12px 28px -6px oklch(0.30 0.06 258 / 0.18),
-              0 32px 60px -20px oklch(0.30 0.06 258 / 0.20);
-  /* L'ombra del primario e' tinta del primario, non un alone: la stessa geometria
-     di --shadow-1, solo con il colore del bottone invece che del navy. Un bagliore
-     colorato sotto ogni bottone e' la firma piu' riconoscibile del genere. */
-  --ombra-primario: 0 1px 2px oklch(0.42 0.11 258 / 0.22), 0 6px 14px -6px oklch(0.42 0.11 258 / 0.34);
+  /* ---- profondita' ------------------------------------------------------ */
+  /* Una riga di luce sul bordo alto: e' come si legge un pannello smaltato
+     illuminato da sopra, e costa un pixel invece di un alone. */
+  --luce: inset 0 1px 0 oklch(0.853 0.043 227 / 0.09);
+  /* Le due sole ombre del foglio, e stanno dove una cosa galleggia davvero. */
+  --shadow-1: 0 2px 6px oklch(0 0 0 / 0.5);
+  --shadow-2: 0 8px 30px oklch(0 0 0 / 0.65), 0 2px 8px oklch(0 0 0 / 0.5);
 
-  /* Ottone: il secondo colore, e usato poco per scelta. Solo dove una cosa e'
-     **tua** -- il tuo sedile, il tuo codice, il tuo ruolo. Il navy resta il
-     colore dell'app; questo e' il colore di chi la sta usando. */
-  --ottone: oklch(0.74 0.13 78);
-  --ottone-scuro: oklch(0.50 0.11 72);          /* per il testo: 5.4:1 su carta */
-  --ottone-velo: oklch(0.95 0.035 85);
-  --ottone-bordo: oklch(0.84 0.09 80);
-
-  /* Profondita': ombre tinte del navy invece che grigie, su due strati -- una
-     stretta che appoggia l'oggetto, una larga e morbida che lo stacca. Il grigio
-     puro e' quello che fa sembrare le ombre incollate. */
-  --luce-interna: inset 0 1px 0 oklch(1 0 0 / 0.75);
-  --luce-interna-scura: inset 0 1px 0 oklch(1 0 0 / 0.06);
-
-  /* Motion system */
-  /* Geometria della navigazione. Il centro dell'icona e la posizione dei tondi si
-     calcolano da qui: cambiando una misura restano allineati da soli. */
-  --nav-pad: 8px;          /* padding verticale della barra */
-  --nav-item-pad: 7px;     /* padding sopra l'icona nella scheda */
-  --nav-icona: 21px;       /* lato dell'icona */
-  --nav-salita: 26px;      /* di quanto sale l'icona attiva */
-  --nav-salita-sopra: 6px; /* di quanto si alza al passaggio */
-  --nav-tondo: 50px;
-  --nav-tondo-sopra: 42px;
-  /* Centro verticale dell'icona attiva, misurato dal bordo alto della barra. */
-  --nav-centro: calc(var(--nav-pad) + var(--nav-item-pad) + var(--nav-icona) / 2 - var(--nav-salita));
-  /* E al passaggio, misurato dal bordo alto della scheda. */
-  --nav-centro-sopra: calc(var(--nav-item-pad) + var(--nav-icona) / 2 - var(--nav-salita-sopra));
-
-  /* Una curva sola, ed e' una decelerazione. Al suo posto c'era `--spring`, con il
-     terzo numero sopra 1: quello e' un superamento, cioe' l'elemento va oltre il punto
-     d'arrivo e torna indietro. E' la "animazione a molla" che sta fra gli
-     anti-riferimenti di PRODUCT.md, e stava su venti regole: bottoni, schede, sedili,
-     il tondo della navigazione. Le cose vere rallentano, non rimbalzano. */
+  /* ---- movimento -------------------------------------------------------- */
+  /* Una curva sola, ed e' una decelerazione. Al suo posto c'era `--spring`, con
+     il terzo numero sopra 1: quello e' un superamento, cioe' l'elemento va oltre
+     il punto d'arrivo e torna indietro. E' l'«animazione a molla» che sta fra gli
+     anti-riferimenti di PRODUCT.md. Le cose vere rallentano, non rimbalzano. */
   --ease-out: cubic-bezier(0.22, 1, 0.36, 1);
-  --t-fast: 160ms;
-  --t-med: 240ms;
+  --t-fast: 140ms;
+  --t-med: 220ms;
 
   font-family: 'IBM Plex Sans', system-ui, sans-serif;
 }
@@ -157,47 +222,58 @@
 
 html, body { height: 100%; }
 
-/* Il fondo e' una tinta piatta. Prima erano due macchie sfocate da 1200 e 900px
-   ancorate agli angoli: la stessa aurora del pannello d'accesso, spalmata sotto
-   tutta l'app. La profondita' qui la fanno le superfici e le due ombre tinte, che
-   e' il modo in cui la fa un oggetto vero appoggiato sulla carta. */
 body {
   background: var(--bg);
   color: var(--ink);
   font-size: 0.95rem;
   line-height: 1.55;
+  -webkit-font-smoothing: antialiased;
 }
 
 .hidden { display: none !important; }
 
-h1, h2, h3 { text-wrap: balance; letter-spacing: -0.015em; }
+h1, h2, h3 { text-wrap: balance; letter-spacing: -0.02em; }
 
 svg { vertical-align: -0.15em; }
 
-/* **I collegamenti non avevano una regola.** Dentro l'app quasi tutti i link erano
+/* **I collegamenti non avevano una regola.** Dentro l'app quasi tutti i link sono
    bottoni, quindi non si notava; ma `404.html`, `offline.html` e l'informativa hanno
-   link veri, e li' restava il blu predefinito del browser. Al buio quel blu (#0000EE)
-   finisce sopra un fondo quasi nero: un collegamento che non si vede su una pagina il
-   cui unico scopo e' portare da un'altra parte. */
+   link veri, e li' restava il blu predefinito del browser — che su onyx e' un blu
+   quasi nero, cioe' un collegamento invisibile su una pagina il cui unico scopo e'
+   portare da un'altra parte. */
 a { color: var(--primary-testo); text-underline-offset: 3px; }
 a:hover { color: var(--primary-hover); }
 
+/* Le cifre in tabellare e col monospaziato: un tabellone degli orari ha le colonne
+   incolonnate, ed e' esattamente il riferimento fisico di PRODUCT.md. Vale per ore,
+   posti, prezzi, codici e percentuali — non per il testo. */
+.num {
+  font-family: 'IBM Plex Mono', ui-monospace, monospace;
+  font-weight: 500;
+  font-variant-numeric: tabular-nums;
+}
+
 /* ================= AUTH =================
 
-   L'accesso e' l'unica schermata che si vede **prima** di sapere cos'e' l'app, e
-   fino a oggi era l'unica rimasta com'era nata: aurora animata, logo che
-   galleggiava, pastiglie di vetro, pannello che scivolava di 820ms. Cioe' la lista
-   degli anti-riferimenti di PRODUCT.md, quasi voce per voce, sulla prima schermata.
+   L'accesso e' l'unica schermata che si vede **prima** di sapere cos'e' l'app.
+   Tre decisioni, e tutto il resto discende da queste.
 
-   Due decisioni, e tutto il resto discende da queste.
+   1. **Il modulo per primo, a ogni larghezza.** Il contesto d'uso e' in piedi, di
+      corsa, cinque minuti prima di partire: la prima cosa sullo schermo e' il posto
+      dove si entra. Il cartello con l'auto grande e' *accanto* da 1280px in su, in
+      fascia sotto sul tablet, e sul telefono non c'e' affatto — li' lo spazio
+      verticale serve tutto al modulo, e c'e' un test a 360x780 che lo verifica.
 
-   1. **Il modulo per primo.** Il contesto d'uso e' in piedi, di corsa, cinque minuti
-      prima di partire: la prima cosa sullo schermo e' il posto dove si entra. Il
-      cartello e' *accanto* da 1280px in su, e sotto quella soglia non c'e'.
-   2. **Il cartello e' l'auto, non un logo.** L'unica cosa qui dentro che nessun
-      altro ha e' l'auto coi sedili, ed e' quella che risponde alla prova del nove.
-      Il cartello resta navy nei due temi perche' e' un oggetto stampato, non una
-      superficie dell'interfaccia: un cartello non cambia colore con il sistema. */
+   2. **L'animazione racconta il prodotto, non riempie il fondo.** Quello che si
+      muove qui e' l'auto che si riempie: i sedili si occupano uno alla volta e la
+      riga accanto conta i posti che restano, poi l'auto si svuota e ricomincia. E'
+      la stessa cosa che si fa dentro l'app, mostrata prima di entrarci. Non c'e'
+      niente di astratto che respira dietro il modulo.
+
+   3. **La striscia dei quattro posti c'e' anche sul telefono**, e sta sulla riga del
+      marchio: costa zero pixel di altezza perche' occupa lo spazio che a destra era
+      vuoto, e dice la stessa cosa dell'auto grande. Le due sono guidate dallo stesso
+      contatore in `app.js`: non possono mostrare due numeri diversi. */
 
 .auth-view {
   min-height: 100dvh;
@@ -218,27 +294,61 @@ a:hover { color: var(--primary-hover); }
   max-width: 420px;
   background: var(--surface);
   border: 1px solid var(--border);
-  border-radius: var(--radius-xl);
-  box-shadow: var(--shadow-1), var(--luce-interna);
-  padding: 28px;
+  border-radius: var(--r-panel);
+  box-shadow: var(--luce);
+  padding: 26px 24px 22px;
 }
 
-/* Il marchio in piccolo sopra il titolo: il nome dell'app c'e' a ogni larghezza,
-   anche dove il cartello non arriva, e costa una riga invece di mezzo schermo. */
+/* La riga del marchio: il nome a sinistra, i quattro posti a destra. E' anche il
+   bordo alto del modulo, quindi la riga di stacco sotto non e' decorazione — separa
+   l'intestazione dal contenuto come su un biglietto stampato. */
 .auth-marchio {
   display: flex;
   align-items: center;
-  gap: 8px;
+  gap: 9px;
+  padding-bottom: 14px;
   margin-bottom: 18px;
+  border-bottom: 1px solid var(--border);
   font-weight: 700;
-  font-size: 0.9rem;
-  letter-spacing: -0.02em;
-  color: var(--ink-soft);
+  font-size: 0.85rem;
+  letter-spacing: 0.02em;
+  text-transform: uppercase;
+  color: var(--ink);
 }
-.auth-marchio svg { color: var(--primary-testo); }
+.auth-marchio svg { color: var(--primary-testo); flex: none; }
 
-.auth-card h2 { font-size: 1.5rem; font-weight: 700; margin-bottom: 4px; }
-.auth-subtitle { color: var(--ink-soft); font-size: 0.92rem; margin-bottom: 20px; line-height: 1.55; }
+/* La striscia dei quattro posti. Quattro rettangoli come i sedili dell'auto vera,
+   non quattro pallini: la forma e' la stessa che si tocca dentro l'app. */
+.auth-posti {
+  margin-left: auto;
+  display: flex;
+  gap: 4px;
+  flex: none;
+}
+.auth-posti i {
+  width: 13px;
+  height: 16px;
+  border-radius: 2px 2px 4px 4px;
+  border: 1.5px solid var(--primary-bordo);
+  background: transparent;
+  transition: background var(--t-med) var(--ease-out),
+              border-color var(--t-med) var(--ease-out),
+              transform var(--t-med) var(--ease-out);
+}
+.auth-posti i.preso {
+  background: var(--primary);
+  border-color: var(--primary);
+  transform: translateY(-1px);
+}
+
+.auth-card h2 {
+  font-size: 1.6rem;
+  font-weight: 700;
+  line-height: 1.1;
+  letter-spacing: -0.035em;
+  margin-bottom: 6px;
+}
+.auth-subtitle { color: var(--ink-soft); font-size: 0.9rem; margin-bottom: 20px; line-height: 1.55; }
 
 /* Il richiamo all'altro modo. Due frasi nella stessa riga, ne vive una sola:
    `display: none` la toglie anche dalla tabulazione, che e' il motivo per cui non
@@ -247,7 +357,7 @@ a:hover { color: var(--primary-hover); }
   margin-top: 18px;
   padding-top: 16px;
   border-top: 1px solid var(--border);
-  font-size: 0.88rem;
+  font-size: 0.86rem;
   color: var(--ink-soft);
   text-align: center;
 }
@@ -257,41 +367,40 @@ a:hover { color: var(--primary-hover); }
 
 /* ---- Il cartello ----
    Sulla fascia mobile non c'e', e la ragione e' misurata: a 360x780 la scheda occupa
-   625px dei 784 disponibili. Qualunque cosa le si metta sopra spinge la casella
-   dell'email sotto la piega, che e' il difetto da cui e' partito tutto questo.
-   Da 768px in su lo spazio verticale avanza, e allora il cartello c'e': in fascia
-   sotto la scheda sul tablet — il modulo resta la prima cosa, il cartello e' il
-   contorno — e in colonna accanto sul desktop.
+   quasi tutto lo schermo, e qualunque cosa le si metta sopra spinge la casella
+   dell'email sotto la piega — il difetto da cui e' partito tutto questo, e c'e' un
+   test che non lo fa tornare.
 
-   `--car-hue` va dichiarato qui. L'auto dell'app lo prende dalla scheda del
-   passaggio (ogni guidatore ha la sua tinta) e senza un valore `oklch(0.97 0.015
-   var(--car-hue))` non e' un colore: il browser scarta la dichiarazione e disegna
-   la scocca **nera**. E' esattamente com'era al primo colpo. */
+   Il cartello e' una targa: fondo onyx pieno, un bordo chiaro da un pixel, spigoli
+   appena smussati. Non cambia con la finestra perche' e' un oggetto stampato, non una
+   superficie dell'interfaccia. */
 
 .auth-cartello { display: none; }
 
 @media (min-width: 768px) {
   .auth-cartello {
-    --car-hue: 258;
     display: flex;
     align-items: center;
-    gap: 26px;
+    gap: 24px;
     width: min(560px, 100%);
     margin: 0 auto;
-    padding: 22px 28px;
-    background: var(--navy-deeper);
-    border-radius: var(--radius-xl);
-    box-shadow: var(--shadow-2), var(--luce-interna-scura);
-    color: oklch(0.93 0.01 258);
+    padding: 20px 24px;
+    background: var(--bg);
+    border: 1px solid var(--primary-bordo);
+    border-radius: var(--r-card);
+    color: var(--ink);
   }
-  .auth-cartello .car-svg { flex: none; width: 116px; margin: 0; }
+  .auth-cartello .car-svg { flex: none; width: 98px; margin: 0; }
   .cartello-testo { min-width: 0; }
-  .cartello-riga { font-size: 0.98rem; line-height: 1.5; }
-  .cartello-riga b { font-weight: 600; }
+  .cartello-riga { font-size: 1.02rem; line-height: 1.35; letter-spacing: -0.02em; }
+  .cartello-riga b { font-weight: 700; }
+  /* Il numero che cambia mentre i sedili si riempiono. Sta nel monospaziato cosi'
+     «quattro» e «due» non fanno ballare la riga a ogni giro. */
+  .cartello-conta { color: var(--primary-testo); }
   .cartello-sotto {
-    margin-top: 6px;
-    color: oklch(0.79 0.02 258);
-    font-size: 0.88rem;
+    margin-top: 8px;
+    color: var(--ink-soft);
+    font-size: 0.86rem;
     text-wrap: pretty;
   }
   .auth-form-panel { padding-top: 22px; }
@@ -310,30 +419,18 @@ a:hover { color: var(--primary-hover); }
     grid-area: 1 / 1;
     flex-direction: column;
     justify-self: end;
-    width: min(330px, 100%);
+    width: min(340px, 100%);
     margin: 48px;
-    padding: 34px 30px 28px;
+    padding: 32px 28px 26px;
     text-align: center;
   }
-  .auth-cartello .car-svg { width: 168px; margin-bottom: 4px; }
+  .auth-cartello .car-svg { width: 142px; margin-bottom: 6px; }
   .auth-form-panel { grid-area: 1 / 2; justify-content: flex-start; padding: 48px; }
 }
 
-/* Accesso con Google / Apple */
+/* Accesso con Google. La forma del bottone sta con gli altri bottoni, piu' sotto:
+   qui resta solo come si dispone nel modulo. */
 .oauth-buttons { display: grid; gap: 10px; margin-bottom: 4px; }
-
-.btn-oauth {
-  width: 100%;
-  background: var(--surface);
-  color: var(--ink);
-  border: 1.5px solid var(--border-strong);
-  padding: 13px 20px;
-  font-weight: 600;
-  justify-content: center;
-  gap: 10px;
-}
-.btn-oauth:hover:not(:disabled) { background: var(--surface-2); transform: translateY(-1px); }
-.btn-oauth svg { flex: 0 0 auto; }
 
 .oauth-divider {
   display: flex;
@@ -341,8 +438,10 @@ a:hover { color: var(--primary-hover); }
   gap: 14px;
   margin: 18px 0;
   color: var(--ink-soft);
-  font-size: 0.82rem;
-  font-weight: 500;
+  font-size: 0.78rem;
+  font-weight: 600;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
 }
 .oauth-divider::before,
 .oauth-divider::after {
@@ -352,10 +451,14 @@ a:hover { color: var(--primary-hover); }
   background: var(--border);
 }
 
+/* ================= CAMPI ================= */
+
 label {
   display: block;
-  font-size: 0.85rem;
+  font-size: 0.78rem;
   font-weight: 600;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
   color: var(--ink-soft);
   margin-bottom: 14px;
 }
@@ -363,38 +466,44 @@ label {
 input, select, textarea {
   width: 100%;
   margin-top: 6px;
-  padding: 13px 17px;
-  background: var(--surface);
+  padding: 12px 14px;
+  background: var(--bg);
   border: 1.5px solid var(--border-strong);
-  border-radius: var(--radius-sm);
+  border-radius: var(--r-btn);
   color: var(--ink);
   font: inherit;
   font-size: 0.95rem;
-  transition: border-color var(--t-fast) var(--ease-out), box-shadow var(--t-med) var(--ease-out), transform var(--t-med) var(--ease-out);
+  letter-spacing: normal;
+  text-transform: none;
+  transition: border-color var(--t-fast) var(--ease-out), box-shadow var(--t-fast) var(--ease-out);
 }
+/* Le tendine native su fondo scuro: senza questo il menu' che si apre resta bianco
+   in qualche browser, ed e' l'unica cosa bianca dell'app. */
+select option { background: var(--surface); color: var(--ink); }
 
 input::placeholder, textarea::placeholder { color: var(--segnaposto); }
-input:hover, select:hover, textarea:hover { border-color: oklch(0.68 0.03 255); }
+input:hover, select:hover, textarea:hover { border-color: var(--primary-bordo); }
 
 input:focus-visible, select:focus-visible, textarea:focus-visible {
   outline: none;
   border-color: var(--primary-testo);
-  box-shadow: 0 0 0 4px var(--primary-soft);
-  transform: translateY(-1px);
+  box-shadow: 0 0 0 3px var(--primary-soft);
 }
+/* Le icone native dei campi data e ora nascono nere su fondo nero: invisibili.
+   Il filtro le ribalta, che e' l'unico modo di ricolorarle da CSS. */
+input[type="date"]::-webkit-calendar-picker-indicator,
+input[type="time"]::-webkit-calendar-picker-indicator { filter: invert(1) opacity(0.55); cursor: pointer; }
 
 /* Password con occhio.
    L'etichetta sta fuori da .pw-wrap: dentro, avrebbe associato a se' anche il bottone
    dell'occhio (una <label> per due controlli). Le due misure qui sotto ricostruiscono
    la stessa spaziatura di quando erano annidati. */
 .field-label { margin-bottom: 0; }
-/* font-weight: il campo prima stava dentro la <label> e ne ereditava il peso;
-   fuori lo perderebbe, e la password si vedrebbe piu' leggera dell'email. */
-.pw-wrap { position: relative; display: block; margin-bottom: 14px; font-weight: 600; }
-.pw-wrap input { padding-right: 48px; }
+.pw-wrap { position: relative; display: block; margin-bottom: 14px; }
+.pw-wrap input { padding-right: 46px; }
 .pw-toggle {
   position: absolute;
-  right: 7px;
+  right: 6px;
   top: 50%;
   transform: translateY(-50%);
   background: none;
@@ -402,71 +511,95 @@ input:focus-visible, select:focus-visible, textarea:focus-visible {
   color: var(--ink-soft);
   cursor: pointer;
   padding: 8px;
-  border-radius: 50%;
+  border-radius: var(--r-chip);
   line-height: 1;
   transition: background var(--t-fast) var(--ease-out), color var(--t-fast) var(--ease-out);
 }
 .pw-toggle:hover { background: var(--surface-2); color: var(--ink); }
-.pw-toggle:focus-visible { outline: 2px solid var(--primary-testo); }
 
-/* ================= BOTTONI ================= */
+/* ================= BOTTONI =================
+
+   Un bottone e' un rettangolo con lo spigolo appena rotto, non una pastiglia: le
+   pastiglie erano ovunque — bottoni, pastiglie del giorno, badge, navigazione — e
+   quando tutto ha la stessa forma la forma smette di dire qualcosa.
+
+   Tre livelli e basta:
+   · **primario**, candy blue pieno con l'onyx sopra: uno per schermata;
+   · **secondario**, contorno chiaro su fondo trasparente;
+   · **fantasma**, solo testo con un bordo appena visibile.                        */
 
 .btn {
   display: inline-flex;
   align-items: center;
   justify-content: center;
   gap: 8px;
-  padding: 12px 22px;
-  border: none;
-  border-radius: var(--pill);
+  padding: 11px 18px;
+  border: 1.5px solid transparent;
+  border-radius: var(--r-btn);
   font: inherit;
   font-weight: 600;
-  font-size: 0.92rem;
+  font-size: 0.9rem;
+  letter-spacing: -0.005em;
   cursor: pointer;
   touch-action: manipulation;
-  transition: transform var(--t-med) var(--ease-out), box-shadow var(--t-med) var(--ease-out),
-              background var(--t-fast) var(--ease-out), border-color var(--t-fast) var(--ease-out),
-              color var(--t-fast) var(--ease-out);
+  transition: background var(--t-fast) var(--ease-out), border-color var(--t-fast) var(--ease-out),
+              color var(--t-fast) var(--ease-out), transform var(--t-fast) var(--ease-out);
 }
 
-.btn:focus-visible { outline: 2px solid var(--primary-testo); outline-offset: 2px; }
-.btn:disabled { opacity: 0.5; cursor: default; }
-.btn:active:not(:disabled) { transform: scale(0.95); }
+.btn:disabled { opacity: 0.45; cursor: default; }
+.btn:active:not(:disabled) { transform: translateY(1px); }
 
-.btn-primary {
-  background: var(--primary);
-  color: #fff;
-  box-shadow: var(--ombra-primario);
-}
-.btn-primary:hover:not(:disabled) { background: var(--primary-hover); }
-.btn-primary:active:not(:disabled) { transform: scale(0.95); }
+.btn-primary { background: var(--primary); color: var(--su-primario); border-color: var(--primary); }
+.btn-primary:hover:not(:disabled) { background: var(--primary-hover); border-color: var(--primary-hover); }
 
-.btn-big { font-size: 0.98rem; padding: 14px 26px; }
+.btn-big { font-size: 0.96rem; padding: 13px 22px; }
 .btn-full { width: 100%; margin-top: 4px; }
 
-.btn-secondary { background: var(--surface); color: var(--ink); border: 1.5px solid var(--border-strong); }
-.btn-secondary:hover:not(:disabled) { background: var(--surface-2); transform: translateY(-1px); }
+.btn-secondary { background: transparent; color: var(--ink); border-color: var(--border-strong); }
+.btn-secondary:hover:not(:disabled) { background: var(--surface-2); border-color: var(--primary-bordo); }
 
-.btn-ghost { background: var(--surface); color: var(--ink-soft); border: 1.5px solid var(--border); padding: 9px 16px; font-size: 0.87rem; }
-.btn-ghost:hover { color: var(--ink); border-color: var(--border-strong); transform: translateY(-1px); }
+.btn-ghost {
+  background: transparent;
+  color: var(--ink-soft);
+  border-color: var(--border);
+  padding: 8px 14px;
+  font-size: 0.85rem;
+}
+.btn-ghost:hover { color: var(--ink); border-color: var(--border-strong); }
 
-.btn-small { padding: 7px 14px; font-size: 0.82rem; }
+.btn-small { padding: 6px 12px; font-size: 0.8rem; }
+
+/* Il bottone di Google. Sta qui e non nella sezione dell'accesso, ed e' una
+   lezione presa a video: scritto la' era **prima** di `.btn`, stessa specificita',
+   e `border: 1.5px solid transparent` gli cancellava il contorno. Il bottone si
+   vedeva, il suo bordo no. */
+.btn-oauth {
+  width: 100%;
+  background: transparent;
+  color: var(--ink);
+  border-color: var(--border-strong);
+  padding: 12px 20px;
+  justify-content: center;
+  gap: 10px;
+}
+.btn-oauth:hover:not(:disabled) { background: var(--surface-2); border-color: var(--primary-bordo); }
+.btn-oauth svg { flex: 0 0 auto; }
 
 /* Il bottone che conferma un'azione distruttiva. Pieno come il primario, perche' e'
    comunque il bottone da premere se si e' scelto di farlo, ma del colore che dice
-   cosa succede. Il testo bianco ci sta sopra a 5.4:1. */
-.btn-pericolo { background: var(--danger-pieno); color: #fff; }
-.btn-pericolo:hover:not(:disabled) { filter: brightness(0.9); }
+   cosa succede. Il bianco ci sta sopra a 5.9:1. */
+.btn-pericolo { background: var(--danger-pieno); color: oklch(1 0 0); border-color: var(--danger-pieno); }
+.btn-pericolo:hover:not(:disabled) { filter: brightness(1.12); }
 .btn-danger:hover { color: var(--danger); border-color: var(--danger); }
 
 .link-btn {
   display: block;
-  margin: 12px auto 0;
+  margin: 14px auto 0;
   background: none;
   border: none;
   color: var(--primary-testo);
   font: inherit;
-  font-size: 0.87rem;
+  font-size: 0.85rem;
   font-weight: 500;
   cursor: pointer;
   text-decoration: underline;
@@ -487,22 +620,31 @@ input:focus-visible, select:focus-visible, textarea:focus-visible {
 }
 .link-inline:hover { color: var(--primary-hover); }
 
+/* Il messaggio dell'accesso. Non usa l'ombra ne' l'arrotondamento delle schede: e'
+   una fascia, come il nastro che si attacca sopra un cartello quando qualcosa
+   cambia. Lo scatto laterale dice «riprova qui», e sotto `prefers-reduced-motion`
+   sparisce lasciando il colore e la parola, che sono l'informazione vera. */
 .auth-message {
   margin-top: 16px;
-  font-size: 0.89rem;
+  font-size: 0.88rem;
   font-weight: 500;
   color: var(--danger);
   background: var(--danger-soft);
-  border: 1px solid oklch(0.85 0.06 25);
-  border-radius: var(--radius-sm);
-  padding: 12px 16px;
+  border: 1px solid oklch(0.42 0.12 25);
+  border-radius: var(--r-btn);
+  padding: 11px 14px;
   line-height: 1.5;
-  animation: shake 400ms var(--ease-out);
+  animation: scatto 360ms var(--ease-out);
 }
 .auth-message:empty { display: none; animation: none; }
-.auth-message.ok { color: var(--ok-deep); background: var(--ok-soft); border-color: oklch(0.85 0.05 165); animation: view-in var(--t-med) var(--ease-out); }
+.auth-message.ok {
+  color: var(--ok);
+  background: var(--ok-soft);
+  border-color: oklch(0.40 0.09 165);
+  animation: entra var(--t-med) var(--ease-out);
+}
 
-@keyframes shake {
+@keyframes scatto {
   0%, 100% { transform: translateX(0); }
   25% { transform: translateX(-5px); }
   50% { transform: translateX(4px); }
@@ -512,50 +654,48 @@ input:focus-visible, select:focus-visible, textarea:focus-visible {
 /* Conferma email */
 .auth-success { text-align: center; }
 .auth-success-icon {
-  width: 80px; height: 80px;
+  width: 68px; height: 68px;
   margin: 0 auto 16px;
-  border-radius: 50%;
+  border-radius: var(--r-card);
   background: var(--primary-soft);
+  border: 1px solid var(--primary-bordo);
   color: var(--primary-testo);
   display: grid;
   place-items: center;
-  animation: view-in var(--t-med) var(--ease-out) both;
 }
 .auth-success h2 { margin-bottom: 10px; }
 .auth-success .btn { margin-top: 8px; }
 
-/* ================= APP SHELL ================= */
+/* ================= GUSCIO ================= */
 
-.app-shell { min-height: 100vh; display: flex; flex-direction: column; }
+.app-shell { min-height: 100dvh; display: flex; flex-direction: column; }
 .shell-col { display: flex; flex-direction: column; flex: 1; min-width: 0; }
 
 /* ---- Barra in alto (da 768px in su) ----
    Nasce spenta e si accende con la media query: cosi' se il CSS nuovo non arrivasse
-   per intero, sul telefono resta la navigazione di prima invece di una fascia navy
-   senza posizione.
+   per intero, sul telefono resta la navigazione di prima invece di una fascia senza
+   posizione.
 
-   Non e' la pillola flottante della foto di riferimento — quella sta fra gli
-   anti-riferimenti di PRODUCT.md, e una lastra di vetro sospesa su un fondo scuro e'
-   la cosa che questa app ha deciso di non essere. E' una **fascia piena**, dello
-   stesso navy della fascia scura che sostituisce, larga quanto la pagina: un cartello
-   in cima, non un oggetto che galleggia. Della foto resta cio' che serviva davvero,
-   cioe' il tondo che scivola. */
+   Non e' una pillola che galleggia — quella sta fra gli anti-riferimenti di
+   PRODUCT.md. E' una fascia larga quanto la pagina, onyx pieno, chiusa sotto da una
+   riga: la testata di un tabellone. Della pillola resta solo cio' che serviva
+   davvero, cioe' **l'indicatore che scivola**: un rettangolo di due pixel sotto la
+   voce accesa, e sotto il puntatore anticipa dove andresti. */
 .top-nav { display: none; }
 
-/* Il tondo. Sta sotto le voci (`z-index` non serve: e' scritto prima nel markup e le
-   voci hanno `position: relative`), e non intercetta il puntatore, altrimenti sarebbe
-   lui a ricevere il `pointerenter` della voce su cui e' appena arrivato.
-   `--tondo-x` e `--tondo-w` li scrive `app.js`, che le voci le misura. */
+/* L'indicatore. Sta sotto le voci (`z-index` non serve: e' scritto prima nel markup
+   e le voci hanno `position: relative`), e non intercetta il puntatore, altrimenti
+   sarebbe lui a ricevere il `pointerenter` della voce su cui e' appena arrivato.
+   `--tondo-x` e `--tondo-w` li scrive `app.js`, che le voci le misura: i nomi restano
+   quelli di prima perche' e' lo stesso meccanismo, cambiata solo la forma. */
 .nav-tondo {
   position: absolute;
-  top: 4px;
-  bottom: 4px;
+  bottom: 0;
   left: 0;
+  height: 2px;
   width: var(--tondo-w, 0);
   transform: translateX(var(--tondo-x, 0));
-  border-radius: var(--pill);
   background: var(--primary);
-  box-shadow: var(--ombra-primario);
   opacity: 0;
   pointer-events: none;
   transition: transform var(--t-med) var(--ease-out),
@@ -568,15 +708,16 @@ input:focus-visible, select:focus-visible, textarea:focus-visible {
   /* Griglia e non riga flessibile: le due colonne laterali sono `1fr` uguali, quindi
      il gruppo delle voci sta al centro **della pagina** e non a meta' fra un marchio
      corto e una scheda lunga. Con il flex la scheda si stirava per pareggiare, e a
-     destra restava una pastiglia scura mezza vuota. */
+     destra restava una pastiglia mezza vuota. */
   .top-nav {
     display: grid;
     grid-template-columns: minmax(0, 1fr) auto minmax(0, 1fr);
     align-items: center;
     gap: 18px;
-    padding: 10px 22px;
-    background: var(--navy-deeper);
-    color: oklch(0.93 0.01 258);
+    padding: 0 22px;
+    background: var(--bg);
+    border-bottom: 1px solid var(--border);
+    color: var(--ink);
     position: sticky;
     top: 0;
     z-index: 20;
@@ -586,51 +727,44 @@ input:focus-visible, select:focus-visible, textarea:focus-visible {
     display: flex;
     align-items: center;
     gap: 9px;
-    font-size: 1rem;
-    letter-spacing: -0.03em;
+    font-size: 0.86rem;
+    font-weight: 700;
+    letter-spacing: 0.06em;
+    text-transform: uppercase;
     overflow: hidden;
     white-space: nowrap;
   }
-  .top-brand b { font-weight: 800; }
-  .top-brand svg { flex: none; color: var(--ottone); }
+  .top-brand b { font-weight: 700; }
+  .top-brand svg { flex: none; color: var(--primary-testo); }
 
-  /* Il gruppo delle voci: un solo rilievo, appena piu' chiaro della fascia, cosi' si
-     legge come un blocco unico e non come quattro bottoni sparsi. */
+  /* Le voci non stanno dentro un rilievo: stanno sulla fascia, e a dividerle e' lo
+     spazio. Un rilievo dentro una fascia era un pannello dentro un pannello. */
   .top-list {
     position: relative;
     display: flex;
     gap: 2px;
-    padding: 4px;
-    border-radius: var(--pill);
-    background: var(--navy-deep);
-    box-shadow: var(--luce-interna-scura);
+    align-self: stretch;
   }
   .top-item {
     position: relative;
     display: flex;
     align-items: center;
-    gap: 7px;
-    padding: 8px 16px;
+    gap: 6px;
+    padding: 18px 11px;
     border: 0;
-    border-radius: var(--pill);
     background: none;
-    color: oklch(0.78 0.02 258);
+    color: var(--ink-soft);
     font: inherit;
-    font-size: 0.8rem;
+    font-size: 0.82rem;
     font-weight: 600;
     white-space: nowrap;
     cursor: pointer;
     transition: color var(--t-fast) var(--ease-out);
   }
   .top-item svg { flex: none; color: inherit; }
-  .top-item:hover { color: #fff; }
-  /* Sopra il tondo ci va il bianco, e ci va **anche quando il tondo e' solo di
-     passaggio**: senza questa riga la voce sotto il puntatore resta grigia su fondo
-     primario mentre il tondo la copre. */
-  .top-item.on, .top-list.tondo-acceso .top-item:hover { color: #fff; }
-  .top-item.on { font-weight: 700; }
-  .top-item:focus-visible { outline: 2px solid var(--ottone); outline-offset: 2px; }
-  .top-item:active { transform: scale(0.97); }
+  .top-item:hover { color: var(--ink); }
+  .top-item.on { color: var(--primary-testo); font-weight: 700; }
+  .top-item:focus-visible { outline: 2px solid var(--primary-testo); outline-offset: -4px; }
 
   /* La scheda con la faccia. Il nome basta a riconoscerla; il ruolo e il conto delle
      comitive compaiono dove c'e' la riga per scriverli senza stringere le voci. */
@@ -641,89 +775,100 @@ input:focus-visible, select:focus-visible, textarea:focus-visible {
     align-items: center;
     gap: 9px;
     padding: 5px 12px 5px 5px;
-    border: 0;
-    border-radius: var(--pill);
-    background: oklch(1 0 0 / 0.07);
-    box-shadow: var(--luce-interna-scura);
+    border: 1px solid var(--border);
+    border-radius: var(--r-btn);
+    background: transparent;
     color: inherit;
     font: inherit;
     text-align: left;
     cursor: pointer;
-    transition: background var(--t-fast) var(--ease-out);
+    transition: border-color var(--t-fast) var(--ease-out), background var(--t-fast) var(--ease-out);
   }
-  .top-me:hover { background: oklch(1 0 0 / 0.14); }
-  .top-me:focus-visible { outline: 2px solid var(--ottone); outline-offset: 2px; }
-  .top-me.on { background: oklch(1 0 0 / 0.14); box-shadow: inset 0 0 0 1px var(--ottone-bordo), var(--luce-interna-scura); }
+  .top-me:hover { background: var(--surface); border-color: var(--border-strong); }
+  .top-me:focus-visible { outline: 2px solid var(--primary-testo); outline-offset: 2px; }
+  .top-me.on { border-color: var(--primary-bordo); background: var(--surface); }
   .top-av {
     flex: none;
-    width: 30px; height: 30px;
+    width: 28px; height: 28px;
     border-radius: 50%;
-    background: var(--ottone);
-    color: oklch(0.28 0.05 70);
+    background: var(--tuo);
+    color: var(--tuo-su);
     display: grid; place-items: center;
-    font-weight: 700; font-size: 0.75rem;
+    font-weight: 700; font-size: 0.72rem;
   }
   .top-chi { min-width: 0; }
   .top-chi b, .top-chi small { display: block; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-  .top-chi b { font-size: 0.82rem; }
-  .top-chi small { display: none; font-size: 0.68rem; color: oklch(0.66 0.03 258); }
-
-  /* La fascia scura di prima e la pillola in basso si spengono in fondo al foglio,
-     dove sono dichiarate: a parita' di specificita' vince l'ultima regola scritta. */
+  .top-chi b { font-size: 0.8rem; font-weight: 600; }
+  .top-chi small { display: none; font-size: 0.68rem; color: var(--ink-soft); }
 }
 
 @media (min-width: 1280px) {
-  .top-nav { padding: 10px 30px; }
-  .top-item { padding: 8px 20px; font-size: 0.83rem; }
+  .top-nav { padding: 0 30px; }
+  .top-item { padding: 18px 20px; gap: 7px; }
   .top-chi small { display: block; }
 }
 
-/* Chi ha chiesto meno movimento vede il tondo comparire dove sei, senza il viaggio. */
+/* Chi ha chiesto meno movimento vede l'indicatore comparire dove sei, senza il
+   viaggio: l'informazione («sei qui») resta, il tragitto no. */
 @media (prefers-reduced-motion: reduce) {
   .nav-tondo { transition: opacity var(--t-fast) linear; }
 }
 
+/* La fascia del telefono. Onyx piena come quella grande, chiusa sotto da una riga:
+   niente vetro sfocato, che era la stessa lastra sospesa degli anti-riferimenti. */
 .topbar {
   display: flex;
   justify-content: space-between;
   align-items: center;
-  padding: 13px 22px;
-  background: oklch(0.26 0.06 260 / 0.88);
-  backdrop-filter: blur(14px);
-  color: #fff;
+  padding: 12px 18px;
+  background: var(--bg);
+  border-bottom: 1px solid var(--border);
+  color: var(--ink);
   position: sticky;
   top: 0;
   z-index: 10;
 }
 
-.brand { font-weight: 800; font-size: 1.1rem; letter-spacing: -0.03em; display: flex; align-items: center; gap: 9px; }
+.brand {
+  font-weight: 700;
+  font-size: 0.86rem;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  display: flex;
+  align-items: center;
+  gap: 9px;
+}
+.brand svg { color: var(--primary-testo); }
 
 .user-name-btn {
-  background: oklch(1 0 0 / 0.12);
-  border: none;
-  color: #fff;
+  background: transparent;
+  border: 1px solid var(--border);
+  border-radius: var(--r-btn);
+  color: var(--ink);
   font: inherit;
-  font-size: 0.87rem;
+  font-size: 0.84rem;
   font-weight: 600;
   cursor: pointer;
-  padding: 8px 16px;
-  border-radius: var(--pill);
-  transition: background var(--t-fast) var(--ease-out), transform var(--t-med) var(--ease-out);
+  padding: 7px 13px;
+  transition: border-color var(--t-fast) var(--ease-out), background var(--t-fast) var(--ease-out);
 }
-.user-name-btn:hover { background: oklch(1 0 0 / 0.2); transform: translateY(-1px); }
+.user-name-btn:hover { background: var(--surface); border-color: var(--border-strong); }
 
 .app-view {
   flex: 1;
   width: 100%;
   max-width: 920px;
   margin: 0 auto;
-  padding: 26px 20px 148px;
+  padding: 24px 18px 140px;
 }
 
-/* Transizione tra viste */
-.view { animation: view-in var(--t-med) var(--ease-out) both; }
-@keyframes view-in {
-  from { opacity: 0; transform: translateY(14px); }
+/* Transizione tra viste. Da `both` a nessun riempimento in avanti: il contenuto e'
+   visibile per conto suo e l'animazione lo accompagna, invece di essere l'unica cosa
+   che lo rende visibile. Una scheda nascosta che aspetta una transizione e' una
+   scheda che resta vuota se la transizione non parte. */
+.view { animation: entra var(--t-med) var(--ease-out); }
+@keyframes entra {
+  from { opacity: 0; transform: translateY(8px); }
   to { opacity: 1; transform: none; }
 }
 
@@ -731,12 +876,13 @@ input:focus-visible, select:focus-visible, textarea:focus-visible {
   display: flex;
   align-items: center;
   gap: 10px;
-  font-size: 1.25rem;
+  font-size: 1.35rem;
   font-weight: 700;
+  letter-spacing: -0.03em;
   margin-bottom: 4px;
 }
 .view-title svg { color: var(--primary-testo); }
-.view-subtitle { color: var(--ink-soft); font-size: 0.92rem; margin-bottom: 20px; }
+.view-subtitle { color: var(--ink-soft); font-size: 0.9rem; margin-bottom: 22px; max-width: 62ch; }
 
 /* ================= COME FUNZIONA / BENVENUTO ================= */
 
@@ -744,59 +890,60 @@ input:focus-visible, select:focus-visible, textarea:focus-visible {
   position: relative;
   display: grid;
   gap: 10px;
-  background: var(--primary-soft);
-  border: 1px solid oklch(0.85 0.03 258);
-  border-radius: var(--radius);
-  padding: 18px 46px 18px 18px;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--r-card);
+  padding: 16px 46px 16px 16px;
   margin-bottom: 20px;
-  animation: view-in var(--t-med) var(--ease-out) both;
 }
 
 .howto-step { display: flex; align-items: center; gap: 12px; font-weight: 500; font-size: 0.9rem; color: var(--ink); }
 .howto-icon {
   color: var(--primary-testo);
-  background: var(--surface);
-  width: 40px; height: 40px;
-  border-radius: 14px;
+  background: var(--primary-soft);
+  border: 1px solid var(--primary-bordo);
+  width: 36px; height: 36px;
+  border-radius: var(--r-btn);
   display: grid;
   place-items: center;
   flex: 0 0 auto;
-  box-shadow: var(--shadow-1);
 }
 
 .howto-close {
   position: absolute;
-  top: 12px; right: 12px;
-  background: var(--surface);
+  top: 10px; right: 10px;
+  background: transparent;
   border: 1px solid var(--border);
-  border-radius: 50%;
-  width: 30px; height: 30px;
+  border-radius: var(--r-chip);
+  width: 28px; height: 28px;
   color: var(--ink-soft);
   cursor: pointer;
   display: grid;
   place-items: center;
-  transition: transform var(--t-med) var(--ease-out), color var(--t-fast) var(--ease-out);
+  transition: color var(--t-fast) var(--ease-out), border-color var(--t-fast) var(--ease-out);
 }
-.howto-close:hover { color: var(--ink); transform: rotate(90deg); }
+.howto-close:hover { color: var(--ink); border-color: var(--border-strong); }
 
+/* Il benvenuto e' l'unico posto dell'app in cui il candy blue prende tutta la
+   superficie, e ha una ragione sola: e' la schermata di chi non ha ancora niente, e
+   deve dire «qui si comincia» prima di dire qualsiasi altra cosa. Ce n'e' uno, e si
+   vede una volta. */
 .welcome {
-  background: var(--navy-deep);
-  color: #fff;
-  border-radius: var(--radius-xl);
-  box-shadow: var(--shadow-2);
-  padding: 34px 28px;
-  margin-bottom: 20px;
-  text-align: center;
-  position: relative;
-  overflow: hidden;
+  background: var(--primary);
+  color: var(--su-primario);
+  border-radius: var(--r-panel);
+  padding: 30px 26px;
+  margin-bottom: 22px;
 }
-.welcome h2 { position: relative; font-size: 1.35rem; font-weight: 800; margin-bottom: 6px; }
-.welcome p { position: relative; color: oklch(0.85 0.02 255); font-size: 0.93rem; margin-bottom: 18px; }
-.welcome-actions { position: relative; display: flex; gap: 10px; justify-content: center; flex-wrap: wrap; }
-.welcome .btn-secondary { background: oklch(1 0 0 / 0.12); color: #fff; border-color: oklch(1 0 0 / 0.25); }
-.welcome .btn-secondary:hover { background: oklch(1 0 0 / 0.2); }
+.welcome h2 { font-size: 1.5rem; font-weight: 700; letter-spacing: -0.035em; margin-bottom: 6px; }
+.welcome p { color: oklch(0.28 0.03 227); font-size: 0.92rem; margin-bottom: 18px; max-width: 46ch; }
+.welcome-actions { display: flex; gap: 10px; flex-wrap: wrap; }
+.welcome .btn-primary { background: var(--su-primario); color: var(--primary); border-color: var(--su-primario); }
+.welcome .btn-primary:hover { background: oklch(0.22 0.02 227); border-color: oklch(0.22 0.02 227); }
+.welcome .btn-secondary { background: transparent; color: var(--su-primario); border-color: oklch(0.13 0.012 227 / 0.35); }
+.welcome .btn-secondary:hover { background: oklch(0.13 0.012 227 / 0.10); border-color: var(--su-primario); }
 
-/* ================= GRUPPI / GIORNI / TAB ================= */
+/* ================= GRUPPI / GIORNI / PASTIGLIE ================= */
 
 .group-bar, .day-bar {
   display: flex;
@@ -806,45 +953,69 @@ input:focus-visible, select:focus-visible, textarea:focus-visible {
   flex-wrap: wrap;
 }
 .group-bar { margin-bottom: 12px; }
-.day-bar { margin-bottom: 14px; }
+.day-bar { margin-bottom: 16px; }
 
-.group-pills { display: flex; gap: 8px; flex-wrap: wrap; }
+.group-pills { display: flex; gap: 6px; flex-wrap: wrap; }
 .group-actions { display: flex; gap: 8px; }
-.day-tabs { display: flex; gap: 8px; align-items: center; }
 .day-cta { display: flex; gap: 8px; align-items: center; flex-wrap: wrap; }
 
+/* I giorni sono un gruppo di interruttori, non quattro bottoni sciolti: stanno
+   dentro una cornice sola e li separa una riga, come le linguette di un raccoglitore.
+   Acceso e spento si distinguono per fondo **e** per peso, non solo per colore. */
+.day-tabs {
+  display: flex;
+  align-items: stretch;
+  border: 1px solid var(--border-strong);
+  border-radius: var(--r-btn);
+  overflow: hidden;
+}
+.day-tabs > * + * { border-left: 1px solid var(--border); }
+
 .tab {
-  background: var(--surface);
-  border: 1.5px solid var(--border);
+  background: transparent;
+  border: 0;
   color: var(--ink-soft);
-  padding: 10px 20px;
-  border-radius: var(--pill);
+  padding: 10px 16px;
   font: inherit;
-  font-size: 0.9rem;
+  font-size: 0.88rem;
   font-weight: 600;
   cursor: pointer;
   touch-action: manipulation;
-  transition: all var(--t-med) var(--ease-out);
+  transition: background var(--t-fast) var(--ease-out), color var(--t-fast) var(--ease-out);
 }
-
-.tab:hover { color: var(--ink); border-color: var(--border-strong); transform: translateY(-1px); }
-.tab:focus-visible { outline: 2px solid var(--primary-testo); outline-offset: 2px; }
-.tab:active { transform: scale(0.95); }
-.tab.active {
-  background: var(--primary);
-  border-color: var(--primary);
-  color: #fff;
-}
+.tab:hover { color: var(--ink); background: var(--surface); }
+.tab:focus-visible { outline: 2px solid var(--primary-testo); outline-offset: -3px; }
+.tab.active { background: var(--primary); color: var(--su-primario); font-weight: 700; }
 
 .day-picker {
   width: auto;
   margin: 0;
-  padding: 9px 14px;
-  border-radius: var(--pill);
-  font-size: 0.87rem;
+  padding: 9px 12px;
+  border: 0;
+  border-radius: 0;
+  background: transparent;
+  font-size: 0.85rem;
   color: var(--ink-soft);
 }
-.day-picker.active { border-color: var(--primary-testo); color: var(--ink); }
+.day-picker:focus-visible { box-shadow: none; outline: 2px solid var(--primary-testo); outline-offset: -3px; }
+.day-picker.active { color: var(--primary-testo); }
+
+/* La pastiglia di una comitiva. Piccola, squadrata, e quella scelta si riconosce
+   perche' e' piena — non perche' e' di un blu leggermente diverso. */
+.group-pill {
+  background: transparent;
+  border: 1px solid var(--border);
+  border-radius: var(--r-chip);
+  color: var(--ink-soft);
+  padding: 7px 13px;
+  font: inherit;
+  font-size: 0.84rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: border-color var(--t-fast) var(--ease-out), color var(--t-fast) var(--ease-out);
+}
+.group-pill:hover { color: var(--ink); border-color: var(--border-strong); }
+.group-pill.active { background: var(--primary); border-color: var(--primary); color: var(--su-primario); }
 
 .group-info {
   display: flex;
@@ -853,28 +1024,29 @@ input:focus-visible, select:focus-visible, textarea:focus-visible {
   flex-wrap: wrap;
   background: var(--surface);
   border: 1px solid var(--border);
-  border-radius: var(--radius);
-  padding: 12px 18px;
+  border-radius: var(--r-card);
+  padding: 12px 16px;
   margin-bottom: 16px;
-  font-size: 0.88rem;
+  font-size: 0.86rem;
 }
 
+/* Il codice invito e' un codice: monospaziato, spaziato, e si copia toccandolo. */
 .group-code {
-  /* 500 e non 700: il file monospaziato ha quel peso solo, e chiederne uno piu'
-     grasso lo farebbe ingrossare al browser invece di disegnarlo. */
+  font-family: 'IBM Plex Mono', ui-monospace, monospace;
   font-weight: 500;
   font-variant-numeric: tabular-nums;
-  letter-spacing: 0.1em;
+  letter-spacing: 0.14em;
   color: var(--primary-testo);
   background: var(--primary-soft);
-  padding: 5px 12px;
-  border-radius: var(--pill);
-  font-family: 'IBM Plex Mono', ui-monospace, monospace;
+  border: 1px solid var(--primary-bordo);
+  padding: 4px 10px;
+  border-radius: var(--r-chip);
+  cursor: pointer;
 }
 .group-members-count { color: var(--ink-soft); font-weight: 500; }
 
 /* Riepilogo giorno */
-.day-stats { display: flex; gap: 10px; flex-wrap: wrap; align-items: center; margin-bottom: 20px; }
+.day-stats { display: flex; gap: 8px; flex-wrap: wrap; align-items: center; margin-bottom: 20px; }
 
 .stat-chip {
   display: inline-flex;
@@ -882,29 +1054,46 @@ input:focus-visible, select:focus-visible, textarea:focus-visible {
   gap: 8px;
   background: var(--surface);
   border: 1px solid var(--border);
-  border-radius: var(--pill);
-  padding: 9px 16px;
-  font-size: 0.86rem;
+  border-radius: var(--r-chip);
+  padding: 8px 13px;
+  font-size: 0.84rem;
   font-weight: 500;
   color: var(--ink-soft);
-  animation: view-in var(--t-med) var(--ease-out) both;
 }
 .stat-chip svg { color: var(--primary-testo); }
-.stat-chip strong { color: var(--ink); font-weight: 700; }
+.stat-chip strong { color: var(--ink); font-weight: 700; font-variant-numeric: tabular-nums; }
+
+.turn-hint {
+  border: 1px solid var(--primary-bordo);
+  background: var(--primary-soft);
+  border-radius: var(--r-card);
+  padding: 12px 16px;
+  margin-bottom: 18px;
+  font-size: 0.88rem;
+  color: var(--ink);
+}
 
 /* ================= FORM AUTO ================= */
 
 .add-card {
   background: var(--surface);
   border: 1px solid var(--border);
-  border-radius: var(--radius-xl);
-  box-shadow: var(--shadow-2);
-  padding: 24px;
+  border-radius: var(--r-panel);
+  padding: 22px;
   margin-bottom: 24px;
-  animation: view-in var(--t-med) var(--ease-out) both;
+  animation: entra var(--t-med) var(--ease-out);
 }
 
-.add-card h2 { font-size: 1.05rem; font-weight: 700; margin-bottom: 16px; }
+.add-card h2 {
+  font-size: 0.82rem;
+  font-weight: 700;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: var(--ink-soft);
+  padding-bottom: 12px;
+  margin-bottom: 16px;
+  border-bottom: 1px solid var(--border);
+}
 
 .form-row { display: flex; gap: 10px; margin-bottom: 10px; flex-wrap: wrap; }
 .form-row input, .form-row select { flex: 1; min-width: 150px; margin-top: 0; }
@@ -912,304 +1101,362 @@ input:focus-visible, select:focus-visible, textarea:focus-visible {
 .form-row-end .btn { flex: 0 0 auto; }
 
 .rating-label { margin: 0; display: flex; align-items: center; gap: 8px; }
-.rating-label select { width: auto; margin: 0; }
+.rating-label select, .rating-label input { width: auto; margin: 0; }
 .note-input { flex: 1; min-width: 160px; margin: 0; }
+.fuel-input { max-width: 110px; }
 
 /* ================= SENZA PASSAGGIO ================= */
 
 .walkers-card {
   background: var(--surface);
   border: 1px solid var(--border);
-  border-radius: var(--radius);
-  padding: 16px 20px;
+  border-radius: var(--r-card);
+  padding: 16px 18px;
   margin-bottom: 20px;
 }
 
 .walkers-card h2 {
-  font-size: 0.92rem;
+  font-size: 0.78rem;
   font-weight: 700;
-  margin-bottom: 10px;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: var(--ink-soft);
+  margin-bottom: 12px;
   display: flex;
   align-items: center;
   gap: 8px;
 }
-.walkers-card h2 svg { color: var(--ink-soft); }
-.walkers-list { display: flex; gap: 8px; flex-wrap: wrap; }
+.walkers-list { display: flex; gap: 6px; flex-wrap: wrap; }
 
 .walker-chip {
   background: var(--surface-2);
-  border-radius: var(--pill);
-  padding: 6px 14px;
-  font-size: 0.84rem;
+  border: 1px solid transparent;
+  border-radius: var(--r-chip);
+  padding: 6px 12px;
+  font-size: 0.83rem;
   font-weight: 500;
   color: var(--ink-soft);
 }
-.walker-chip.request {
-  background: var(--primary-soft);
-  color: var(--primary-testo);
-  font-weight: 600;
-}
+.walker-chip.request { background: var(--primary-soft); border-color: var(--primary-bordo); color: var(--primary-testo); font-weight: 600; }
 /* Per chi guida la pastiglia e' un bottone: apre il modulo dell'auto con dentro l'ora
    chiesta. Si vede che si tocca dal bordo, non da una scritta in piu'. */
 .walker-chip.offribile {
-  border: 1px solid var(--primary-testo);
+  border-color: var(--primary-testo);
   font: inherit;
-  font-size: 0.84rem;
+  font-size: 0.83rem;
   font-weight: 600;
   cursor: pointer;
 }
-.walker-chip.offribile:hover { background: var(--primary); color: #fff; }
-.walker-chip.offribile:focus-visible { outline: 2px solid var(--primary-testo); outline-offset: 2px; }
+.walker-chip.offribile:hover { background: var(--primary); color: var(--su-primario); }
 
 /* ================= AUTO ================= */
 
 .rides-grid {
   display: grid;
   grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
-  gap: 18px;
+  gap: 14px;
   align-items: start;
 }
 
+/* La scheda del passaggio e' l'oggetto piu' importante dell'app, e si vede: bordo
+   chiaro, non un'ombra. Quando ci sei dentro tu, il bordo diventa candy blue — cioe'
+   la stessa regola del sedile, alla scala della scheda. */
 .ride-card {
-  box-shadow: var(--shadow-1), var(--luce-interna);
-  --car-hue: 258;
   --i: 0;
   background: var(--surface);
   border: 1px solid var(--border);
-  border-radius: var(--radius-xl);
-  box-shadow: var(--shadow-1);
-  padding: 20px;
+  border-radius: var(--r-panel);
+  padding: 18px;
   display: flex;
   flex-direction: column;
   gap: 10px;
-  animation: view-in var(--t-med) var(--ease-out) both;
-  animation-delay: calc(var(--i) * 60ms);
-  transition: box-shadow var(--t-med) var(--ease-out), transform var(--t-med) var(--ease-out);
+  animation: entra var(--t-med) var(--ease-out);
+  animation-delay: calc(var(--i) * 45ms);
+  transition: border-color var(--t-fast) var(--ease-out);
 }
-.ride-card:hover { box-shadow: var(--shadow-2); transform: translateY(-4px); }
+.ride-card:hover { border-color: var(--border-strong); }
+.ride-card.mia { border-color: var(--tuo-bordo); }
 
 .ride-head { display: flex; justify-content: space-between; align-items: start; gap: 8px; }
-.ride-route { font-weight: 700; font-size: 1rem; }
-.ride-sub { color: var(--ink-soft); font-size: 0.85rem; margin-top: 2px; }
-/* Il link al ritrovo era senza regola da quando esiste: ereditava lo stile dei link e
-   dentro la scheda sembrava un errore. Riga sua, allineata all'icona del pin. */
+.ride-route { font-weight: 700; font-size: 1rem; letter-spacing: -0.02em; }
+.ride-sub { color: var(--ink-soft); font-size: 0.84rem; margin-top: 2px; }
+/* L'ora e' la prima cosa che si cerca: monospaziata e un gradino piu' grande del
+   resto della riga, come su un tabellone. */
+.ride-ora {
+  font-family: 'IBM Plex Mono', ui-monospace, monospace;
+  font-weight: 500;
+  font-size: 0.98rem;
+  color: var(--primary-testo);
+  letter-spacing: 0.02em;
+}
 .maps-link {
   display: inline-flex; align-items: center; gap: 4px; margin-top: 2px;
-  color: var(--ink-soft); font-size: 0.83rem; text-decoration: none;
+  color: var(--ink-soft); font-size: 0.82rem; text-decoration: none;
 }
-.maps-link:hover { color: var(--primary-hover); text-decoration: underline; }
+.maps-link:hover { color: var(--primary-testo); text-decoration: underline; }
 .maps-link svg { flex: none; }
-.ride-foot { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
+.ride-foot { display: flex; align-items: center; gap: 6px; flex-wrap: wrap; }
 .ride-note { color: var(--ink-soft); font-size: 0.83rem; }
 
 .ride-actions { display: flex; gap: 4px; align-items: center; }
 
 .place-delete {
-  background: var(--surface-2);
-  border: none;
+  background: transparent;
+  border: 1px solid var(--border);
   color: var(--ink-soft);
   cursor: pointer;
-  width: 36px; height: 36px;
-  border-radius: 50%;
+  width: 32px; height: 32px;
+  border-radius: var(--r-chip);
   display: grid;
   place-items: center;
-  transition: all var(--t-med) var(--ease-out);
+  transition: color var(--t-fast) var(--ease-out), border-color var(--t-fast) var(--ease-out);
 }
-.place-delete:hover { color: var(--danger); background: var(--danger-soft); transform: scale(1.12); }
-.place-delete.share:hover { color: var(--primary-testo); background: var(--primary-soft); }
-.place-delete:focus-visible { outline: 2px solid var(--primary-testo); outline-offset: 1px; }
+.place-delete:hover { color: var(--danger); border-color: var(--danger); }
+.place-delete.share:hover { color: var(--primary-testo); border-color: var(--primary-testo); }
 
 .place-badge {
-  font-size: 0.78rem;
+  font-size: 0.76rem;
   font-weight: 600;
   color: var(--ink-soft);
   background: var(--surface-2);
-  padding: 5px 13px;
-  border-radius: var(--pill);
+  border: 1px solid transparent;
+  padding: 3px 9px;
+  border-radius: var(--r-chip);
 }
-.place-badge.public { color: var(--ok-deep); background: var(--ok-soft); }
-/* Il tuo posto: ottone, non lo stesso navy di tutto il resto. Prima "il mio
-   sedile" e "un sedile" erano lo stesso colore con due parole diverse. */
+.place-badge.public { color: var(--ok); background: var(--ok-soft); }
+/* Il tuo posto: pieno, con l'onyx sopra. Le altre pastiglie sono contorni o veli —
+   e' la forma a dire «questo ti riguarda», prima del colore. */
 .place-badge.mine {
-  color: var(--ottone-scuro);
-  background: var(--ottone-velo);
-  border-color: var(--ottone-bordo);
+  color: var(--tuo-su);
+  background: var(--tuo);
+  border-color: var(--tuo);
+  font-weight: 700;
 }
-
 /* Un ritardo annunciato (C30) non e' un errore, ma e' la cosa che cambia i piani
    di chi legge: prende il rosso perche' e' l'unica pastiglia del piede che
    qualcuno deve **notare** senza cercarla. */
 .place-badge.ritardo { color: var(--danger); background: var(--danger-soft); }
-/* La coppia andata/ritorno (C31): e' un'informazione, non un allarme — prende il
-   blu di servizio, non il rosso. */
-.place-badge.coppia { color: var(--primary-testo); background: var(--primary-soft); }
+/* La coppia andata/ritorno (C31): e' un'informazione, non un allarme. Contorno, non
+   riempimento: sta accanto a «il mio posto» e non deve competerci. */
+.place-badge.coppia { color: var(--primary-testo); background: transparent; border-color: var(--primary-bordo); }
 
-/* Le risposte da un tocco nel dialogo (C30): stanno sopra il campo, che resta
-   per tutte le altre. Riusano `.filtro`, che e' gia' la forma «pastiglia che si
-   preme» di questa interfaccia. */
 .dialog-scelte { display: flex; flex-wrap: wrap; gap: 8px; margin: 0 0 12px; }
 
-/* Auto SVG. Materiali, non tinte piatte (C15): la lamiera prende luce dall'alto,
-   il vetro ha un riflesso, e sotto c'e' un'ombra che appoggia l'auto a terra.
-   Ogni guidatore ha la sua tinta (--car-hue), quindi la luce deve funzionare su
-   qualsiasi colore: per questo e' fatta di chiaro e scuro sullo stesso hue e non
-   di grigio sopra. */
-.car-svg { width: min(228px, 82%); margin: 6px auto 2px; display: block; }
-.car-body {
-  stroke: oklch(0.70 0.06 var(--car-hue));
-  stroke-width: 2;
-}
-.lamiera-alto { stop-color: oklch(0.97 0.015 var(--car-hue)); }
-.lamiera-mezzo { stop-color: oklch(0.93 0.022 var(--car-hue)); }
-.lamiera-basso { stop-color: oklch(0.87 0.032 var(--car-hue)); }
-.car-luce { fill: none; stroke: oklch(1 0 0 / 0.9); stroke-width: 2; stroke-linecap: round; }
-.car-ombra { fill: oklch(0.30 0.06 258 / 0.16); }
-.car-riflesso { fill: oklch(1 0 0 / 0.38); }
-.vetro-chiaro { stop-color: oklch(0.90 0.02 240); }
-.vetro-scuro { stop-color: oklch(0.83 0.03 240); }
-.car-glass { fill: oklch(0.87 0.015 240); }
-.car-wheel { fill: oklch(0.35 0.02 260); }
-.car-wheel-steer { fill: none; stroke: oklch(0.35 0.02 260); stroke-width: 3; }
+/* ---- L'auto SVG ----------------------------------------------------------
+   E' l'unica cosa qui dentro che nessun altro ha, ed e' la prima che si deve
+   vedere (PRODUCT.md, principio 3).
 
-.seat .seat-back { fill: oklch(0.82 0.02 var(--car-hue)); }
+   **Figura e sfondo, e questa e' la terza stesura.** Le prime due disegnavano
+   l'auto come un contorno chiaro su una scocca nera quanto la pagina: a video
+   non si leggeva un'auto, si leggevano cinque rettangoli chiari sospesi nel
+   buio. Il difetto non erano le proporzioni (quelle erano gia' giuste) ne' i
+   dettagli (passaruota, fari, porte c'erano): era che **la carrozzeria non
+   aveva corpo**.
+
+   Adesso la scocca e' una superficie piena e chiara, e i posti sono buchi
+   scavati dentro. E' come e' fatta una mappa dei posti vera — un aereo, un
+   cinema, un teatro: l'oggetto e' solido, i posti sono vuoti.
+
+   I quattro stati si distinguono per **forma prima che per colore**, che e' cio'
+   che PRODUCT.md chiede a lettere (un'auto piena e una vuota non possono
+   dipendere dal rosso e dal verde):
+   · libero   → buco con il contorno **tratteggiato** candy blue, dentro un «+»;
+   · occupato → buco con il contorno **pieno** chiaro, dentro le iniziali;
+   · di chi guida → come occupato, piu' il tondo del volante accanto;
+   · tuo      → **l'unico riempimento candy blue del disegno**, bordo spesso.  */
+.car-svg { width: min(150px, 58%); margin: 6px auto 2px; display: block; }
+
+/* La lamiera: chiara, con la luce che arriva dall'alto. Il gradiente serve a
+   dare volume a una superficie grande; senza, e' una sagoma di cartone. */
+.car-body { fill: var(--scocca); stroke: var(--scocca-luce); stroke-width: 1.5; }
+.lamiera-alto { stop-color: var(--scocca-luce); }
+.lamiera-mezzo { stop-color: var(--scocca); }
+.lamiera-basso { stop-color: var(--scocca-ombra); }
+.car-luce { fill: none; stroke: oklch(1 0 0 / 0.30); stroke-width: 2; stroke-linecap: round; }
+.car-ombra { fill: none; }
+/* Il vetro e' scuro: guardando un'auto dall'alto, dentro non si vede. */
+.vetro-chiaro { stop-color: oklch(0.44 0.030 227); }
+.vetro-scuro { stop-color: var(--vetro); }
+.car-glass { fill: var(--vetro); stroke: var(--scocca-riga); stroke-width: 1; }
+.car-riflesso { fill: oklch(1 0 0 / 0.22); }
+/* Le gomme sono nere, come le gomme. Su una scocca chiara si staccano da sole. */
+.car-wheel { fill: var(--gomma); }
+.car-wheel-steer { fill: none; stroke: var(--posto-bordo); stroke-width: 2.5; }
+
+/* --- Le finiture della carrozzeria ---------------------------------------
+   Prese dal riferimento della supercar, che pero' e' un'auto **di profilo**: di
+   profilo un sedile non si puo' toccare, e toccare un sedile e' quello che
+   questa app fa. Resta la vista dall'alto, e di quel disegno si prende il
+   vocabolario — passaruota, battistrada, fari, pieghe, porte — non
+   l'inquadratura. E non i colori: rosso metallizzato e ciano al neon sono due
+   tinte che questa palette non ha. */
+.car-passaruota { fill: var(--scocca); stroke: none; }
+.car-battistrada { stroke: oklch(1 0 0 / 0.22); stroke-width: 1.6; stroke-linecap: round; }
+.car-cofano { fill: none; stroke: var(--scocca-riga); stroke-width: 1.4; stroke-linecap: round; }
+.car-griglia { stroke: var(--scocca-riga); stroke-width: 3; stroke-linecap: round; }
+/* I fari sono l'unico punto in cui la lamiera porta il colore dell'app: dicono
+   da che parte guarda l'auto, cioe' dove sta chi guida. */
+.car-faro { fill: var(--primary); stroke: var(--scocca-riga); stroke-width: 1; }
+/* I fanali dietro restano un contorno. Pieni e rossi sarebbero il colore
+   dell'errore su una cosa che non e' un errore. */
+.car-fanale { fill: none; stroke: var(--scocca-riga); stroke-width: 1.8; }
+.car-porta { stroke: var(--scocca-riga); stroke-width: 1.5; stroke-linecap: round; }
+.car-piega-scocca { stroke: oklch(1 0 0 / 0.16); stroke-width: 1.2; stroke-linecap: round; }
+/* Il pavimento dell'abitacolo: il vano dove il tetto e' tagliato via per far
+   vedere i posti. Piu' scuro della lamiera, o i sedili sembrano appoggiati
+   sopra il cofano invece che dentro l'auto. */
+.car-abitacolo { fill: var(--pavimento); stroke: var(--scocca-riga); stroke-width: 1.2; }
+/* I paraurti: una fascia piu' scura all'estremita'. Senza, muso e coda sono due
+   grandi superfici chiare e vuote, e l'auto sembra un guscio. */
+.car-paraurti { fill: var(--scocca-ombra); }
+
+/* --- I posti -------------------------------------------------------------
+   Un posto e' un **buco**: fondo scuro, e il contorno dice in che stato e'.
+   L'unico riempimento del disegno e' il tuo, ed e' per questo che si trova con
+   un colpo d'occhio in un'auto da sei senza leggere le iniziali. */
+.seat .seat-back { fill: var(--scocca-ombra); }
 .seat .seat-base {
-  fill: var(--surface);
-  stroke: oklch(0.72 0.05 var(--car-hue));
+  fill: var(--posto);
+  stroke: var(--posto-bordo);
   stroke-width: 1.5;
-  transition: transform 240ms var(--ease-out), filter var(--t-fast) var(--ease-out);
+  transition: fill var(--t-med) var(--ease-out), stroke var(--t-med) var(--ease-out),
+              transform var(--t-med) var(--ease-out);
+  transform-box: fill-box;
+  transform-origin: center;
 }
 .seat-text {
   text-anchor: middle;
   font-family: 'IBM Plex Sans', system-ui, sans-serif;
   font-size: 14px;
   font-weight: 700;
-  fill: var(--ink-soft);
+  fill: var(--ink);
   pointer-events: none;
+  transition: fill var(--t-med) var(--ease-out);
 }
 
-.seat-driver .seat-base { fill: var(--navy-deep); stroke: var(--navy-deeper); }
-.seat-driver .seat-back { fill: var(--navy-deeper); }
-.seat-driver .seat-text { fill: #fff; }
+/* Chi guida: un posto occupato per definizione, e il tondo del volante accanto
+   e' quello che lo distingue da un passeggero. */
+.seat-driver .seat-base { stroke: var(--posto-bordo); stroke-width: 2; }
+.seat-driver .seat-back { fill: var(--scocca-riga); }
 
-.seat-free .seat-base {
-  stroke-dasharray: 5 4;
-  stroke: var(--primary-testo);
-  fill: var(--primary-soft);
-}
+/* Libero: tratteggiato. Il tratteggio e' un vuoto anche per chi non vede il
+   colore, ed e' la stessa convenzione del giorno scoperto nella settimana. */
+.seat-free .seat-base { stroke-dasharray: 5 4; stroke: var(--primary); }
 .seat-free .seat-text { fill: var(--primary-testo); font-size: 18px; font-weight: 600; }
 
-.seat-taken .seat-base { fill: var(--primary); stroke: var(--primary-hover); }
-.seat-taken .seat-back { fill: var(--primary-hover); }
-.seat-taken .seat-text { fill: #fff; }
+.seat-taken .seat-base { stroke: var(--posto-bordo); }
 
-/* Il tuo posto e' ottone. Prima era verde come "va bene", ma qui non e' una
-   conferma: e' l'unico sedile che ti riguarda, e in un'auto da cinque deve
-   trovarsi con un colpo d'occhio, senza leggere le iniziali. */
-.seat-mine .seat-base { fill: var(--ottone); stroke: var(--ottone-scuro); }
-.seat-mine .seat-back { fill: var(--ottone-scuro); }
-.seat-mine .seat-text { fill: oklch(0.24 0.04 70); }
-.seat-mine .seat-piega { stroke: oklch(0.24 0.04 70 / 0.28); }
+/* Il tuo. L'unico pieno del disegno. */
+.seat-mine .seat-base { fill: var(--tuo); stroke: var(--scocca-riga); stroke-width: 2.5; }
+.seat-mine .seat-back { fill: var(--tuo-bordo); }
+.seat-mine .seat-text { fill: var(--tuo-su); }
+.seat-mine .seat-piega { stroke: oklch(0.13 0.012 227 / 0.35); }
 
-/* La piega del cuscino, scura sui sedili pieni e chiara su quelli vuoti. */
-.seat-piega { fill: none; stroke: oklch(0.30 0.03 260 / 0.16); stroke-width: 1.5; stroke-linecap: round; }
-.seat-taken .seat-piega, .seat-driver .seat-piega { stroke: oklch(1 0 0 / 0.22); }
-.seat-free .seat-piega { stroke: var(--primary-testo); opacity: 0.28; }
+/* La piega del cuscino: e' quella che rende un rettangolo un sedile. */
+.seat-piega { fill: none; stroke: oklch(1 0 0 / 0.16); stroke-width: 1.5; stroke-linecap: round; }
+.seat-free .seat-piega { stroke: var(--primary); opacity: 0.45; }
 
 .seat-click { cursor: pointer; }
-.seat-click:hover .seat-base { transform: scale(1.12); transform-box: fill-box; transform-origin: center; }
-.seat-click:active .seat-base { transform: scale(0.92); transform-box: fill-box; transform-origin: center; }
+.seat-click:hover .seat-base { transform: scale(1.1); }
+.seat-click:active .seat-base { transform: scale(0.94); }
 .seat-click:focus-visible { outline: none; }
 .seat-click:focus-visible .seat-base { stroke: var(--ink); stroke-width: 2.5; }
 
+/* Il giro dell'accesso: il sedile che si occupa **entra**, non si accende. E' la
+   stessa distanza che fa un sedile vero quando qualcuno ci si siede. */
+.auth-cartello .seat-taken .seat-base,
+.auth-cartello .seat-mine .seat-base { animation: sedersi 320ms var(--ease-out); }
+@keyframes sedersi {
+  from { transform: scale(0.72); }
+  to { transform: scale(1); }
+}
+
 /* Commenti */
 .comments-btn { align-self: flex-start; }
-.comments-panel { display: grid; gap: 8px; border-top: 1px solid var(--border); padding-top: 12px; animation: view-in var(--t-med) var(--ease-out) both; }
+.comments-panel { display: grid; gap: 8px; border-top: 1px solid var(--border); padding-top: 12px; }
 .comments-list { display: grid; gap: 6px; }
 
 .comment {
   display: flex;
   align-items: baseline;
   gap: 8px;
-  font-size: 0.86rem;
+  font-size: 0.85rem;
   background: var(--surface-2);
-  border-radius: var(--radius-sm);
-  padding: 8px 13px;
+  border-radius: var(--r-btn);
+  padding: 8px 12px;
 }
-.comment-meta { color: var(--ink-soft); font-size: 0.76rem; font-weight: 600; white-space: nowrap; }
+.comment-meta { color: var(--ink-soft); font-size: 0.74rem; font-weight: 600; white-space: nowrap; }
 .comment-del {
   margin-left: auto;
   background: none; border: none;
   color: var(--ink-soft); cursor: pointer;
-  padding: 2px 4px; border-radius: 6px;
+  padding: 2px 4px; border-radius: var(--r-chip);
 }
 .comment-del:hover { color: var(--danger); }
 
 .comment-form { display: flex; gap: 8px; }
-.comment-form input { margin: 0; flex: 1; padding: 9px 14px; font-size: 0.88rem; }
+.comment-form input { margin: 0; flex: 1; padding: 9px 12px; font-size: 0.87rem; }
 
 /* ================= STORICO ================= */
 
-/* ---- i due interruttori dello storico (C27) ----
-   Stessa forma delle pastiglie del giorno, un gradino piu' piccola: sono un
-   filtro, non la navigazione principale della vista. Acceso e spento si
-   distinguono per colore **e** per bordo, non solo per colore. */
 .history-filtri {
   display: flex; flex-wrap: wrap; align-items: center; gap: 8px;
   margin: 0 0 18px;
 }
 .filtro {
-  background: var(--surface);
-  border: 1.5px solid var(--border);
+  background: transparent;
+  border: 1px solid var(--border);
   color: var(--ink-soft);
-  padding: 7px 15px;
-  border-radius: var(--pill);
+  padding: 6px 13px;
+  border-radius: var(--r-chip);
   font: inherit;
-  font-size: 0.82rem;
+  font-size: 0.81rem;
   font-weight: 600;
   cursor: pointer;
   touch-action: manipulation;
-  transition: all var(--t-med) var(--ease-out);
+  transition: border-color var(--t-fast) var(--ease-out), color var(--t-fast) var(--ease-out),
+              background var(--t-fast) var(--ease-out);
 }
 .filtro:hover { color: var(--ink); border-color: var(--border-strong); }
-.filtro:focus-visible { outline: 2px solid var(--primary-testo); outline-offset: 2px; }
-.filtro.on { background: var(--primary); border-color: var(--primary); color: #fff; }
+.filtro.on { background: var(--primary); border-color: var(--primary); color: var(--su-primario); }
 
-.history-list { display: grid; gap: 20px; }
+.history-list { display: grid; gap: 22px; }
+/* Il giorno e' un'intestazione di colonna, non un titolo: piccola, spaziata, con la
+   riga sotto che lega insieme i passaggi di quel giorno. */
 .history-day-title {
-  font-size: 0.85rem;
+  font-size: 0.74rem;
   font-weight: 700;
+  letter-spacing: 0.09em;
+  text-transform: uppercase;
   color: var(--ink-soft);
-  text-transform: capitalize;
-  margin-bottom: 8px;
+  padding-bottom: 7px;
+  margin-bottom: 10px;
+  border-bottom: 1px solid var(--border);
 }
 
 .history-ride {
-  background: var(--surface);
+  background: transparent;
   border: 1px solid var(--border);
-  border-radius: var(--radius);
-  padding: 15px 18px;
+  border-radius: var(--r-card);
+  padding: 13px 16px;
   margin-bottom: 8px;
-  transition: transform var(--t-med) var(--ease-out), box-shadow var(--t-med) var(--ease-out);
+  transition: border-color var(--t-fast) var(--ease-out), background var(--t-fast) var(--ease-out);
 }
-.history-ride:hover { transform: translateX(4px); box-shadow: var(--shadow-1); }
+.history-ride:hover { border-color: var(--border-strong); background: var(--surface); }
 
-.history-route { font-weight: 600; font-size: 0.95rem; }
-.history-driver { color: var(--ink-soft); font-size: 0.86rem; margin-top: 2px; }
+.history-route { font-weight: 600; font-size: 0.94rem; }
+.history-driver { color: var(--ink-soft); font-size: 0.85rem; margin-top: 2px; }
 .history-passengers { display: flex; gap: 6px; flex-wrap: wrap; margin-top: 9px; }
 .history-chip {
   background: var(--surface-2);
-  border-radius: var(--pill);
-  padding: 4px 12px;
-  font-size: 0.8rem;
+  border: 1px solid transparent;
+  border-radius: var(--r-chip);
+  padding: 3px 10px;
+  font-size: 0.79rem;
   font-weight: 500;
   color: var(--ink-soft);
 }
-.history-chip.driver {
-  background: var(--ottone-velo);
-  color: var(--ottone-scuro);
-  border: 1px solid var(--ottone-bordo);
-  font-weight: 600;
-}
+.history-chip.driver { background: var(--tuo); border-color: var(--tuo); color: var(--tuo-su); font-weight: 700; }
 
 .chip-kick {
   background: none;
@@ -1225,56 +1472,50 @@ input:focus-visible, select:focus-visible, textarea:focus-visible {
 /* ================= GRUPPI (vista) ================= */
 
 .group-actions-row { display: flex; gap: 10px; margin-bottom: 20px; flex-wrap: wrap; }
-.groups-list { display: grid; gap: 14px; }
+.groups-list { display: grid; gap: 12px; }
 
 .group-card {
   background: var(--surface);
   border: 1px solid var(--border);
-  border-radius: var(--radius-xl);
-  box-shadow: var(--shadow-1);
-  padding: 20px;
-  transition: box-shadow var(--t-med) var(--ease-out), transform var(--t-med) var(--ease-out);
+  border-radius: var(--r-panel);
+  padding: 18px;
+  transition: border-color var(--t-fast) var(--ease-out);
 }
-.group-card:hover { box-shadow: var(--shadow-2); transform: translateY(-2px); }
+.group-card:hover { border-color: var(--border-strong); }
 
 .group-card-head { display: flex; justify-content: space-between; align-items: center; gap: 10px; flex-wrap: wrap; margin-bottom: 10px; }
-.group-card-name { font-weight: 700; font-size: 1.02rem; }
+.group-card-name { font-weight: 700; font-size: 1rem; letter-spacing: -0.02em; }
 .group-card-members { display: flex; gap: 6px; flex-wrap: wrap; margin: 10px 0 14px; }
 
-/* ---- la rubrica delle fermate (C32) ----
-   Sta dentro la scheda della comitiva, separata da una riga: e' roba del gruppo
-   come i membri, ma di un'altra specie, e senza lo stacco le due liste di
-   pastiglie si leggevano come una sola. */
 .fermate-box { border-top: 1px solid var(--border); margin: 14px 0 0; padding: 12px 0 0; }
-.fermate-titolo { font-size: 0.82rem; font-weight: 600; color: var(--ink); margin-bottom: 8px; }
+.fermate-titolo {
+  font-size: 0.72rem; font-weight: 700; letter-spacing: 0.08em; text-transform: uppercase;
+  color: var(--ink-soft); margin-bottom: 8px;
+}
 .fermate-elenco { display: flex; gap: 6px; flex-wrap: wrap; margin-bottom: 8px; }
 .fermate-box .form-hint { margin: 0; }
 
-/* ---- il garage (C33) ----
-   Una riga per auto, con le azioni in fondo: sono poche e si toccano di rado,
-   quindi stanno scritte invece che nascoste dietro un'icona da indovinare. */
+/* ---- il garage (C33) ---- */
 .auto-list { display: grid; gap: 8px; margin: 10px 0; }
 .auto-riga {
   display: flex; align-items: center; gap: 8px; flex-wrap: wrap;
   padding: 10px 12px;
   border: 1px solid var(--border);
-  border-radius: var(--radius);
+  border-radius: var(--r-btn);
   background: var(--surface-2);
 }
 .auto-testo { flex: 1 1 160px; min-width: 0; font-size: 0.85rem; }
 .auto-testo small { display: block; color: var(--ink-soft); font-size: 0.76rem; margin-top: 2px; }
 
 /* ---- la settimana (C37) ----
-   Sette colonne su schermo largo, sette righe sul telefono: e' un elenco di
-   giorni, e su una colonna sola resta leggibile senza inventarsi uno scorrimento
-   orizzontale. Il criterio del cantiere e' «i giorni scoperti si distinguono
-   senza leggere», quindi il buco ha un fondo suo e un bordo tratteggiato — due
-   segnali, non solo un colore. */
-.week-grid { display: grid; gap: 10px; margin-bottom: 24px; }
-@media (min-width: 760px) { .week-grid { grid-template-columns: repeat(7, 1fr); align-items: start; } }
+   Sette colonne su schermo largo, sette righe sul telefono. Il criterio del cantiere
+   e' «i giorni scoperti si distinguono senza leggere», quindi il buco ha un bordo
+   tratteggiato **e** il rosso — due segnali, non solo un colore. */
+.week-grid { display: grid; gap: 8px; margin-bottom: 24px; }
+@media (min-width: 768px) { .week-grid { grid-template-columns: repeat(7, 1fr); align-items: start; } }
 .week-day {
   border: 1px solid var(--border);
-  border-radius: var(--radius);
+  border-radius: var(--r-btn);
   background: var(--surface);
   padding: 10px;
   display: grid;
@@ -1283,72 +1524,35 @@ input:focus-visible, select:focus-visible, textarea:focus-visible {
 }
 .week-day.oggi { border-color: var(--primary); }
 .week-day.scoperto { border-style: dashed; border-color: var(--danger); background: var(--danger-soft); }
-/* Un giorno gia' passato non e' un buco da riempire: si spegne invece di gridare. */
-.week-day.finito { opacity: 0.6; }
-.week-testa { display: flex; align-items: baseline; gap: 5px; font-size: 0.8rem; color: var(--ink-soft); }
-.week-testa b { color: var(--ink); text-transform: capitalize; }
+.week-day.finito { opacity: 0.5; }
+.week-testa {
+  display: flex; align-items: baseline; gap: 5px;
+  font-size: 0.72rem; color: var(--ink-soft);
+  font-variant-numeric: tabular-nums;
+}
+.week-testa b { color: var(--ink); text-transform: uppercase; letter-spacing: 0.06em; font-size: 0.7rem; }
 .week-auto, .week-vuoto {
   display: flex; align-items: baseline; gap: 6px; flex-wrap: wrap;
   width: 100%;
   text-align: left;
   border: 1px solid var(--border);
-  border-radius: 12px;
-  background: var(--surface-2);
+  border-radius: var(--r-chip);
+  background: transparent;
   color: var(--ink);
   font: inherit;
-  font-size: 0.76rem;
-  padding: 7px 9px;
+  font-size: 0.75rem;
+  padding: 6px 8px;
   cursor: pointer;
 }
 .week-auto:hover, .week-vuoto:hover { border-color: var(--border-strong); }
-.week-auto:focus-visible, .week-vuoto:focus-visible { outline: 2px solid var(--primary-testo); outline-offset: 2px; }
-.week-auto b { font-variant-numeric: tabular-nums; }
+.week-auto b { font-family: 'IBM Plex Mono', ui-monospace, monospace; font-weight: 500; }
 .week-auto span { flex: 1 1 auto; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-.week-auto em { font-style: normal; color: var(--ok-deep); }
+.week-auto em { font-style: normal; color: var(--ok); }
 .week-auto.pieno em { color: var(--ink-soft); }
-.week-auto.mia { border-color: var(--ottone-bordo); background: var(--ottone-velo); }
-.week-vuoto { color: var(--danger); border-color: transparent; background: transparent; font-weight: 600; }
+.week-auto.mia { border-color: var(--tuo-bordo); background: var(--tuo-velo); }
+.week-vuoto { color: var(--danger); border-color: transparent; font-weight: 600; }
 .week-piede { grid-column: 1 / -1; margin: 2px 0 0; }
 .group-card-actions { display: flex; gap: 8px; flex-wrap: wrap; }
-
-/* ================= STATISTICHE ================= */
-
-.stats-section { margin-bottom: 26px; }
-.stats-section h3 { font-size: 0.95rem; font-weight: 700; margin-bottom: 12px; }
-
-.stats-me {
-  display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(130px, 1fr));
-  gap: 12px;
-  margin-bottom: 26px;
-}
-
-.stat-box {
-  background: var(--surface);
-  border: 1px solid var(--border);
-  border-radius: var(--radius);
-  padding: 18px;
-  text-align: center;
-  transition: transform var(--t-med) var(--ease-out), box-shadow var(--t-med) var(--ease-out);
-}
-.stat-box:hover { transform: translateY(-3px); box-shadow: var(--shadow-1); }
-.stat-box strong { display: block; font-size: 1.7rem; font-weight: 800; color: var(--primary-testo); }
-.stat-box span { font-size: 0.82rem; color: var(--ink-soft); font-weight: 500; }
-
-.stats-row { display: flex; align-items: center; gap: 10px; margin-bottom: 8px; }
-.stats-row-name { flex: 0 0 110px; font-size: 0.88rem; font-weight: 600; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-.stats-row-bar-wrap { flex: 1; background: var(--surface-2); border-radius: var(--pill); height: 24px; overflow: hidden; }
-.stats-row-bar {
-  height: 100%;
-  background: var(--primary);
-  border-radius: var(--pill);
-  min-width: 10px;
-  animation: bar-grow var(--t-med) var(--ease-out) both;
-  transform-origin: left;
-}
-@keyframes bar-grow { from { transform: scaleX(0); } to { transform: scaleX(1); } }
-.stats-row.alt .stats-row-bar { background: var(--ok-deep); }
-.stats-row-count { flex: 0 0 26px; text-align: right; font-size: 0.88rem; font-weight: 700; }
 
 /* ================= PROFILO ================= */
 
@@ -1358,40 +1562,29 @@ input:focus-visible, select:focus-visible, textarea:focus-visible {
   gap: 16px;
   background: var(--surface);
   border: 1px solid var(--border);
-  border-radius: var(--radius-xl);
-  box-shadow: var(--shadow-1);
-  padding: 22px;
+  border-radius: var(--r-panel);
+  padding: 20px;
   margin-bottom: 16px;
 }
 
 .profile-avatar {
-  width: 62px; height: 62px;
+  width: 56px; height: 56px;
   border-radius: 50%;
-  background: var(--primary);
-  color: #fff;
+  background: var(--tuo);
+  color: var(--tuo-su);
   display: grid;
   place-items: center;
   font-weight: 700;
-  font-size: 1.3rem;
+  font-size: 1.25rem;
   flex: 0 0 auto;
   /* Il cerchio c'era, il ritaglio no. L'avatar di Google arriva alla sua dimensione
-     naturale (96, 128, 256px a seconda del profilo) e senza queste tre righe si
-     disegnava per intero, quadrato, sfondando la scheda dal basso. Era visibile solo
-     con un account OAuth vero: con le iniziali il difetto non esiste. */
+     naturale e senza queste righe si disegnava per intero, quadrato, sfondando la
+     scheda dal basso. Si vede solo con un account OAuth vero. */
   overflow: hidden;
 }
-.profile-avatar img {
-  width: 100%;
-  height: 100%;
-  object-fit: cover;
-  display: block;
-}
-.profile-name { font-weight: 700; font-size: 1.1rem; }
-.profile-email { color: var(--ink-soft); font-size: 0.88rem; }
-/* I quattro bottoni stavano in una colonna larga 420px accanto a schede larghe quanto
-   la pagina: due misure e due allineamenti diversi per la stessa vista. Ora sono un
-   blocco 2x2 largo come tutto il resto, e i due distruttivi stanno nella riga in
-   fondo invece che in mezzo ai due innocui. */
+.profile-avatar img { width: 100%; height: 100%; object-fit: cover; display: block; }
+.profile-name { font-weight: 700; font-size: 1.1rem; letter-spacing: -0.02em; }
+.profile-email { color: var(--ink-soft); font-size: 0.87rem; }
 .profile-actions {
   display: grid;
   grid-template-columns: repeat(2, minmax(0, 1fr));
@@ -1402,47 +1595,41 @@ input:focus-visible, select:focus-visible, textarea:focus-visible {
 @media (max-width: 767px) {
   .profile-actions { grid-template-columns: minmax(0, 1fr); }
 }
-.btn-danger-full { color: var(--danger); border-color: oklch(0.85 0.06 25); }
-.btn-danger-full:hover { background: var(--danger-soft); }
-.profile-hint { color: var(--ink-soft); font-size: 0.85rem; margin-top: 20px; max-width: 55ch; }
-.profile-hint a { color: var(--primary-testo); }
+.btn-danger-full { color: var(--danger); border-color: oklch(0.42 0.12 25); }
+.btn-danger-full:hover { background: var(--danger-soft); border-color: var(--danger); }
+.profile-hint { color: var(--ink-soft); font-size: 0.85rem; margin-top: 20px; max-width: 60ch; }
 
-/* ================= BOTTOM NAV — pillola flottante ================= */
+/* ================= NAVIGAZIONE IN BASSO =================
+
+   Non e' piu' la pillola che galleggia con il tondo che solleva l'icona: quella era
+   voce per voce un anti-riferimento di PRODUCT.md. E' una **fascia appoggiata al
+   bordo**, onyx piena, chiusa sopra da una riga — la stessa fascia della testata,
+   dall'altra parte dello schermo.
+
+   Il movimento resta, perche' e' quello che dice dove sei: un rettangolo di due
+   pixel che scivola sulla colonna attiva. Un elemento solo che si sposta, non cinque
+   sfondi che si accendono a turno. */
 
 .bottom-nav {
   position: fixed;
-  left: 50%;
-  transform: translateX(-50%);
-  bottom: calc(12px + env(safe-area-inset-bottom));
-  width: min(94vw, 520px);
+  left: 0; right: 0;
+  bottom: 0;
   display: grid;
   grid-template-columns: repeat(5, 1fr);
-  background: var(--surface);
-  border: 1px solid var(--border);
-  border-radius: var(--pill);
-  box-shadow: var(--shadow-2);
-  padding: 8px 0;
+  background: var(--bg);
+  border-top: 1px solid var(--border);
+  padding-bottom: env(safe-area-inset-bottom);
   z-index: 50;
 }
 
-/* Il tondo non appartiene piu' alla Home: appartiene a **dove sei**, e ci va.
-   Scivola sulla colonna attiva, e l'icona di quella scheda sale dentro. E' un
-   elemento solo che si sposta -- non cinque tondi che si accendono a turno --
-   quindi il movimento racconta il passaggio da una vista all'altra. */
 .bottom-nav::before {
   content: '';
-  box-sizing: border-box;   /* il bordo sta DENTRO i 50px, altrimenti sono 58 */
   position: absolute;
-  top: calc(var(--nav-centro) - var(--nav-tondo) / 2);
-  left: calc((var(--nav-i, 2) + 0.5) * 20%);
-  width: var(--nav-tondo); height: var(--nav-tondo);
-  margin-left: calc(var(--nav-tondo) / -2);
-  border-radius: 50%;
+  top: 0;
+  left: calc(var(--nav-i, 2) * 20%);
+  width: 20%;
+  height: 2px;
   background: var(--primary);
-  border: 4px solid var(--surface);
-  box-shadow: var(--ombra-primario);
-  /* 420ms erano troppi per un cambio di vista: il tondo arrivava dopo il contenuto.
-     240ms e' il tempo in cui l'occhio lo segue senza aspettarlo. */
   transition: left var(--t-med) var(--ease-out);
   pointer-events: none;
 }
@@ -1451,218 +1638,112 @@ input:focus-visible, select:focus-visible, textarea:focus-visible {
   display: flex;
   flex-direction: column;
   align-items: center;
-  gap: 3px;
+  gap: 4px;
   background: none;
   border: none;
   font: inherit;
-  font-size: 0.68rem;
+  font-size: 0.66rem;
   font-weight: 600;
+  letter-spacing: 0.02em;
   color: var(--ink-soft);
-  padding: 7px 2px 4px;
-  border-radius: var(--radius-sm);
+  padding: 11px 2px 9px;
   cursor: pointer;
   touch-action: manipulation;
-  transition: color var(--t-fast) var(--ease-out), transform var(--t-med) var(--ease-out);
+  transition: color var(--t-fast) var(--ease-out);
 }
 .nav-item:hover { color: var(--ink); }
 .nav-item.active { color: var(--primary-testo); font-weight: 700; }
-.nav-item svg {
-  position: relative;
-  z-index: 1;
-  transition: transform 420ms var(--ease-out), color var(--t-fast) var(--ease-out);
-}
-.nav-item.active svg { transform: translateY(calc(-1 * var(--nav-salita))); color: #fff; }
-/* L'etichetta non si muove: alzandola finiva sotto il tondo. Al posto dell'icona
-   che e' salita resta un vuoto, ed e' giusto che si veda -- e' quel vuoto a dire
-   che l'icona e' quella dentro il tondo. */
-.nav-item.active span { color: var(--primary-testo); }
-.nav-item:active { transform: scale(0.92); }
-.nav-item:focus-visible { outline: 2px solid var(--primary-testo); outline-offset: -2px; }
+.nav-item svg { transition: color var(--t-fast) var(--ease-out); }
+.nav-item:focus-visible { outline: 2px solid var(--primary-testo); outline-offset: -3px; }
 
-
-/* ================= DIALOG / TOAST / VUOTI ================= */
+/* ================= DIALOGO / MESSAGGIO / VUOTI ================= */
 
 /* `margin: auto` va riscritto qui, e non e' pignoleria: e' il modo in cui il browser
    centra un `<dialog>` aperto con `showModal()`. La riga `* { margin: 0 }` in cima al
-   foglio lo spegneva, quindi ogni finestra di questa app — chiedi un nome, conferma,
-   segnala qualcuno — si apriva **incollata all'angolo in alto a sinistra**. Si vedeva
-   solo aprendone una, e nessuno l'aveva mai fotografata. */
+   foglio lo spegneva, quindi ogni finestra di questa app si apriva **incollata
+   all'angolo in alto a sinistra**. Si vedeva solo aprendone una. */
 .app-dialog {
   margin: auto;
-  border: 1px solid var(--border);
-  border-radius: var(--radius-xl);
+  border: 1px solid var(--border-strong);
+  border-radius: var(--r-panel);
   background: var(--surface);
   color: var(--ink);
-  padding: 26px;
-  width: min(92vw, 390px);
+  padding: 24px;
+  width: min(92vw, 400px);
   box-shadow: var(--shadow-2);
 }
-.app-dialog[open] { animation: view-in var(--t-med) var(--ease-out) both; }
-.app-dialog::backdrop { background: oklch(0.1 0.02 260 / 0.55); backdrop-filter: blur(3px); }
+.app-dialog[open] { animation: entra var(--t-med) var(--ease-out); }
+.app-dialog::backdrop { background: oklch(0.02 0 0 / 0.78); }
 .app-dialog h3 { font-size: 1.1rem; font-weight: 700; margin-bottom: 4px; }
-.app-dialog .auth-subtitle { margin-bottom: 12px; }
-.app-dialog input { margin-top: 0; }
+.app-dialog .auth-subtitle { margin-bottom: 14px; }
+.app-dialog input, .app-dialog select, .app-dialog textarea { margin-top: 0; }
 .dialog-actions { display: flex; gap: 10px; margin-top: 18px; }
 .dialog-actions .btn { flex: 1; }
 /* Su 360px due bottoni affiancati costringono le etichette ad andare a capo, e
-   «Esci dall'account» diventa due righe dentro una pastiglia. In colonna ci stanno
-   per intero; `column-reverse` tiene l'azione sopra e l'uscita sotto, che e'
-   l'ordine in cui si legge un telefono con una mano sola. */
+   «Esci dall'account» diventa due righe. In colonna ci stanno per intero;
+   `column-reverse` tiene l'azione sopra e l'uscita sotto, che e' l'ordine in cui si
+   legge un telefono con una mano sola. */
 @media (max-width: 767px) {
   .dialog-actions { flex-direction: column-reverse; }
 }
 
+/* Lo scheletro: una riga di luce che passa, non un blocco che pulsa. */
 .skeleton {
   height: 150px;
-  border-radius: var(--radius-xl);
-  background: linear-gradient(100deg, var(--surface-2) 40%, oklch(0.97 0.004 250) 50%, var(--surface-2) 60%);
+  border-radius: var(--r-card);
+  background: linear-gradient(100deg, var(--surface) 40%, var(--surface-2) 50%, var(--surface) 60%);
   background-size: 200% 100%;
-  animation: shimmer 1.2s infinite linear;
+  animation: passaggio-luce 1.4s infinite linear;
 }
-@keyframes shimmer { to { background-position: -200% 0; } }
+@keyframes passaggio-luce { to { background-position: -200% 0; } }
 
-.empty { text-align: center; padding: 48px 20px; animation: view-in var(--t-med) var(--ease-out) both; }
-.empty-icon {
-  width: 80px; height: 80px;
-  margin: 0 auto 14px;
-  border-radius: 50%;
-  background: var(--surface);
-  border: 1px solid var(--border);
-  color: var(--ink-soft);
-  display: grid;
-  place-items: center;
-  box-shadow: var(--shadow-1);
+/* Lo stato vuoto non e' un'icona grigia centrata con una frase gentile — quello sta
+   fra gli anti-riferimenti. E' una riga tratteggiata con dentro cosa manca e cosa
+   fare: il posto vuoto in un parcheggio, segnato per terra. */
+.empty {
+  text-align: left;
+  padding: 26px 22px;
+  border: 1px dashed var(--border-strong);
+  border-radius: var(--r-card);
 }
-.empty-title { font-weight: 700; font-size: 1.08rem; margin-bottom: 8px; }
-.empty-hint { color: var(--ink-soft); font-size: 0.92rem; max-width: 46ch; margin: 0 auto; line-height: 1.6; }
+.empty-icon { display: none; }
+.empty-title { font-weight: 700; font-size: 1rem; margin-bottom: 6px; }
+.empty-hint { color: var(--ink-soft); font-size: 0.9rem; max-width: 54ch; line-height: 1.6; }
 
-/* Avviso di rete (C12). Da quando c'e' il service worker l'app si apre anche offline, e
-   proprio per questo va detto: una schermata che si apre e non si aggiorna, senza avviso,
-   sembra un'app rotta invece di un telefono senza segnale. */
+/* Avviso di rete (C12). Da quando c'e' il service worker l'app si apre anche offline,
+   e proprio per questo va detto: una schermata che si apre e non si aggiorna, senza
+   avviso, sembra un'app rotta invece di un telefono senza segnale. */
 .offline-bar {
   position: sticky; top: 0; z-index: 60;
   padding: 8px 14px;
-  background: var(--danger-pieno); color: #fff;
-  font-size: 0.85rem; font-weight: 500; text-align: center;
+  background: var(--danger-pieno); color: oklch(1 0 0);
+  font-size: 0.84rem; font-weight: 500; text-align: center;
 }
 .offline-bar[hidden] { display: none; }
 
 .toast {
   position: fixed;
   left: 50%;
-  bottom: calc(88px + env(safe-area-inset-bottom));
+  bottom: calc(84px + env(safe-area-inset-bottom));
   transform: translateX(-50%);
-  background: var(--navy-deep);
-  color: #fff;
-  font-weight: 500;
-  font-size: 0.9rem;
-  padding: 13px 22px;
-  border-radius: var(--pill);
+  background: var(--primary);
+  color: var(--su-primario);
+  font-weight: 600;
+  font-size: 0.88rem;
+  padding: 12px 20px;
+  border-radius: var(--r-btn);
   box-shadow: var(--shadow-2);
   z-index: 100;
-  animation: toast-in var(--t-med) var(--ease-out);
+  animation: entra-basso var(--t-med) var(--ease-out);
   max-width: min(92vw, 440px);
   text-align: center;
 }
-@keyframes toast-in {
-  from { opacity: 0; transform: translateX(-50%) translateY(14px) scale(0.95); }
+@keyframes entra-basso {
+  from { opacity: 0; transform: translateX(-50%) translateY(10px); }
   to { opacity: 1; transform: translateX(-50%); }
 }
 
 .footer { display: none; }
-
-/* ================= RESPONSIVE ================= */
-
-@media (max-width: 767px) {
-  .auth-view { grid-template-columns: 1fr; }
-  .auth-brand-panel { padding: 38px 28px 30px; }
-  .auth-brand-panel h1 { font-size: 2.1rem; }
-  .auth-form-panel { padding: 26px 18px 48px; align-items: start; }
-  .form-row-end { justify-content: stretch; }
-  .form-row-end .btn { flex: 1; }
-  .day-bar, .group-bar { flex-direction: column; align-items: stretch; }
-  /* A 360px — il bordo basso della fascia mobile — i due giorni piu' il selettore data
-     misurano 337px in un contenitore da 320: sbordavano di 17, invisibili perche'
-     `html { overflow-x: hidden }` li tagliava. Un elemento flex non scende sotto la
-     larghezza del proprio contenuto se non glielo si dice, e senza `wrap` non ha
-     nemmeno dove andare a capo. A 390 e 430 non cambia niente: li' ci stavano gia'. */
-  .day-tabs, .day-cta { flex-wrap: wrap; }
-  .day-tabs > *, .day-cta > * { min-width: 0; }
-  .day-tabs, .group-pills, .group-actions { justify-content: center; }
-  .rides-grid { grid-template-columns: 1fr; }
-  .car-svg { width: min(220px, 80%); }
-}
-
-/* ================= DARK MODE ================= */
-
-@media (prefers-color-scheme: dark) {
-  :root {
-    --bg: oklch(0.16 0.02 260);
-    --surface: oklch(0.22 0.025 260);
-    --surface-2: oklch(0.27 0.025 260);
-    --border: oklch(0.32 0.02 260);
-    --border-strong: oklch(0.42 0.02 260);
-    --ink: oklch(0.93 0.01 250);
-    --ink-soft: oklch(0.72 0.015 250);
-    /* Nel tema scuro il primario si sdoppia davvero: 0.50 perche' sopra ci va il
-       bianco (6.1:1), 0.72 per quando e' lui a essere il testo (6.9:1 sulla
-       superficie). Con un valore solo, come prima, si perdevano tutti e due. */
-    --primary: oklch(0.50 0.13 258);
-    --primary-testo: oklch(0.72 0.10 258);
-    --segnaposto: oklch(0.66 0.015 255);
-    --ombra-primario: 0 1px 2px oklch(0 0 0 / 0.35), 0 6px 14px -6px oklch(0 0 0 / 0.4);
-    --primary-hover: oklch(0.67 0.12 258);
-    --primary-soft: oklch(0.3 0.05 258);
-    --navy-deep: oklch(0.2 0.04 260);
-    --navy-deeper: oklch(0.14 0.03 262);
-    --danger: oklch(0.68 0.15 25);
-    --danger-pieno: oklch(0.52 0.19 25);
-    --danger-soft: oklch(0.27 0.06 25);
-    --ok: oklch(0.6 0.11 165);
-    --ok-pieno: oklch(0.52 0.11 165);
-    --ok-deep: oklch(0.72 0.1 165);
-    --ok-soft: oklch(0.26 0.05 165);
-    --shadow-1: 0 2px 8px oklch(0 0 0 / 0.35), 0 8px 24px oklch(0 0 0 / 0.35);
-    --shadow-2: 0 4px 14px oklch(0 0 0 / 0.4), 0 18px 44px oklch(0 0 0 / 0.45);
-    /* L'ottone al buio: il velo chiaro su fondo scuro diventava un blocco color panna
-       (i sedili "tuoi", i riquadri del riepilogo). Si ridefinisce il token, mai il
-       componente, e cambiano insieme tutti i posti che lo usano. */
-    --ottone: oklch(0.80 0.13 78);
-    --ottone-scuro: oklch(0.84 0.12 80);
-    --ottone-velo: oklch(0.30 0.05 80);
-    --ottone-bordo: oklch(0.44 0.07 80);
-    --luce-interna: inset 0 1px 0 oklch(1 0 0 / 0.06);
-    --luce-interna-scura: inset 0 1px 0 oklch(1 0 0 / 0.05);
-  }
-  .auth-message { border-color: oklch(0.4 0.08 25); }
-  .auth-message.ok { border-color: oklch(0.4 0.06 165); }
-  .car-glass { fill: oklch(0.4 0.02 240); }
-  .car-body { fill: oklch(0.33 0.04 var(--car-hue)); stroke: oklch(0.5 0.06 var(--car-hue)); }
-  .seat .seat-base { stroke: oklch(0.52 0.05 var(--car-hue)); }
-  .seat .seat-back { fill: oklch(0.42 0.03 var(--car-hue)); }
-  .seat-text { fill: var(--ink-soft); }
-  .car-wheel { fill: oklch(0.55 0.01 260); }
-  .car-wheel-steer { stroke: oklch(0.55 0.01 260); }
-  .auth-cartello .car-body { fill: url(#lamiera-auth); stroke: oklch(0.70 0.06 258); }
-  .auth-cartello .car-glass { fill: url(#vetro-auth); }
-  .auth-cartello .seat .seat-base { fill: oklch(0.97 0.005 258); stroke: oklch(0.72 0.05 258); }
-  .auth-cartello .seat .seat-back { fill: oklch(0.82 0.02 258); }
-  .auth-cartello .seat-text { fill: var(--ink); }
-  .auth-cartello .seat-driver .seat-base { fill: oklch(0.26 0.06 260); stroke: oklch(0.18 0.05 262); }
-  .auth-cartello .seat-driver .seat-back { fill: oklch(0.18 0.05 262); }
-  .auth-cartello .seat-driver .seat-text { fill: #fff; }
-  .auth-cartello .seat-taken .seat-base { fill: oklch(0.42 0.11 258); stroke: oklch(0.36 0.11 258); }
-  .auth-cartello .seat-taken .seat-back { fill: oklch(0.36 0.11 258); }
-  .auth-cartello .seat-taken .seat-text { fill: #fff; }
-  .auth-cartello .seat-free .seat-base { fill: oklch(0.93 0.025 258); stroke: oklch(0.42 0.11 258); }
-  .auth-cartello .seat-free .seat-text { fill: oklch(0.42 0.11 258); }
-  .auth-cartello .car-wheel { fill: oklch(0.35 0.02 260); }
-  .auth-cartello .car-wheel-steer { stroke: oklch(0.35 0.02 260); }
-  .howto { border-color: var(--border-strong); }
-  .toast { background: var(--surface-2); color: var(--ink); }
-  .bottom-nav { background: var(--surface); }
-  .topbar { background: oklch(0.14 0.03 262 / 0.88); }
-}
 
 /* ================= SICUREZZA DELLE PERSONE (C10) ================= */
 
@@ -1670,16 +1751,14 @@ input:focus-visible, select:focus-visible, textarea:focus-visible {
   background: var(--danger-soft);
   border: 1px solid var(--danger);
   color: var(--danger);
-  border-radius: var(--radius);
-  padding: 14px 18px;
+  border-radius: var(--r-card);
+  padding: 14px 16px;
   margin-bottom: 20px;
-  font-size: 0.9rem;
+  font-size: 0.89rem;
   line-height: 1.5;
 }
 .sospeso-banner strong { display: block; margin-bottom: 4px; }
 
-/* Il "⋯" accanto a una persona: presente ma discreto. Segnalare qualcuno non e'
-   un'azione da mettere in evidenza come "prenota". */
 .chip-report {
   background: none;
   border: none;
@@ -1689,622 +1768,110 @@ input:focus-visible, select:focus-visible, textarea:focus-visible {
   padding: 0 4px;
   font-size: 0.9rem;
   line-height: 1;
-  border-radius: var(--pill);
+  border-radius: var(--r-chip);
 }
 .chip-report:hover { color: var(--ink); background: var(--surface-2); }
 
 .card {
   background: var(--surface);
   border: 1px solid var(--border);
-  border-radius: var(--radius-xl);
-  box-shadow: var(--shadow-1);
-  padding: 20px;
-  margin-top: 20px;
+  border-radius: var(--r-panel);
+  padding: 18px;
+  margin-top: 18px;
 }
-.card-title { font-size: 1rem; font-weight: 650; margin-bottom: 4px; }
-.card-sub { color: var(--ink-soft); font-size: 0.86rem; margin-bottom: 14px; }
+.card-title {
+  font-size: 0.78rem; font-weight: 700; letter-spacing: 0.06em; text-transform: uppercase;
+  color: var(--ink-soft); margin-bottom: 6px;
+}
+.card-sub { color: var(--ink-soft); font-size: 0.86rem; margin-bottom: 14px; max-width: 66ch; }
 .chip-row { display: flex; gap: 8px; flex-wrap: wrap; }
 
-.report-row {
-  border-top: 1px solid var(--border);
-  padding-top: 14px;
-  margin-top: 14px;
-}
+.report-row { border-top: 1px solid var(--border); padding-top: 14px; margin-top: 14px; }
 .report-row:first-child { border-top: none; padding-top: 0; margin-top: 0; }
-.report-head { font-weight: 600; font-size: 0.92rem; }
-.report-body {
-  color: var(--ink-soft);
-  font-size: 0.88rem;
-  margin: 6px 0 10px;
-  white-space: pre-wrap;
-}
+.report-head { font-weight: 600; font-size: 0.91rem; }
+.report-body { color: var(--ink-soft); font-size: 0.87rem; margin: 6px 0 10px; white-space: pre-wrap; }
 
 #persona-dialog select,
-#persona-dialog textarea {
-  width: 100%;
-  margin-bottom: 12px;
-  font: inherit;
-  color: var(--ink);
-  background: var(--surface-2);
-  border: 1px solid var(--border);
-  border-radius: var(--radius);
-  padding: 10px 12px;
-}
-#persona-dialog label {
-  display: block;
-  font-size: 0.82rem;
-  font-weight: 600;
-  color: var(--ink-soft);
-  margin-bottom: 5px;
-}
+#persona-dialog textarea { margin-bottom: 12px; }
+#persona-dialog label { margin-bottom: 5px; }
 
 /* ================= PASSAGGI IN ZONA (C9) ================= */
 
-/* Un passaggio che arriva da fuori la propria comitiva deve dirlo: senza, sembrerebbe
-   della comitiva e non si capirebbe chi e' chi guida. */
 .badge-fuori {
   display: inline-block;
   margin-left: 8px;
-  padding: 1px 8px;
-  border-radius: var(--pill);
-  background: var(--surface-2);
-  border: 1px solid var(--border);
+  padding: 1px 7px;
+  border-radius: var(--r-chip);
+  background: transparent;
+  border: 1px solid var(--border-strong);
   color: var(--ink-soft);
-  font-size: 0.72rem;
+  font-size: 0.71rem;
   font-weight: 600;
   vertical-align: middle;
 }
 
-.form-hint {
-  color: var(--ink-soft);
-  font-size: 0.8rem;
-  align-self: center;
-}
+.form-hint { color: var(--ink-soft); font-size: 0.8rem; align-self: center; }
 
-@media (prefers-reduced-motion: reduce) {
-  *, *::before, *::after { animation: none !important; transition: none !important; }
-}
+/* ================= FINITURE ================= */
 
-/* --- Finiture (C15) ------------------------------------------------------- */
-
-/* Ore, posti, prezzi e codici in tabellare: le cifre hanno tutte la stessa
-   larghezza, quindi una colonna di orari resta una colonna invece di ballare. */
-.ride-sub, .ride-route, .stat-box strong, .stats-row-label, .group-code,
+/* Ore, posti, prezzi e codici in tabellare: le cifre hanno tutte la stessa larghezza,
+   quindi una colonna di orari resta una colonna invece di ballare. */
+.ride-sub, .ride-route, .stats-row-label, .group-code,
 .history-chip, .place-badge, .day-picker { font-variant-numeric: tabular-nums; }
 
-/* Un anello di focus che fa parte del disegno invece di quello del browser:
-   doppio, cosi' si vede sia sul chiaro sia sullo scuro. */
+/* Un anello di fuoco che fa parte del disegno invece di quello del browser. Sul buio
+   il candy blue si stacca da qualsiasi superficie del foglio. */
 :where(button, a, input, select, textarea):focus-visible {
   outline: 2px solid var(--primary-testo);
   outline-offset: 2px;
-  border-radius: var(--radius-sm);
+  border-radius: var(--r-btn);
 }
 
-/* --- Passare sopra (C15) --------------------------------------------------
-   Solo dove esiste un puntatore vero: su un telefono `:hover` resta attaccato
-   dopo il tocco, e una scheda che rimane illuminata sembra rotta.
+/* --- Passare sopra --------------------------------------------------------
+   Solo dove esiste un puntatore vero: su un telefono `:hover` resta attaccato dopo
+   il tocco, e una scheda che rimane illuminata sembra rotta.
 
-   L'idea e' una sola: passare sopra **anticipa** quello che succede se tocchi.
-   La scheda della navigazione mostra un tondo pallido dove arriverebbe quello
-   pieno, e l'icona si alza di un soffio nella stessa direzione. Non e' un
-   bagliore decorativo: e' un'anteprima.                                     */
+   L'idea e' una sola: passare sopra **anticipa** quello che succede se tocchi. Nella
+   navigazione in basso compare una riga pallida dove arriverebbe quella piena. Non e'
+   un bagliore decorativo: e' un'anteprima.                                        */
 @media (hover: hover) and (pointer: fine) {
   .nav-item { position: relative; }
   .nav-item:not(.active)::after {
     content: '';
-    box-sizing: border-box;
     position: absolute;
-    top: calc(var(--nav-centro-sopra) - var(--nav-tondo-sopra) / 2);
-    left: 50%;
-    width: var(--nav-tondo-sopra); height: var(--nav-tondo-sopra);
-    margin-left: calc(var(--nav-tondo-sopra) / -2);
-    border-radius: 50%;
-    background: var(--primary-soft);
+    top: 0; left: 0; right: 0;
+    height: 2px;
+    background: var(--primary-bordo);
     opacity: 0;
-    transform: scale(0.7);
-    transition: opacity var(--t-fast) var(--ease-out), transform var(--t-med) var(--ease-out);
-    pointer-events: none;
+    transition: opacity var(--t-fast) var(--ease-out);
   }
-  .nav-item:not(.active):hover::after { opacity: 1; transform: scale(1); }
-  .nav-item:not(.active):hover svg { transform: translateY(calc(-1 * var(--nav-salita-sopra))); color: var(--primary-testo); }
-  .nav-item:not(.active):hover span { color: var(--ink); }
-
-  /* Le schede dei passaggi: si alzano un po' di piu' e l'ombra si approfondisce,
-     cosi' il movimento sembra peso che si stacca e non un salto. */
-  .ride-card:hover { box-shadow: var(--shadow-2), var(--luce-interna); }
-
-  /* I pulsanti: un pixel in su, non una molla. */
+  .nav-item:not(.active):hover::after { opacity: 1; }
   .btn:hover:not(:disabled) { transform: translateY(-1px); }
-  .btn-primary:hover:not(:disabled) { box-shadow: var(--ombra-primario), var(--luce-interna); }
-
-  /* Il codice del gruppo si copia con un tocco: che sia toccabile lo dice
-     l'ottone che si scalda, non un'istruzione scritta accanto. */
-  .group-code:hover { background: var(--ottone-velo); border-color: var(--ottone); }
+  .group-code:hover { background: var(--primary); color: var(--su-primario); border-color: var(--primary); }
 }
 
+/* ================= RESPONSIVE ================= */
 
-/* ══════════════════════════════════════════════════════════════════════════
-   RIEPILOGO — la vista Statistiche
-
-   Tutto quello che segue vive dentro `.dash`, che e' l'unico figlio di
-   #view-stats: i nomi qui dentro sono corti (`.k`, `.card`, `.head`) perche'
-   sono corti nel disegno da cui vengono, e restano innocui perche' non
-   esistono fuori da questo contenitore.
-
-   Due regole di colore, e non se ne aggiungono altre:
-   · l'**ottone** marca solo cio' che e' tuo — il tuo turno, il tuo saldo, i
-     giorni in cui guidi tu;
-   · il **navy** e' l'app, e i due riquadri scuri sono i due che riassumono
-     (il carburante del mese, l'occupazione di domani).
-
-   `min-width: 0` compare ovunque ci sia un flex o una griglia: e' la causa
-   numero uno di elementi che escono dai bordi, perche' il minimo naturale di
-   un elemento flessibile e' la sua parola piu' lunga, non zero.
-   ══════════════════════════════════════════════════════════════════════════ */
-
-.dash { display: flex; flex-direction: column; gap: 12px; min-width: 0; font-size: 0.82rem; }
-.dash * { min-width: 0; }
-
-/* ---- testata ---- */
-.dash-top { display: flex; align-items: center; gap: 12px; flex-wrap: wrap; }
-.dash-hi { flex: 1 1 260px; min-width: 0; }
-.dash-hi h1 { margin: 0; font-size: 1.35rem; font-weight: 700; letter-spacing: -0.02em; overflow-wrap: anywhere; }
-.dash-hi p { margin: 2px 0 0; color: var(--ink-soft); font-size: 0.78rem; overflow-wrap: anywhere; }
-.dash-gruppo {
-  flex: 0 1 auto;
-  background: var(--surface);
-  border: 1px solid var(--border);
-  border-radius: var(--pill);
-  padding: 7px 15px;
-  color: var(--ink-soft);
-  font-size: 0.74rem;
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
-}
-.dash-av {
-  flex: none;
-  width: 35px; height: 35px;
-  border-radius: 50%;
-  background: var(--ottone);
-  color: oklch(0.28 0.05 70);
-  display: grid; place-items: center;
-  font-weight: 700; font-size: 0.82rem;
-}
-
-/* ---- striscia dei numeri ---- */
-/* Flex, non griglia, ed e' il motivo per cui non restano buchi.
-   `repeat(auto-fit, minmax(148px, 1fr))` fa cinque colonne finche' ci stanno, poi
-   quattro — e i cinque riquadri diventano 4 + 1, con tre celle vuote accanto
-   all'ultimo. Un elemento di griglia non si allarga sulle tracce libere. Un elemento
-   flex si': `flex-grow` riempie sempre la riga, quante che siano le voci. Vale qui, per
-   le mattonelle e per l'elenco dei conti — sono tre elenchi a capo automatico, cioe'
-   una dimensione sola, cioe' flex. */
-.dash .kpi { display: flex; flex-wrap: wrap; gap: 10px; }
-.dash .kpi > .k { flex: 1 1 148px; }
-.dash .k {
-  background: var(--surface);
-  border-radius: var(--radius-sm);
-  padding: 11px 13px;
-  box-shadow: var(--shadow-1), var(--luce-interna);
-  min-width: 0;
-}
-.dash .k .lab { font-size: 0.68rem; color: var(--ink-soft); overflow-wrap: anywhere; }
-.dash .k .val { font-size: 1.2rem; font-weight: 600; margin-top: 3px; letter-spacing: -0.02em; overflow-wrap: anywhere; }
-.dash .k .nota { font-size: 0.68rem; color: var(--ink-soft); margin-top: 1px; overflow-wrap: anywhere; }
-.dash .k.mio { background: var(--ottone-velo); border: 1px solid var(--ottone-bordo); }
-.dash .k.mio .val { color: var(--ottone-scuro); }
-.dash .k.allerta { background: var(--danger-soft); }
-.dash .k.allerta .val { color: var(--danger); }
-
-/* ---- la griglia: quattro colonne sullo schermo largo, due o una piu' sotto ---- */
-/* ── La composizione ──────────────────────────────────────────────────────
-   Prima la colonna di destra era una pila a se' (`grid-row: 1 / span 4`) alta quanto
-   il suo contenuto, accanto a due colonne alte quanto il loro: due misure indipendenti,
-   e sotto quella piu' corta restava un vuoto grande quanto la differenza. Nessun
-   valore di spaziatura poteva chiuderlo, perche' non era spaziatura.
-
-   Ora e' **una griglia sola**, e ogni scheda occupa un'area con un nome. L'altezza di
-   una riga e' quella della scheda piu' alta che contiene, e le altre si stirano fino a
-   lei: il bordo inferiore del blocco e' a filo per costruzione, con qualsiasi quantita'
-   di dati. Le tre soglie ridisegnano le aree, non le spostano.
-
-   Sullo schermo largo le colonne sono **quattro** e le righe **tre**. Erano tre e
-   quattro finche' la vista stava dentro 1180px; ora che il riepilogo prende tutta la
-   pagina, la larghezza avanzata si spende in una colonna in piu' invece che in schede
-   piu' larghe, e una riga in meno e' esattamente cio' che serve per stare dentro
-   l'altezza della finestra senza scorrere. Calendario e attivita' — le due piu' alte,
-   341 e 250px di contenuto misurati — occupano due righe: e' li' che il posto serve.
-
-   Il patto che rende vero tutto questo: **ogni cella ha sempre la sua scheda.** Se una
-   sparisse quando manca il dato lascerebbe un buco in mezzo, che e' il difetto di
-   prima spostato. Le schede senza dati dicono cosa mostrerebbero. */
-.dash .grid {
-  display: grid;
-  grid-template-columns: repeat(4, minmax(0, 1fr));
-  grid-template-areas:
-    "carburante prossimo calendario attivita"
-    "azioni     azioni   calendario attivita"
-    "settimana  turni    conti      domani";
-  gap: 12px;
-  align-items: stretch;
-}
-.dash .g-carburante { grid-area: carburante; }
-.dash .g-prossimo   { grid-area: prossimo; }
-.dash .g-calendario { grid-area: calendario; }
-.dash .g-azioni     { grid-area: azioni; }
-.dash .g-settimana  { grid-area: settimana; }
-.dash .g-turni      { grid-area: turni; }
-.dash .g-attivita   { grid-area: attivita; }
-.dash .g-conti      { grid-area: conti; }
-.dash .g-domani     { grid-area: domani; }
-
-/* Le schede stirate distribuiscono lo spazio invece di lasciarlo in fondo: l'elenco
-   sale in cima, il riepilogo di chiusura resta attaccato al bordo inferiore. */
-.dash .grid > .card { display: flex; flex-direction: column; }
-.dash .grid > .card > .piede { margin-top: auto; }
-.dash .g-domani .ciambella { flex: 1 1 auto; }
-.dash .g-domani .ciambella svg { width: clamp(74px, 22%, 104px); height: auto; }
-.dash .g-domani .leg { justify-content: space-evenly; align-self: stretch; }
-.dash .card {
-  background: var(--surface);
-  border-radius: var(--radius);
-  padding: 14px;
-  box-shadow: var(--shadow-1), var(--luce-interna);
-  min-width: 0;
-  overflow: hidden;
-  margin: 0;
-  border: 0;
-}
-.dash .card h3 { margin: 0; font-size: 0.79rem; font-weight: 600; overflow-wrap: anywhere; }
-.dash .sub { color: var(--ink-soft); font-size: 0.68rem; overflow-wrap: anywhere; }
-.dash .head {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: 8px;
-  margin-bottom: 10px;
-  flex-wrap: wrap;
-}
-.dash .pill {
-  flex: none;
-  background: var(--surface-2);
-  border-radius: var(--pill);
-  padding: 3px 9px;
-  font-size: 0.68rem;
-  color: var(--ink-soft);
-  white-space: nowrap;
-}
-.dash .nuovo {
-  display: inline-block;
-  background: var(--ottone-velo);
-  color: var(--ottone-scuro);
-  border: 1px solid var(--ottone-bordo);
-  border-radius: var(--pill);
-  padding: 0 7px;
-  font-size: 0.68rem;
-  font-weight: 700;
-  letter-spacing: 0.03em;
-  vertical-align: 1px;
-  white-space: nowrap;
-}
-
-/* ---- i due riquadri scuri ---- */
-.dash .hero {
-  background: var(--navy-deep);
-  color: oklch(0.94 0.01 258);
-  box-shadow: var(--shadow-1), var(--luce-interna-scura);
-}
-.dash .hero .sub, .dash .hero h3 { color: oklch(0.72 0.03 258); }
-.dash .hero h3 { color: oklch(0.94 0.01 258); }
-.dash .hero .pill { background: oklch(1 0 0 / 0.10); color: oklch(0.78 0.02 258); }
-.dash .hero .big { font-size: clamp(1.35rem, 2.1vw, 1.7rem); font-weight: 600; margin: 4px 0 2px; letter-spacing: -0.03em; }
-.dash .hero .d { color: oklch(0.72 0.03 258); font-size: 0.68rem; overflow-wrap: anywhere; }
-.dash .hero .cta {
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  gap: 6px;
-  background: var(--ottone);
-  color: oklch(0.28 0.05 70);
-  border: 0;
-  border-radius: var(--pill);
-  padding: 7px 14px;
-  margin-top: 10px;
-  max-width: 100%;
-  font: inherit;
-  font-size: 0.7rem;
-  font-weight: 600;
-  cursor: pointer;
-}
-.dash .hero .cta:hover { background: oklch(0.80 0.13 78); }
-.dash .hero .cta:focus-visible { outline: 2px solid #fff; outline-offset: 2px; }
-
-/* ---- il prossimo passaggio ---- */
-.dash .next {
-  background: var(--primary-soft);
-  position: relative;
-  border: 1px solid oklch(0.86 0.04 258);
-  box-shadow: var(--shadow-1), var(--luce-interna);
-}
-.dash .next .sub { color: var(--primary-testo); }
-.dash .next .titolo {
-  font-size: clamp(0.9rem, 1.3vw, 1rem);
-  font-weight: 600;
-  line-height: 1.25;
-  margin: 4px 0 10px;
-  color: var(--primary-testo);
-  padding-right: 38px;
-  overflow-wrap: anywhere;
-}
-.dash .next .riga {
-  display: flex;
-  justify-content: space-between;
-  align-items: baseline;
-  gap: 10px;
-  position: relative;
-  z-index: 1;
-  background: var(--surface);
-  border-radius: 12px;
-  padding: 6px 10px;
-  margin-bottom: 5px;
-  font-size: 0.7rem;
-}
-.dash .next .riga:last-of-type { margin-bottom: 0; }
-.dash .next .riga > span { flex: none; color: var(--ink-soft); }
-.dash .next .riga > b { min-width: 0; text-align: right; overflow-wrap: anywhere; }
-.dash .next .riga.tua { background: var(--ottone-velo); border: 1px solid var(--ottone-bordo); color: var(--ottone-scuro); }
-.dash .next .riga.tua > span { color: var(--ottone-scuro); }
-.dash .next .go {
-  position: absolute;
-  right: 14px; top: 14px;
-  width: 29px; height: 29px;
-  border: 0;
-  border-radius: 50%;
-  background: var(--primary);
-  color: #fff;
-  display: grid; place-items: center;
-  font-size: 0.78rem;
-  z-index: 2;
-  cursor: pointer;
-}
-.dash .next .go:focus-visible { outline: 2px solid var(--primary-testo); outline-offset: 2px; }
-
-/* ---- calendario e agenda ---- */
-.dash .cal .dows, .dash .cal .days {
-  display: grid;
-  grid-template-columns: repeat(7, minmax(0, 1fr));
-  gap: 2px;
-  text-align: center;
-}
-.dash .cal .dows span { color: var(--ink-soft); font-size: 0.68rem; padding-bottom: 4px; }
-.dash .cal .days span {
-  padding: 5px 0;
-  border-radius: var(--pill);
-  font-size: 0.7rem;
-  min-width: 0;
-  overflow: hidden;
-  font-variant-numeric: tabular-nums;
-}
-.dash .cal .days .fuori { color: var(--ink-soft); opacity: 0.45; }
-.dash .cal .days .ha { background: var(--primary-soft); color: var(--primary-testo); font-weight: 600; }
-.dash .cal .days .mio {
-  background: var(--ottone-velo);
-  color: var(--ottone-scuro);
-  font-weight: 700;
-  box-shadow: inset 0 0 0 1px var(--ottone-bordo);
-}
-.dash .cal .days .oggi { background: var(--primary); color: #fff; font-weight: 700; }
-.dash .ag { display: flex; gap: 9px; align-items: center; padding: 7px 0; border-top: 1px solid var(--border); }
-.dash .ag .h {
-  flex: none;
-  width: 40px;
-  font-size: 0.68rem;
-  color: var(--ink-soft);
-  font-family: 'IBM Plex Mono', ui-monospace, monospace;
-}
-.dash .ag .t { flex: 1 1 auto; min-width: 0; font-size: 0.7rem; font-weight: 600; line-height: 1.25; overflow-wrap: anywhere; }
-.dash .ag .t small { display: block; font-weight: 400; color: var(--ink-soft); font-size: 0.68rem; }
-.dash .ag .chip { flex: none; width: 24px; height: 24px; border-radius: 8px; display: grid; place-items: center; }
-.dash .ag .chip svg { width: 13px; height: 13px; color: var(--primary-testo); }
-.dash .ag .chip.mia svg { color: var(--ottone-scuro); }
-
-/* ---- la colonna di destra, le azioni, la fascia larga ---- */
-.dash .azioni { display: flex; flex-wrap: wrap; gap: 9px; }
-.dash .azioni > .az { flex: 1 1 104px; }
-.dash .az {
-  background: var(--surface);
-  border: 0;
-  border-radius: var(--radius-sm);
-  padding: 10px 6px;
-  text-align: center;
-  box-shadow: var(--shadow-1), var(--luce-interna);
-  min-width: 0;
-  font: inherit;
-  color: inherit;
-  cursor: pointer;
-  transition: transform var(--t-fast) var(--ease-out), box-shadow var(--t-fast) var(--ease-out);
-}
-.dash .az:hover { transform: translateY(-2px); box-shadow: var(--shadow-2), var(--luce-interna); }
-.dash .az:focus-visible { outline: 2px solid var(--primary-testo); outline-offset: 2px; }
-.dash .az .o {
-  width: 30px; height: 30px;
-  border-radius: 50%;
-  background: var(--primary-soft);
-  color: var(--primary-testo);
-  display: grid; place-items: center;
-  margin: 0 auto 5px;
-}
-.dash .az .o svg { width: 15px; height: 15px; }
-.dash .az .t { font-size: 0.68rem; color: var(--ink-soft); line-height: 1.25; overflow-wrap: anywhere; }
-
-/* ---- barre di riempimento ---- */
-.dash .riemp { display: flex; align-items: center; gap: 8px; margin-bottom: 7px; }
-.dash .riemp:last-of-type { margin-bottom: 0; }
-.dash .riemp .n { flex: 0 1 108px; min-width: 0; font-size: 0.7rem; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-.dash .riemp .n .tu { color: var(--ottone-scuro); font-weight: 600; }
-.dash .riemp .bar { flex: 1 1 auto; min-width: 24px; height: 6px; border-radius: var(--pill); background: var(--surface-2); overflow: hidden; }
-.dash .riemp .bar i { display: block; height: 100%; border-radius: var(--pill); }
-.dash .riemp .p {
-  flex: none;
-  width: 30px;
-  text-align: right;
-  font-size: 0.68rem;
-  color: var(--ink-soft);
-  font-family: 'IBM Plex Mono', ui-monospace, monospace;
-}
-.dash .piede {
-  border-top: 1px solid var(--border);
-  margin-top: 9px;
-  padding-top: 9px;
-  font-size: 0.68rem;
-  color: var(--ink-soft);
-  overflow-wrap: anywhere;
-}
-.dash .piede b { color: var(--ink); }
-
-/* ---- attivita' recente ---- */
-.dash .att { display: flex; gap: 8px; align-items: flex-start; padding: 6px 0; }
-.dash .att .av {
-  flex: none;
-  width: 26px; height: 26px;
-  border-radius: 50%;
-  display: grid; place-items: center;
-  font-size: 0.68rem; font-weight: 700;
-  color: #fff;
-}
-.dash .att .txt { flex: 1 1 auto; min-width: 0; font-size: 0.68rem; line-height: 1.35; overflow-wrap: anywhere; }
-.dash .att .txt small { display: block; color: var(--ink-soft); font-size: 0.68rem; margin-top: 1px; }
-.dash .att .when { flex: none; font-size: 0.68rem; color: var(--ink-soft); white-space: nowrap; padding-top: 2px; }
-
-/* ---- legenda della ciambella ---- */
-.dash .leg { display: flex; flex-direction: column; gap: 6px; font-size: 0.68rem; flex: 1 1 auto; min-width: 0; color: oklch(0.82 0.02 258); }
-.dash .leg > div { display: flex; align-items: center; gap: 6px; }
-.dash .leg i { flex: none; width: 7px; height: 7px; border-radius: 50%; }
-.dash .leg .nm { flex: 1 1 auto; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-.dash .leg b { flex: none; color: #fff; }
-.dash .ciambella { display: flex; align-items: center; gap: 12px; }
-
-/* ---- partite aperte ---- */
-.dash .conti { display: flex; flex-wrap: wrap; column-gap: 22px; }
-/* Il blocco, non la riga: sotto la riga si apre il dettaglio di C26, e le due
-   cose devono restare nella stessa colonna quando l'elenco va a capo. */
-.dash .conti > .conto-blocco { flex: 1 1 230px; }
-.dash .conto { display: flex; align-items: center; gap: 8px; padding: 6px 0; font-size: 0.7rem; }
-.dash .conto .av {
-  flex: none;
-  width: 24px; height: 24px;
-  border-radius: 50%;
-  display: grid; place-items: center;
-  font-size: 0.68rem; font-weight: 700;
-  color: #fff;
-}
-/* Il nome e' un bottone da C26: apre le voci che compongono la cifra. Resta
-   scritto come un nome — nessun bordo, nessuno sfondo — perche' e' il testo che
-   c'era prima, non un comando in piu' da imparare. */
-.dash .conto .chi {
-  flex: 1 1 auto; min-width: 0; overflow-wrap: anywhere;
-  border: 0; background: none; padding: 0; margin: 0;
-  font: inherit; color: inherit; text-align: left; cursor: pointer;
-}
-.dash .conto .chi small { display: block; color: var(--ink-soft); font-size: 0.68rem; }
-.dash .conto .chi:hover small { color: var(--primary-testo); }
-.dash .conto .chi:focus-visible { outline: 2px solid var(--primary-testo); outline-offset: 2px; border-radius: 4px; }
-.dash .conto .imp { flex: none; font-weight: 600; font-family: 'IBM Plex Mono', ui-monospace, monospace; white-space: nowrap; }
-.dash .conto .imp.dare { color: var(--danger); }
-.dash .conto .imp.avere { color: var(--ok-deep); }
-
-/* ---- da cosa nasce un conto (C26) ----
-   Rientrato sotto il nome e con la stessa griglia in tutte le righe: il totale
-   in fondo deve stare esattamente incolonnato con gli addendi, altrimenti
-   «controlla la somma» resta un invito che non si puo' accettare. */
-.dash .voci {
-  margin: 0 0 8px 32px;
-  padding: 6px 8px;
-  border-left: 2px solid var(--border);
-  font-size: 0.66rem;
-}
-.dash .riga-voce { display: flex; align-items: baseline; gap: 8px; padding: 2px 0; }
-.dash .riga-voce .q { flex: none; width: 46px; color: var(--ink-soft); }
-.dash .riga-voce .t { flex: 1 1 auto; min-width: 0; overflow-wrap: anywhere; color: var(--ink-soft); }
-.dash .riga-voce .i { flex: none; font-family: 'IBM Plex Mono', ui-monospace, monospace; white-space: nowrap; }
-.dash .riga-voce .i.dare { color: var(--danger); }
-.dash .riga-voce .i.avere { color: var(--ok-deep); }
-.dash .riga-voce.somma { border-top: 1px solid var(--border); margin-top: 4px; padding-top: 5px; }
-.dash .riga-voce.somma .t, .dash .riga-voce.somma .i { color: var(--ink); font-weight: 600; }
-
-/* ---- distribuzione dei turni ---- */
-.dash .turno { display: flex; align-items: center; gap: 8px; margin-bottom: 6px; font-size: 0.7rem; }
-.dash .turno:last-of-type { margin-bottom: 0; }
-.dash .turno .n { flex: 0 1 72px; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-.dash .turno .n b { color: var(--ottone-scuro); }
-.dash .turno .bar {
-  flex: 1 1 auto;
-  min-width: 40px;
-  height: 18px;
-  border-radius: 8px;
-  background: var(--surface-2);
-  overflow: hidden;
-  position: relative;
-  display: flex;
-  align-items: center;
-  /* Il numero sta dentro la barra, e la barra piu' lunga arriva al 100%: senza
-     questo spazio riservato il conteggio finiva sopra il riempimento, cioe'
-     testo tenue su ottone pieno. Il padding rimpicciolisce la pista, non
-     l'elemento, quindi le proporzioni fra le persone restano quelle vere. */
-  padding-right: 26px;
-}
-.dash .turno .bar i { display: block; height: 100%; border-radius: 8px; flex: none; }
-.dash .turno .bar em { position: absolute; right: 7px; font-size: 0.68rem; color: var(--ink-soft); font-style: normal; }
-
-.dash .vuoto { color: var(--ink-soft); font-size: 0.7rem; }
-
-/* ---- adattamento: invece di sovrapporsi, si riordina ----
-   Le soglie sono tre e ognuna toglie una colonna. La colonna di destra e' la
-   prima ad andarsene perche' e' quella di contorno; la fascia larga e le azioni
-   seguono la griglia che le contiene, e devono cambiare `grid-column` insieme a
-   lei, altrimenti chiedono una terza colonna che non esiste piu' e il browser la
-   inventa fuori dallo schermo. E' esattamente il difetto che si vedeva prima. */
-/* A due colonne le schede si riaccoppiano **per altezza naturale**, non per argomento.
-   Accoppiate per argomento davano l'ultima riga con i conti (quattro righe e un piede)
-   accanto alla ciambella di domani, che e' la scheda piu' bassa di tutte: mezzo riquadro
-   di niente. Misurate a 1100px: calendario 341, settimana 275, attivita 250, conti 250,
-   carburante 230, prossimo 200, turni 200, domani 150. Appaiate cosi', lo scarto
-   massimo di una riga scende da 100px a una trentina, che le righe interne assorbono. */
-@media (max-width: 1279px) {
-  .dash .grid {
-    grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
-    grid-template-areas:
-      "carburante prossimo"
-      "azioni     azioni"
-      "calendario conti"
-      "settimana  attivita"
-      "turni      domani";
-  }
-}
 @media (max-width: 767px) {
-  .dash .grid {
-    grid-template-columns: minmax(0, 1fr);
-    grid-template-areas:
-      "carburante" "prossimo" "azioni" "calendario"
-      "settimana" "turni" "attivita" "domani" "conti";
-  }
-}
-@media (max-width: 767px) {
-  .dash .kpi > .k { flex: 1 1 132px; }
-  .dash .azioni > .az { flex: 1 1 92px; }
-}
-
-/* Chi ha chiesto meno movimento non vede sollevarsi le mattonelle. */
-@media (prefers-reduced-motion: reduce) {
-  .dash .az, .dash .az:hover { transition: none; transform: none; }
+  .auth-form-panel { padding: 24px 16px 44px; align-items: start; }
+  .auth-card { padding: 22px 20px 20px; }
+  .auth-card h2 { font-size: 1.45rem; }
+  .form-row-end { justify-content: stretch; }
+  .form-row-end .btn { flex: 1; }
+  .day-bar, .group-bar { flex-direction: column; align-items: stretch; }
+  .day-tabs { flex-wrap: wrap; }
+  .day-tabs > * { flex: 1 1 auto; min-width: 0; }
+  .day-cta { flex-wrap: wrap; }
+  .day-cta > * { flex: 1 1 auto; min-width: 0; }
+  .group-pills { justify-content: flex-start; }
+  .rides-grid { grid-template-columns: 1fr; }
+  .car-svg { width: min(145px, 56%); }
 }
 
-/* Dove c'e' la barra in alto non servono ne' la pillola in basso ne' la fascia scura
-   di prima: sarebbero due navigazioni per le stesse viste e il nome scritto due volte.
-   Sta in fondo al foglio di proposito — `.bottom-nav` e `.topbar` sono dichiarate piu'
-   sotto di dove nasce la barra in alto, e a parita' di specificita' vince l'ultima
-   regola scritta, non quella piu' vicina al senso. */
+/* Dove c'e' la barra in alto non servono ne' la fascia in basso ne' quella del
+   telefono: sarebbero due navigazioni per le stesse viste e il nome scritto due
+   volte. Sta qui di proposito — a parita' di specificita' vince l'ultima regola
+   scritta, non quella piu' vicina al senso. */
 @media (min-width: 768px) {
   .bottom-nav { display: none; }
   .topbar { display: none; }
@@ -2314,96 +1881,657 @@ input:focus-visible, select:focus-visible, textarea:focus-visible {
   .app-view { max-width: 1180px; }
 }
 
-/* ══════════════════════ IL RIEPILOGO PRENDE LA PAGINA ══════════════════════
-   Le altre viste sono elenchi, e un elenco largo 1600px si legge peggio di uno largo
-   1180: la misura di lettura resta. Il riepilogo no — e' una tabella di riquadri
-   affiancati, e ogni pixel in piu' e' una colonna che smette di andare a capo. Quindi
-   e' l'unico a cui si toglie il tetto, e lo dice l'attributo che `switchView()` scrive
-   sul contenitore: nessuno deve indovinare quale vista e' aperta guardando i figli. */
-.app-view[data-vista="stats"] { max-width: none; }
-
-/* **Niente scorrimento verticale.** Il guscio si ferma all'altezza della finestra, la
-   griglia si prende quello che avanza sotto la testata, e le sue tre righe se lo
-   dividono: il bordo di sotto dell'ultima scheda e' il bordo di sotto della pagina.
-
-   Le due soglie di larghezza del foglio restano quelle di sempre; qui se ne aggiunge
-   **una di altezza**, ed e' l'unica del progetto. Sotto i 700px di finestra nove
-   riquadri in tre righe darebbero 150px a testa, cioe' schede che si scorrono tutte
-   dentro: peggio di una pagina che scorre una volta sola. Li' il riepilogo torna a
-   scorrere come prima, largo ma alto quanto gli serve.
-
-   Le schede piu' cariche (calendario, conti) tengono la barra di scorrimento propria
-   invece di tagliare quello che non entra: un dato nascosto senza dirlo sarebbe una
-   bugia, un dato raggiungibile in un gesto e' una scheda piena. */
-@media (min-width: 1280px) and (min-height: 700px) {
-  .app-shell[data-vista="stats"] { height: 100dvh; min-height: 0; overflow: hidden; }
-  .app-shell[data-vista="stats"] .shell-col { min-height: 0; }
-  .app-shell[data-vista="stats"] .app-view {
-    min-height: 0;
-    overflow: hidden;
-    padding-top: 18px;
-    padding-bottom: 18px;
-  }
-  .app-shell[data-vista="stats"] #view-stats { min-height: 0; height: 100%; }
-  #view-stats .dash { height: 100%; }
-  #view-stats .dash .grid {
-    flex: 1 1 auto;
-    min-height: 0;
-    /* Tre righe uguali: le altezze naturali qui non servono piu', quello che conta e'
-       che la somma faccia esattamente l'altezza rimasta. */
-    grid-template-rows: repeat(3, minmax(0, 1fr));
-  }
-  #view-stats .dash .grid > .card {
-    overflow-y: auto;
-    overscroll-behavior: contain;
-    scrollbar-width: thin;
-    scrollbar-color: var(--border-strong) transparent;
-  }
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after { animation: none !important; transition: none !important; }
+  /* Con le transizioni spente l'indicatore compare dove sei invece di viaggiarci:
+     l'informazione resta, il tragitto no. Vale anche per il riepilogo, che passa da
+     una schermata all'altra di scatto invece che scorrendo. */
+  .dash .grid { scroll-behavior: auto; }
 }
+
+/* ══════════════════════════════════════════════════════════════════════════
+   RIEPILOGO — la vista Statistiche
+
+   Tutto quello che segue vive dentro `.dash`, che e' l'unico figlio di
+   #view-stats: i nomi qui dentro sono corti (`.k`, `.card`, `.head`) perche'
+   sono corti nel disegno da cui vengono, e restano innocui perche' non esistono
+   fuori da questo contenitore.
+
+   **Il riepilogo non scorre. Ne' la pagina, ne' i riquadri.**
+   Prima la promessa valeva solo da 1280px in su e con la finestra alta almeno
+   700px; sotto quelle soglie la vista tornava a scorrere, e i riquadri piu'
+   carichi tenevano una barra di scorrimento propria. Adesso vale sempre, e il
+   modo in cui vale e' uno solo: quello che non ci sta in altezza **non viene
+   compresso, viene messo nella schermata dopo**.
+
+   Da 768px in su le schede ci stanno tutte in una schermata: quattro colonne sul
+   desktop, tre sul tablet, e la griglia si prende esattamente l'altezza che
+   avanza sotto la testata. Sul telefono no — nove riquadri in 780px sarebbero
+   nove strisce da ottanta pixel — e allora la griglia diventa un **quaderno di
+   schermate affiancate**: due riquadri per schermata, si passa alla successiva
+   con un gesto laterale, e ogni schermata e' alta quanto la finestra. Nessun
+   dato sparisce e nessuno viene tagliato: cambia solo quante cose si guardano
+   insieme, che e' esattamente cio' che cambia fra un telefono e un monitor.
+
+   Due regole di colore, e non se ne aggiungono altre:
+   · il **candy blue pieno** marca solo cio' che e' tuo — il tuo turno, il tuo
+     saldo, i giorni in cui guidi tu;
+   · il **candy blue scritto o contornato** e' cio' che si tocca.
+
+   `min-width: 0` compare ovunque ci sia un flex o una griglia: e' la causa
+   numero uno di elementi che escono dai bordi, perche' il minimo naturale di un
+   elemento flessibile e' la sua parola piu' lunga, non zero.
+   ══════════════════════════════════════════════════════════════════════════ */
+
+.dash { display: flex; flex-direction: column; gap: 10px; min-width: 0; font-size: 0.82rem; }
+.dash * { min-width: 0; }
+
+/* ---- testata ---- */
+.dash-top { display: flex; align-items: center; gap: 12px; flex-wrap: wrap; }
+.dash-hi { flex: 1 1 200px; min-width: 0; }
+.dash-hi h1 { margin: 0; font-size: 1.3rem; font-weight: 700; letter-spacing: -0.035em; overflow-wrap: anywhere; }
+.dash-hi p { margin: 1px 0 0; color: var(--ink-soft); font-size: 0.76rem; overflow-wrap: anywhere; }
+.dash-gruppo {
+  flex: 0 1 auto;
+  background: transparent;
+  border: 1px solid var(--border);
+  border-radius: var(--r-chip);
+  padding: 5px 12px;
+  color: var(--ink-soft);
+  font-size: 0.73rem;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.dash-av {
+  flex: none;
+  width: 32px; height: 32px;
+  border-radius: 50%;
+  background: var(--tuo);
+  color: var(--tuo-su);
+  display: grid; place-items: center;
+  font-weight: 700; font-size: 0.8rem;
+}
+
+/* ---- la griglia ----------------------------------------------------------
+   **Un meccanismo solo, a ogni larghezza e a ogni altezza**, e sono due numeri:
+
+     --colonne  quante colonne di riquadri si vedono insieme  (la larghezza)
+     --righe    quanti riquadri stanno in una colonna         (l'altezza)
+
+   Le schede scorrono per colonne. Se le colonne che ne escono sono meno o
+   uguali a `--colonne`, si vede tutto insieme e non c'e' niente da scorrere: e'
+   il caso del monitor. Se sono di piu', si va avanti di lato, una colonna alla
+   volta, e sotto compaiono i pallini. Nessuna soglia decide «qui scorre e qui
+   no»: lo decide l'aritmetica fra quante schede ci sono e quante ne entrano.
+
+   **`--righe` lo detta l'altezza, non la larghezza,** ed e' la parte che prima
+   sbagliavo: la vista stava dentro la finestra ma le schede piu' alte — il
+   calendario, la settimana, i conti — venivano tagliate dai loro stessi bordi.
+   Un riquadro con tre quarti di calendario dentro non e' «senza scorrimento»,
+   e' un calendario rotto. Le due soglie qui sotto sono misurate sulla scheda
+   piu' alta che esista (il mese, che sotto i 240px non si legge piu'):
+
+     finestra >= 1000px   tre riquadri per colonna
+     finestra >=  620px   due
+     sotto                uno
+
+   L'ordine nel markup e' l'ordine in cui si riempiono le colonne, quindi e'
+   anche la composizione: i numeri, poi il denaro e il prossimo passaggio, poi il
+   calendario e le azioni, poi il conto della settimana. */
+.dash .grid {
+  --righe: 2;
+  --colonne: 1;
+  display: grid;
+  grid-auto-flow: column;
+  grid-auto-columns: calc((100% - (var(--colonne) - 1) * 10px) / var(--colonne));
+  grid-template-rows: repeat(var(--righe), minmax(0, 1fr));
+  gap: 10px;
+  min-height: 0;
+  flex: 1 1 auto;
+  overflow-x: auto;
+  overflow-y: hidden;
+  scroll-snap-type: x mandatory;
+  scroll-behavior: smooth;
+  /* La barra di scorrimento non si mostra: il gesto e' laterale e i pallini sotto
+     dicono a che punto sei. Una barra orizzontale sotto nove riquadri sarebbe un
+     secondo indicatore che dice la stessa cosa, peggio. */
+  scrollbar-width: none;
+}
+.dash .grid::-webkit-scrollbar { display: none; }
+.dash .grid > * { scroll-snap-align: start; min-height: 0; overflow: hidden; }
+
+/* La striscia dei numeri si prende una colonna intera: sono cinque misure e sono
+   la risposta piu' corta alla domanda «come siamo messi», quindi stanno insieme e
+   stanno per prime. In colonna e non in fascia: cosi' e' un riquadro come gli
+   altri, e la griglia non ha bisogno di un'eccezione per lei. */
+.dash .g-kpi { grid-row: 1 / -1; display: flex; flex-direction: column; gap: 8px; }
+.dash .g-kpi > .k { flex: 1 1 0; }
+
+.dash .k {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--r-card);
+  padding: 11px 13px;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+}
+.dash .k .lab {
+  font-size: 0.67rem; color: var(--ink-soft); overflow-wrap: anywhere;
+  letter-spacing: 0.05em; text-transform: uppercase; font-weight: 600;
+}
+.dash .k .val {
+  font-size: 1.25rem; font-weight: 700; margin-top: 3px; letter-spacing: -0.03em;
+  overflow-wrap: anywhere; font-variant-numeric: tabular-nums;
+}
+.dash .k .nota { font-size: 0.67rem; color: var(--ink-soft); margin-top: 1px; overflow-wrap: anywhere; }
+/* Cio' che e' tuo: pieno, con l'onyx sopra. La misura e' la stessa delle altre —
+   cambia il materiale, non la dimensione. */
+.dash .k.mio { background: var(--tuo); border-color: var(--tuo); color: var(--tuo-su); }
+.dash .k.mio .lab, .dash .k.mio .nota { color: oklch(0.30 0.03 227); }
+.dash .k.mio .val { color: var(--tuo-su); }
+.dash .k.allerta { border-color: var(--danger); background: var(--danger-soft); }
+.dash .k.allerta .val { color: var(--danger); }
+
+.dash .card {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--r-card);
+  padding: 13px;
+  min-width: 0;
+  overflow: hidden;
+  margin: 0;
+  display: flex;
+  flex-direction: column;
+}
+.dash .card > .piede { margin-top: auto; }
+.dash .card h3 {
+  margin: 0; font-size: 0.72rem; font-weight: 700; overflow-wrap: anywhere;
+  letter-spacing: 0.06em; text-transform: uppercase;
+}
+.dash .sub { color: var(--ink-soft); font-size: 0.68rem; overflow-wrap: anywhere; }
+.dash .head {
+  display: flex;
+  align-items: center;
+  justify-content: flex-start;
+  gap: 4px 8px;
+  margin-bottom: 10px;
+  flex-wrap: wrap;
+}
+.dash .head > .pill, .dash .head > .sub:last-child { margin-left: auto; }
+.dash .pill {
+  flex: none;
+  background: transparent;
+  border: 1px solid var(--border);
+  border-radius: var(--r-chip);
+  padding: 2px 8px;
+  font-size: 0.67rem;
+  color: var(--ink-soft);
+  white-space: nowrap;
+}
+.dash .nuovo {
+  display: inline-block;
+  background: var(--tuo);
+  color: var(--tuo-su);
+  border-radius: var(--r-chip);
+  padding: 0 6px;
+  font-size: 0.66rem;
+  font-weight: 700;
+  letter-spacing: 0.04em;
+  vertical-align: 1px;
+  white-space: nowrap;
+}
+
+/* ---- i due riquadri che riassumono ---- */
+.dash .hero { background: var(--rilievo); border-color: var(--primary-bordo); }
+.dash .hero .pill { border-color: oklch(0.853 0.043 227 / 0.28); }
+.dash .hero .big {
+  font-size: clamp(1.4rem, 2.1vw, 1.8rem); font-weight: 700; margin: 4px 0 2px;
+  letter-spacing: -0.04em; font-variant-numeric: tabular-nums;
+}
+.dash .hero .d { color: var(--ink-soft); font-size: 0.68rem; overflow-wrap: anywhere; }
+.dash .hero .cta {
+  align-self: flex-start;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  background: transparent;
+  color: var(--primary-testo);
+  border: 1px solid var(--primary-bordo);
+  border-radius: var(--r-chip);
+  padding: 5px 11px;
+  margin-top: 10px;
+  max-width: 100%;
+  font: inherit;
+  font-size: 0.7rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: background var(--t-fast) var(--ease-out), color var(--t-fast) var(--ease-out);
+}
+.dash .hero .cta:hover { background: var(--primary); color: var(--su-primario); border-color: var(--primary); }
+
+/* ---- il prossimo passaggio ----
+   E' l'unica scheda che risponde alla domanda del prodotto — «chi guida oggi, e c'e'
+   posto per me» — quindi e' l'unica con il bordo acceso. */
+.dash .next { border-color: var(--primary-bordo); position: relative; }
+/* La freccia in alto a destra e' fuori dal flusso: senza questo spazio riservato
+   ci finiva sopra la data della testata. */
+.dash .next .head { padding-right: 34px; }
+.dash .next .sub { color: var(--primary-testo); }
+.dash .next .titolo {
+  font-size: clamp(0.92rem, 1.3vw, 1.05rem);
+  font-weight: 700;
+  line-height: 1.2;
+  letter-spacing: -0.03em;
+  margin: 3px 0 10px;
+  padding-right: 34px;
+  overflow-wrap: anywhere;
+}
+.dash .next .riga {
+  display: flex;
+  justify-content: space-between;
+  align-items: baseline;
+  gap: 10px;
+  border-top: 1px solid var(--border);
+  padding: 5px 0;
+  font-size: 0.7rem;
+}
+.dash .next .riga > span { flex: none; color: var(--ink-soft); }
+.dash .next .riga > b { min-width: 0; text-align: right; overflow-wrap: anywhere; }
+.dash .next .riga.tua > span, .dash .next .riga.tua > b { color: var(--tuo-testo); }
+.dash .next .go {
+  position: absolute;
+  right: 12px; top: 12px;
+  width: 26px; height: 26px;
+  border: 1px solid var(--primary-bordo);
+  border-radius: var(--r-chip);
+  background: transparent;
+  color: var(--primary-testo);
+  display: grid; place-items: center;
+  font-size: 0.78rem;
+  cursor: pointer;
+}
+.dash .next .go:hover { background: var(--primary); color: var(--su-primario); }
+
+/* ---- calendario e agenda ---- */
+.dash .cal .dows, .dash .cal .days {
+  display: grid;
+  grid-template-columns: repeat(7, minmax(0, 1fr));
+  gap: 2px;
+  text-align: center;
+}
+.dash .cal .dows span {
+  color: var(--ink-soft); font-size: 0.64rem; padding-bottom: 4px;
+  letter-spacing: 0.08em; font-weight: 600;
+}
+.dash .cal .days span {
+  padding: 3px 0;
+  border-radius: var(--r-chip);
+  font-size: 0.7rem;
+  min-width: 0;
+  overflow: hidden;
+  font-family: 'IBM Plex Mono', ui-monospace, monospace;
+  font-variant-numeric: tabular-nums;
+}
+.dash .cal .days .fuori { color: var(--ink-soft); opacity: 0.35; }
+.dash .cal .days .ha { color: var(--primary-testo); box-shadow: inset 0 0 0 1px var(--primary-bordo); }
+.dash .cal .days .mio { background: var(--tuo); color: var(--tuo-su); font-weight: 700; }
+.dash .cal .days .oggi { background: var(--ink); color: var(--bg); font-weight: 700; }
+.dash .ag { display: flex; gap: 9px; align-items: center; padding: 5px 0; border-top: 1px solid var(--border); }
+.dash .ag .h {
+  flex: none;
+  width: 38px;
+  font-size: 0.68rem;
+  color: var(--primary-testo);
+  font-family: 'IBM Plex Mono', ui-monospace, monospace;
+}
+.dash .ag .t { flex: 1 1 auto; min-width: 0; font-size: 0.7rem; font-weight: 600; line-height: 1.25; overflow-wrap: anywhere; }
+.dash .ag .t small { display: block; font-weight: 400; color: var(--ink-soft); font-size: 0.67rem; }
+.dash .ag .chip { flex: none; width: 22px; height: 22px; border-radius: var(--r-chip); display: grid; place-items: center; }
+.dash .ag .chip svg { width: 13px; height: 13px; color: var(--primary-testo); }
+.dash .ag .chip.mia { background: var(--tuo); }
+.dash .ag .chip.mia svg { color: var(--tuo-su); }
+
+/* ---- le azioni ----
+   Erano tre bottoni sciolti in una cella alta quanto le altre: sopra e sotto
+   restava il nero, e in una tavola dove ogni cella e' piena quel vuoto si legge
+   come un errore di impaginazione. Adesso la **cella e' la scheda** e i tre
+   bottoni sono le sue colonne, separate da una riga: riempiono l'altezza per
+   costruzione, e non c'e' un riquadro dentro un riquadro. */
+.dash .azioni {
+  display: flex;
+  gap: 0;
+  align-items: stretch;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--r-card);
+  overflow: hidden;
+}
+.dash .azioni > .az { flex: 1 1 0; }
+.dash .azioni > .az + .az { border-left: 1px solid var(--border); }
+.dash .az {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 5px;
+  background: transparent;
+  border: 0;
+  border-radius: 0;
+  padding: 12px 6px;
+  text-align: center;
+  min-width: 0;
+  font: inherit;
+  color: inherit;
+  cursor: pointer;
+  transition: background var(--t-fast) var(--ease-out);
+}
+.dash .az:hover { background: var(--surface-2); }
+.dash .az:focus-visible { outline-offset: -3px; }
+.dash .az .o {
+  flex: none;
+  width: 28px; height: 28px;
+  border-radius: var(--r-chip);
+  background: var(--primary-soft);
+  color: var(--primary-testo);
+  display: grid; place-items: center;
+}
+.dash .az .o svg { width: 15px; height: 15px; }
+.dash .az .t { font-size: 0.68rem; color: var(--ink-soft); line-height: 1.25; overflow-wrap: anywhere; }
+
+/* ---- barre di riempimento ---- */
+.dash .riemp { display: flex; align-items: center; gap: 8px; margin-bottom: 6px; }
+.dash .riemp:last-of-type { margin-bottom: 0; }
+.dash .riemp .n { flex: 0 1 108px; min-width: 0; font-size: 0.7rem; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.dash .riemp .n .tu { color: var(--tuo-testo); font-weight: 700; }
+.dash .riemp .bar { flex: 1 1 auto; min-width: 24px; height: 6px; border-radius: var(--r-chip); background: var(--surface-2); overflow: hidden; }
+.dash .riemp .bar i { display: block; height: 100%; border-radius: var(--r-chip); }
+.dash .riemp .p {
+  flex: none;
+  width: 32px;
+  text-align: right;
+  font-size: 0.67rem;
+  color: var(--ink-soft);
+  font-family: 'IBM Plex Mono', ui-monospace, monospace;
+}
+.dash .piede {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 8px;
+  border-top: 1px solid var(--border);
+  margin-top: 9px;
+  padding-top: 9px;
+  font-size: 0.67rem;
+  color: var(--ink-soft);
+  overflow-wrap: anywhere;
+}
+.dash .piede .cta-vuoto { margin-top: 0; }
+.dash .piede b { color: var(--ink); }
+
+/* ---- attivita' recente ---- */
+.dash .att { display: flex; gap: 8px; align-items: flex-start; padding: 5px 0; }
+.dash .att .av {
+  flex: none;
+  width: 24px; height: 24px;
+  border-radius: 50%;
+  display: grid; place-items: center;
+  font-size: 0.66rem; font-weight: 700;
+  color: var(--su-primario);
+}
+.dash .att .txt { flex: 1 1 auto; min-width: 0; font-size: 0.68rem; line-height: 1.35; overflow-wrap: anywhere; }
+.dash .att .txt small { display: block; color: var(--ink-soft); font-size: 0.67rem; margin-top: 1px; }
+.dash .att .when { flex: none; font-size: 0.66rem; color: var(--ink-soft); white-space: nowrap; padding-top: 2px; }
+
+/* ---- legenda della ciambella ---- */
+.dash .leg { display: flex; flex-direction: column; gap: 6px; font-size: 0.68rem; flex: 1 1 auto; min-width: 0; color: var(--ink-soft); }
+.dash .leg > div { display: flex; align-items: center; gap: 6px; }
+.dash .leg i { flex: none; width: 7px; height: 7px; border-radius: 50%; }
+.dash .leg .nm { flex: 1 1 auto; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.dash .leg b { flex: none; color: var(--ink); font-variant-numeric: tabular-nums; }
+.dash .ciambella { display: flex; align-items: center; gap: 12px; flex: 1 1 auto; }
+.dash .ciambella svg { width: clamp(70px, 22%, 100px); height: auto; flex: none; }
+
+/* ---- partite aperte ---- */
+.dash .conti { display: flex; flex-wrap: wrap; column-gap: 20px; flex: 1 1 auto; align-content: flex-start; }
+.dash .conti > .conto-blocco { flex: 1 1 260px; }
+/* La riga di un conto andava a capo tre volte in una colonna stretta: nome,
+   importo e bottone finivano ognuno sulla propria riga, e un conto occupava
+   novanta pixel invece di quaranta. In una vista che non scorre, un elemento che
+   decide da solo quanto essere alto e' *il* problema. Qui la riga resta una riga,
+   e a cedere e' la parte che si puo' accorciare senza perdere niente: il nome e
+   il suo sottotitolo, che si tagliano con i puntini. */
+.dash .conto {
+  display: flex; align-items: center; gap: 8px;
+  padding: 5px 0; font-size: 0.7rem;
+  flex-wrap: nowrap;
+}
+.dash .conto .av {
+  flex: none;
+  width: 22px; height: 22px;
+  border-radius: 50%;
+  display: grid; place-items: center;
+  font-size: 0.65rem; font-weight: 700;
+  color: var(--su-primario);
+}
+/* Il nome e' un bottone da C26: apre le voci che compongono la cifra. Resta scritto
+   come un nome — nessun bordo, nessuno sfondo — perche' e' il testo che c'era prima,
+   non un comando in piu' da imparare. */
+.dash .conto .chi {
+  flex: 1 1 auto; min-width: 0;
+  border: 0; background: none; padding: 0; margin: 0;
+  font: inherit; color: inherit; text-align: left; cursor: pointer;
+  overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+}
+.dash .conto .chi small {
+  display: block; color: var(--ink-soft); font-size: 0.66rem;
+  overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+}
+.dash .conto .chi:hover small { color: var(--primary-testo); }
+.dash .conto .imp {
+  flex: none; font-weight: 600;
+  font-family: 'IBM Plex Mono', ui-monospace, monospace; white-space: nowrap;
+}
+.dash .conto .imp.dare { color: var(--danger); }
+.dash .conto .imp.avere { color: var(--ok); }
+
+/* ---- da cosa nasce un conto (C26) ----
+   Rientrato sotto il nome e con la stessa griglia in tutte le righe: il totale in
+   fondo deve stare esattamente incolonnato con gli addendi, altrimenti «controlla la
+   somma» resta un invito che non si puo' accettare. */
+.dash .voci {
+  margin: 0 0 8px 30px;
+  padding: 6px 8px;
+  background: var(--bg);
+  border-radius: var(--r-chip);
+  font-size: 0.66rem;
+}
+.dash .riga-voce { display: flex; align-items: baseline; gap: 8px; padding: 2px 0; }
+.dash .riga-voce .q { flex: none; width: 46px; color: var(--ink-soft); font-family: 'IBM Plex Mono', ui-monospace, monospace; }
+.dash .riga-voce .t { flex: 1 1 auto; min-width: 0; overflow-wrap: anywhere; color: var(--ink-soft); }
+.dash .riga-voce .i { flex: none; font-family: 'IBM Plex Mono', ui-monospace, monospace; white-space: nowrap; }
+.dash .riga-voce .i.dare { color: var(--danger); }
+.dash .riga-voce .i.avere { color: var(--ok); }
+.dash .riga-voce.somma { border-top: 1px solid var(--border); margin-top: 4px; padding-top: 5px; }
+.dash .riga-voce.somma .t, .dash .riga-voce.somma .i { color: var(--ink); font-weight: 700; }
+
+/* ---- distribuzione dei turni ---- */
+.dash .turno { display: flex; align-items: center; gap: 8px; margin-bottom: 6px; font-size: 0.7rem; }
+.dash .turno:last-of-type { margin-bottom: 0; }
+.dash .turno .n { flex: 0 1 72px; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.dash .turno .n b { color: var(--tuo-testo); }
+.dash .turno .bar {
+  flex: 1 1 auto;
+  min-width: 40px;
+  height: 16px;
+  border-radius: var(--r-chip);
+  background: var(--surface-2);
+  overflow: hidden;
+  position: relative;
+  display: flex;
+  align-items: center;
+  /* Il numero sta dentro la barra, e la barra piu' lunga arriva al 100%: senza questo
+     spazio riservato il conteggio finiva sopra il riempimento. Il padding rimpicciolisce
+     la pista, non l'elemento, quindi le proporzioni fra le persone restano quelle vere. */
+  padding-right: 26px;
+}
+.dash .turno .bar i { display: block; height: 100%; border-radius: var(--r-chip); flex: none; }
+.dash .turno .bar em {
+  position: absolute; right: 7px; font-size: 0.67rem; color: var(--ink-soft); font-style: normal;
+  font-family: 'IBM Plex Mono', ui-monospace, monospace;
+}
+
+.dash .vuoto { color: var(--ink-soft); font-size: 0.7rem; }
+
+/* Da quando il riepilogo non scorre, ogni elenco ha un tetto — e un elenco con un
+   tetto deve **dire** quante voci restano fuori, o e' un dato sparito in silenzio.
+   Questa e' quella riga, e c'e' ovunque ci sia un `slice()`. */
+.dash .resto {
+  color: var(--ink-soft);
+  font-size: 0.67rem;
+  padding-top: 6px;
+  border-top: 1px solid var(--border);
+}
+.dash .piede .resto { border: 0; padding: 0; margin-right: 12px; }
+
+/* Le quattro parole colorate del riepilogo. Stavano in `style=""` dentro app.js,
+   cioe' fuori dalla portata del controllo del contrasto e di qualsiasi cambio di
+   palette: quattro colori incollati nel codice che nessuno andava piu' a leggere. */
+.dash .allarme { color: var(--danger); }
+.dash .tuo { color: var(--tuo-testo); }
+.dash .avere { color: var(--ok); }
+.dash .dare { color: var(--danger); }
 
 /* Il bottone dei riquadri vuoti (nessuna comitiva, riepilogo non disponibile). */
 .dash .cta-vuoto {
   margin-top: 10px;
   border: 1px solid var(--border-strong);
-  border-radius: var(--pill);
-  background: var(--surface-2);
+  border-radius: var(--r-chip);
+  background: transparent;
   color: var(--ink);
   font: inherit;
   font-size: 0.72rem;
   font-weight: 600;
-  padding: 7px 14px;
+  padding: 6px 12px;
   cursor: pointer;
 }
-.dash .cta-vuoto:hover { background: var(--primary-soft); border-color: var(--primary-testo); color: var(--primary-testo); }
-.dash .cta-vuoto:focus-visible { outline: 2px solid var(--primary-testo); outline-offset: 2px; }
+.dash .cta-vuoto:hover { border-color: var(--primary-testo); color: var(--primary-testo); }
 
-/* Dentro una scheda stirata, le righe che si ripetono si dividono lo spazio avanzato
-   invece di lasciarlo tutto in fondo. E' la differenza fra un grafico a quattro barre
-   con un blocco di niente sotto e un grafico a quattro barre con il suo respiro: la
-   scheda dei turni sta accanto a quella dell'occupazione, che di righe ne ha sette, e
-   il pareggio delle altezze e' della griglia — la distribuzione interna e' di qui. */
-/* L'elenco dei conti sta dentro un contenitore suo, quindi non lo raggiunge la regola
-   qui sotto: si allarga lui e distribuisce le proprie righe a capo. */
-.dash .g-conti .conti { flex: 1 1 auto; align-content: space-between; }
-
+/* Dentro una scheda, le righe che si ripetono si dividono lo spazio avanzato invece
+   di lasciarlo tutto in fondo: e' la differenza fra un grafico a quattro barre con un
+   blocco di niente sotto e un grafico a quattro barre con il suo respiro. */
 .dash .grid > .card > .turno,
 .dash .grid > .card > .riemp,
 .dash .grid > .card > .att,
+.dash .g-agenda > div,
+.dash .g-agenda .ag,
 .dash .g-prossimo .riga { flex: 1 1 auto; }
+.dash .g-agenda > div { display: flex; flex-direction: column; }
 
 /* Segnare un pagamento sta sulla riga del conto: il gesto accanto al numero che
    cambia, non in un'altra pagina. */
 .dash .conto .salda {
   flex: none;
   border: 1px solid var(--border-strong);
-  border-radius: var(--pill);
+  border-radius: var(--r-chip);
   background: transparent;
   color: var(--ink-soft);
   font: inherit;
-  font-size: 0.68rem;
+  font-size: 0.67rem;
   font-weight: 600;
-  padding: 3px 9px;
+  padding: 2px 8px;
   cursor: pointer;
 }
-.dash .conto .salda:hover { background: var(--ok-soft); border-color: var(--ok); color: var(--ok-deep); }
-.dash .conto .salda:focus-visible { outline: 2px solid var(--primary-testo); outline-offset: 2px; }
+.dash .conto .salda:hover { border-color: var(--ok); color: var(--ok); }
+
+/* ---- i pallini del quaderno ----
+   Nascono spenti e `app.js` li accende solo se le schermate sono piu' di una: su un
+   monitor c'e' una schermata sola, e un indicatore con un pallino solo e' un
+   indicatore che non indica niente. Sono bottoni veri, non decorazioni: con la
+   tastiera si passa da una schermata all'altra senza saper scorrere di lato. */
+.dash-pagine { display: none; }
+.dash-pagine.acceso {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  gap: 7px;
+  padding: 8px 0 2px;
+}
+.dash-pagine button {
+  width: 22px; height: 3px;
+  padding: 0;
+  border: 0;
+  border-radius: var(--pill);
+  background: var(--border-strong);
+  cursor: pointer;
+  transition: background var(--t-fast) var(--ease-out), width var(--t-med) var(--ease-out);
+}
+.dash-pagine button.on { background: var(--primary); width: 34px; }
+.dash-pagine button:focus-visible { outline: 2px solid var(--primary-testo); outline-offset: 3px; }
+
+@media (max-width: 767px) {
+  .dash-hi { flex: 1 1 auto; }
+  .dash-hi h1 { font-size: 1.15rem; }
+  .dash-hi p { font-size: 0.72rem; }
+  .dash-av { display: none; }
+  .dash-top { gap: 8px; }
+}
+
+/* ---- quante colonne si vedono insieme ---- */
+@media (min-width: 768px)  { .dash .grid { --colonne: 3; } }
+@media (min-width: 1280px) { .dash .grid { --colonne: 4; } }
+/* Non c'e' una terza soglia di larghezza, e il conto dice perche': nove schede in
+   colonne da tre fanno tre colonne, piu' quella dei numeri fa quattro. Su un
+   monitor da 1280 in su, con la finestra alta abbastanza, il riepilogo si vede
+   tutto in una schermata sola senza che nessuno debba scorrere niente. */
+
+/* ---- e quante schede stanno in una colonna ---- */
+/* Misurate sul calendario, che e' la scheda piu' alta che esista qui dentro: sotto
+   i 240px un mese diventa cinque righe di cifre schiacciate. */
+@media (min-height: 620px)  { .dash .grid { --righe: 2; } }
+@media (min-height: 1000px) { .dash .grid { --righe: 3; } }
+@media (max-height: 619px)  { .dash .grid { --righe: 1; } }
+
+/* **La tavola si chiude, non lascia un mezzo riquadro in fondo.**
+   Le schede sono nove. In colonne da tre fanno tre colonne piene; in colonne da
+   due ne fanno quattro e mezza, e quella meta' e' una cella vuota in fondo
+   all'ultima colonna — lo stesso buco che il riepilogo si portava dietro da
+   quando esiste. Basta che una scheda ne occupi due: il calendario, che e'
+   l'unica a cui l'altezza in piu' serve davvero, e a quel punto i conti tornano
+   (dieci caselle, cinque colonne piene, piu' quella dei numeri).
+   Vale solo dove le righe sono due: a tre non serve, a una non e' possibile. */
+@media (min-height: 620px) and (max-height: 999px) {
+  .dash .g-calendario { grid-row: span 2; }
+}
+
+/* **Il guscio si ferma all'altezza della finestra.** Da qui in giu' non c'e' piu' una
+   pagina che scorre: c'e' un rettangolo alto quanto lo schermo, e dentro ci sta il
+   riepilogo. Vale a ogni larghezza — il quaderno esiste apposta perche' valga anche
+   dove le schede non ci starebbero.
+
+   `100dvh` e non `100vh`: sul telefono la barra del browser entra ed esce, e con
+   l'unita' statica la fascia in basso finiva sotto il bordo dello schermo. */
+.app-shell[data-vista="stats"] { height: 100dvh; min-height: 0; overflow: hidden; }
+.app-shell[data-vista="stats"] .shell-col { min-height: 0; }
+.app-shell[data-vista="stats"] .app-view {
+  min-height: 0;
+  overflow: hidden;
+  display: flex;
+  flex-direction: column;
+  padding-top: 14px;
+  padding-bottom: 14px;
+}
+/* La fascia in basso e' fissa e coprirebbe l'ultima riga di riquadri: qui la vista
+   si ferma prima invece di passarci sotto. */
+@media (max-width: 767px) {
+  .app-shell[data-vista="stats"] .app-view { padding-bottom: calc(80px + env(safe-area-inset-bottom)); }
+}
+.app-shell[data-vista="stats"] #view-stats { min-height: 0; flex: 1 1 auto; display: flex; }
+.app-shell[data-vista="stats"] #view-stats .dash { flex: 1 1 auto; min-height: 0; }
+
+/* Le altre viste sono elenchi, e un elenco largo 1600px si legge peggio di uno largo
+   1180: la misura di lettura resta. Il riepilogo no — e' una tavola di riquadri
+   affiancati, e ogni pixel in piu' e' una colonna che smette di andare a capo. */
+.app-view[data-vista="stats"] { max-width: none; }
