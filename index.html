@@ -301,6 +301,11 @@
             <button type="button" id="day-today" class="tab active">Oggi</button>
             <button type="button" id="day-tomorrow" class="tab">Domani</button>
             <input type="date" id="day-picker" class="day-picker" aria-label="Scegli un giorno" />
+            <!-- C37: la domanda della domenica sera non è «chi guida domani», è «come
+                 siamo messi questa settimana». Sta fra le pastiglie del giorno perché
+                 è la stessa scelta — quanto lontano si guarda — non una vista a parte
+                 da cercare altrove. -->
+            <button type="button" id="day-week" class="tab">Settimana</button>
           </div>
           <div class="day-cta">
             <button type="button" id="request-toggle" class="btn btn-secondary"><svg width="15" height="15"><use href="#i-walk"/></svg> Cerco un passaggio</button>
@@ -315,11 +320,22 @@
           <h2>La tua auto</h2>
           <form id="ride-form">
             <div class="form-row">
-              <input type="text" id="ride-origin" maxlength="60" placeholder="Punto di partenza" aria-label="Partenza" />
-              <input type="text" id="ride-destination" maxlength="60" placeholder="Destinazione *" required aria-label="Destinazione" />
+              <input type="text" id="ride-origin" maxlength="60" placeholder="Punto di partenza" aria-label="Partenza" list="fermate-lista" autocomplete="off" />
+              <input type="text" id="ride-destination" maxlength="60" placeholder="Destinazione *" required aria-label="Destinazione" list="fermate-lista" autocomplete="off" />
+              <!-- La rubrica delle fermate del gruppo (C32): si sceglie invece di
+                   riscrivere, e scrivendone una nuova la si aggiunge. Il contenuto lo
+                   riempie l'app; la riempie il database, che e' l'unico a sapere quali
+                   grafie sono lo stesso posto. -->
+              <datalist id="fermate-lista"></datalist>
               <input type="time" id="ride-time" aria-label="Orario di partenza" />
             </div>
             <div class="form-row form-row-end">
+              <!-- C33: nasce nascosta e compare solo a chi ha salvato un'auto. Un
+                   menu a tendina con una voce sola («Nessuna auto salvata») sarebbe un
+                   campo in più che non fa niente. -->
+              <label class="rating-label hidden" id="ride-auto-label" for="ride-auto">Auto
+                <select id="ride-auto"></select>
+              </label>
               <label class="rating-label" for="ride-seats">Posti
                 <select id="ride-seats">
                   <option value="4" selected>4</option>
@@ -329,6 +345,9 @@
                   <option value="5">5</option>
                   <option value="6">6</option>
                 </select>
+              </label>
+              <label class="rating-label" for="ride-ritorno">Ritorno
+                <input type="time" id="ride-ritorno" aria-label="Orario del ritorno, facoltativo" />
               </label>
               <label class="rating-label" for="ride-repeat">Ripeti
               <select id="ride-repeat">
@@ -340,8 +359,12 @@
               </select>
             </label>
             <label class="rating-label" for="ride-fuel">€ a testa
-              <input type="number" id="ride-fuel" min="0" max="100" step="0.5" placeholder="—" aria-label="Contributo benzina a testa in euro" class="fuel-input" />
+              <input type="number" id="ride-fuel" min="0" max="100" step="0.5" placeholder="—" aria-label="Contributo benzina a testa in euro" class="fuel-input" aria-describedby="ride-quota-nota" />
             </label>
+            <!-- C34: da dove esce la cifra proposta. Un numero precompilato senza il
+                 suo conto è un numero da accettare per fiducia, cioè la stessa cosa
+                 che C26 ha tolto ai conti. -->
+            <span id="ride-quota-nota" class="form-hint"></span>
             <input type="text" id="ride-note" maxlength="200" placeholder="Nota (facoltativa)" aria-label="Nota" class="note-input" />
               <button type="submit" id="save-place-btn" class="btn btn-primary">Pubblica</button>
             </div>
@@ -364,6 +387,7 @@
           <div id="walkers-list" class="walkers-list"></div>
         </section>
 
+        <div id="week-grid" class="week-grid hidden"></div>
         <div id="rides-list" class="rides-grid"></div>
         <div id="empty-message" class="empty hidden">
           <div class="empty-icon"><svg width="40" height="40"><use href="#i-parking"/></svg></div>
@@ -376,6 +400,11 @@
       <section id="view-history" class="view hidden">
         <h2 class="view-title"><svg width="20" height="20"><use href="#i-history"/></svg> Storico</h2>
         <p class="view-subtitle">Tutti i viaggi passati: chi ha guidato e chi era a bordo.</p>
+        <div class="history-filtri" role="group" aria-label="Filtra lo storico">
+          <button type="button" id="storico-miei" class="filtro" aria-pressed="false">Solo i miei passaggi</button>
+          <button type="button" id="storico-guidati" class="filtro" aria-pressed="false">Solo quando ho guidato io</button>
+          <span id="storico-conteggio" class="form-hint"></span>
+        </div>
         <div id="history-list" class="history-list"></div>
         <div id="history-empty" class="empty hidden">
           <div class="empty-icon"><svg width="40" height="40"><use href="#i-history"/></svg></div>
@@ -423,6 +452,17 @@
           <button type="button" id="profile-logout" class="btn btn-secondary btn-full btn-danger-full"><svg width="15" height="15"><use href="#i-logout"/></svg> Esci dall'account</button>
           <button type="button" id="profile-delete" class="btn btn-secondary btn-full btn-danger-full">Elimina il mio account</button>
         </div>
+
+        <!-- Le auto (C33). Il testo dice il momento in cui l'informazione serve, che
+             è l'unico argomento per cui valga la pena compilare un campo in più. -->
+        <section id="auto-card" class="card">
+          <h3 class="card-title">Le tue auto</h3>
+          <p class="card-sub">Salvane una e pubblichi scegliendo l'auto e l'ora, senza reinserire i posti. Modello e colore servono a chi ti aspetta sotto casa al buio: è l'unico momento in cui quell'informazione conta davvero.</p>
+          <div id="auto-list" class="auto-list"></div>
+          <div class="group-card-actions">
+            <button type="button" id="auto-nuova" class="btn btn-ghost btn-small"><svg width="14" height="14"><use href="#i-plus"/></svg> Aggiungi un'auto</button>
+          </div>
+        </section>
 
         <section id="zona-card" class="card">
           <h3 class="card-title">La mia zona</h3>
@@ -479,6 +519,7 @@
     <form method="dialog" id="dialog-form">
       <h3 id="dialog-title">Conferma</h3>
       <p id="dialog-text" class="auth-subtitle"></p>
+      <div id="dialog-scelte" class="dialog-scelte hidden"></div>
       <input type="text" id="dialog-input" maxlength="60" />
       <div class="dialog-actions">
         <button type="button" id="dialog-cancel" class="btn btn-secondary">Annulla</button>

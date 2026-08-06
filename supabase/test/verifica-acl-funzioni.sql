@@ -79,6 +79,10 @@ begin
   ('registra_evento_pagamento',  '',                    'nessuno'),
   ('accoda_notifica',            'p_destinatario uuid, p_tipo text, p_ride uuid, p_titolo text, p_corpo text, p_chiave text', 'nessuno'),
   ('accoda_partenze_imminenti',  '',                    'nessuno'),
+  ('notifica_annullamento',      '',                    'nessuno'),   -- 026, lo chiama il trigger
+  ('notifica_ritardo',           '',                    'nessuno'),   -- 027, idem
+  ('registra_fermate',           '',                    'nessuno'),   -- 029, idem
+  ('check_ospite',               '',                    'nessuno'),   -- 031, idem
   ('blinda_coordinate',          '',                    'nessuno'),
   ('blinda_funzioni',            '',                    'nessuno'),
   ('blinda_profilo',             '',                    'nessuno'),
@@ -87,7 +91,7 @@ begin
 
   -- --- Solo da autenticato: servono al client, ma dopo l'accesso (018, 020) ---
   ('saldo_con',                  'altro uuid',          'authenticated'),   -- 022, ancorata ad auth.uid()
-  ('create_group',               'p_name text',         'authenticated'),
+  ('create_group',               'p_name text, p_scade date', 'authenticated'),   -- 033
   ('elimina_account',            '',                    'authenticated'),
   ('join_group',                 'p_code text',         'authenticated'),
   ('mio_profilo',                '',                    'authenticated'),
@@ -95,6 +99,7 @@ begin
   -- --- Aperte a chiunque, e voluto: trigger e funzioni ancorate ad auth.uid() ---
   -- Il perche', funzione per funzione, sta nell'intestazione di questo file.
   ('check_claim',                '',                    'anon'),
+  ('chiave_fermata',             'nome text',           'anon'),   -- 029, puro testo: non legge niente
   ('check_ride',                 '',                    'anon'),
   ('condivide_gruppo',           'altro uuid',          'anon'),
   ('controlla_persone',          '',                    'anon'),

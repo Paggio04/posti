@@ -15,6 +15,7 @@ const groupPills = document.getElementById('group-pills');
 const dayToday = document.getElementById('day-today');
 const dayTomorrow = document.getElementById('day-tomorrow');
 const dayPicker = document.getElementById('day-picker');
+const dayWeek = document.getElementById('day-week');
 const offerToggle = document.getElementById('offer-toggle');
 const offerCard = document.getElementById('offer-card');
 const rideForm = document.getElementById('ride-form');
@@ -57,11 +58,39 @@ function addDaysISO(iso, days) {
 // nello storico. Senza questa rete, l'incorporamento nullo mandava in errore la pagina.
 function nomeDi(profilo) { return profilo?.display_name ?? 'Ex membro'; }
 
+// C35 — un sedile puo' essere di una persona con un account o di un ospite con un
+// nome. Da qui in giu' non si legge piu' `claim.passenger` a mano: il posto ha un
+// occupante, e queste tre funzioni sono l'unico modo di chiedere chi sia.
+function nomeOccupante(claim) {
+  return claim.passenger_id ? nomeDi(claim.passenger) : (claim.ospite_nome ?? 'Ospite');
+}
+// Chi risponde di quel posto: e' l'ospite stesso a non esistere come persona, e la
+// sua quota sta nel conto di chi lo ha portato (031, `saldo_con`). La stessa regola
+// vale nei conti del riepilogo, o le due somme direbbero cose diverse.
+function chiRisponde(claim) {
+  return claim.passenger_id ?? claim.invitato_da ?? null;
+}
+function mioPosto(claim) {
+  return claim.passenger_id === currentUser.id;
+}
+
 function hasDeparted(ride) {
   if (ride.ride_date !== todayISO() || !ride.depart_time) return false;
   const [h, m] = ride.depart_time.split(':').map(Number);
   const now = new Date();
-  return h * 60 + m <= now.getHours() * 60 + now.getMinutes();
+  // Con un ritardo annunciato (C30) l'auto non e' partita: e' quello il senso
+  // dell'annuncio. Senza questo termine la lista d'attesa si chiuderebbe mentre
+  // l'auto e' ancora ferma sotto casa.
+  return h * 60 + m + (ride.ritardo_min || 0) <= now.getHours() * 60 + now.getMinutes();
+}
+
+// «07:40» + 15 -> «07:55». Somma in minuti e non con una Date: una Date vuole un
+// giorno, e qui il giorno non c'entra — un ritardo che scavalca la mezzanotte
+// rientra dall'altra parte del quadrante, come su un orologio vero.
+function oraPiu(hhmm, minuti) {
+  const [h, m] = String(hhmm).split(':').map(Number);
+  const t = (((h * 60 + m + (minuti || 0)) % 1440) + 1440) % 1440;
+  return `${String(Math.floor(t / 60)).padStart(2, '0')}:${String(t % 60).padStart(2, '0')}`;
 }
 
 // --- Auth ---
@@ -503,6 +532,197 @@ document.getElementById('ride-qui').addEventListener('click', async () => {
   }
 });
 
+// ══════════════════════════════════════════════════════════════════════════
+// C33 — Il garage.
+//
+// Le auto sono di una persona, non di una comitiva: la stessa Panda porta gente
+// in due gruppi diversi. Stanno quindi nel Profilo e non nella Comitiva, e le
+// legge chi condivide un gruppo — la regola dei profili (D2).
+// ══════════════════════════════════════════════════════════════════════════
+let mieAuto = [];
+
+async function caricaAuto() {
+  const { data, error } = await supabase
+    .from('auto')
+    .select('id, nome, posti, modello, colore, consumo_km_l, predefinita')
+    .eq('user_id', currentUser.id)
+    .order('predefinita', { ascending: false })
+    .order('creata_il', { ascending: true });
+  if (error) { console.error('auto:', error); }
+  mieAuto = data ?? [];
+  riempiSceltaAuto();
+}
+
+// Il menu nel modulo di pubblicazione. Scegliere un'auto porta con se' i posti:
+// e' tutto il senso del cantiere, e farlo qui invece che a mano evita la
+// combinazione senza senso «la Panda da 4, con 6 posti».
+function riempiSceltaAuto() {
+  const sel = document.getElementById('ride-auto');
+  const lab = document.getElementById('ride-auto-label');
+  lab.classList.toggle('hidden', mieAuto.length === 0);
+  sel.innerHTML = '';
+  if (!mieAuto.length) return;
+  const vuota = document.createElement('option');
+  vuota.value = '';
+  vuota.textContent = 'Nessuna';
+  sel.appendChild(vuota);
+  for (const a of mieAuto) {
+    const o = document.createElement('option');
+    o.value = a.id;
+    o.textContent = a.nome;
+    if (a.predefinita) o.selected = true;
+    sel.appendChild(o);
+  }
+  applicaAutoScelta();
+}
+
+function autoScelta() {
+  const id = document.getElementById('ride-auto')?.value;
+  return id ? mieAuto.find(a => a.id === id) ?? null : null;
+}
+
+function applicaAutoScelta() {
+  const a = autoScelta();
+  if (a) document.getElementById('ride-seats').value = String(a.posti);
+  // Cambiare auto cambia i posti e puo' cambiare il consumo: la quota proposta
+  // (C34) dipende da entrambi, e ricalcolarla qui e' l'unico modo perche' non
+  // resti indietro di un'auto quando il menu si riempie da solo.
+  proponiQuota();
+}
+
+document.getElementById('ride-auto').addEventListener('change', applicaAutoScelta);
+
+function descriviAuto(a) {
+  return [a.modello, a.colore].filter(Boolean).join(' ') || null;
+}
+
+function renderAuto() {
+  const box = document.getElementById('auto-list');
+  box.innerHTML = '';
+  if (!mieAuto.length) {
+    const p = document.createElement('p');
+    p.className = 'form-hint';
+    p.textContent = 'Nessuna auto salvata: pubblichi come prima, scrivendo i posti ogni volta.';
+    box.appendChild(p);
+    return;
+  }
+  for (const a of mieAuto) {
+    const riga = document.createElement('div');
+    riga.className = 'auto-riga';
+    const testo = document.createElement('div');
+    testo.className = 'auto-testo';
+    const nome = document.createElement('b');
+    nome.textContent = a.nome + (a.predefinita ? ' · predefinita' : '');
+    testo.appendChild(nome);
+    const sotto = document.createElement('small');
+    sotto.textContent = [
+      `${a.posti} ${a.posti === 1 ? 'posto' : 'posti'}`,
+      descriviAuto(a),
+      a.consumo_km_l ? `${a.consumo_km_l} km/l` : null,
+    ].filter(Boolean).join(' · ');
+    testo.appendChild(sotto);
+    riga.appendChild(testo);
+
+    if (!a.predefinita) {
+      const pred = document.createElement('button');
+      pred.className = 'btn btn-ghost btn-small';
+      pred.textContent = 'Predefinita';
+      pred.addEventListener('click', async () => {
+        // Due passaggi e non uno: l'indice parziale ammette **una** predefinita per
+        // persona, quindi accenderne una senza prima spegnere l'altra viene rifiutato.
+        await supabase.from('auto').update({ predefinita: false })
+          .eq('user_id', currentUser.id).eq('predefinita', true);
+        const { error } = await supabase.from('auto').update({ predefinita: true }).eq('id', a.id);
+        if (error) { toast(friendlyError(error)); return; }
+        await caricaAuto();
+        renderAuto();
+      });
+      riga.appendChild(pred);
+    }
+
+    const mod = document.createElement('button');
+    mod.className = 'btn btn-ghost btn-small';
+    mod.textContent = 'Modifica';
+    mod.addEventListener('click', () => modificaAuto(a));
+    riga.appendChild(mod);
+
+    const via = document.createElement('button');
+    via.className = 'btn btn-ghost btn-small btn-danger';
+    via.textContent = 'Togli';
+    via.addEventListener('click', async () => {
+      if (!await conferma(`Togliere "${a.nome}" dal garage?`, {
+        // `on delete set null` sulla colonna di `rides`: e' il motivo per cui questa
+        // frase si puo' scrivere, e va detta perche' altrimenti nessuno la crede.
+        testo: 'I passaggi già pubblicati con questa auto restano, e restano i conti della benzina. Sparisce solo dal menu quando pubblichi.',
+        azione: 'Togli l\'auto',
+        pericolo: true,
+      })) return;
+      const { error } = await supabase.from('auto').delete().eq('id', a.id);
+      if (error) { toast(friendlyError(error)); return; }
+      await caricaAuto();
+      renderAuto();
+    });
+    riga.appendChild(via);
+    box.appendChild(riga);
+  }
+}
+
+// Una domanda per volta, con i dialoghi che l'app ha gia'. Un modulo intero per
+// cinque campi facoltativi sarebbe una schermata in piu' da disegnare e mantenere
+// per una cosa che si compila una volta nella vita dell'auto.
+async function modificaAuto(a) {
+  const nuova = !a;
+  const nome = await ask(nuova ? 'Come la chiami?' : 'Nome dell\'auto', {
+    text: 'Il nome che vedi tu nel menu quando pubblichi. «La mia», «Panda», «Quella di papà».',
+    value: a?.nome ?? '', placeholder: 'Panda',
+  });
+  if (!nome) return;
+  const posti = await ask('Quanti posti per i passeggeri?', {
+    text: 'Senza contare il tuo. È il numero di sedili che si possono prenotare.',
+    value: String(a?.posti ?? 4), type: 'number',
+    scelte: [[3, '3'], [4, '4'], [5, '5']],
+  });
+  if (posti === null) return;
+  const n = Number(posti);
+  if (!(n >= 1 && n <= 6)) { toast('Da 1 a 6 posti.'); return; }
+  const modello = await ask('Che modello è?', {
+    text: 'Facoltativo, e serve a chi ti aspetta: è metà di «cerca la Panda blu».',
+    value: a?.modello ?? '', placeholder: 'Fiat Panda',
+  });
+  if (modello === null) return;
+  const colore = await ask('Di che colore?', {
+    text: 'Facoltativo. È l\'altra metà, ed è quella che si vede da lontano.',
+    value: a?.colore ?? '', placeholder: 'blu',
+  });
+  if (colore === null) return;
+  const consumo = await ask('Quanti chilometri con un litro?', {
+    text: 'Facoltativo. Serve solo a farti proporre il «€ a testa» invece di inventarlo ogni volta.',
+    value: a?.consumo_km_l ? String(a.consumo_km_l) : '', placeholder: '15', type: 'number',
+  });
+  if (consumo === null) return;
+  const km = consumo === '' ? null : Number(String(consumo).replace(',', '.'));
+  if (km !== null && !(km >= 3 && km <= 40)) { toast('Un consumo fra 3 e 40 km/l.'); return; }
+
+  const riga = {
+    nome: nome.slice(0, 30),
+    posti: n,
+    modello: modello.trim().slice(0, 40) || null,
+    colore: colore.trim().slice(0, 20) || null,
+    consumo_km_l: km,
+  };
+  const { error } = nuova
+    ? await supabase.from('auto').insert({
+        ...riga, user_id: currentUser.id, predefinita: mieAuto.length === 0,
+      })
+    : await supabase.from('auto').update(riga).eq('id', a.id);
+  if (error) { toast(friendlyError(error)); return; }
+  toast(nuova ? `"${riga.nome}" è nel garage.` : 'Auto aggiornata.');
+  await caricaAuto();
+  renderAuto();
+}
+
+document.getElementById('auto-nuova').addEventListener('click', () => modificaAuto(null));
+
 function renderZona() {
   const stato = document.getElementById('zona-stato');
   stato.textContent = miaZona
@@ -563,7 +783,11 @@ async function esportaDati() {
   const [profilo, auto, posti, richieste, commenti, attesa, gruppi, segnalazioni, blocchi] = await Promise.all([
     supabase.rpc('mio_profilo'),
     mieAuto(),
-    mio('seat_claims', 'passenger_id'),
+    // Il proprio posto **e quelli presi per un ospite**: sono righe che questa
+    // persona ha scritto e di cui paga la quota (C35). Lasciarle fuori vorrebbe
+    // dire che «tutto quello che il database ha su di te» non e' vero.
+    supabase.from('seat_claims').select('*')
+      .or(`passenger_id.eq.${currentUser.id},invitato_da.eq.${currentUser.id}`),
     mio('ride_requests', 'user_id'),
     mio('ride_comments', 'user_id'),
     mio('ride_waitlist', 'user_id'),
@@ -658,10 +882,25 @@ async function condividi(testo, url) {
 const dialogTesto = document.getElementById('dialog-text');
 const dialogOk = document.getElementById('dialog-ok');
 
-function apriDialogo({ titolo, testo = '', campo = false, azione = 'Conferma', pericolo = false, placeholder = '', value = '', type = 'text' }) {
+// `scelte` e' un elenco di [valore, etichetta]: le risposte che si danno quasi
+// sempre diventano un tocco solo, e il campo resta li' sotto per tutte le altre.
+// Serve dove la risposta si da' col telefono in mano e di fretta — annunciare un
+// ritardo mentre si esce di casa in ritardo (C30) e' il caso limite.
+function apriDialogo({ titolo, testo = '', campo = false, azione = 'Conferma', pericolo = false, placeholder = '', value = '', type = 'text', scelte = [] }) {
   document.getElementById('dialog-title').textContent = titolo;
   dialogTesto.textContent = testo;
   dialogTesto.style.display = testo ? '' : 'none';
+  const boxScelte = document.getElementById('dialog-scelte');
+  boxScelte.innerHTML = '';
+  boxScelte.classList.toggle('hidden', scelte.length === 0);
+  for (const [val, etichetta] of scelte) {
+    const b = document.createElement('button');
+    b.type = 'button';
+    b.className = 'filtro';
+    b.textContent = etichetta;
+    b.addEventListener('click', () => chiudiDialogo(String(val)));
+    boxScelte.appendChild(b);
+  }
   dialogInput.classList.toggle('hidden', !campo);
   dialogInput.type = type;
   dialogInput.placeholder = placeholder;
@@ -677,8 +916,8 @@ function apriDialogo({ titolo, testo = '', campo = false, azione = 'Conferma', p
   return new Promise((resolve) => { dialogResolve = resolve; });
 }
 
-function ask(title, { text = '', placeholder = '', value = '', type = 'text' } = {}) {
-  return apriDialogo({ titolo: title, testo: text, campo: true, placeholder, value, type });
+function ask(title, { text = '', placeholder = '', value = '', type = 'text', scelte = [] } = {}) {
+  return apriDialogo({ titolo: title, testo: text, campo: true, placeholder, value, type, scelte });
 }
 
 // Torna `true` solo se si e' scelto davvero: chiudere con Esc o toccare fuori vale no.
@@ -818,6 +1057,7 @@ function renderProfile() {
     + (sospeso ? ' · Sospeso' : '');
   document.getElementById('profile-email').textContent = currentUser?.email ?? '';
   renderZona();
+  renderAuto();
   renderNotifiche();
   renderBlocked();
   renderReports();
@@ -923,19 +1163,39 @@ document.getElementById('notifiche-spegni')?.addEventListener('click', async () 
 async function createGroupFlow() {
   const name = await ask('Nuovo gruppo', { text: 'Il nome che vedranno gli amici.', placeholder: 'es. Comitiva del mare' });
   if (!name || !name.trim()) return;
-  const { data, error } = await supabase.rpc('create_group', { p_name: name.trim().slice(0, 40) });
+  // C38 — la seconda domanda, e si salta. Una comitiva permanente resta il caso
+  // normale: chiedere una data e basta trasformerebbe ogni gruppo in una cosa che
+  // scade, che e' l'opposto del punto.
+  const fine = await ask('Quando finisce?', {
+    text: 'Facoltativo. Per un concerto o un weekend: dopo quel giorno non ci si entra più col codice, e i dati restano a chi c\'era. Lascia vuoto per una comitiva che non finisce.',
+    type: 'date',
+  });
+  if (fine === null) return;
+  if (fine && fine < todayISO()) { toast('Una comitiva non può chiudere prima di aprire.'); return; }
+  const { data, error } = await supabase.rpc('create_group', {
+    p_name: name.trim().slice(0, 40), p_scade: fine || null,
+  });
   if (error) { toast('Errore: ' + error.message); return; }
   await loadGroups();
   selectGroup(data.id);
   renderGroupsView();
-  toast(`Gruppo creato. Condividi il codice ${data.code} con gli amici.`);
+  toast(fine
+    ? `Comitiva creata, si chiude il ${dataBreve(fine)}. Condividi il codice ${data.code}.`
+    : `Gruppo creato. Condividi il codice ${data.code} con gli amici.`);
 }
 
 async function joinGroupFlow() {
   const code = await ask('Entra in un gruppo', { text: 'Fatti mandare il codice da un amico.', placeholder: 'Codice invito (6 caratteri)' });
   if (!code || !code.trim()) return;
   const { data, error } = await supabase.rpc('join_group', { p_code: code.trim() });
-  if (error) { toast(error.message.includes('Codice') ? 'Codice non valido, ricontrolla.' : 'Errore: ' + error.message); return; }
+  if (error) {
+    // Tre esiti e non due (C38): «chiusa» non e' «sbagliato», e dirlo uguale
+    // manderebbe a ricontrollare le lettere di un codice giusto.
+    toast(error.message.includes('chiusa') ? 'Quella comitiva è chiusa: il codice non vale più.'
+      : error.message.includes('Codice') ? 'Codice non valido, ricontrolla.'
+      : 'Errore: ' + error.message);
+    return;
+  }
   await loadGroups();
   selectGroup(data.id);
   renderGroupsView();
@@ -950,7 +1210,7 @@ document.getElementById('welcome-join').addEventListener('click', joinGroupFlow)
 async function loadGroups() {
   const { data, error } = await supabase
     .from('group_members')
-    .select('group:groups(id, name, code, owner_id)')
+    .select('group:groups(id, name, code, owner_id, scade_il, regola_quota, regola_guida_non_paga, regola_max_posti)')
     .eq('user_id', currentUser.id);
   if (error) { console.error(error); return; }
   myGroups = (data ?? []).map(r => r.group).filter(Boolean);
@@ -976,6 +1236,7 @@ async function loadGroups() {
     offerCard.classList.add('hidden');
   }
   renderGroupBar();
+  caricaFermate();
 }
 
 function renderGroupBar() {
@@ -993,10 +1254,190 @@ function selectGroup(groupId) {
   currentGroupId = groupId;
   if (groupId) localStorage.setItem(ULTIMO_GRUPPO, groupId);
   renderGroupBar();
+  // La rubrica (C32) e' del gruppo: cambiando comitiva cambia, e i suggerimenti
+  // sotto i campi devono essere quelli della comitiva che si sta guardando.
+  caricaFermate();
   loadRides();
 }
 
 // --- Vista Gruppi ---
+// ══════════════════════════════════════════════════════════════════════════
+// C32 — La rubrica delle fermate.
+//
+// La riempie il trigger `registra_fermate` (029), non questo codice: qui si
+// legge e si sceglie. Le fermate stanno in memoria perche' servono in due posti
+// che non si parlano — l'elenco sotto i campi del modulo e la scheda nella
+// vista Comitiva — e perche' C34 ci cerca dentro le coordinate per la quota.
+// ══════════════════════════════════════════════════════════════════════════
+let fermate = [];
+
+async function caricaFermate() {
+  fermate = [];
+  if (!currentGroupId) { riempiElencoFermate(); return; }
+  const { data, error } = await supabase
+    .from('fermate')
+    .select('id, nome, chiave, lat, lon, usi, usata_il')
+    .eq('group_id', currentGroupId)
+    .order('usi', { ascending: false })
+    .limit(60);
+  // Un errore qui non rompe niente: senza rubrica i campi tornano a essere quello che
+  // erano prima di C32, cioe' testo libero. Degrada, non rompe.
+  if (error) { console.error('fermate:', error); }
+  fermate = data ?? [];
+  riempiElencoFermate();
+}
+
+function riempiElencoFermate() {
+  const lista = document.getElementById('fermate-lista');
+  lista.innerHTML = '';
+  for (const f of fermate) {
+    const o = document.createElement('option');
+    o.value = f.nome;
+    // `<option>` in un datalist mostra il testo come suggerimento accanto al valore:
+    // quante volte si e' partiti di li' e' l'unica cosa che aiuta a scegliere fra due
+    // nomi simili.
+    o.label = f.usi > 1 ? `${f.usi} volte` : '';
+    lista.appendChild(o);
+  }
+}
+
+// La stessa normalizzazione della 029, nella stessa forma. Sono due copie e va
+// detto: quella che conta e' la SQL, perche' e' lei a decidere l'unicita'. Questa
+// serve solo a ritrovare in memoria la fermata che il campo nomina, e se le due
+// divergessero il peggio che succede e' che la quota non si precompila (C34).
+function chiaveFermata(nome) {
+  const piegato = String(nome ?? '').toLowerCase()
+    .replace(/[àáâä]/g, 'a').replace(/[èéêë]/g, 'e').replace(/[ìíîï]/g, 'i')
+    .replace(/[òóôö]/g, 'o').replace(/[ùúûü]/g, 'u').replace(/ç/g, 'c');
+  return piegato.replace(/[^a-z0-9]+/g, ' ').trim() || null;
+}
+
+function fermataDi(nome) {
+  const k = chiaveFermata(nome);
+  return k ? fermate.find(f => f.chiave === k) ?? null : null;
+}
+
+// ══════════════════════════════════════════════════════════════════════════
+// C34 — La quota proposta invece che inventata.
+//
+// `fuel_per_person` era un numero che chi guida sceglie ogni volta, quindi
+// **cambia da persona a persona per lo stesso tragitto**: e' l'unica trattativa
+// rimasta nell'app. Qui la cifra si ricava, e sopra il campo c'e' scritto da
+// dove esce — un numero precompilato senza il suo conto e' un numero da
+// accettare per fiducia, che e' la cosa che C26 ha appena tolto ai conti.
+//
+// ── Le due costanti, e perche' sono costanti ──────────────────────────────
+// Il prezzo del carburante e il consumo di riferimento stanno qui, in due righe
+// sole, come `raggio_zona_km()` per il raggio della zona. Un campo da compilare
+// per il prezzo del gasolio sarebbe una cosa in piu' da tenere aggiornata che
+// nessuno aggiorna; una chiamata a un servizio dei prezzi sarebbe un terzo che
+// guarda dove va la gente (D6). Il numero invecchia, e va bene: la proposta si
+// corregge, e sbagliare di dieci centesimi su una cifra che oggi si inventa di
+// sana pianta non e' un peggioramento.
+//
+// ── «La stessa proposta per lo stesso tragitto», e cosa vuol dire ─────────
+// Il criterio della roadmap e' che due persone che fanno la stessa strada
+// propongano la stessa cifra. Vale **per costruzione** finche' nessuno ha
+// dichiarato il consumo della propria auto: prezzo, consumo di riferimento e
+// modo di dividere sono uguali per tutti, e cambia solo la distanza.
+// Se chi guida ha salvato un consumo (C33) la proposta usa quello, ed e' una
+// deroga voluta: un'auto che beve di piu' costa davvero di piu', e fingere di
+// no vorrebbe dire che il numero derivato e' meno vero di quello inventato.
+// La nota sotto il campo dice sempre quale dei due conti ha fatto.
+const PREZZO_CARBURANTE = 1.75;      // €/litro, benzina, ordine di grandezza 2026
+const CONSUMO_RIFERIMENTO = 15;      // km/l di un'utilitaria qualsiasi
+
+// Haversine, la stessa formula di `distanza_km()` (014). Qui in JS perche' i
+// due punti sono gia' in pagina: chiedere al database la distanza fra due
+// fermate che si stanno guardando sarebbe un giro di rete per un'aritmetica.
+function distanzaKm(a, b) {
+  const R = 6371;
+  const rad = (g) => (g * Math.PI) / 180;
+  const dLat = rad(b.lat - a.lat);
+  const dLon = rad(b.lon - a.lon);
+  const h = Math.sin(dLat / 2) ** 2
+    + Math.cos(rad(a.lat)) * Math.cos(rad(b.lat)) * Math.sin(dLon / 2) ** 2;
+  return 2 * R * Math.asin(Math.sqrt(h));
+}
+
+let quotaProposta = null;   // l'ultima cifra scritta da qui, per non sovrascrivere quella di chi guida
+
+function proponiQuota() {
+  const nota = document.getElementById('ride-quota-nota');
+  const campo = document.getElementById('ride-fuel');
+  const regole = regoleGruppo();
+
+  // C36 — la quota fissa della comitiva vince sul calcolo, e non e' un'eccezione al
+  // principio di C34: e' ancora un numero che non si inventa ogni volta. La comitiva
+  // l'ha deciso una volta, e questo e' il posto in cui quella decisione si applica
+  // senza che nessuno la ridigiti.
+  if (regole.quota != null) {
+    const fissa = regole.quota;
+    if (campo.value === '' || (quotaProposta !== null && Number(campo.value) === quotaProposta)) {
+      campo.value = String(fissa);
+      quotaProposta = fissa;
+    }
+    nota.textContent = `Quota fissa della comitiva: ${fissa.toFixed(2)} €`
+      + (regole.guidaNonPaga ? ' · chi guida non paga' : '');
+    return;
+  }
+
+  const da = fermataDi(document.getElementById('ride-origin').value);
+  const a = fermataDi(document.getElementById('ride-destination').value);
+  if (!da || !a || da.lat == null || a.lat == null || da.id === a.id) {
+    // Niente proposta e **niente scusa**: dire «non posso calcolare» sotto un campo
+    // facoltativo sarebbe rumore. Chi vuole capire perche' lo trova nella scheda
+    // delle fermate, dove si vede quali hanno un punto e quali no.
+    nota.textContent = '';
+    return;
+  }
+  const km = distanzaKm(da, a);
+  if (!(km > 0.3)) { nota.textContent = ''; return; }
+  const auto = autoScelta();
+  const consumo = auto?.consumo_km_l ? Number(auto.consumo_km_l) : CONSUMO_RIFERIMENTO;
+  // Diviso per chi c'e' in macchina, guidatore compreso: e' la convenzione con cui
+  // si divide una spesa fra chi la fa insieme. Se la comitiva ha deciso che chi
+  // guida non paga (C36), il conto e' lo stesso e cambia solo in quante parti si
+  // divide — la benzina costa uguale.
+  const posti = Number(document.getElementById('ride-seats').value || 4);
+  const persone = regole.guidaNonPaga ? Math.max(1, posti) : posti + 1;
+  const costo = (km / consumo) * PREZZO_CARBURANTE;
+  // A mezzi euro, come lo scatto del campo: proporre 1,37 € a testa e' un numero
+  // che nessuno tira fuori dal portafoglio.
+  const quota = Math.round((costo / persone) * 2) / 2;
+  const base = `${km.toFixed(1)} km · ${consumo} km/l`
+    + (auto?.consumo_km_l ? ` (${auto.nome})` : ' (riferimento)')
+    + ` · ${PREZZO_CARBURANTE.toFixed(2)} €/l · diviso ${persone}`
+    + (regole.guidaNonPaga ? ' (chi guida non paga)' : '');
+
+  const vuoto = campo.value === '';
+  const miaProposta = quotaProposta !== null && Number(campo.value) === quotaProposta;
+
+  // **Sotto i cinquanta centesimi non si propone niente, e non e' un dettaglio.**
+  // Il conto vero di un tragitto corto diviso per cinque fa venti centesimi: un
+  // minimo di mezzo euro messo li' per avere un numero da mostrare sarebbe una
+  // cifra inventata, cioe' esattamente cio' che questo cantiere toglie — e per
+  // giunta piu' alta del dovuto. Un campo vuoto qui vuol dire «non si paga», che
+  // per due chilometri e' la risposta giusta.
+  if (quota < 0.5) {
+    if (miaProposta) { campo.value = ''; quotaProposta = null; }
+    nota.textContent = `${base} · meno di 50 centesimi a testa: non vale un contributo`;
+    return;
+  }
+
+  if (vuoto || miaProposta) {
+    campo.value = String(quota);
+    quotaProposta = quota;
+  }
+  nota.textContent = base
+    + (vuoto || miaProposta ? '' : ` · proposta: ${quota.toFixed(2)} €`);
+}
+
+for (const id of ['ride-origin', 'ride-destination', 'ride-seats', 'ride-auto']) {
+  document.getElementById(id).addEventListener('input', proponiQuota);
+  document.getElementById(id).addEventListener('change', proponiQuota);
+}
+
 async function renderGroupsView() {
   const list = document.getElementById('groups-list');
   document.getElementById('groups-empty').classList.toggle('hidden', myGroups.length > 0);
@@ -1016,6 +1457,19 @@ async function renderGroupsView() {
     code.textContent = g.code;
     code.title = 'Codice invito';
     head.appendChild(code);
+    // C38: quando una comitiva finisce si legge accanto al codice, che e' la cosa
+    // che smette di funzionare. Chiusa e in scadenza sono due stati diversi: il
+    // primo e' un fatto, il secondo e' un avviso.
+    if (g.scade_il) {
+      const fine = document.createElement('span');
+      const chiusa = g.scade_il < todayISO();
+      fine.className = 'place-badge' + (chiusa ? ' ritardo' : '');
+      fine.textContent = chiusa ? `Chiusa il ${dataBreve(g.scade_il)}` : `Si chiude il ${dataBreve(g.scade_il)}`;
+      fine.title = chiusa
+        ? 'Col codice non si entra più e non si pubblica. Quello che c\'è resta leggibile a chi c\'era.'
+        : 'Dopo quel giorno col codice non si entra più.';
+      head.appendChild(fine);
+    }
     card.appendChild(head);
 
     const membersWrap = document.createElement('div');
@@ -1098,9 +1552,210 @@ async function renderGroupsView() {
     });
     actions.appendChild(leave);
 
+    // ── C36: le regole, a chi possiede la comitiva ──────────────────────
+    // Sotto ai membri e sopra alle fermate: sono la cosa che vale per tutti
+    // quelli scritti sopra, e si leggono nell'ordine in cui si ragiona.
+    card.appendChild(schedaRegole(g));
+
+    // ── C32: le fermate, ma solo della comitiva aperta ──────────────────
+    // `fermate` in memoria e' quella di `currentGroupId`: mostrarla sotto tutte
+    // le schede direbbe che i posti di un gruppo sono anche quelli dell'altro,
+    // che e' il contrario di cio' che questa app tiene separato.
+    if (g.id === currentGroupId) card.appendChild(schedaFermate(g));
+
     card.appendChild(actions);
     list.appendChild(card);
   }
+}
+
+// C36 — le regole si leggono sempre, si cambiano solo se la comitiva e' tua.
+// Leggerle vale per tutti: una regola che vedi solo se puoi cambiarla non e' una
+// regola, e' una preferenza di chi comanda.
+function schedaRegole(g) {
+  const box = document.createElement('div');
+  box.className = 'fermate-box';
+  const titolo = document.createElement('div');
+  titolo.className = 'fermate-titolo';
+  titolo.textContent = 'Le regole della comitiva';
+  box.appendChild(titolo);
+
+  const detto = [
+    g.regola_quota != null ? `Quota fissa: ${Number(g.regola_quota).toFixed(2)} € a testa` : null,
+    g.regola_guida_non_paga ? 'Chi guida non paga' : null,
+    g.regola_max_posti != null ? `Massimo ${g.regola_max_posti} passeggeri` : null,
+  ].filter(Boolean);
+
+  const p = document.createElement('p');
+  p.className = 'form-hint';
+  p.textContent = detto.length
+    ? detto.join(' · ')
+    : 'Nessuna regola fissata: ogni passaggio si decide da capo.';
+  box.appendChild(p);
+
+  if (g.owner_id !== currentUser.id) return box;
+
+  const azioni = document.createElement('div');
+  azioni.className = 'group-card-actions';
+  const cambia = document.createElement('button');
+  cambia.className = 'btn btn-ghost btn-small';
+  cambia.textContent = detto.length ? 'Cambia le regole' : 'Fissa le regole';
+  cambia.addEventListener('click', () => modificaRegole(g));
+  azioni.appendChild(cambia);
+
+  // C38 — la data di fine si sceglie creando la comitiva, ma una data sbagliata
+  // dev'essere correggibile: senza questo bottone l'unico rimedio sarebbe rifare la
+  // comitiva, cioe' perdere i membri e i conti. Sta qui e non fra le regole perche'
+  // non e' una convenzione del gruppo — e' un fatto che il database fa rispettare.
+  const data = document.createElement('button');
+  data.className = 'btn btn-ghost btn-small';
+  data.textContent = g.scade_il ? 'Cambia la data di fine' : 'Falla chiudere da sola';
+  data.addEventListener('click', async () => {
+    const fine = await ask('Quando finisce la comitiva?', {
+      text: 'Dopo quel giorno non ci si entra più col codice e non si pubblica. Quello che c\'è resta leggibile a chi c\'era. Lascia vuoto perché non finisca.',
+      value: g.scade_il ?? '', type: 'date',
+    });
+    if (fine === null) return;
+    if (fine && fine < todayISO()) { toast('Una comitiva non può chiudere prima di oggi.'); return; }
+    const { error } = await supabase.from('groups').update({ scade_il: fine || null }).eq('id', g.id);
+    if (error) { toast(friendlyError(error)); return; }
+    toast(fine ? `La comitiva si chiude il ${dataBreve(fine)}.` : 'La comitiva non finisce più.');
+    await loadGroups();
+    renderGroupsView();
+    loadRides();
+  });
+  azioni.appendChild(data);
+
+  box.appendChild(azioni);
+  return box;
+}
+
+async function modificaRegole(g) {
+  // Vuoto vuol dire «nessuna regola», e va detto a parole in ogni domanda: senza,
+  // l'unico modo di togliere una regola gia' messa sarebbe indovinarlo.
+  const quota = await ask('Quota fissa a testa', {
+    text: 'In euro. Lascia vuoto perché la quota resti libera: chi guida la sceglie ogni volta, o la fa proporre dal tragitto.',
+    value: g.regola_quota != null ? String(Number(g.regola_quota)) : '',
+    placeholder: '5', type: 'number',
+  });
+  if (quota === null) return;
+  const q = quota === '' ? null : Math.round(Number(String(quota).replace(',', '.')) * 100) / 100;
+  if (q !== null && !(q >= 0 && q <= 100)) { toast('Una quota fra 0 e 100 €.'); return; }
+
+  const guida = await ask('Chi guida partecipa alla spesa?', {
+    text: 'Rispondi "no" se nella tua comitiva chi mette l\'auto non paga la benzina.',
+    value: g.regola_guida_non_paga ? 'no' : 'sì',
+    scelte: [['sì', 'Sì, divide con gli altri'], ['no', 'No, chi guida non paga']],
+  });
+  if (guida === null) return;
+  const nonPaga = /^n/i.test(guida.trim());
+
+  const posti = await ask('Massimo passeggeri', {
+    text: 'Senza contare chi guida. Lascia vuoto per nessun limite.',
+    value: g.regola_max_posti != null ? String(g.regola_max_posti) : '',
+    placeholder: '4', type: 'number',
+    scelte: [['3', '3'], ['4', '4'], ['5', '5']],
+  });
+  if (posti === null) return;
+  const mp = posti === '' ? null : Number(posti);
+  if (mp !== null && !(mp >= 1 && mp <= 6)) { toast('Da 1 a 6 passeggeri.'); return; }
+
+  const { error } = await supabase.from('groups').update({
+    regola_quota: q, regola_guida_non_paga: nonPaga, regola_max_posti: mp,
+  }).eq('id', g.id);
+  if (error) { toast(friendlyError(error)); return; }
+  toast('Regole della comitiva aggiornate.');
+  await loadGroups();
+  renderGroupsView();
+  // La quota proposta (C34) dipende da queste: senza, il modulo continuerebbe a
+  // proporre la cifra di prima fino al ricaricamento.
+  proponiQuota();
+}
+
+// Le fermate stanno nella vista Comitiva perche' sono **del gruppo**: e' la
+// rubrica condivisa, non una preferenza di chi guarda.
+function schedaFermate(g) {
+  const box = document.createElement('div');
+  box.className = 'fermate-box';
+  const titolo = document.createElement('div');
+  titolo.className = 'fermate-titolo';
+  titolo.textContent = fermate.length
+    ? `Fermate della comitiva (${fermate.length})`
+    : 'Fermate della comitiva';
+  box.appendChild(titolo);
+  if (!fermate.length) {
+    const p = document.createElement('p');
+    p.className = 'form-hint';
+    p.textContent = 'Si riempie da sola: ogni partenza e ogni destinazione che scrivete pubblicando entra qui, e dalla volta dopo si sceglie invece di riscriverla.';
+    box.appendChild(p);
+    return box;
+  }
+  const elenco = document.createElement('div');
+  elenco.className = 'fermate-elenco';
+  for (const f of fermate) {
+    const riga = document.createElement('span');
+    riga.className = 'history-chip' + (f.lat != null ? ' driver' : '');
+    riga.textContent = `${f.nome} · ${f.usi}`;
+    riga.title = f.lat != null
+      ? 'Ha un punto sulla mappa: serve a proporre la quota della benzina.'
+      : 'Senza punto sulla mappa.';
+
+    const punta = document.createElement('button');
+    punta.className = 'chip-kick';
+    punta.textContent = f.lat != null ? '↺' : '⌖';
+    punta.title = f.lat != null ? 'Rimisura il punto stando qui' : 'Segna il punto stando qui';
+    punta.addEventListener('click', () => segnaPuntoFermata(f));
+    riga.appendChild(punta);
+
+    if (g.owner_id === currentUser.id) {
+      const via = document.createElement('button');
+      via.className = 'chip-kick';
+      via.textContent = '✕';
+      via.title = `Togli "${f.nome}" dalla rubrica`;
+      via.addEventListener('click', async () => {
+        if (!await conferma(`Togliere "${f.nome}" dalla rubrica?`, {
+          testo: 'Sparisce dai suggerimenti. I passaggi già pubblicati non cambiano, e se qualcuno la riscrive torna.',
+          azione: 'Togli dalla rubrica',
+          pericolo: true,
+        })) return;
+        const { error } = await supabase.from('fermate').delete().eq('id', f.id);
+        if (error) { toast(friendlyError(error)); return; }
+        await caricaFermate();
+        renderGroupsView();
+      });
+      riga.appendChild(via);
+    }
+    elenco.appendChild(riga);
+  }
+  box.appendChild(elenco);
+  const nota = document.createElement('p');
+  nota.className = 'form-hint';
+  nota.textContent = 'Il numero è quante volte è stata usata. Il punto sulla mappa si segna stando sul posto, e lo vede tutta la comitiva: mettilo su un ritrovo, non su casa tua.';
+  box.appendChild(nota);
+  return box;
+}
+
+// Il punto di una fermata **non** si raccoglie di nascosto dalle pubblicazioni:
+// e' la decisione scritta nella 029, ed e' C21 per la terza volta. Si mette con
+// un gesto che dice cosa sta facendo, e la conferma lo dice a parole.
+async function segnaPuntoFermata(f) {
+  if (bloccaSeSospeso('segnare una fermata')) return;
+  if (!await conferma(`Segnare qui "${f.nome}"?`, {
+    testo: 'Prende la posizione di adesso e la salva sulla fermata. La vede tutta la comitiva, quindi vale per un punto di ritrovo — non per il posto da cui parti tu.',
+    azione: 'Sono alla fermata',
+  })) return;
+  let punto;
+  try {
+    punto = await posizione();
+  } catch (err) {
+    toast(err.message);
+    return;
+  }
+  const { error } = await supabase.from('fermate')
+    .update({ lat: punto.lat, lon: punto.lon }).eq('id', f.id);
+  if (error) { toast(friendlyError(error)); return; }
+  toast(`"${f.nome}" ha il suo punto sulla mappa.`);
+  await caricaFermate();
+  renderGroupsView();
 }
 
 // --- Vista Storico ---
@@ -1113,28 +1768,112 @@ function groupLabel() {
 
 // Il solo nome, senza etichetta davanti: nella testata del riepilogo sta accanto alla
 // parola «Riepilogo» e in un contesto che non lascia dubbi su cosa sia.
+// C36 — le regole della comitiva aperta. Sempre un oggetto, mai `undefined`: chi le
+// legge non deve chiedersi se c'e' una comitiva, e «nessuna regola» e' un caso
+// normale, non un errore.
+// C38 — la comitiva aperta ha gia' chiuso? Il confronto e' sulla data locale, la
+// stessa che `todayISO()` usa dappertutto: `current_date` del database e' in un
+// altro fuso, e un'ora di scarto a mezzanotte direbbe due cose diverse.
+function comitivaChiusa() {
+  const g = myGroups.find(x => x.id === currentGroupId);
+  return Boolean(g?.scade_il && g.scade_il < todayISO());
+}
+
+function regoleGruppo() {
+  const g = myGroups.find(x => x.id === currentGroupId);
+  return {
+    quota: g?.regola_quota != null ? Number(g.regola_quota) : null,
+    guidaNonPaga: Boolean(g?.regola_guida_non_paga),
+    maxPosti: g?.regola_max_posti ?? null,
+  };
+}
+
 function nomeComitiva() {
   return myGroups.find(x => x.id === currentGroupId)?.name ?? 'Nessuna comitiva';
 }
+
+// ── C27: i due interruttori dello storico ──────────────────────────────────
+// Sono variabili di modulo, non stato di un elemento: e' l'unico modo perche'
+// la scelta sopravviva al cambio di vista senza scriverla da nessuna parte.
+// La domanda vera e' «quante volte ci ho messo l'auto?», e senza questi due si
+// risponde contando a mano un elenco indistinto.
+const STORICO_FINESTRA = 120;
+let storicoSoloMiei = false;
+let storicoSoloGuidati = false;
+
+function aggiornaFiltriStorico() {
+  const m = document.getElementById('storico-miei');
+  const g = document.getElementById('storico-guidati');
+  m.classList.toggle('on', storicoSoloMiei);
+  m.setAttribute('aria-pressed', String(storicoSoloMiei));
+  g.classList.toggle('on', storicoSoloGuidati);
+  g.setAttribute('aria-pressed', String(storicoSoloGuidati));
+}
+
+document.getElementById('storico-miei').addEventListener('click', () => {
+  storicoSoloMiei = !storicoSoloMiei;
+  aggiornaFiltriStorico();
+  loadHistory();
+});
+document.getElementById('storico-guidati').addEventListener('click', () => {
+  storicoSoloGuidati = !storicoSoloGuidati;
+  aggiornaFiltriStorico();
+  loadHistory();
+});
 
 async function loadHistory() {
   if (!currentGroupId) return;
   const list = document.getElementById('history-list');
   document.querySelector('#view-history .view-subtitle').textContent =
     `Chi ha guidato e chi era a bordo · ${groupLabel()} (si cambia dalla Home)`;
+  aggiornaFiltriStorico();
   list.innerHTML = '<div class="skeleton"></div>';
   let hq = supabase
     .from('rides')
-    .select('ride_date, origin, destination, depart_time, driver:profiles!rides_driver_id_fkey(display_name), seat_claims(passenger:profiles!seat_claims_passenger_id_fkey(display_name))')
+    .select('ride_date, origin, destination, depart_time, driver_id, driver:profiles!rides_driver_id_fkey(display_name), seat_claims(passenger_id, ospite_nome, invitato_da, passenger:profiles!seat_claims_passenger_id_fkey(display_name))')
     .lt('ride_date', todayISO());
   hq = hq.eq('group_id', currentGroupId);
-  const { data, error } = await hq
+  const { data: tutti, error } = await hq
     .order('ride_date', { ascending: false })
     .order('depart_time', { ascending: true, nullsFirst: false })
-    .limit(120);
+    .limit(STORICO_FINESTRA);
   list.innerHTML = '';
-  document.getElementById('history-empty').classList.toggle('hidden', !!data?.length);
-  if (error || !data) return;
+  if (error || !tutti) {
+    document.getElementById('history-empty').classList.remove('hidden');
+    document.getElementById('storico-conteggio').textContent = '';
+    return;
+  }
+
+  // I due filtri si combinano, e insieme valgono il piu' stretto dei due: chi
+  // chiede «i miei» **e** «guidati da me» chiede i suoi turni alla guida.
+  // «I miei passaggi» comprende quelli su cui ho portato un ospite: il posto l'ho
+  // preso io, e nel conto della benzina risulta a me (C35).
+  const cEroIo = (r) => r.seat_claims.some(c => chiRisponde(c) === currentUser.id);
+  const data = tutti.filter(r =>
+    (!storicoSoloMiei || r.driver_id === currentUser.id || cEroIo(r))
+    && (!storicoSoloGuidati || r.driver_id === currentUser.id));
+
+  // Il conteggio e' la risposta alla domanda, e va detto anche quando il filtro
+  // non nasconde niente: e' il numero che si andava a contare a mano.
+  const conteggio = document.getElementById('storico-conteggio');
+  const filtrato = storicoSoloMiei || storicoSoloGuidati;
+  conteggio.textContent = filtrato
+    ? `${data.length} su ${tutti.length} · ultimi ${STORICO_FINESTRA} passaggi della comitiva`
+    : (tutti.length >= STORICO_FINESTRA ? `ultimi ${STORICO_FINESTRA} passaggi` : '');
+
+  // Vuoto per il filtro e vuoto per davvero sono due cose diverse, e dirle uguali
+  // fa credere che la comitiva non abbia mai viaggiato.
+  const vuoto = document.getElementById('history-empty');
+  vuoto.classList.toggle('hidden', data.length > 0);
+  if (!data.length && tutti.length) {
+    vuoto.querySelector('.empty-title').textContent = 'Nessun passaggio con questi filtri';
+    vuoto.querySelector('.empty-hint').textContent =
+      `La comitiva ne ha ${tutti.length} nella finestra guardata: togli un filtro per vederli.`;
+  } else if (!data.length) {
+    vuoto.querySelector('.empty-title').textContent = 'Ancora nessun viaggio';
+    vuoto.querySelector('.empty-hint').textContent =
+      'Quando i giorni passano, qui trovi chi ha guidato e chi era con lui.';
+  }
 
   let currentDay = null;
   let dayWrap = null;
@@ -1170,7 +1909,7 @@ async function loadHistory() {
     for (const c of r.seat_claims) {
       const chip = document.createElement('span');
       chip.className = 'history-chip';
-      chip.textContent = nomeDi(c.passenger);
+      chip.textContent = nomeOccupante(c);
       people.appendChild(chip);
     }
     item.appendChild(people);
@@ -1232,7 +1971,7 @@ async function disegnaRiepilogo(box) {
 
   let sq = supabase
     .from('rides')
-    .select('id, ride_date, depart_time, origin, destination, seats, driver_id, fuel_per_person, driver:profiles!rides_driver_id_fkey(display_name), seat_claims(passenger_id, passenger:profiles!seat_claims_passenger_id_fkey(display_name))');
+    .select('id, ride_date, depart_time, origin, destination, seats, driver_id, fuel_per_person, driver:profiles!rides_driver_id_fkey(display_name), seat_claims(passenger_id, ospite_nome, invitato_da, passenger:profiles!seat_claims_passenger_id_fkey(display_name))');
   sq = sq.eq('group_id', currentGroupId);
   const { data, error } = await sq;
   // Non si scrive un messaggio a mano: si lascia salire, cosi' l'errore vero finisce
@@ -1268,9 +2007,15 @@ async function disegnaRiepilogo(box) {
       d30.n++; drives30.set(r.driver_id, d30);
     }
     for (const c of r.seat_claims) {
-      nomePer.set(c.passenger_id, nomeDi(c.passenger));
-      const p = ridesTaken.get(c.passenger_id) ?? { name: nomeDi(c.passenger), n: 0 };
-      p.n++; ridesTaken.set(c.passenger_id, p);
+      // Un ospite non e' una persona di questa applicazione: il posto si conta a
+      // chi lo ha portato, che e' la stessa regola con cui `saldo_con` gli mette
+      // addosso la quota (031). Due regole diverse qui e nel database vorrebbero
+      // dire due totali diversi per la stessa cosa.
+      const chi = chiRisponde(c);
+      if (!chi) continue;
+      nomePer.set(chi, c.passenger_id ? nomeDi(c.passenger) : (nomePer.get(chi) ?? 'Qualcuno'));
+      const p = ridesTaken.get(chi) ?? { name: nomePer.get(chi) ?? 'Qualcuno', n: 0 };
+      p.n++; ridesTaken.set(chi, p);
     }
   }
   const futuri = data
@@ -1307,28 +2052,49 @@ async function disegnaRiepilogo(box) {
   const dovutoAMe = new Map();    // passeggero -> quanto mi deve
   const quantiCon = new Map();    // altra persona -> quanti passaggi in ballo
   const primaCon = new Map();     // altra persona -> il piu' vecchio dei passaggi
+  // C26 — le voci che compongono ogni conto, nello stesso giro che lo somma.
+  // Il segno e' sempre dal mio punto di vista: positivo = quella riga fa salire
+  // il mio credito. Cosi' la somma delle voci **e'** il netto, per costruzione, e
+  // non un secondo conto che puo' divergere dal primo.
+  const vociCon = new Map();      // altra persona -> [{quando, testo, importo}]
+  const voce = (id, quando, testo, importo) => {
+    const v = vociCon.get(id) ?? [];
+    v.push({ quando, testo, importo });
+    vociCon.set(id, v);
+  };
   const segna = (id, giorno) => {
     quantiCon.set(id, (quantiCon.get(id) || 0) + 1);
     const p = primaCon.get(id);
     if (!p || giorno < p) primaCon.set(id, giorno);
   };
+  const tratta = (r) => (r.origin ? `${r.origin} → ` : '') + (r.destination || '—');
   for (const r of data) {
     const q = Number(r.fuel_per_person) || 0;
     if (!q) continue;
     for (const c of r.seat_claims) {
-      if (c.passenger_id === currentUser.id && r.driver_id !== currentUser.id) {
+      const chi = chiRisponde(c);
+      if (chi === currentUser.id && r.driver_id !== currentUser.id) {
         dovutoDaMe.set(r.driver_id, (dovutoDaMe.get(r.driver_id) || 0) + q);
         segna(r.driver_id, r.ride_date);
-      } else if (r.driver_id === currentUser.id && c.passenger_id !== currentUser.id) {
-        dovutoAMe.set(c.passenger_id, (dovutoAMe.get(c.passenger_id) || 0) + q);
-        segna(c.passenger_id, r.ride_date);
+        voce(r.driver_id, r.ride_date, `Posto sulla sua auto · ${tratta(r)}`, -q);
+      } else if (r.driver_id === currentUser.id && chi && chi !== currentUser.id) {
+        dovutoAMe.set(chi, (dovutoAMe.get(chi) || 0) + q);
+        segna(chi, r.ride_date);
+        voce(chi, r.ride_date, `Posto sulla tua auto · ${tratta(r)}`
+          + (c.passenger_id ? '' : ` (ospite: ${c.ospite_nome})`), q);
       }
     }
   }
   for (const pg of pagamenti) {
     const imp = Number(pg.importo) || 0;
-    if (pg.da_utente === currentUser.id) dovutoDaMe.set(pg.a_utente, (dovutoDaMe.get(pg.a_utente) || 0) - imp);
-    if (pg.a_utente === currentUser.id) dovutoAMe.set(pg.da_utente, (dovutoAMe.get(pg.da_utente) || 0) - imp);
+    if (pg.da_utente === currentUser.id) {
+      dovutoDaMe.set(pg.a_utente, (dovutoDaMe.get(pg.a_utente) || 0) - imp);
+      voce(pg.a_utente, pg.quando, 'Pagamento che hai fatto', imp);
+    }
+    if (pg.a_utente === currentUser.id) {
+      dovutoAMe.set(pg.da_utente, (dovutoAMe.get(pg.da_utente) || 0) - imp);
+      voce(pg.da_utente, pg.quando, 'Pagamento che hai ricevuto', -imp);
+    }
   }
   // Una riga per persona, non una per verso. Con due mappe separate chi ha
   // guidato per me **e** e' salito con me compariva due volte, una in credito e
@@ -1438,7 +2204,7 @@ async function disegnaRiepilogo(box) {
       <div class="riga"><span>Ritrovo</span><b>${escapeHtml(prossimo.origin || 'da concordare')}</b></div>
       <div class="riga"><span>${prossimo.seat_claims.length === 1 ? 'Passeggero' : 'Passeggeri'}</span><b>${
         prossimo.seat_claims.length
-          ? prossimo.seat_claims.map(c => escapeHtml(nomeCorto(c.passenger_id))).join(' · ')
+          ? prossimo.seat_claims.map(c => escapeHtml(c.passenger_id ? nomeCorto(c.passenger_id) : `${c.ospite_nome} (ospite)`)).join(' · ')
           : 'nessuno, per ora'}</b></div>
       <button type="button" class="go" data-vai="home" aria-label="Vai al passaggio">→</button>
     </section>` : `
@@ -1606,17 +2372,33 @@ async function disegnaRiepilogo(box) {
       ${partite.length ? `<div class="conti">${partite.map(p => {
         const n = quantiCon.get(p.id) || 0;
         const da = primaCon.get(p.id);
-        return `<div class="conto">
+        // Le voci in ordine di tempo, dalla piu' recente: la contestazione parte
+        // quasi sempre dall'ultima cosa successa.
+        const voci = [...(vociCon.get(p.id) ?? [])].sort((a, b) => String(b.quando).localeCompare(String(a.quando)));
+        return `<div class="conto-blocco">
+          <div class="conto">
           <div class="av" style="background:${coloreDi(p.id)}">${escapeHtml(iniz(nomePer.get(p.id)))}</div>
-          <div class="chi">${escapeHtml(nomePer.get(p.id) || 'Qualcuno')}<small>${n} ${n === 1 ? 'passaggio' : 'passaggi'}${da ? ` · dal ${escapeHtml(dataBreve(da))}` : ''}</small></div>
+          <button type="button" class="chi" data-dettaglio="${p.id}" aria-expanded="false" aria-controls="voci-${p.id}">${escapeHtml(nomePer.get(p.id) || 'Qualcuno')}<small>${n} ${n === 1 ? 'passaggio' : 'passaggi'}${da ? ` · dal ${escapeHtml(dataBreve(da))}` : ''} · da cosa nasce</small></button>
           <span class="imp ${p.v >= 0 ? 'avere' : 'dare'}">${p.v >= 0 ? '+ ' : '− '}${escapeHtml(eur(Math.abs(p.v)))}</span>
           <button type="button" class="salda" data-salda="${p.id}" data-verso="${p.v >= 0 ? 'ricevuto' : 'pagato'}"
                   data-quanto="${Math.abs(p.v).toFixed(2)}"
                   title="${p.v >= 0 ? 'Segna che ti ha pagato' : 'Segna che l\'hai pagato'}">${p.v >= 0 ? 'Ricevuto' : 'Pagato'}</button>
+          </div>
+          <div class="voci hidden" id="voci-${p.id}">
+            ${voci.map(v => `<div class="riga-voce">
+              <span class="q">${escapeHtml(dataBreve(v.quando))}</span>
+              <span class="t">${escapeHtml(v.testo)}</span>
+              <span class="i ${v.importo >= 0 ? 'avere' : 'dare'}">${v.importo >= 0 ? '+ ' : '− '}${escapeHtml(eur(Math.abs(v.importo)))}</span>
+            </div>`).join('')}
+            <div class="riga-voce somma">
+              <span class="q"></span><span class="t">Totale</span>
+              <span class="i ${p.v >= 0 ? 'avere' : 'dare'}">${p.v >= 0 ? '+ ' : '− '}${escapeHtml(eur(Math.abs(p.v)))}</span>
+            </div>
+          </div>
         </div>`;
       }).join('')}</div>`
       : '<p class="vuoto">Nessun conto in sospeso. Compaiono qui quando chi guida indica un «€ a testa».</p>'}
-      <div class="piede">${partite.length ? '<button type="button" class="cta-vuoto" id="conto-mese" style="margin:0 12px 0 0">Riepilogo del mese</button>' : ''}Gli importi li vedete solo tu e la persona interessata: la policy sulla tabella nomina le due parti, non la comitiva.</div>
+      <div class="piede">${partite.length ? `<button type="button" class="cta-vuoto" id="salda-tutto" style="margin:0 12px 0 0">Salda tutto (${partite.length})</button><button type="button" class="cta-vuoto" id="conto-mese" style="margin:0 12px 0 0">Riepilogo del mese</button>` : ''}Gli importi li vedete solo tu e la persona interessata: la policy sulla tabella nomina le due parti, non la comitiva.</div>
     </section>`;
 
   box.innerHTML =
@@ -1675,6 +2457,48 @@ async function disegnaRiepilogo(box) {
     toast(`Segnato: ${eur(importo)} ${ricevuto ? 'da' : 'a'} ${chi}.`);
     loadStats();
   }));
+
+  // ── C26: da cosa nasce il conto ─────────────────────────────────────────
+  // Nessuna interrogazione nuova: le voci sono state contate nello stesso giro
+  // che ha prodotto il totale, e stanno gia' in pagina. Qui si scopre e basta —
+  // che e' anche il motivo per cui apre istantaneo e funziona senza rete.
+  box.querySelectorAll('[data-dettaglio]').forEach(b => b.addEventListener('click', () => {
+    const pannello = document.getElementById('voci-' + b.dataset.dettaglio);
+    if (!pannello) return;
+    const aperto = pannello.classList.toggle('hidden');
+    b.setAttribute('aria-expanded', String(!aperto));
+  }));
+
+  // ── C25: saldare tutto in un colpo ──────────────────────────────────────
+  // N righe in `pagamenti`, **un solo insert**: o passano tutte o non passa
+  // nessuna. Con una riga per volta un rifiuto a meta' strada lascerebbe il
+  // saldo per aria, cioe' esattamente lo stato che questo bottone deve chiudere.
+  document.getElementById('salda-tutto')?.addEventListener('click', async () => {
+    if (bloccaSeSospeso('saldare i conti')) return;
+    const daPagare = partite.filter(p => p.v < 0).reduce((s, p) => s - p.v, 0);
+    const daIncassare = partite.filter(p => p.v > 0).reduce((s, p) => s + p.v, 0);
+    const dettaglio = [
+      daPagare > 0 ? `${eur(daPagare)} che paghi tu` : null,
+      daIncassare > 0 ? `${eur(daIncassare)} che hai ricevuto` : null,
+    ].filter(Boolean).join(' e ');
+    if (!await conferma(`Azzerare tutti i conti (${partite.length})?`, {
+      testo: `Si registrano ${partite.length} ${partite.length === 1 ? 'pagamento' : 'pagamenti'}: ${dettaglio}. `
+        + 'Segnare un pagamento non lo esegue: dice che è già avvenuto.',
+      azione: 'Segna tutto saldato',
+    })) return;
+    const righe = partite.map(p => ({
+      group_id: currentGroupId,
+      da_utente: p.v >= 0 ? p.id : currentUser.id,
+      a_utente: p.v >= 0 ? currentUser.id : p.id,
+      importo: Math.round(Math.abs(p.v) * 100) / 100,
+      registrato_da: currentUser.id,
+      nota: 'Saldo totale',
+    }));
+    const { error } = await supabase.from('pagamenti').insert(righe);
+    if (error) { toast(friendlyError(error)); return; }
+    toast(`Conti azzerati: ${righe.length} ${righe.length === 1 ? 'pagamento registrato' : 'pagamenti registrati'}.`);
+    loadStats();
+  });
 
   // Il riepilogo del mese: i numeri ci sono gia' tutti, mancava il modo di mandarli.
   document.getElementById('conto-mese')?.addEventListener('click', () => {
@@ -1804,13 +2628,136 @@ dayPicker.addEventListener('change', () => { if (dayPicker.value) setDate(dayPic
 
 function setDate(date) {
   currentDate = date;
+  // Scegliere un giorno vuol dire uscire dalla settimana (C37): sono la stessa
+  // scelta — quanto lontano si guarda — e due pastiglie accese insieme direbbero
+  // che si sta guardando due cose.
+  vistaSettimana = false;
   dayToday.classList.toggle('active', date === todayISO());
   dayTomorrow.classList.toggle('active', date === todayISO(1));
   dayPicker.classList.toggle('active', date !== todayISO() && date !== todayISO(1));
+  dayWeek.classList.remove('active');
   dayPicker.value = date;
+  document.getElementById('week-grid').classList.add('hidden');
+  document.querySelector('.day-cta').classList.remove('hidden');
+  ridesList.classList.remove('hidden');
   // il canale realtime filtra sul giorno visualizzato: cambiato giorno, ci si riabbona
   if (realtimeChannel) subscribeRealtime();
   loadRides();
+}
+
+// ══════════════════════════════════════════════════════════════════════════
+// C37 — La settimana.
+//
+// La Home guarda un giorno per volta, e la domanda della domenica sera e'
+// un'altra: «come siamo messi questa settimana». Il riepilogo il conto lo fa
+// gia' — `disegnaRiepilogo` calcola i giorni scoperti — ma li' e' un numero in
+// una pastiglia, e da un numero non si pubblica. Qui i sette giorni si guardano
+// e da un giorno vuoto si parte in un tocco, che e' la cosa che quel numero
+// faceva venire voglia di fare senza dare il modo di farla.
+// ══════════════════════════════════════════════════════════════════════════
+let vistaSettimana = false;
+const GIORNI_BREVI = ['lun', 'mar', 'mer', 'gio', 'ven', 'sab', 'dom'];
+
+dayWeek.addEventListener('click', () => {
+  if (vistaSettimana) { setDate(todayISO()); return; }
+  vistaSettimana = true;
+  dayToday.classList.remove('active');
+  dayTomorrow.classList.remove('active');
+  dayPicker.classList.remove('active');
+  dayWeek.classList.add('active');
+  // Tutto quello che parla del **giorno** sparisce: lasciarlo direbbe che quei
+  // numeri riguardano la settimana che si sta guardando, e non e' vero.
+  ridesList.classList.add('hidden');
+  emptyMessage.classList.add('hidden');
+  document.getElementById('day-stats').classList.add('hidden');
+  document.getElementById('turn-hint').classList.add('hidden');
+  walkersCard.classList.add('hidden');
+  offerCard.classList.add('hidden');
+  // Anche i due bottoni del giorno, e questo non e' pulizia: «Metti la tua auto»
+  // pubblicherebbe per `currentDate`, cioe' per il giorno che si stava guardando
+  // prima — mentre a schermo ci sono sette giorni e nessuno di essi e' evidenziato.
+  // Nella settimana l'azione e' un'altra ed e' scritta dentro i buchi.
+  document.querySelector('.day-cta').classList.add('hidden');
+  document.getElementById('week-grid').classList.remove('hidden');
+  loadWeek();
+});
+
+async function loadWeek() {
+  const box = document.getElementById('week-grid');
+  if (!currentGroupId) { box.innerHTML = ''; return; }
+  box.innerHTML = '<div class="skeleton"></div>';
+  const inizio = todayISO();
+  const fine = addDaysISO(inizio, 6);
+  const { data, error } = await supabase
+    .from('rides')
+    .select('id, ride_date, depart_time, origin, destination, seats, driver_id, ritardo_min, driver:profiles!rides_driver_id_fkey(display_name), seat_claims(passenger_id, ospite_nome)')
+    .eq('group_id', currentGroupId)
+    .gte('ride_date', inizio).lte('ride_date', fine)
+    .order('ride_date', { ascending: true })
+    .order('depart_time', { ascending: true, nullsFirst: false });
+  if (error) {
+    console.error('settimana:', error);
+    box.innerHTML = '<p class="empty-hint">La settimana non si è caricata. Riprova, o torna al giorno singolo.</p>';
+    return;
+  }
+  // Solo la comitiva aperta, e di proposito: un passaggio di fuori (C9) e' un'occasione
+  // per una persona, non copertura per il gruppo. Contarlo qui direbbe che martedi' e'
+  // coperto quando la comitiva martedi' non ha nessuno.
+  const perGiorno = new Map();
+  for (let i = 0; i < 7; i++) perGiorno.set(addDaysISO(inizio, i), []);
+  for (const r of data ?? []) perGiorno.get(r.ride_date)?.push(r);
+
+  box.innerHTML = '';
+  for (const [giorno, elenco] of perGiorno) {
+    const col = document.createElement('div');
+    const scoperto = elenco.length === 0;
+    const passato = giorno === inizio && elenco.every(hasDeparted) && elenco.length > 0;
+    col.className = 'week-day' + (scoperto ? ' scoperto' : '') + (giorno === inizio ? ' oggi' : '');
+
+    const testa = document.createElement('div');
+    testa.className = 'week-testa';
+    const gg = new Date(giorno + 'T12:00:00');
+    testa.innerHTML = `<b>${GIORNI_BREVI[(gg.getDay() + 6) % 7]}</b> <span>${gg.getDate()}</span>`;
+    col.appendChild(testa);
+
+    if (scoperto) {
+      // Da un giorno vuoto si pubblica in un tocco: e' il criterio del cantiere, ed
+      // e' anche l'unica ragione per cui vale la pena guardare i buchi.
+      const cta = document.createElement('button');
+      cta.type = 'button';
+      cta.className = 'week-vuoto';
+      cta.textContent = 'Nessuno · metti la tua auto';
+      cta.addEventListener('click', () => {
+        setDate(giorno);
+        if (offerCard.classList.contains('hidden')) offerToggle.click();
+        offerCard.scrollIntoView({ block: 'center', behavior: 'smooth' });
+      });
+      col.appendChild(cta);
+    } else {
+      for (const r of elenco) {
+        const liberi = r.seats - r.seat_claims.length;
+        const riga = document.createElement('button');
+        riga.type = 'button';
+        riga.className = 'week-auto' + (r.driver_id === currentUser.id ? ' mia' : '') + (liberi === 0 ? ' pieno' : '');
+        riga.innerHTML = `<b>${escapeHtml((r.depart_time || '').slice(0, 5) || '—')}</b>`
+          + `<span>${escapeHtml(nomeDi(r.driver))}</span>`
+          + `<em>${liberi > 0 ? `${liberi} ${liberi === 1 ? 'libero' : 'liberi'}` : 'completo'}</em>`;
+        riga.title = `${r.origin || '—'} → ${r.destination || ''}`;
+        riga.addEventListener('click', () => setDate(giorno));
+        col.appendChild(riga);
+      }
+      if (passato) col.classList.add('finito');
+    }
+    box.appendChild(col);
+  }
+
+  const piede = document.createElement('p');
+  piede.className = 'form-hint week-piede';
+  const scoperti = [...perGiorno.values()].filter(v => v.length === 0).length;
+  piede.textContent = scoperti === 0
+    ? 'Sette giorni tutti coperti.'
+    : `${scoperti} ${scoperti === 1 ? 'giorno scoperto' : 'giorni scoperti'} su sette: tocca un giorno vuoto per pubblicare.`;
+  box.appendChild(piede);
 }
 
 // Prenotando o pubblicando, la richiesta "cerco un passaggio" si toglie da sola
@@ -1841,6 +2788,9 @@ offerToggle.addEventListener('click', async () => {
       document.getElementById('ride-seats').value = String(data.seats);
       document.getElementById('ride-fuel').value = data.fuel_per_person ?? '';
       document.getElementById('ride-note').value = data.note ?? '';
+      // La nota di C34 va aggiornata anche qui: i campi sono cambiati senza che
+      // nessuno li abbia toccati, quindi nessun evento `input` e' partito.
+      proponiQuota();
       toast('Modulo precompilato con il tuo ultimo viaggio: cambia quello che vuoi.');
     }
   }
@@ -1861,20 +2811,72 @@ rideForm.addEventListener('submit', async (e) => {
     seats: Number(document.getElementById('ride-seats').value),
     fuel_per_person: Number(document.getElementById('ride-fuel').value) || null,
     note: document.getElementById('ride-note').value.trim() || null,
+    // C33: quale auto. Il database rifiuta l'auto di un altro (`check_ride`), quindi
+    // qui basta dire quale si e' scelta.
+    auto_id: document.getElementById('ride-auto').value || null,
   };
   if (base.visibilita === 'zona' && base.origin_lat === null) {
     toast('Per aprire il passaggio a chi è in zona serve "Parto da qui": senza, non lo vedrebbe nessuno.');
     return;
   }
+  // ── C36: chi infrange una regola lo vede scritto prima di confermare ────
+  // Un avviso, non un rifiuto. Una regola di comitiva e' una convenzione fra amici,
+  // e la sera che qualcuno fa un'eccezione deve poterla fare: il database infatti non
+  // la fa rispettare (032), e bloccare qui sarebbe rimettere il vincolo dalla parte
+  // sbagliata — quella che si aggira cambiando la regola per tutti.
+  const regole = regoleGruppo();
+  const infrazioni = [];
+  if (regole.maxPosti != null && base.seats > regole.maxPosti) {
+    infrazioni.push(`la comitiva sta al massimo in ${regole.maxPosti + 1} (tu compreso), e tu offri ${base.seats} posti`);
+  }
+  if (regole.quota != null && Number(base.fuel_per_person || 0) !== regole.quota) {
+    infrazioni.push(base.fuel_per_person
+      ? `la quota fissa è ${regole.quota.toFixed(2)} €, tu hai messo ${Number(base.fuel_per_person).toFixed(2)} €`
+      : `la quota fissa è ${regole.quota.toFixed(2)} € e tu non ne chiedi nessuna`);
+  }
+  if (infrazioni.length && !await conferma('Va contro le regole della comitiva', {
+    testo: infrazioni.join('; ') + '. Puoi pubblicare lo stesso: le eccezioni si vedono perché sono eccezioni.',
+    azione: 'Pubblica lo stesso',
+  })) return;
+
+  // C31 — il ritorno, se c'e'. E' la stessa auto che rifa' la strada al contrario:
+  // origine e destinazione si scambiano, i posti e la quota restano quelli. Non si
+  // ricopiano le coordinate della partenza: il punto misurato e' dove si e' adesso,
+  // e alle 13:30 si parte dall'altra parte — un punto sbagliato e' peggio di nessun
+  // punto, perche' il navigatore ci porta davvero.
+  const oraRitorno = document.getElementById('ride-ritorno').value || null;
+  if (oraRitorno && !base.destination) {
+    toast('Per il ritorno serve la destinazione: è da lì che si riparte.');
+    return;
+  }
   const weeks = Number(document.getElementById('ride-repeat').value) || 1;
   let published = 0;
+  let ritorni = 0;
   let firstError = null;
   for (let w = 0; w < weeks; w++) {
-    const { error } = await supabase.from('rides').insert({
+    const giorno = addDaysISO(currentDate, w * 7);
+    // `select().single()` invece di un semplice insert: senza l'id dell'andata il
+    // ritorno non ha a cosa legarsi, e due righe scollegate sono lo stato di prima.
+    const { data: andata, error } = await supabase.from('rides')
+      .insert({ ...base, ride_date: giorno }).select('id').single();
+    if (error || !andata) { firstError = firstError ?? error; continue; }
+    published++;
+    if (!oraRitorno) continue;
+    const { error: erroreRitorno } = await supabase.from('rides').insert({
       ...base,
-      ride_date: addDaysISO(currentDate, w * 7),
+      ride_date: giorno,
+      depart_time: oraRitorno,
+      origin: base.destination,
+      destination: base.origin || 'Ritorno',
+      // Il ritorno parte da dove si e' arrivati, non da dove si e' misurato.
+      origin_lat: null,
+      origin_lon: null,
+      // Un ritorno aperto alla zona senza coordinate non lo vedrebbe nessuno (014):
+      // resta della comitiva, che e' il default e la cosa che non sorprende.
+      visibilita: base.visibilita === 'zona' ? 'gruppo' : base.visibilita,
+      ritorno_di: andata.id,
     });
-    if (error) { firstError = firstError ?? error; } else { published++; }
+    if (erroreRitorno) { firstError = firstError ?? erroreRitorno; } else { ritorni++; }
   }
   if (published === 0) {
     toast(firstError?.code === '23505'
@@ -1886,12 +2888,28 @@ rideForm.addEventListener('submit', async (e) => {
   // reset() non tocca le variabili: senza questo, la posizione segnata resterebbe
   // appiccicata alla pubblicazione successiva, che magari parte da un'altra parte.
   partenza = null;
+  // C34: `reset()` svuota il campo ma non questa variabile. Senza, la pubblicazione
+  // dopo crederebbe che la cifra scritta a mano sia una vecchia proposta e la
+  // sovrascriverebbe.
+  quotaProposta = null;
+  document.getElementById('ride-quota-nota').textContent = '';
   document.getElementById('ride-posizione').textContent = '';
   offerCard.classList.add('hidden');
-  toast(published === 1
+  // Il ritorno si conta a parte: se le andate passano e i ritorni no — succede se
+  // per quel giorno un ritorno c'era gia' — dirlo e' l'unico modo perche' chi
+  // pubblica non scopra sul posto di avere meta' viaggio.
+  const quanti = published === 1
     ? 'Auto pubblicata: ora gli amici possono prenotare il posto.'
-    : `Auto pubblicata per ${published} settimane.`);
+    : `Auto pubblicata per ${published} settimane.`;
+  toast(!oraRitorno ? quanti
+    : ritorni === published ? `${quanti} Anche il ritorno delle ${oraRitorno}.`
+    : ritorni === 0 ? `${quanti} Il ritorno però non è passato: ne avevi già uno per quel giorno.`
+    : `${quanti} Ritorno pubblicato ${ritorni} volte su ${published}.`);
   await clearMyRequest();
+  // C32: il trigger ha appena messo in rubrica partenza e destinazione. Ricaricarla
+  // qui e' l'unico modo perche' la seconda pubblicazione trovi da scegliere cio' che
+  // la prima ha scritto, senza ricaricare la pagina.
+  caricaFermate();
   loadRides();
 });
 
@@ -1931,6 +2949,10 @@ function subscribeRealtime() {
       loadRides(true);
     })
     .on('postgres_changes', { event: 'DELETE', schema: 'public', table: 'rides' }, () => loadRides(true))
+    // C30: un ritardo annunciato mentre si guarda la scheda deve comparire senza che
+    // nessuno ricarichi. E' l'unico caso in cui una riga di `rides` cambia dopo essere
+    // stata pubblicata, ed e' il caso in cui i secondi contano.
+    .on('postgres_changes', { event: 'UPDATE', schema: 'public', table: 'rides', filter: `ride_date=eq.${currentDate}` }, () => loadRides(true))
     .on('postgres_changes', { event: '*', schema: 'public', table: 'ride_waitlist' }, () => loadRides(true))
     .on('postgres_changes', { event: '*', schema: 'public', table: 'ride_requests', filter: `ride_date=eq.${currentDate}` }, () => loadRides(true))
     .subscribe();
@@ -1989,7 +3011,17 @@ let loadToken = 0;
 // `016_coordinate_riservate.sql` un client non ha il permesso di leggere origin_lat,
 // origin_lon, dest_lat e dest_lon, quindi `select('*')` verrebbe rifiutato in blocco.
 // Aggiungendo una colonna a `rides`, va aggiunta anche qui.
-const COLONNE_RIDE = 'id, driver_id, ride_date, depart_time, origin, destination, seats, note, created_at, group_id, fuel_per_person, visibilita';
+const COLONNE_RIDE = 'id, driver_id, ride_date, depart_time, origin, destination, seats, note, created_at, group_id, fuel_per_person, visibilita, ritardo_min, ritorno_di, auto_id';
+
+// C31 — l'altra meta' del viaggio, cercata fra i passaggi gia' in pagina.
+// Il legame in `rides` va dal ritorno all'andata, quindi la ricerca e' nei due
+// versi: da un ritorno si risale, da un'andata si scende.
+let passaggiVisibili = [];
+function gemelloDi(ride) {
+  if (!ride) return null;
+  if (ride.ritorno_di) return passaggiVisibili.find(r => r.id === ride.ritorno_di) ?? null;
+  return passaggiVisibili.find(r => r.ritorno_di === ride.id) ?? null;
+}
 
 // Le coordinate del ritrovo arrivano a parte, e solo per i passaggi a cui si ha diritto:
 // e' il database a decidere quali (`coordinate_passaggi`), non il client. Chi resta senza
@@ -2008,6 +3040,10 @@ let retryCount = 0;
 async function loadRides(silent = false) {
   // Senza comitiva non c'e' niente da caricare: la Home mostra il benvenuto (vedi loadGroups).
   if (!currentGroupId) return;
+  // C37: guardando la settimana, «ricarica i passaggi» vuol dire ricaricare quella.
+  // Senza questa riga il realtime riempirebbe una lista nascosta e `updateDayCta`
+  // rimetterebbe in pagina i bottoni del giorno sopra la griglia dei sette.
+  if (vistaSettimana) { loadWeek(); return; }
   const token = ++loadToken;
   if (!silent) {
     ridesList.innerHTML = '<div class="skeleton"></div><div class="skeleton"></div>';
@@ -2015,7 +3051,7 @@ async function loadRides(silent = false) {
   }
   let query = supabase
     .from('rides')
-    .select(`${COLONNE_RIDE}, driver:profiles!rides_driver_id_fkey(display_name, avatar_url), seat_claims(seat_index, passenger_id, passenger:profiles!seat_claims_passenger_id_fkey(display_name, avatar_url)), ride_comments(count), ride_waitlist(user_id, created_at, profile:profiles(display_name))`)
+    .select(`${COLONNE_RIDE}, driver:profiles!rides_driver_id_fkey(display_name, avatar_url), seat_claims(seat_index, passenger_id, ospite_nome, invitato_da, passenger:profiles!seat_claims_passenger_id_fkey(display_name, avatar_url)), ride_comments(count), ride_waitlist(user_id, created_at, profile:profiles(display_name)), auto(nome, modello, colore)`)
     .eq('ride_date', currentDate)
     .order('depart_time', { ascending: true, nullsFirst: false });
   // Niente piu' filtro sul gruppo qui: da C9 la policy fa uscire anche i passaggi aperti
@@ -2103,11 +3139,15 @@ function updateDayCta(rides) {
   // `sospeso` va rimesso qui e non solo in applicaSospensione(): questa riga gira a ogni
   // caricamento dei passaggi e senza il controllo rimetterebbe il pulsante "pubblica" a
   // chi e' sospeso, che poi si prenderebbe un errore dal database.
-  offerToggle.classList.toggle('hidden', past || sospeso);
-  if (past || sospeso) offerCard.classList.add('hidden');
+  // C38: in una comitiva chiusa il database rifiuta comunque (033), ma un bottone che
+  // porta dritto a un errore e' peggio di un bottone che non c'e'. Stessa forma della
+  // riga qui sopra su `sospeso`.
+  const chiusa = comitivaChiusa();
+  offerToggle.classList.toggle('hidden', past || sospeso || chiusa);
+  if (past || sospeso || chiusa) offerCard.classList.add('hidden');
   const reqBtn = document.getElementById('request-toggle');
   const iDrive = rides.some(r => r.driver_id === currentUser.id);
-  const iSit = rides.some(r => r.seat_claims.some(c => c.passenger_id === currentUser.id));
+  const iSit = rides.some(r => r.seat_claims.some(mioPosto));
   const myReq = currentRequests.some(r => r.user_id === currentUser.id);
   reqBtn.classList.toggle('hidden', past || iDrive || iSit);
   reqBtn.innerHTML = myReq
@@ -2150,7 +3190,9 @@ async function renderWalkers(rides) {
   const seated = new Set();
   for (const r of rides) {
     seated.add(r.driver_id);
-    for (const c of r.seat_claims) seated.add(c.passenger_id);
+    // Un ospite non e' un membro: non compare fra chi e' «ancora senza passaggio»,
+    // e chi lo ha portato ci compare solo se non ha un posto suo.
+    for (const c of r.seat_claims) if (c.passenger_id) seated.add(c.passenger_id);
   }
   const requesters = new Map(currentRequests.map(r => [r.user_id, r.ora || null]));
 
@@ -2415,7 +3457,7 @@ function buildCar(ride) {
   }
 
   const claims = new Map(ride.seat_claims.map(c => [c.seat_index, c]));
-  const myClaim = ride.seat_claims.find(c => c.passenger_id === currentUser.id);
+  const myClaim = ride.seat_claims.find(mioPosto);
   const isDriver = ride.driver_id === currentUser.id;
   const past = isPastDay() || hasDeparted(ride);
 
@@ -2427,19 +3469,35 @@ function buildCar(ride) {
     const claim = claims.get(idx);
     const pos = layout[idx];
     if (claim) {
-      const mine = claim.passenger_id === currentUser.id;
+      const mine = mioPosto(claim);
+      // Il posto di un ospite lo libera anche chi ce l'ha portato: e' la policy di
+      // 031, e senza questo ramo un ospite messo per sbaglio resterebbe li' finche'
+      // il guidatore non se ne accorge.
+      const mioOspite = claim.invitato_da === currentUser.id;
+      const nome = nomeOccupante(claim);
       const seat = drawSeat(svg, pos, {
         kind: mine ? 'mine' : 'taken',
-        label: initials(nomeDi(claim.passenger)),
-        name: nomeDi(claim.passenger),
+        label: initials(nome),
+        name: claim.passenger_id ? nome : `${nome} · ospite`,
         avatar: claim.passenger?.avatar_url ?? null,
-        clickable: !past && (mine || isDriver || isAdmin),
+        clickable: !past && (mine || mioOspite || isDriver || isAdmin),
       });
-      if (!past && (mine || isDriver || isAdmin)) seat.addEventListener('click', () => releaseSeat(ride, claim, mine));
+      if (!past && (mine || mioOspite || isDriver || isAdmin)) {
+        seat.addEventListener('click', () => releaseSeat(ride, claim, mine));
+      }
     } else {
+      // Con un posto gia' preso resta possibile aggiungere un ospite: e' tutto il
+      // senso di C35, e chi ha gia' il suo sedile e' proprio la persona che porta
+      // qualcuno. Chi guida puo' farlo anche lui — e' la sua auto.
       const canClaim = !past && !isDriver && !myClaim;
-      const seat = drawSeat(svg, pos, { kind: 'free', label: '+', name: 'Posto libero', clickable: canClaim });
+      const canOspite = !past && !sospeso && (isDriver || Boolean(myClaim));
+      const seat = drawSeat(svg, pos, {
+        kind: 'free', label: '+',
+        name: canOspite && !canClaim ? 'Posto libero: aggiungi un ospite' : 'Posto libero',
+        clickable: canClaim || canOspite,
+      });
       if (canClaim) seat.addEventListener('click', () => claimSeat(ride, idx));
+      else if (canOspite) seat.addEventListener('click', () => aggiungiOspite(ride, idx));
     }
   }
   return svg;
@@ -2490,19 +3548,107 @@ async function claimSeat(ride, seatIndex) {
   if (error) {
     if (error.code === '23505') toast('Posto già occupato, oppure sei già su questa auto.');
     else toast(friendlyError(error));
+    loadRides();
+    return;
+  }
+  toast('Posto prenotato: sei a bordo.');
+  await clearMyRequest();
+  await proponiGemello(ride);
+  loadRides();
+}
+
+// C31 — preso il posto all'andata, la domanda successiva e' sempre la stessa.
+// Si chiede invece di farlo da soli: prenotare per conto di qualcuno e' la cosa
+// che poi si scopre di aver fatto, e un posto occupato per sbaglio lo perde
+// qualcun altro. Si chiede **una volta** e la risposta e' un tocco.
+async function proponiGemello(ride) {
+  const g = gemelloDi(ride);
+  if (!g) return;
+  if (g.seat_claims.some(mioPosto)) return;
+  if (g.driver_id === currentUser.id) return;
+  const occupati = new Set(g.seat_claims.map(c => c.seat_index));
+  const libero = [...Array(g.seats).keys()].map(i => i + 1).find(i => !occupati.has(i));
+  if (!libero) return;
+  const versoCasa = Boolean(ride.ritorno_di) === false;
+  if (!await conferma(versoCasa ? 'Prendi anche il ritorno?' : 'Prendi anche l\'andata?', {
+    testo: `${g.origin || '—'} → ${g.destination || ''}`
+      + (g.depart_time ? ` alle ${g.depart_time.slice(0, 5)}` : '')
+      + `, con ${nomeDi(g.driver)}. È l'altra metà dello stesso viaggio.`,
+    azione: 'Sì, prendo il posto',
+  })) return;
+  const { error } = await supabase.from('seat_claims').insert({
+    ride_id: g.id, seat_index: libero, passenger_id: currentUser.id,
+  });
+  if (error) { toast(friendlyError(error)); return; }
+  toast(versoCasa ? 'Preso anche il ritorno.' : 'Presa anche l\'andata.');
+}
+
+// --- C35: il posto per un ospite ---
+// Un sedile con un nome libero invece di un `user_id`. Il database sa gia' dire di
+// no a tutto il resto (031): che chi invita sia della comitiva, che non ci siano due
+// ospiti con lo stesso nome, che un sospeso o un bloccato non passino. Qui si chiede
+// il nome e si scrive.
+async function aggiungiOspite(ride, seatIndex) {
+  if (bloccaSeSospeso('portare un ospite')) return;
+  const nome = await ask('Chi porti?', {
+    text: 'Il nome di chi sale senza avere l\'app. Il posto risulta occupato a tutti, e la sua quota finisce nel tuo conto — non in uno suo, che non esiste.',
+    placeholder: 'Enrico',
+  });
+  if (!nome) return;
+  const { error } = await supabase.from('seat_claims').insert({
+    ride_id: ride.id, seat_index: seatIndex,
+    ospite_nome: nome.trim().slice(0, 40), invitato_da: currentUser.id,
+  });
+  if (error) {
+    toast(error.code === '23505' ? 'Posto già occupato.' : friendlyError(error));
   } else {
-    toast('Posto prenotato: sei a bordo.');
-    await clearMyRequest();
+    toast(`${nome.trim()} è a bordo come tuo ospite.`);
   }
   loadRides();
 }
 
+// --- C30: annunciare un ritardo ---
+// Zero non e' un ritardo di zero minuti: e' «ho sbagliato, sono in orario». Il
+// database tiene `null` per quello, cosi' il vincolo resta «da 1 a 180» e non
+// esiste una seconda maniera di dire la stessa cosa.
+async function annunciaRitardo(ride) {
+  if (bloccaSeSospeso('annunciare un ritardo')) return;
+  const risposta = await ask('Di quanto sei in ritardo?', {
+    text: ride.ritardo_min > 0
+      ? `Adesso dice ${ride.ritardo_min} minuti. Scrivi 0 per dire che sei di nuovo in orario.`
+      : 'Chi ha un posto sulla tua auto lo vede subito, senza ricaricare.',
+    value: String(ride.ritardo_min || ''), placeholder: '10', type: 'number',
+    scelte: [[5, '5 min'], [10, '10 min'], [15, '15 min'], [30, '30 min']],
+  });
+  if (risposta === null) return;
+  const minuti = Math.round(Number(String(risposta).replace(',', '.')));
+  if (!Number.isFinite(minuti) || minuti < 0 || minuti > 180) {
+    toast('Da 1 a 180 minuti, oppure 0 per dire che sei in orario.');
+    return;
+  }
+  const { error } = await supabase.from('rides')
+    .update({ ritardo_min: minuti || null, ritardo_alle: minuti ? new Date().toISOString() : null })
+    .eq('id', ride.id);
+  if (error) { toast(friendlyError(error)); return; }
+  toast(minuti
+    ? `Annunciato: ${minuti} minuti di ritardo, si parte verso le ${oraPiu(ride.depart_time || '00:00', minuti)}.`
+    : 'Ritardo tolto: risulti di nuovo in orario.');
+  loadRides(true);
+}
+
 async function releaseSeat(ride, claim, mine) {
-  const titolo = mine ? 'Scendere da questa auto?' : `Liberare il posto di ${nomeDi(claim.passenger)}?`;
+  // Tre casi e non due: il proprio posto, quello di una persona, quello di un
+  // proprio ospite. Il terzo non e' il secondo con un nome diverso — «non riceve un
+  // avviso» sarebbe una frase senza senso per chi non ha l'app.
+  const ospite = !claim.passenger_id;
+  const nome = nomeOccupante(claim);
+  const titolo = mine ? 'Scendere da questa auto?' : `Liberare il posto di ${nome}?`;
   if (!await conferma(titolo, {
     testo: mine
       ? 'Il posto torna libero e chiunque della comitiva può prenderlo.'
-      : 'Il posto torna libero e chiunque della comitiva può prenderlo. Chi ci stava non riceve un avviso.',
+      : ospite
+        ? `Il posto torna libero e la quota di ${nome} esce dal conto di chi lo ha portato.`
+        : 'Il posto torna libero e chiunque della comitiva può prenderlo. Chi ci stava non riceve un avviso.',
     azione: mine ? 'Scendi' : 'Libera il posto',
   })) return;
   const { error } = await supabase.from('seat_claims').delete()
@@ -2516,6 +3662,9 @@ async function releaseSeat(ride, claim, mine) {
 function renderRides(rides) {
   ridesList.innerHTML = '';
   emptyMessage.classList.toggle('hidden', rides.length > 0);
+  // C31: `gemelloDi()` cerca qui dentro. Va assegnato prima di disegnare, perche'
+  // le schede lo interrogano mentre si costruiscono.
+  passaggiVisibili = rides;
 
   // Riepilogo del giorno
   const statsEl = document.getElementById('day-stats');
@@ -2539,7 +3688,7 @@ function renderRides(rides) {
         lines.push('');
         lines.push(`🚗 ${nomeDi(r.driver)} → ${r.destination}`
           + (r.depart_time ? ` (ore ${r.depart_time.slice(0, 5)})` : ''));
-        lines.push('A bordo: ' + (r.seat_claims.map(c => nomeDi(c.passenger)).join(', ') || 'nessuno'));
+        lines.push('A bordo: ' + (r.seat_claims.map(nomeOccupante).join(', ') || 'nessuno'));
         lines.push(freeN > 0 ? `Liberi: ${freeN} → prenota su ${SITE_URL}` : 'Al completo');
       }
       condividi(lines.join('\n'));
@@ -2576,7 +3725,11 @@ function renderRides(rides) {
     info.appendChild(sub);
     const drv = document.createElement('div');
     drv.className = 'ride-sub';
-    drv.textContent = `Guida ${nomeDi(ride.driver)}`;
+    // C33: che auto cercare. Sta accanto a chi guida e non fra le pastiglie in
+    // fondo, perche' risponde alla stessa domanda — «chi passa a prendermi» — e
+    // perche' si legge nel momento in cui si guarda la strada, non la scheda.
+    const targa = ride.auto ? descriviAuto(ride.auto) : null;
+    drv.textContent = `Guida ${nomeDi(ride.driver)}` + (targa ? ` · ${targa}` : '');
     // Da C9 in Home arrivano anche passaggi di comitive a cui non appartengo: senza
     // dirlo, sembrerebbero della propria e non si capirebbe chi sia chi guida.
     if (ride.group_id !== currentGroupId) {
@@ -2624,8 +3777,13 @@ function renderRides(rides) {
       del.innerHTML = '<svg width="16" height="16"><use href="#i-x"/></svg>';
       del.title = 'Annulla passaggio';
       del.addEventListener('click', async () => {
+        // C28: l'avviso si accoda comunque (026), ma arriva sul telefono solo con le
+        // chiavi delle notifiche in piedi. Prometterlo quando non puo' partire sarebbe
+        // la stessa mezza verita' di un test che si salta da solo.
         if (!await conferma('Annullare il passaggio?', {
-          testo: 'Chi aveva un posto sopra questa auto lo perde, e per oggi resta a piedi.',
+          testo: notifichePossibili()
+            ? 'Chi aveva un posto sopra questa auto lo perde. Riceve un avviso, e lo riceve anche chi era in lista d\'attesa.'
+            : 'Chi aveva un posto sopra questa auto lo perde, e per oggi resta a piedi.',
           azione: 'Annulla il passaggio',
           pericolo: true,
         })) return;
@@ -2647,8 +3805,8 @@ function renderRides(rides) {
       aboard.className = 'history-passengers';
       for (const c of ride.seat_claims) {
         const chip = document.createElement('span');
-        chip.className = 'history-chip' + (c.passenger_id === currentUser.id ? ' driver' : '');
-        chip.textContent = nomeDi(c.passenger);
+        chip.className = 'history-chip' + (mioPosto(c) ? ' driver' : '');
+        chip.textContent = nomeOccupante(c) + (c.passenger_id ? '' : ' · ospite');
         aboard.appendChild(chip);
       }
       card.appendChild(aboard);
@@ -2667,7 +3825,7 @@ function renderRides(rides) {
       meBadge.className = 'place-badge mine';
       meBadge.textContent = 'La tua auto';
       foot.appendChild(meBadge);
-    } else if (ride.seat_claims.some(c => c.passenger_id === currentUser.id)) {
+    } else if (ride.seat_claims.some(mioPosto)) {
       const meBadge = document.createElement('span');
       meBadge.className = 'place-badge mine';
       meBadge.textContent = 'Sei a bordo';
@@ -2676,13 +3834,38 @@ function renderRides(rides) {
     if (ride.depart_time && currentDate === todayISO()) {
       const [h, m] = ride.depart_time.split(':').map(Number);
       const now = new Date();
-      const mins = h * 60 + m - (now.getHours() * 60 + now.getMinutes());
+      // C30: annunciato un ritardo, il conto alla rovescia deve contare verso l'ora
+      // vera. Lasciarlo sull'ora pubblicata direbbe «Partita» a un'auto che sta
+      // ancora arrivando, cioe' la cosa esattamente sbagliata da dire a chi aspetta.
+      const mins = h * 60 + m + (ride.ritardo_min || 0) - (now.getHours() * 60 + now.getMinutes());
       const t = document.createElement('span');
       t.className = 'place-badge' + (mins > 0 && mins <= 60 ? ' mine' : '');
       t.textContent = mins <= 0 ? 'Partita'
         : mins < 60 ? `Parte tra ${mins} min`
         : `Parte tra ${Math.floor(mins / 60)} h ${mins % 60} min`;
       foot.appendChild(t);
+    }
+    // C31: le due meta' si riconoscono a colpo d'occhio. Il legame si dice sulla
+    // scheda e non in una vista a parte, perche' la domanda («e per tornare?»)
+    // nasce guardando l'andata.
+    const gemello = gemelloDi(ride);
+    if (gemello) {
+      const par = document.createElement('span');
+      par.className = 'place-badge coppia';
+      par.textContent = ride.ritorno_di
+        ? `Ritorno · andata alle ${(gemello.depart_time || '').slice(0, 5) || '—'}`
+        : `Andata · ritorno alle ${(gemello.depart_time || '').slice(0, 5) || '—'}`;
+      par.title = 'Andata e ritorno dello stesso viaggio: puoi prenderli entrambi.';
+      foot.appendChild(par);
+    }
+    // Il ritardo si vede a tutti, sempre: chi apre l'app in quel momento deve
+    // trovarlo scritto, non dedurlo dal conto alla rovescia.
+    if (ride.ritardo_min > 0) {
+      const rit = document.createElement('span');
+      rit.className = 'place-badge ritardo';
+      rit.textContent = `In ritardo di ${ride.ritardo_min} min`
+        + (ride.depart_time ? ` · verso le ${oraPiu(ride.depart_time, ride.ritardo_min)}` : '');
+      foot.appendChild(rit);
     }
     if (ride.fuel_per_person > 0) {
       const fuel = document.createElement('span');
@@ -2698,11 +3881,25 @@ function renderRides(rides) {
     }
     card.appendChild(foot);
 
+    // ── C30: «sono in ritardo» ───────────────────────────────────────────
+    // Solo a chi guida e solo il giorno stesso: annunciare un ritardo per
+    // dopodomani non vuol dire niente, e il bottone in piu' su ogni scheda
+    // renderebbe illeggibili le altre azioni. La cifra si sceglie da un elenco
+    // corto invece che scriverla, perche' si preme col telefono in mano mentre
+    // si esce di casa in ritardo — che e' l'unico momento in cui serve.
+    if (ride.driver_id === currentUser.id && ride.ride_date === todayISO() && !sospeso) {
+      const rBtn = document.createElement('button');
+      rBtn.className = 'btn btn-ghost btn-small';
+      rBtn.textContent = ride.ritardo_min > 0 ? `In ritardo di ${ride.ritardo_min} min · cambia` : 'Sono in ritardo';
+      rBtn.addEventListener('click', () => annunciaRitardo(ride));
+      card.appendChild(rBtn);
+    }
+
     // Lista d'attesa: quando l'auto è piena ci si mette in coda,
     // il primo in lista prende il posto appena qualcuno scende (trigger DB)
     const waitlist = [...(ride.ride_waitlist ?? [])].sort((a, b) => a.created_at.localeCompare(b.created_at));
     const ridePast = isPastDay() || hasDeparted(ride);
-    const imAboard = ride.seat_claims.some(c => c.passenger_id === currentUser.id);
+    const imAboard = ride.seat_claims.some(mioPosto);
     const imWaiting = waitlist.some(w => w.user_id === currentUser.id);
     if (waitlist.length > 0) {
       const wl = document.createElement('div');
@@ -2829,6 +4026,10 @@ async function render() {
     await loadBlocked();
     applicaSospensione();
     await loadGroups();
+    // Prima di renderProfile(), che disegna il garage, e prima che il modulo di
+    // pubblicazione possa aprirsi: senza, il menu delle auto resta vuoto fino al
+    // primo giro nel Profilo.
+    await caricaAuto();
     renderProfile();
     askNotifyPermission();
     subscribeRealtime();

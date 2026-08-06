@@ -959,6 +959,19 @@ input:focus-visible, select:focus-visible, textarea:focus-visible {
   border-color: var(--ottone-bordo);
 }
 
+/* Un ritardo annunciato (C30) non e' un errore, ma e' la cosa che cambia i piani
+   di chi legge: prende il rosso perche' e' l'unica pastiglia del piede che
+   qualcuno deve **notare** senza cercarla. */
+.place-badge.ritardo { color: var(--danger); background: var(--danger-soft); }
+/* La coppia andata/ritorno (C31): e' un'informazione, non un allarme — prende il
+   blu di servizio, non il rosso. */
+.place-badge.coppia { color: var(--primary-testo); background: var(--primary-soft); }
+
+/* Le risposte da un tocco nel dialogo (C30): stanno sopra il campo, che resta
+   per tutte le altre. Riusano `.filtro`, che e' gia' la forma «pastiglia che si
+   preme» di questa interfaccia. */
+.dialog-scelte { display: flex; flex-wrap: wrap; gap: 8px; margin: 0 0 12px; }
+
 /* Auto SVG. Materiali, non tinte piatte (C15): la lamiera prende luce dall'alto,
    il vetro ha un riflesso, e sotto c'e' un'ombra che appoggia l'auto a terra.
    Ogni guidatore ha la sua tinta (--car-hue), quindi la luce deve funzionare su
@@ -1059,6 +1072,31 @@ input:focus-visible, select:focus-visible, textarea:focus-visible {
 
 /* ================= STORICO ================= */
 
+/* ---- i due interruttori dello storico (C27) ----
+   Stessa forma delle pastiglie del giorno, un gradino piu' piccola: sono un
+   filtro, non la navigazione principale della vista. Acceso e spento si
+   distinguono per colore **e** per bordo, non solo per colore. */
+.history-filtri {
+  display: flex; flex-wrap: wrap; align-items: center; gap: 8px;
+  margin: 0 0 18px;
+}
+.filtro {
+  background: var(--surface);
+  border: 1.5px solid var(--border);
+  color: var(--ink-soft);
+  padding: 7px 15px;
+  border-radius: var(--pill);
+  font: inherit;
+  font-size: 0.82rem;
+  font-weight: 600;
+  cursor: pointer;
+  touch-action: manipulation;
+  transition: all var(--t-med) var(--ease-out);
+}
+.filtro:hover { color: var(--ink); border-color: var(--border-strong); }
+.filtro:focus-visible { outline: 2px solid var(--primary-testo); outline-offset: 2px; }
+.filtro.on { background: var(--primary); border-color: var(--primary); color: #fff; }
+
 .history-list { display: grid; gap: 20px; }
 .history-day-title {
   font-size: 0.85rem;
@@ -1125,6 +1163,75 @@ input:focus-visible, select:focus-visible, textarea:focus-visible {
 .group-card-head { display: flex; justify-content: space-between; align-items: center; gap: 10px; flex-wrap: wrap; margin-bottom: 10px; }
 .group-card-name { font-weight: 700; font-size: 1.02rem; }
 .group-card-members { display: flex; gap: 6px; flex-wrap: wrap; margin: 10px 0 14px; }
+
+/* ---- la rubrica delle fermate (C32) ----
+   Sta dentro la scheda della comitiva, separata da una riga: e' roba del gruppo
+   come i membri, ma di un'altra specie, e senza lo stacco le due liste di
+   pastiglie si leggevano come una sola. */
+.fermate-box { border-top: 1px solid var(--border); margin: 14px 0 0; padding: 12px 0 0; }
+.fermate-titolo { font-size: 0.82rem; font-weight: 600; color: var(--ink); margin-bottom: 8px; }
+.fermate-elenco { display: flex; gap: 6px; flex-wrap: wrap; margin-bottom: 8px; }
+.fermate-box .form-hint { margin: 0; }
+
+/* ---- il garage (C33) ----
+   Una riga per auto, con le azioni in fondo: sono poche e si toccano di rado,
+   quindi stanno scritte invece che nascoste dietro un'icona da indovinare. */
+.auto-list { display: grid; gap: 8px; margin: 10px 0; }
+.auto-riga {
+  display: flex; align-items: center; gap: 8px; flex-wrap: wrap;
+  padding: 10px 12px;
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  background: var(--surface-2);
+}
+.auto-testo { flex: 1 1 160px; min-width: 0; font-size: 0.85rem; }
+.auto-testo small { display: block; color: var(--ink-soft); font-size: 0.76rem; margin-top: 2px; }
+
+/* ---- la settimana (C37) ----
+   Sette colonne su schermo largo, sette righe sul telefono: e' un elenco di
+   giorni, e su una colonna sola resta leggibile senza inventarsi uno scorrimento
+   orizzontale. Il criterio del cantiere e' «i giorni scoperti si distinguono
+   senza leggere», quindi il buco ha un fondo suo e un bordo tratteggiato — due
+   segnali, non solo un colore. */
+.week-grid { display: grid; gap: 10px; margin-bottom: 24px; }
+@media (min-width: 760px) { .week-grid { grid-template-columns: repeat(7, 1fr); align-items: start; } }
+.week-day {
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  background: var(--surface);
+  padding: 10px;
+  display: grid;
+  gap: 6px;
+  align-content: start;
+}
+.week-day.oggi { border-color: var(--primary); }
+.week-day.scoperto { border-style: dashed; border-color: var(--danger); background: var(--danger-soft); }
+/* Un giorno gia' passato non e' un buco da riempire: si spegne invece di gridare. */
+.week-day.finito { opacity: 0.6; }
+.week-testa { display: flex; align-items: baseline; gap: 5px; font-size: 0.8rem; color: var(--ink-soft); }
+.week-testa b { color: var(--ink); text-transform: capitalize; }
+.week-auto, .week-vuoto {
+  display: flex; align-items: baseline; gap: 6px; flex-wrap: wrap;
+  width: 100%;
+  text-align: left;
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  background: var(--surface-2);
+  color: var(--ink);
+  font: inherit;
+  font-size: 0.76rem;
+  padding: 7px 9px;
+  cursor: pointer;
+}
+.week-auto:hover, .week-vuoto:hover { border-color: var(--border-strong); }
+.week-auto:focus-visible, .week-vuoto:focus-visible { outline: 2px solid var(--primary-testo); outline-offset: 2px; }
+.week-auto b { font-variant-numeric: tabular-nums; }
+.week-auto span { flex: 1 1 auto; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.week-auto em { font-style: normal; color: var(--ok-deep); }
+.week-auto.pieno em { color: var(--ink-soft); }
+.week-auto.mia { border-color: var(--ottone-bordo); background: var(--ottone-velo); }
+.week-vuoto { color: var(--danger); border-color: transparent; background: transparent; font-weight: 600; }
+.week-piede { grid-column: 1 / -1; margin: 2px 0 0; }
 .group-card-actions { display: flex; gap: 8px; flex-wrap: wrap; }
 
 /* ================= STATISTICHE ================= */
@@ -1998,7 +2105,9 @@ input:focus-visible, select:focus-visible, textarea:focus-visible {
 
 /* ---- partite aperte ---- */
 .dash .conti { display: flex; flex-wrap: wrap; column-gap: 22px; }
-.dash .conti > .conto { flex: 1 1 230px; }
+/* Il blocco, non la riga: sotto la riga si apre il dettaglio di C26, e le due
+   cose devono restare nella stessa colonna quando l'elenco va a capo. */
+.dash .conti > .conto-blocco { flex: 1 1 230px; }
 .dash .conto { display: flex; align-items: center; gap: 8px; padding: 6px 0; font-size: 0.7rem; }
 .dash .conto .av {
   flex: none;
@@ -2008,11 +2117,39 @@ input:focus-visible, select:focus-visible, textarea:focus-visible {
   font-size: 0.68rem; font-weight: 700;
   color: #fff;
 }
-.dash .conto .chi { flex: 1 1 auto; min-width: 0; overflow-wrap: anywhere; }
+/* Il nome e' un bottone da C26: apre le voci che compongono la cifra. Resta
+   scritto come un nome — nessun bordo, nessuno sfondo — perche' e' il testo che
+   c'era prima, non un comando in piu' da imparare. */
+.dash .conto .chi {
+  flex: 1 1 auto; min-width: 0; overflow-wrap: anywhere;
+  border: 0; background: none; padding: 0; margin: 0;
+  font: inherit; color: inherit; text-align: left; cursor: pointer;
+}
 .dash .conto .chi small { display: block; color: var(--ink-soft); font-size: 0.68rem; }
+.dash .conto .chi:hover small { color: var(--primary-testo); }
+.dash .conto .chi:focus-visible { outline: 2px solid var(--primary-testo); outline-offset: 2px; border-radius: 4px; }
 .dash .conto .imp { flex: none; font-weight: 600; font-family: 'IBM Plex Mono', ui-monospace, monospace; white-space: nowrap; }
 .dash .conto .imp.dare { color: var(--danger); }
 .dash .conto .imp.avere { color: var(--ok-deep); }
+
+/* ---- da cosa nasce un conto (C26) ----
+   Rientrato sotto il nome e con la stessa griglia in tutte le righe: il totale
+   in fondo deve stare esattamente incolonnato con gli addendi, altrimenti
+   «controlla la somma» resta un invito che non si puo' accettare. */
+.dash .voci {
+  margin: 0 0 8px 32px;
+  padding: 6px 8px;
+  border-left: 2px solid var(--border);
+  font-size: 0.66rem;
+}
+.dash .riga-voce { display: flex; align-items: baseline; gap: 8px; padding: 2px 0; }
+.dash .riga-voce .q { flex: none; width: 46px; color: var(--ink-soft); }
+.dash .riga-voce .t { flex: 1 1 auto; min-width: 0; overflow-wrap: anywhere; color: var(--ink-soft); }
+.dash .riga-voce .i { flex: none; font-family: 'IBM Plex Mono', ui-monospace, monospace; white-space: nowrap; }
+.dash .riga-voce .i.dare { color: var(--danger); }
+.dash .riga-voce .i.avere { color: var(--ok-deep); }
+.dash .riga-voce.somma { border-top: 1px solid var(--border); margin-top: 4px; padding-top: 5px; }
+.dash .riga-voce.somma .t, .dash .riga-voce.somma .i { color: var(--ink); font-weight: 600; }
 
 /* ---- distribuzione dei turni ---- */
 .dash .turno { display: flex; align-items: center; gap: 8px; margin-bottom: 6px; font-size: 0.7rem; }
