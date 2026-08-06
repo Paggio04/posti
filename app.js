@@ -1273,7 +1273,7 @@ function renderGroupBar() {
   groupPills.innerHTML = '';
   for (const g of myGroups) {
     const b = document.createElement('button');
-    b.className = 'tab' + (currentGroupId === g.id ? ' active' : '');
+    b.className = 'group-pill' + (currentGroupId === g.id ? ' active' : '');
     b.textContent = g.name;
     b.addEventListener('click', () => selectGroup(g.id));
     groupPills.appendChild(b);
@@ -1997,6 +1997,71 @@ async function loadStats() {
   }
 }
 
+// ── Il quaderno del riepilogo ───────────────────────────────────────────────
+// Il riepilogo non scorre in verticale a nessuna larghezza (vedi style.css). Dove
+// le schede non ci stanno tutte insieme, la griglia diventa una fila di schermate
+// larghe quanto la finestra: qui si contano, si disegnano i pallini e si tiene
+// acceso quello giusto.
+//
+// Quante siano non lo decide questo codice: lo decide il CSS impaginando, e si
+// legge da `scrollWidth`. Cosi' non c'e' un secondo posto che deve sapere quante
+// righe entrano in una schermata, e i due non possono divergere.
+function montaPagine(box) {
+  const griglia = box.querySelector('.grid');
+  const barra = box.querySelector('#dash-pagine');
+  if (!griglia || !barra) return;
+
+  // **Il passo e' una colonna, non una schermata**, e la differenza si vede solo
+  // quando le due non coincidono: sul tablet si vedono tre colonne su quattro,
+  // quindi c'e' una sola posizione in piu' dove fermarsi, non un'altra schermata
+  // intera. Dividere la larghezza totale per quella visibile dava 1,336 e
+  // arrotondava a 1, cioe' «nessun pallino» su una vista che invece scorreva.
+  const passo = () => {
+    const prima = griglia.firstElementChild;
+    return Math.max(1, (prima ? prima.getBoundingClientRect().width : griglia.clientWidth) + 10);
+  };
+  const quante = () =>
+    Math.max(1, Math.round((griglia.scrollWidth - griglia.clientWidth) / passo()) + 1);
+  const attuale = () => Math.round(griglia.scrollLeft / passo());
+
+  function disegna() {
+    const n = quante();
+    barra.classList.toggle('acceso', n > 1);
+    if (n <= 1) { barra.innerHTML = ''; return; }
+    if (barra.children.length !== n) {
+      barra.innerHTML = '';
+      for (let i = 0; i < n; i++) {
+        const b = document.createElement('button');
+        b.type = 'button';
+        b.setAttribute('role', 'tab');
+        // Il pallino e' un bottone vero: con la tastiera si passa da una
+        // schermata all'altra senza dover saper scorrere di lato.
+        b.setAttribute('aria-label', `Schermata ${i + 1} di ${n}`);
+        b.addEventListener('click', () => {
+          griglia.scrollTo({ left: i * passo(), behavior: 'smooth' });
+        });
+        barra.appendChild(b);
+      }
+    }
+    accendi();
+  }
+
+  function accendi() {
+    const i = attuale();
+    [...barra.children].forEach((b, k) => {
+      b.classList.toggle('on', k === i);
+      b.setAttribute('aria-selected', k === i ? 'true' : 'false');
+    });
+  }
+
+  griglia.addEventListener('scroll', accendi, { passive: true });
+  // La larghezza della griglia cambia con la finestra **e** con la fascia in alto
+  // che compare a 768px: `resize` da solo si perde il secondo caso quando il
+  // riquadro cambia senza che cambi la finestra.
+  new ResizeObserver(disegna).observe(griglia);
+  disegna();
+}
+
 async function disegnaRiepilogo(box) {
 
   let sq = supabase
@@ -2163,7 +2228,6 @@ async function disegnaRiepilogo(box) {
   const diDomani = data.filter(r => r.ride_date === domani);
   const postiDom = diDomani.reduce((s, r) => s + (r.seats || 0), 0);
   const occupatiDom = diDomani.reduce((s, r) => s + r.seat_claims.length, 0);
-  const liberiDom = Math.max(0, postiDom - occupatiDom);
 
   // ── Il calendario del mese ───────────────────────────────────────────────
   const conPassaggio = new Set(data.map(r => r.ride_date));
@@ -2217,10 +2281,10 @@ async function disegnaRiepilogo(box) {
            aria-label="Andamento del carburante ripartito negli ultimi sei mesi"
            style="width:100%;height:56px;margin-top:8px;display:block">
         <defs><linearGradient id="grad-carb" x1="0" y1="0" x2="0" y2="1">
-          <stop offset="0" stop-color="oklch(0.74 0.13 78)" stop-opacity=".40"/>
-          <stop offset="1" stop-color="oklch(0.74 0.13 78)" stop-opacity="0"/></linearGradient></defs>
+          <stop offset="0" stop-color="var(--primary)" stop-opacity=".28"/>
+          <stop offset="1" stop-color="var(--primary)" stop-opacity="0"/></linearGradient></defs>
         <path d="${via} L250,56 L0,56 Z" fill="url(#grad-carb)"/>
-        <path d="${via}" fill="none" stroke="oklch(0.74 0.13 78)" stroke-width="2" vector-effect="non-scaling-stroke"/>
+        <path d="${via}" fill="none" stroke="var(--primary)" stroke-width="2" vector-effect="non-scaling-stroke"/>
       </svg>` : ''}
       <button type="button" class="cta" data-vai="conti">Vedi i conti →</button>
     </section>`;
@@ -2267,48 +2331,28 @@ async function disegnaRiepilogo(box) {
       <div class="head"><h3>${escapeHtml(meseInLettere(oggi))}</h3><span class="sub">oggi · tuoi turni · con auto</span></div>
       <div class="dows"><span>L</span><span>M</span><span>M</span><span>G</span><span>V</span><span>S</span><span>D</span></div>
       <div class="days">${celle.join('')}</div>
-      <div style="margin-top:9px">
+    </section>`;
+
+  const cardAgenda = `
+    <section class="card g-agenda">
+      <div class="head"><h3>Prossimi sette giorni</h3>${postiDom > 0
+        ? `<span class="pill">domani · ${diDomani.length} ${diDomani.length === 1 ? 'auto' : 'auto'} · <b>${occupatiDom}/${postiDom}</b> posti</span>`
+        : '<span class="pill">domani · nessuna auto</span>'}</div>
+      <div>
         ${giornoAgenda.rides.length
-          ? giornoAgenda.rides.slice(0, 4).map(r => {
+          ? giornoAgenda.rides.slice(0, 3).map(r => {
               const pieno = r.seat_claims.length >= (r.seats || 0);
               return `<div class="ag">
                 <span class="h">${escapeHtml((r.depart_time || '').slice(0, 5) || '—')}</span>
                 <div class="t">${escapeHtml(r.origin || '—')} → ${escapeHtml(r.destination || '')}
                   <small>${escapeHtml(nomeCorto(r.driver_id))} · ${r.seat_claims.length}/${r.seats}${pieno ? ' completo' : ''}</small></div>
-                <span class="chip${mio(r.driver_id) ? ' mia' : ''}" style="background:${mio(r.driver_id) ? 'var(--ottone-velo)' : 'var(--primary-soft)'}">${ico('car', 13)}</span>
+                <span class="chip${mio(r.driver_id) ? ' mia' : ''}">${ico('car', 13)}</span>
               </div>`;
-            }).join('')
+            }).join('') + (giornoAgenda.rides.length > 3
+              ? `<div class="resto">e altri ${giornoAgenda.rides.length - 3}</div>`
+              : '')
           : '<p class="vuoto" style="margin:0">Nessun passaggio nei prossimi sette giorni.</p>'}
       </div>
-    </section>`;
-
-  // La ciambella si disegna solo se domani esiste qualcosa da ripartire.
-  const cardDomani = postiDom > 0 ? `
-    <section class="card hero g-domani">
-      <div class="head"><h3>Occupazione · domani</h3><span class="sub">${postiDom}</span></div>
-      <div class="ciambella">
-        <svg width="74" height="74" viewBox="0 0 42 42" style="flex:none" role="img"
-             aria-label="${occupatiDom} posti occupati su ${postiDom}">
-          <circle cx="21" cy="21" r="16" fill="none" stroke="oklch(1 0 0/.10)" stroke-width="7"/>
-          <circle cx="21" cy="21" r="16" fill="none" stroke="oklch(0.52 0.11 165)" stroke-width="7"
-                  stroke-dasharray="${((occupatiDom / postiDom) * 100).toFixed(1)} 100" transform="rotate(-90 21 21)"/>
-          <circle cx="21" cy="21" r="16" fill="none" stroke="oklch(0.52 0.13 255)" stroke-width="7"
-                  stroke-dasharray="${((liberiDom / postiDom) * 100).toFixed(1)} 100"
-                  stroke-dashoffset="-${((occupatiDom / postiDom) * 100).toFixed(1)}" transform="rotate(-90 21 21)"/>
-          <text x="21" y="20" text-anchor="middle" font-size="8.5" font-weight="700" fill="#fff">${postiDom}</text>
-          <text x="21" y="26" text-anchor="middle" font-size="3.4" fill="oklch(0.72 0.03 258)">posti</text>
-        </svg>
-        <div class="leg">
-          <div><i style="background:oklch(0.52 0.11 165)"></i><span class="nm">Occupati</span><b>${occupatiDom}</b></div>
-          <div><i style="background:oklch(0.52 0.13 255)"></i><span class="nm">Disponibili</span><b>${liberiDom}</b></div>
-          <div><i style="background:oklch(1 0 0/.18)"></i><span class="nm">Auto in strada</span><b>${diDomani.length}</b></div>
-        </div>
-      </div>
-    </section>` : `
-    <section class="card hero g-domani">
-      <div class="head"><h3>Occupazione · domani</h3></div>
-      <p class="vuoto" style="color:oklch(0.72 0.03 258)">Domani non c'è nessuna auto in programma.
-      Se guidi tu, pubblicala dalla Home.</p>
     </section>`;
 
   const ETICHETTA = {
@@ -2323,10 +2367,10 @@ async function disegnaRiepilogo(box) {
   const cardAttivita = `
     <section class="card g-attivita">
       <div class="head"><h3>Attività recente</h3></div>
-      ${eventi.length ? eventi.map(e => {
+      ${eventi.length ? eventi.slice(0, 5).map(e => {
         const chi = nomeCorto(e.attore);
         return `<div class="att">
-          <div class="av" style="background:${mio(e.attore) ? 'var(--ottone)' : coloreDi(e.attore)};${mio(e.attore) ? 'color:oklch(0.28 0.05 70)' : ''}">${escapeHtml(iniz(chi))}</div>
+          <div class="av" style="background:${mio(e.attore) ? 'var(--tuo)' : coloreDi(e.attore)}">${escapeHtml(iniz(chi))}</div>
           <div class="txt"><b>${escapeHtml(chi)}</b> — ${ETICHETTA[e.tipo] || escapeHtml(e.tipo)}</div>
           <span class="when">${escapeHtml(quandoBreve(e.quando))}</span>
         </div>`;
@@ -2351,8 +2395,7 @@ async function disegnaRiepilogo(box) {
   const nomeGiorno = (iso) => GIORNI[(new Date(iso + 'T00:00:00').getDay() + 6) % 7];
   const cardSettimana = `
     <section class="card g-settimana">
-      <div class="head"><div><h3>Occupazione settimanale</h3>
-        <span class="sub">posti assegnati, giorno per giorno</span></div></div>
+      <div class="head"><h3>Occupazione settimanale</h3></div>
       ${settimana.map(g => {
         // Con piu' di un'auto nello stesso giorno il nome di chi guida la prima
         // sarebbe una mezza verita': si dice quante sono.
@@ -2366,15 +2409,15 @@ async function disegnaRiepilogo(box) {
         return `<div class="riemp">
           <span class="n">${suo ? `<span class="tu">${escapeHtml(et)}</span>` : escapeHtml(et)}</span>
           <span class="bar"><i style="width:${perc.toFixed(0)}%;background:${
-            !g.posti ? 'transparent' : perc >= 100 ? 'var(--ok)' : suo ? 'var(--ottone)' : 'var(--primary)'}"></i></span>
+            !g.posti ? 'transparent' : suo ? 'var(--tuo)' : 'var(--ink-soft)'}"></i></span>
           <span class="p">${g.posti ? `${g.presi}/${g.posti}` : '—'}</span>
         </div>`;
       }).join('')}
-      <div class="piede"><b>${presiSett} / ${postiSett}</b> posti assegnati nei prossimi sette giorni${
-        scoperti ? ` · <b style="color:var(--danger)">${scoperti} ${scoperti === 1 ? 'giorno scoperto' : 'giorni scoperti'}</b>` : ' · nessun giorno scoperto'}</div>
+      <div class="piede"><b>${presiSett}/${postiSett}</b> posti assegnati${
+        scoperti ? ` · <b class="allarme">${scoperti} ${scoperti === 1 ? 'giorno scoperto' : 'giorni scoperti'}</b>` : ' · nessun giorno scoperto'}</div>
     </section>`;
 
-  const turni = [...drives30.entries()].sort((a, b) => b[1].n - a[1].n).slice(0, 6);
+  const turni = [...drives30.entries()].sort((a, b) => b[1].n - a[1].n).slice(0, 5);
   const totTurni = turni.reduce((s, [, v]) => s + v.n, 0);
   const mieiTurni = drives30.get(currentUser.id)?.n ?? 0;
   const cardTurni = turni.length ? `
@@ -2384,10 +2427,10 @@ async function disegnaRiepilogo(box) {
         const suo = mio(id);
         return `<div class="turno">
           <span class="n">${suo ? '<b>Tu</b>' : escapeHtml(v.name)}</span>
-          <span class="bar"><i style="width:${totTurni ? ((v.n / turni[0][1].n) * 100).toFixed(0) : 0}%;background:${suo ? 'var(--ottone)' : 'var(--primary)'}"></i><em>${v.n}</em></span>
+          <span class="bar"><i style="width:${totTurni ? ((v.n / turni[0][1].n) * 100).toFixed(0) : 0}%;background:${suo ? 'var(--tuo)' : 'var(--ink-soft)'}"></i><em>${v.n}</em></span>
         </div>`;
       }).join('')}
-      <div class="piede"><b style="color:var(--ottone-scuro)">${totTurni ? Math.round((mieiTurni / totTurni) * 100) : 0}%</b> dei turni a tuo carico</div>
+      <div class="piede"><b class="tuo">${totTurni ? Math.round((mieiTurni / totTurni) * 100) : 0}%</b> dei turni a tuo carico</div>
     </section>` : `
     <section class="card g-turni">
       <div class="head"><div><h3>Distribuzione turni</h3><span class="sub">ultimi 30 giorni</span></div></div>
@@ -2396,10 +2439,9 @@ async function disegnaRiepilogo(box) {
 
   const cardConti = `
     <section class="card g-conti" id="dash-conti">
-      <div class="head"><div><h3>Conti in sospeso</h3>
-        <span class="sub">quote di carburante non ancora saldate</span></div>
-        <span class="pill">Saldo: <b style="color:${saldo >= 0 ? 'var(--ok-deep)' : 'var(--danger)'}">${saldo >= 0 ? '+ ' : '− '}${escapeHtml(eur(Math.abs(saldo)))}</b></span></div>
-      ${partite.length ? `<div class="conti">${partite.map(p => {
+      <div class="head"><h3>Conti in sospeso</h3>
+        <span class="pill">Saldo: <b class="${saldo >= 0 ? 'avere' : 'dare'}">${saldo >= 0 ? '+ ' : '− '}${escapeHtml(eur(Math.abs(saldo)))}</b></span></div>
+      ${partite.length ? `<div class="conti">${partite.slice(0, 2).map(p => {
         const n = quantiCon.get(p.id) || 0;
         const da = primaCon.get(p.id);
         // Le voci in ordine di tempo, dalla piu' recente: la contestazione parte
@@ -2428,7 +2470,7 @@ async function disegnaRiepilogo(box) {
         </div>`;
       }).join('')}</div>`
       : '<p class="vuoto">Nessun conto in sospeso. Compaiono qui quando chi guida indica un «€ a testa».</p>'}
-      <div class="piede">${partite.length ? `<button type="button" class="cta-vuoto" id="salda-tutto" style="margin:0 12px 0 0">Salda tutto (${partite.length})</button><button type="button" class="cta-vuoto" id="conto-mese" style="margin:0 12px 0 0">Riepilogo del mese</button>` : ''}Gli importi li vedete solo tu e la persona interessata: la policy sulla tabella nomina le due parti, non la comitiva.</div>
+      <div class="piede">${partite.length > 2 ? `<span class="resto">e altri ${partite.length - 2} conti aperti</span>` : ''}${partite.length ? `<button type="button" class="cta-vuoto" id="salda-tutto">Salda tutto (${partite.length})</button><button type="button" class="cta-vuoto" id="conto-mese">Riepilogo del mese</button>` : 'Gli importi li vedete solo tu e la persona interessata.'}</div>
     </section>`;
 
   box.innerHTML =
@@ -2442,9 +2484,8 @@ async function disegnaRiepilogo(box) {
       <span class="dash-av">${escapeHtml(iniz(myName))}</span>
     </div>
 
-    <div class="kpi">${kpi.join('')}</div>
-
     <div class="grid">
+      <div class="g-kpi">${kpi.join('')}</div>
       ${heroCarb}
       ${cardProssimo}
       ${cardCal}
@@ -2452,9 +2493,15 @@ async function disegnaRiepilogo(box) {
       ${cardSettimana}
       ${cardTurni}
       ${cardAttivita}
+      ${cardAgenda}
       ${cardConti}
-      ${cardDomani}
-    </div>`;
+    </div>
+    <div class="dash-pagine" id="dash-pagine" role="tablist" aria-label="Schermate del riepilogo"></div>`;
+
+  // Il quaderno: quante schermate ci sono lo sa solo il browser, dopo aver
+  // impaginato. Se ce n'e' una sola i pallini non compaiono — un indicatore con
+  // un pallino solo non indica niente — e su un monitor e' esattamente il caso.
+  montaPagine(box);
 
   // I riquadri portano da qualche parte: nessun bottone qui sopra e' finto.
   box.querySelectorAll('[data-vai]').forEach(b => b.addEventListener('click', () => {
@@ -2577,8 +2624,8 @@ async function disegnaRiepilogo(box) {
 // schiarisce fino a 3.7:1, e il grigio a 0.6 di luminosita', fermo a 3.9:1 in
 // entrambi. Un avatar e' un cerchio con due lettere dentro: e' testo, e vale la
 // stessa soglia del testo.
-const COLORI_AV = ['var(--primary)', 'var(--ok-pieno)', 'oklch(0.50 0.03 258)',
-  'oklch(0.55 0.14 300)', 'oklch(0.55 0.13 30)', 'oklch(0.5 0.1 200)'];
+const COLORI_AV = ['oklch(0.78 0.030 227)', 'oklch(0.70 0.050 250)', 'oklch(0.72 0.060 200)',
+  'oklch(0.66 0.070 215)', 'oklch(0.74 0.040 265)', 'oklch(0.68 0.040 185)'];
 function coloreDi(id) {
   let h = 0;
   for (const c of String(id || '')) h = (h * 31 + c.charCodeAt(0)) >>> 0;
@@ -3013,12 +3060,6 @@ function escapeHtml(s) {
     ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
 }
 
-function hueFor(id) {
-  let h = 0;
-  for (const c of id) h = (h * 31 + c.charCodeAt(0)) % 360;
-  return h;
-}
-
 function isPastDay() { return currentDate < todayISO(); }
 
 // Messaggi d'errore: i trigger del DB parlano già italiano
@@ -3158,8 +3199,8 @@ async function renderTurnHint() {
   if (maxN - lazyN < 2) return; // turni già equi, niente frecciatine
   const lazyName = nomeDi(members.find(m => m.user_id === lazyId)?.profile);
   el.innerHTML = lazyId === currentUser.id
-    ? `🚗 Nelle ultime 4 settimane hai guidato ${lazyN === 0 ? 'zero volte' : `solo ${lazyN} ${lazyN === 1 ? 'volta' : 'volte'}`}: tocca a te metterci l'auto 👀`
-    : `👀 ${escapeHtml(lazyName)} ha guidato ${lazyN === 0 ? 'zero volte' : `solo ${lazyN} ${lazyN === 1 ? 'volta' : 'volte'}`} nelle ultime 4 settimane… i turni parlano da soli`;
+    ? `Nelle ultime quattro settimane hai guidato ${lazyN === 0 ? 'zero volte' : `solo ${lazyN} ${lazyN === 1 ? 'volta' : 'volte'}`}: tocca a te metterci l'auto.`
+    : `${escapeHtml(lazyName)} ha guidato ${lazyN === 0 ? 'zero volte' : `solo ${lazyN} ${lazyN === 1 ? 'volta' : 'volte'}`} nelle ultime quattro settimane.`;
   el.classList.remove('hidden');
 }
 
@@ -3716,7 +3757,7 @@ function renderRides(rides) {
       for (const r of rides) {
         const freeN = r.seats - r.seat_claims.length;
         lines.push('');
-        lines.push(`🚗 ${nomeDi(r.driver)} → ${r.destination}`
+        lines.push(`${nomeDi(r.driver)} → ${r.destination}`
           + (r.depart_time ? ` (ore ${r.depart_time.slice(0, 5)})` : ''));
         lines.push('A bordo: ' + (r.seat_claims.map(nomeOccupante).join(', ') || 'nessuno'));
         lines.push(freeN > 0 ? `Liberi: ${freeN} → prenota su ${SITE_URL}` : 'Al completo');
@@ -3727,8 +3768,7 @@ function renderRides(rides) {
   }
   for (const [idx, ride] of rides.entries()) {
     const card = document.createElement('article');
-    card.className = 'ride-card';
-    card.style.setProperty('--car-hue', hueFor(ride.driver_id));
+    card.className = 'ride-card' + (ride.driver_id === currentUser.id ? ' mia' : '');
     card.style.setProperty('--i', idx); // stagger dell'entrata
 
     const head = document.createElement('div');
@@ -3934,7 +3974,7 @@ function renderRides(rides) {
     if (waitlist.length > 0) {
       const wl = document.createElement('div');
       wl.className = 'ride-sub waitlist-row';
-      wl.textContent = '⏳ In attesa: ' + waitlist.map((w, i) =>
+      wl.textContent = 'In attesa: ' + waitlist.map((w, i) =>
         `${i + 1}. ${nomeDi(w.profile)}${w.user_id === currentUser.id ? ' (tu)' : ''}`).join(' · ');
       card.appendChild(wl);
     }

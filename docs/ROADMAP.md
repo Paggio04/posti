@@ -785,7 +785,8 @@ riga: **la base era buona e andava impreziosita, non spogliata.** Togliere la de
 mettere niente al suo posto non dà carattere, dà povertà.
 
 Secondo tentativo, in aggiunta. Vincoli dati: **navy resta il colore principale**, i **bordi restano
-tondeggianti**, ricco ma sobrio.
+tondeggianti**, ricco ma sobrio. *(Vincoli di allora: C40 li ha sostituiti entrambi — la palette è
+onyx e candy blue, e i raggi sono quattro e diversi fra loro.)*
 
 1. **Il tondo della navigazione è di "dove sei", non della Home.** Era fisso sulla Home, rialzato,
    con un anello che pulsava. Ora è un elemento solo che **scivola** sulla colonna attiva, e l'icona
@@ -1310,6 +1311,93 @@ dire chiuso è che la prima schermata non ha più niente di generico, che nessun
 soglia, e che due dei difetti sopra erano rotture vere, non gusto.
 
 ---
+
+## Fase 9 — Il tabellone (06/08/2026)
+
+### C40 — Due colori, un tema, e il riepilogo che sta in una schermata — *fatto*
+
+Richiesta del proprietario, con la palette allegata: **onyx `#020202` e candy blue `#B2D5E5`**,
+tutte le pagine e l'accesso, l'accesso resta animato, e nel riepilogo **niente scorrimento** né
+sulla pagina né dentro i riquadri.
+
+**1. Il buio è il materiale, non un tema.** Non c'è più un tema chiaro e uno scuro: c'è l'onyx.
+`prefers-color-scheme` era una scelta neutra travestita da cortesia — due palette da mantenere, due
+giri di contrasti da verificare, e nessuna delle due che è *la* faccia dell'app. Il contesto d'uso di
+PRODUCT.md è in piedi al buio davanti a un portone: uno schermo che spara bianco addosso lì è una
+scelta contro chi lo usa. Il riferimento fisico non è un cruscotto né un terminale — sono i due
+riflessi che PRODUCT.md nomina per non prenderli — è una **targa smaltata nera con le lettere
+chiare**: un tabellone degli orari, il cartello di una fermata.
+
+**2. Un accento solo, e vuol dire due cose che si distinguono per forma.** Il candy blue dice
+«questo si tocca» quando è *scritto* o è un contorno, e dice «questo è tuo» quando è un blocco
+*pieno* con l'onyx sopra. Niente di decorativo è candy blue. L'ottone è sparito: era il secondo
+colore, e con una palette di due tinte un terzo colore è una tinta in più, non un'informazione in
+più. Sono sparite anche le sei tinte a caso degli avatar — viola, rosso, verde — che erano sei
+accenti in un'app che ne ha uno: restano sei perché servono a distinguere sei persone, ma stanno
+tutte nella famiglia del candy blue e cambiano di luminosità prima che di tinta.
+
+**3. La profondità la fanno le righe.** Su un fondo quasi nero un'ombra è invisibile o è sporco. Le
+schede si separano con un bordo da un pixel e mezzo tono di fondo, come pannelli avvitati sulla
+stessa lamiera. Le due ombre rimaste stanno solo dove una cosa galleggia davvero: il dialogo e il
+messaggio che compare.
+
+**4. I raggi sono quattro e diversi fra loro.** «Tutto arrotondato allo stesso raggio» sta fra gli
+anti-riferimenti, ed era vero: ventidue pixel su qualsiasi cosa. Ora 3 per le pastiglie, 6 per
+bottoni e campi, 10 per le schede, 14 per i pannelli. Le pillole restano solo dove sono cerchi
+davvero: le facce, i pallini. Con loro se n'è andata la **pillola flottante in basso**, che era
+l'anti-riferimento più letterale rimasto in piedi: adesso è una fascia appoggiata al bordo, e il
+movimento che diceva dove sei — un elemento solo che scivola — è diventato un rettangolo di due
+pixel invece di un tondo che solleva un'icona.
+
+**5. L'accesso resta animato, e l'animazione racconta il prodotto.** Quello che si muove è l'auto
+che si riempie: i posti si occupano uno alla volta, la frase accanto conta quelli che restano
+(«restano tre posti», «resta un posto», «l'auto è piena»), poi riparte. Chi non ha mai aperto l'app
+capisce cos'è prima di entrarci — l'unico argomento per cui una schermata d'accesso può permettersi
+un'animazione. Sul telefono, dove il cartello grande non c'è perché lo spazio verticale serve tutto
+al modulo, la stessa cosa la dice una striscia di quattro posti nella riga del marchio: **costa zero
+pixel di altezza** perché occupa il vuoto a destra del nome. Un contatore solo per i due disegni, o
+potrebbero mostrare due numeri diversi. Vive in `accesso.js`, non in `app.js`, per la stessa ragione
+di `rete.js`: `app.js` comincia con un `import` da un CDN, e la prima schermata dell'app non può
+dipendere dal fatto che un dominio di terzi risponda.
+
+**6. Il riepilogo non scorre, e non barare è la parte difficile.** Prima la promessa valeva solo da
+1280px e con la finestra alta almeno 700: sotto quelle soglie si tornava a scorrere, e i riquadri
+più carichi tenevano una barra di scorrimento propria. Adesso vale sempre, con un meccanismo solo e
+due numeri: **quante colonne si vedono insieme** (la larghezza) e **quante schede stanno in una
+colonna** (l'altezza). Se le colonne che escono sono meno di quelle visibili si vede tutto insieme;
+se sono di più si va avanti di lato, una colonna alla volta, con i pallini sotto. Nessuna soglia
+decide «qui scorre e qui no»: lo decide l'aritmetica.
+
+La parte che ha richiesto tre giri è che *la pagina non scorreva già al primo colpo* — ma il
+calendario, la settimana e i conti venivano tagliati dai loro stessi bordi. **Un riquadro con tre
+quarti di calendario dentro non è «senza scorrimento», è un calendario rotto**, ed è lo stesso
+difetto di prima detto in un altro modo. Si misura, non si guarda: `banco` di prova a sette
+larghezze, e il criterio è `scrollHeight > clientHeight` su ogni riquadro. Da lì sono usciti:
+`--righe` legato all'**altezza** e non alla larghezza (240px è sotto quanto un mese diventa
+illeggibile); l'agenda staccata dal calendario, perché il mese e i prossimi sette giorni sono due
+domande diverse e insieme facevano la scheda che costringeva tutte le altre; la riga di un conto che
+resta una riga e taglia il nome coi puntini invece di andare a capo tre volte; e un tetto su ogni
+elenco **con scritto quante voci restano fuori** — un elenco troncato in silenzio è un dato sparito.
+
+**7. La ciambella di domani è diventata una riga.** Era una scheda intera con un grafico ad anello e
+tre voci di legenda per dire due numeri. Il primo principio di PRODUCT.md dice che se una cosa si
+capisce grazie a un disegno non si è capita: «domani · 3 auto · 5/9 posti» sono gli stessi numeri,
+letti prima, in un ventesimo dello spazio. E le schede da dieci sono diventate nove, che in colonne
+da tre fanno esattamente quattro colonne piene — il riquadro che diceva poco era anche quello che
+lasciava il buco in fondo alla tavola. Non è una coincidenza fortunata.
+
+**Il controllo del contrasto è stato riscritto, non allentato.** Un tema solo invece di due, e le
+coppie sono quelle del sistema nuovo: 38 in tutto, dal testo tenue sul fondo al contorno di un
+sedile libero (che porta informazione, quindi vale la 1.4.11 e la soglia è 3:1, non 4.5). Una l'ha
+già fermato: il contorno del candy blue a `L 0.42` faceva 2.30:1, e sta a 0.52 perché lì fa 3.56.
+
+**Fatto quando:** il giudizio resta di chi la usa. Quello che qui si può dire chiuso è che nessuna
+delle sette misure prova scorrimento — né di pagina né dentro un riquadro — che nessun contrasto è
+sotto soglia, e che gli anti-riferimenti rimasti in piedi (la pillola flottante, il raggio unico,
+l'icona grigia centrata negli stati vuoti) non ci sono più.
+
+---
+
 ## Revisione integrale del 27/07/2026 — cosa è uscito
 
 Lettura riga per riga di `app.js` (2103 righe), delle 17 migrazioni, del guscio (`sw.js`,
@@ -1376,4 +1464,5 @@ seconda volta che ripaga: il difetto peggiore era **fuori** dal file che stavo g
 | **D6** | Servizi esterni (C14) | Solo API native del browser: Web Share per l'invito, `.ics` per il calendario, link Maps con coordinate vere (dentro C9). Nessun SDK di terzi, nessuna analytics. |
 | **D7** | Estetica (C15) | Il difetto è che sembra generata dall'AI, non che sia brutta. Si tolgono gli effetti generici, si sceglie una tipografia vera, l'auto SVG diventa protagonista. Prova del nove: coperto il logo, si riconosce lo stesso. |
 | **D8** | Nome e dominio (C20) | Repo rinominato in `wetransport`; dominio proprio al momento dell'apertura al pubblico, non prima. |
+| **D10** | Palette e tema (C40) | Onyx `#020202` e candy blue `#B2D5E5`, **un tema solo**: niente `prefers-color-scheme`, perché due palette sono due cose da mantenere e nessuna delle due è la faccia dell'app. Un accento solo, e le due cose che dice — «si tocca», «è tuo» — si distinguono per **forma** (scritto/contornato contro pieno), non per tinta. Il riepilogo non scorre a nessuna misura: quello che non entra va nella schermata dopo, non compresso e non tagliato. |
 | **D9** | Contrasto (C39) | Si calcola, non si stima. I rapporti nei commenti valgono finché nessuno tocca un token, cioè non valgono: `tests/contrasto.mjs` legge i token dal foglio di stile e sta dentro `npm run check`. Un colore che deve reggere due contrasti opposti (bianco sopra, se stesso come testo) è due token, non uno. |

@@ -10,8 +10,8 @@
   <link rel="stylesheet" href="style.css" />
   <link rel="manifest" href="manifest.json" />
   <link rel="icon" href="icon.svg" type="image/svg+xml" />
-  <meta name="theme-color" content="#14243d" />
-  <meta name="color-scheme" content="light dark" />
+  <meta name="theme-color" content="#020202" />
+  <meta name="color-scheme" content="dark" />
 
   <!-- Netlify serve l'informativa sia come /privacy sia come /privacy.html, entrambe con
        200: senza canonical un motore di ricerca vede due pagine identiche e sceglie lui. -->
@@ -96,7 +96,15 @@
     <div class="auth-form-panel">
 
       <div class="auth-card" id="auth-card">
-        <p class="auth-marchio"><svg width="19" height="19"><use href="#i-car"/></svg> WeTransport</p>
+        <p class="auth-marchio"><svg width="19" height="19"><use href="#i-car"/></svg> WeTransport
+          <!-- I quattro posti. Sta qui e non sotto il titolo perche' a destra del
+               marchio c'era spazio vuoto: costa zero pixel di altezza, e sul
+               telefono l'altezza e' l'unica cosa che scarseggia (c'e' un test a
+               360x780 che lo verifica). Lo riempie `app.js`, lo stesso contatore
+               che riempie l'auto grande: non possono dire due numeri diversi. -->
+          <span class="auth-posti" id="auth-posti" role="img" aria-label="Restano due posti.">
+            <i></i><i></i><i></i><i></i>
+          </span></p>
         <h2 id="auth-title">Chi guida oggi?</h2>
         <p id="auth-subtitle" class="auth-subtitle">Accedi e vedi i posti liberi della comitiva.</p>
 
@@ -188,25 +196,29 @@
         </g>
         <circle cx="58" cy="60" r="8" class="car-wheel-steer"/>
 
-        <g class="seat seat-taken">
+        <!-- I quattro posti si occupano davanti-dietro, nell'ordine in cui si
+             riempie un'auto vera. Lo stato iniziale scritto qui e' quello che si
+             vede senza JavaScript e con `prefers-reduced-motion`: due presi, due
+             liberi, cioe' la frase che c'e' scritta accanto. -->
+        <g class="seat seat-taken" data-posto="1">
           <rect x="112" y="66" width="40" height="14" rx="7" class="seat-back"/>
           <rect x="110" y="78" width="44" height="40" rx="12" class="seat-base"/>
           <path d="M 119 86 L 145 86" class="seat-piega"/>
           <text x="132" y="104" class="seat-text">GI</text>
         </g>
-        <g class="seat seat-taken">
+        <g class="seat seat-taken" data-posto="2">
           <rect x="23" y="118" width="40" height="14" rx="7" class="seat-back"/>
           <rect x="21" y="130" width="44" height="40" rx="12" class="seat-base"/>
           <path d="M 30 138 L 56 138" class="seat-piega"/>
           <text x="43" y="156" class="seat-text">SA</text>
         </g>
-        <g class="seat seat-free">
+        <g class="seat seat-free" data-posto="3">
           <rect x="75" y="118" width="40" height="14" rx="7" class="seat-back"/>
           <rect x="73" y="130" width="44" height="40" rx="12" class="seat-base"/>
           <path d="M 82 138 L 108 138" class="seat-piega"/>
           <text x="95" y="156" class="seat-text">+</text>
         </g>
-        <g class="seat seat-free">
+        <g class="seat seat-free" data-posto="4">
           <rect x="127" y="118" width="40" height="14" rx="7" class="seat-back"/>
           <rect x="125" y="130" width="44" height="40" rx="12" class="seat-base"/>
           <path d="M 134 138 L 160 138" class="seat-piega"/>
@@ -214,7 +226,11 @@
         </g>
       </svg>
       <div class="cartello-testo">
-        <p class="cartello-riga"><b>Restano due posti.</b></p>
+        <!-- La frase la riscrive `app.js` a ogni sedile che si occupa. Non e' un
+             contatore dentro una frase fissa: «resta un posto» e «restano due
+             posti» hanno due verbi diversi, e mezza frase incollata a un numero
+             sarebbe italiano sbagliato una volta su quattro. -->
+        <p class="cartello-riga"><b id="cartello-frase">Restano due posti.</b></p>
         <p class="cartello-riga cartello-sotto">Chi guida mette la sua auto, gli altri toccano un
           sedile e sono a bordo. Niente da chiedere in chat.</p>
       </div>
@@ -394,7 +410,6 @@
         <div id="week-grid" class="week-grid hidden"></div>
         <div id="rides-list" class="rides-grid"></div>
         <div id="empty-message" class="empty hidden">
-          <div class="empty-icon"><svg width="40" height="40"><use href="#i-parking"/></svg></div>
           <p class="empty-title">Nessuna auto per questo giorno</p>
           <p class="empty-hint">Guidi tu? Tocca <strong>"Metti la tua auto"</strong> qui sopra. Altrimenti attendi che qualcuno del gruppo pubblichi la sua.</p>
         </div>
@@ -411,7 +426,6 @@
         </div>
         <div id="history-list" class="history-list"></div>
         <div id="history-empty" class="empty hidden">
-          <div class="empty-icon"><svg width="40" height="40"><use href="#i-history"/></svg></div>
           <p class="empty-title">Ancora nessun viaggio</p>
           <p class="empty-hint">Quando i giorni passano, qui trovi chi ha guidato e chi era con lui.</p>
         </div>
@@ -427,7 +441,6 @@
         </div>
         <div id="groups-list" class="groups-list"></div>
         <div id="groups-empty" class="empty hidden">
-          <div class="empty-icon"><svg width="40" height="40"><use href="#i-users"/></svg></div>
           <p class="empty-title">Non sei ancora in nessun gruppo</p>
           <p class="empty-hint">Crea il tuo gruppo o fatti mandare un codice da un amico.</p>
         </div>
@@ -559,8 +572,10 @@
 
   <div id="toast" class="toast hidden" role="status"></div>
 
-  <!-- Prima app.js, e senza import: deve funzionare anche quando app.js non parte. -->
+  <!-- Prima app.js, e senza import: devono funzionare anche quando app.js non parte,
+       cioe' quando il CDN da cui arriva la libreria di Supabase non risponde. -->
   <script type="module" src="rete.js"></script>
+  <script type="module" src="accesso.js"></script>
   <script type="module" src="app.js"></script>
 </body>
 </html>
