@@ -167,6 +167,27 @@
   --ok-pieno: oklch(0.55 0.12 165);
   --ok-soft: oklch(0.235 0.050 165);
 
+  /* ---- la carrozzeria --------------------------------------------------- */
+  /* **La scocca e' una superficie piena, non un contorno.** Fino a ieri era
+     riempita di `--surface`, cioe' quasi lo stesso nero del pannello sotto:
+     1,42:1. La sagoma esisteva solo grazie a due pixel di bordo, e l'occhio non
+     vedeva un'auto — vedeva cinque macchie chiare, i sedili, che galleggiavano
+     nel buio. Figura e sfondo erano invertiti.
+     Adesso e' il contrario, ed e' come funziona una mappa dei posti vera (un
+     aereo, un cinema): **l'oggetto e' solido e i posti sono buchi scavati
+     dentro**. Misurato: 4,12:1 sul pannello dell'accesso, 3,83:1 sulla scheda di
+     un passaggio, cioe' sopra soglia su entrambi i fondi su cui l'auto compare. */
+  --scocca: oklch(0.54 0.020 227);
+  --scocca-luce: oklch(0.64 0.022 227);
+  --scocca-ombra: oklch(0.46 0.020 227);
+  --scocca-riga: oklch(0.34 0.018 227);
+  --vetro: oklch(0.36 0.030 227);
+  --gomma: oklch(0.11 0.010 227);
+  /* Il vuoto di un sedile: un buco nella lamiera, quindi piu' scuro di tutto. */
+  --posto: oklch(0.13 0.015 227);
+  --pavimento: oklch(0.22 0.016 227);
+  --posto-bordo: oklch(0.72 0.015 227);
+
   /* ---- le forme -------------------------------------------------------- */
   /* Quattro raggi, uno per classe di oggetto. Il piccolo e' quasi vivo perche'
      una pastiglia da venti pixel arrotondata a otto e' una caramella. */
@@ -1223,35 +1244,44 @@ input[type="time"]::-webkit-calendar-picker-indicator { filter: invert(1) opacit
 
 /* ---- L'auto SVG ----------------------------------------------------------
    E' l'unica cosa qui dentro che nessun altro ha, ed e' la prima che si deve
-   vedere (PRODUCT.md, principio 3). Sul buio non e' piu' una lamiera che prende
-   luce: e' un **disegno tecnico**. Contorno chiaro, corpo appena piu' chiaro del
-   fondo, e i sedili che sono l'unica cosa colorata. La scocca non ha piu' una
-   tinta per guidatore: sei auto di sei colori diversi erano sei accenti, e
-   l'accento e' uno.
+   vedere (PRODUCT.md, principio 3).
 
-   I tre stati di un sedile si distinguono per **forma** prima che per colore:
-   · libero  → contorno tratteggiato, dentro un «+»;
-   · occupato→ pieno chiaro, dentro le iniziali;
-   · tuo     → pieno candy blue, con l'onyx sopra e il bordo doppio.            */
-/* La misura scende da 220 a 150 perche' la sagoma e' cambiata: adesso il viewBox
-   e' 150x310 invece di 190x250, cioe' l'auto e' piu' stretta e piu' lunga. A
-   parita' di larghezza sarebbe diventata mezzo schermo di altezza. */
+   **Figura e sfondo, e questa e' la terza stesura.** Le prime due disegnavano
+   l'auto come un contorno chiaro su una scocca nera quanto la pagina: a video
+   non si leggeva un'auto, si leggevano cinque rettangoli chiari sospesi nel
+   buio. Il difetto non erano le proporzioni (quelle erano gia' giuste) ne' i
+   dettagli (passaruota, fari, porte c'erano): era che **la carrozzeria non
+   aveva corpo**.
+
+   Adesso la scocca e' una superficie piena e chiara, e i posti sono buchi
+   scavati dentro. E' come e' fatta una mappa dei posti vera — un aereo, un
+   cinema, un teatro: l'oggetto e' solido, i posti sono vuoti.
+
+   I quattro stati si distinguono per **forma prima che per colore**, che e' cio'
+   che PRODUCT.md chiede a lettere (un'auto piena e una vuota non possono
+   dipendere dal rosso e dal verde):
+   · libero   → buco con il contorno **tratteggiato** candy blue, dentro un «+»;
+   · occupato → buco con il contorno **pieno** chiaro, dentro le iniziali;
+   · di chi guida → come occupato, piu' il tondo del volante accanto;
+   · tuo      → **l'unico riempimento candy blue del disegno**, bordo spesso.  */
 .car-svg { width: min(150px, 58%); margin: 6px auto 2px; display: block; }
-/* Il contorno e' candy blue smorzato e non grigio: e' quello che fa leggere la
-   sagoma come una cosa disegnata apposta invece che come una macchia piu' chiara
-   sul nero. La scocca resta appena sopra il fondo — la protagonista sono i sedili,
-   e se anche la lamiera avesse un colore competerebbe con loro. */
-.car-body { fill: var(--surface); stroke: var(--primary-bordo); stroke-width: 2; }
-.lamiera-alto, .lamiera-mezzo, .lamiera-basso { stop-color: var(--surface); }
-.vetro-chiaro, .vetro-scuro { stop-color: var(--surface-2); }
-.car-luce { fill: none; stroke: var(--primary); stroke-width: 2; stroke-linecap: round; opacity: 0.55; }
+
+/* La lamiera: chiara, con la luce che arriva dall'alto. Il gradiente serve a
+   dare volume a una superficie grande; senza, e' una sagoma di cartone. */
+.car-body { fill: var(--scocca); stroke: var(--scocca-luce); stroke-width: 1.5; }
+.lamiera-alto { stop-color: var(--scocca-luce); }
+.lamiera-mezzo { stop-color: var(--scocca); }
+.lamiera-basso { stop-color: var(--scocca-ombra); }
+.car-luce { fill: none; stroke: oklch(1 0 0 / 0.30); stroke-width: 2; stroke-linecap: round; }
 .car-ombra { fill: none; }
-.car-riflesso { fill: none; }
-.car-glass { fill: var(--surface-2); stroke: var(--border-strong); stroke-width: 1; }
-/* Le ruote erano dello stesso tono del bordo e sparivano: senza ruote, vista da
-   sopra, quella sagoma e' un rettangolo con degli angoli. */
-.car-wheel { fill: var(--ink-soft); }
-.car-wheel-steer { fill: none; stroke: var(--ink-soft); stroke-width: 3; }
+/* Il vetro e' scuro: guardando un'auto dall'alto, dentro non si vede. */
+.vetro-chiaro { stop-color: oklch(0.44 0.030 227); }
+.vetro-scuro { stop-color: var(--vetro); }
+.car-glass { fill: var(--vetro); stroke: var(--scocca-riga); stroke-width: 1; }
+.car-riflesso { fill: oklch(1 0 0 / 0.22); }
+/* Le gomme sono nere, come le gomme. Su una scocca chiara si staccano da sole. */
+.car-wheel { fill: var(--gomma); }
+.car-wheel-steer { fill: none; stroke: var(--posto-bordo); stroke-width: 2.5; }
 
 /* --- Le finiture della carrozzeria ---------------------------------------
    Prese dal riferimento della supercar, che pero' e' un'auto **di profilo**: di
@@ -1260,37 +1290,34 @@ input[type="time"]::-webkit-calendar-picker-indicator { filter: invert(1) opacit
    vocabolario — passaruota, battistrada, fari, pieghe, porte — non
    l'inquadratura. E non i colori: rosso metallizzato e ciano al neon sono due
    tinte che questa palette non ha. */
-
-/* L'arco che chiude la ruota. Un riempimento non si vedrebbe — il fondo della
-   scheda e' gia' l'onyx — quindi e' un contorno. */
-.car-passaruota { fill: none; stroke: var(--border-strong); stroke-width: 1.4; }
-/* Cofano e baule: le due righe che dividono l'auto nelle sue tre parti. */
-.car-cofano { fill: none; stroke: var(--border-strong); stroke-width: 1.4; stroke-linecap: round; }
-/* La presa d'aria fra i fari: una riga, e il muso ha una faccia. */
-.car-griglia { stroke: var(--border-strong); stroke-width: 2.5; stroke-linecap: round; }
-/* Il vano dell'abitacolo, dove il tetto e' tagliato via per far vedere i sedili.
-   Senza, muso e coda sono la stessa superficie nera dei sedili e questi sembrano
-   appoggiati sulla lamiera invece che dentro l'auto. */
-.car-abitacolo { fill: none; stroke: var(--border); stroke-width: 1.2; }
-/* Il battistrada: tre solchi. A 150px di larghezza e' l'unico dettaglio della
-   ruota che si vede davvero, e senza quello una ruota e' una pastiglia grigia. */
-.car-battistrada { stroke: var(--bg); stroke-width: 1.6; stroke-linecap: round; }
-/* I fari sono l'unico punto in cui la carrozzeria porta il colore dell'app:
-   dicono da che parte guarda l'auto, cioe' dove sta chi guida. */
-.car-faro { fill: var(--primary); }
+.car-passaruota { fill: var(--scocca); stroke: none; }
+.car-battistrada { stroke: oklch(1 0 0 / 0.22); stroke-width: 1.6; stroke-linecap: round; }
+.car-cofano { fill: none; stroke: var(--scocca-riga); stroke-width: 1.4; stroke-linecap: round; }
+.car-griglia { stroke: var(--scocca-riga); stroke-width: 3; stroke-linecap: round; }
+/* I fari sono l'unico punto in cui la lamiera porta il colore dell'app: dicono
+   da che parte guarda l'auto, cioe' dove sta chi guida. */
+.car-faro { fill: var(--primary); stroke: var(--scocca-riga); stroke-width: 1; }
 /* I fanali dietro restano un contorno. Pieni e rossi sarebbero il colore
    dell'errore su una cosa che non e' un errore. */
-.car-fanale { fill: none; stroke: var(--ink-soft); stroke-width: 1.5; }
-/* Le porte: una riga corta sul fianco all'altezza di ogni fila. E' il segnale
-   piu' economico che esista per far leggere una scocca come una scocca. */
-.car-porta { stroke: var(--border-strong); stroke-width: 1.5; stroke-linecap: round; }
-/* La piega del fianco, che da' spessore alla lamiera. */
-.car-piega-scocca { stroke: var(--primary-bordo); stroke-width: 1.2; opacity: 0.55; stroke-linecap: round; }
+.car-fanale { fill: none; stroke: var(--scocca-riga); stroke-width: 1.8; }
+.car-porta { stroke: var(--scocca-riga); stroke-width: 1.5; stroke-linecap: round; }
+.car-piega-scocca { stroke: oklch(1 0 0 / 0.16); stroke-width: 1.2; stroke-linecap: round; }
+/* Il pavimento dell'abitacolo: il vano dove il tetto e' tagliato via per far
+   vedere i posti. Piu' scuro della lamiera, o i sedili sembrano appoggiati
+   sopra il cofano invece che dentro l'auto. */
+.car-abitacolo { fill: var(--pavimento); stroke: var(--scocca-riga); stroke-width: 1.2; }
+/* I paraurti: una fascia piu' scura all'estremita'. Senza, muso e coda sono due
+   grandi superfici chiare e vuote, e l'auto sembra un guscio. */
+.car-paraurti { fill: var(--scocca-ombra); }
 
-.seat .seat-back { fill: var(--surface-2); }
+/* --- I posti -------------------------------------------------------------
+   Un posto e' un **buco**: fondo scuro, e il contorno dice in che stato e'.
+   L'unico riempimento del disegno e' il tuo, ed e' per questo che si trova con
+   un colpo d'occhio in un'auto da sei senza leggere le iniziali. */
+.seat .seat-back { fill: var(--scocca-ombra); }
 .seat .seat-base {
-  fill: var(--bg);
-  stroke: var(--border-strong);
+  fill: var(--posto);
+  stroke: var(--posto-bordo);
   stroke-width: 1.5;
   transition: fill var(--t-med) var(--ease-out), stroke var(--t-med) var(--ease-out),
               transform var(--t-med) var(--ease-out);
@@ -1302,42 +1329,32 @@ input[type="time"]::-webkit-calendar-picker-indicator { filter: invert(1) opacit
   font-family: 'IBM Plex Sans', system-ui, sans-serif;
   font-size: 14px;
   font-weight: 700;
-  fill: var(--ink-soft);
+  fill: var(--ink);
   pointer-events: none;
   transition: fill var(--t-med) var(--ease-out);
 }
 
-/* Chi guida: **vuoto con il contorno pieno**, non riempito come i passeggeri. Non
-   e' un posto che qualcuno puo' prendere, quindi non partecipa alla scala del candy
-   blue — ma nemmeno puo' essere identico a un sedile occupato, o sono cinque
-   blocchi grigi uguali. Il tondo del volante accanto finisce di dirlo. */
-.seat-driver .seat-base { fill: var(--surface-2); stroke: var(--ink-soft); stroke-width: 2; }
-.seat-driver .seat-back { fill: var(--border-strong); }
-.seat-driver .seat-text { fill: var(--ink); }
-.seat-driver .seat-piega { stroke: oklch(1 0 0 / 0.18); }
+/* Chi guida: un posto occupato per definizione, e il tondo del volante accanto
+   e' quello che lo distingue da un passeggero. */
+.seat-driver .seat-base { stroke: var(--posto-bordo); stroke-width: 2; }
+.seat-driver .seat-back { fill: var(--scocca-riga); }
 
-.seat-free .seat-base {
-  stroke-dasharray: 5 4;
-  stroke: var(--primary-bordo);
-  fill: transparent;
-}
+/* Libero: tratteggiato. Il tratteggio e' un vuoto anche per chi non vede il
+   colore, ed e' la stessa convenzione del giorno scoperto nella settimana. */
+.seat-free .seat-base { stroke-dasharray: 5 4; stroke: var(--primary); }
 .seat-free .seat-text { fill: var(--primary-testo); font-size: 18px; font-weight: 600; }
 
-.seat-taken .seat-base { fill: var(--ink-soft); stroke: var(--ink-soft); }
-.seat-taken .seat-back { fill: var(--border-strong); }
-.seat-taken .seat-text { fill: var(--bg); }
+.seat-taken .seat-base { stroke: var(--posto-bordo); }
 
-/* Il tuo posto. E' l'unico sedile che ti riguarda, e in un'auto da cinque deve
-   trovarsi con un colpo d'occhio, senza leggere le iniziali. */
-.seat-mine .seat-base { fill: var(--tuo); stroke: var(--tuo); stroke-width: 3; }
+/* Il tuo. L'unico pieno del disegno. */
+.seat-mine .seat-base { fill: var(--tuo); stroke: var(--scocca-riga); stroke-width: 2.5; }
 .seat-mine .seat-back { fill: var(--tuo-bordo); }
 .seat-mine .seat-text { fill: var(--tuo-su); }
 .seat-mine .seat-piega { stroke: oklch(0.13 0.012 227 / 0.35); }
 
-/* La piega del cuscino: e' quello che rende un rettangolo un sedile. */
-.seat-piega { fill: none; stroke: oklch(1 0 0 / 0.14); stroke-width: 1.5; stroke-linecap: round; }
-.seat-free .seat-piega { stroke: var(--primary-bordo); opacity: 0.6; }
-.seat-taken .seat-piega, .seat-driver .seat-piega { stroke: oklch(0.085 0 0 / 0.30); }
+/* La piega del cuscino: e' quella che rende un rettangolo un sedile. */
+.seat-piega { fill: none; stroke: oklch(1 0 0 / 0.16); stroke-width: 1.5; stroke-linecap: round; }
+.seat-free .seat-piega { stroke: var(--primary); opacity: 0.45; }
 
 .seat-click { cursor: pointer; }
 .seat-click:hover .seat-base { transform: scale(1.1); }

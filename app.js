@@ -3411,6 +3411,11 @@ function finitureAuto(svg, H, righe) {
     }
   }
 
+  // I paraurti: la fascia piu' scura all'estremita'. Senza, muso e coda sono due
+  // superfici chiare e vuote, e l'auto sembra un guscio invece di un mezzo.
+  svg.appendChild(svgEl('rect', { x: 40, y: 12, width: 70, height: 22, rx: 11, class: 'car-paraurti' }));
+  svg.appendChild(svgEl('rect', { x: 36, y: H - 34, width: 78, height: 24, rx: 12, class: 'car-paraurti' }));
+
   // Cofano e baule: la riga dove la lamiera piatta finisce e comincia il vetro.
   // Sono le due che dividono l'auto nelle sue tre parti — muso, abitacolo, coda —
   // e senza di loro il muso e' solo spazio vuoto sopra il parabrezza.

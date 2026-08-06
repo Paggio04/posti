@@ -146,6 +146,21 @@ const COPPIE = [
   ['iniziali sull\'avatar 6', '--su-primario', 'oklch(0.68 0.040 185)', 4.5],
   ['iniziali sull\'avatar tuo', '--tuo-su', '--tuo', 4.5],
 
+  // L'auto. La scocca e' un elemento non testuale che porta informazione — se non
+  // si vede, non si vede che c'e' un'auto — quindi vale la 1.4.11 e la soglia e'
+  // 3:1, su **tutti e due** i fondi su cui l'auto compare: il pannello
+  // dell'accesso e la scheda di un passaggio. E' la coppia che avrebbe fermato le
+  // prime due stesure: scocca riempita di `--surface` faceva 1,42:1.
+  ['scocca dell\'auto, sul fondo pagina', '--scocca', '--bg', 3],
+  ['scocca dell\'auto, sulla scheda del passaggio', '--scocca', '--surface', 3],
+  ['il vuoto di un posto, sulla scocca', '--posto', '--scocca', 3],
+  ['il posto tuo, sulla scocca', '--tuo', '--scocca', 3],
+  ['contorno di un posto, sul suo vuoto', '--posto-bordo', '--posto', 3],
+  ['contorno di un posto libero, sul suo vuoto', '--primary', '--posto', 3],
+  ['iniziali dentro un posto', '--ink', '--posto', 4.5],
+  ['iniziali dentro il posto tuo', '--tuo-su', '--tuo', 4.5],
+  ['gomma sulla scocca', '--gomma', '--scocca', 3],
+
   // Il benvenuto e' l'unico riquadro dove il candy blue prende tutta la superficie:
   // il testo sotto il titolo e' un onyx schiarito, non l'onyx pieno, e va misurato.
   ['testo del benvenuto', 'oklch(0.30 0.03 227)', '--primary', 4.5],
