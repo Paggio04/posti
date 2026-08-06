@@ -38,8 +38,12 @@ async function creaGruppo(page, nome) {
   await rispondiAlDialogo(page, '');
 }
 
+// Le navigazioni sono due e si escludono: la barra in alto da 768px in su, la pillola
+// in basso sotto. Il test non deve sapere quale delle due sta guardando — clicca
+// quella visibile, cosi' vale a qualsiasi larghezza di finestra.
 async function vaiA(page, vista) {
-  await page.locator(`.nav-item[data-view="${vista}"]`).click();
+  await page.locator(`.top-item[data-view="${vista}"], .nav-item[data-view="${vista}"]`)
+    .locator('visible=true').first().click();
   await expect(page.locator(`#view-${vista}`)).toBeVisible();
 }
 

@@ -964,22 +964,28 @@ function switchView(view) {
       b.removeAttribute('aria-current');
     }
   });
-  // La barra laterale segue le stesse viste. Non usa `.nav-item` di proposito:
+  // La barra in alto segue le stesse viste. Non usa `.nav-item` di proposito:
   // quel ciclo qui sopra ricava la colonna del tondo dalla **posizione** del
-  // pulsante nell'elenco, e tredici pulsanti al posto di cinque lo manderebbero
+  // pulsante nell'elenco, e otto pulsanti al posto di cinque lo manderebbero
   // a segnare una colonna che non esiste.
-  document.querySelectorAll('.side-item').forEach(b => {
-    const attiva = b.dataset.view === view && !b.dataset.scroll;
+  document.querySelectorAll('.top-item').forEach(b => {
+    const attiva = b.dataset.view === view;
     b.classList.toggle('on', attiva);
     if (attiva) b.setAttribute('aria-current', 'page'); else b.removeAttribute('aria-current');
   });
-  // Il profilo non ha una voce: ce l'ha la scheda con la faccia, in fondo. Senza
+  tondoACasa();
+  // Il profilo non ha una voce: ce l'ha la scheda con la faccia, a destra. Senza
   // questa riga si arrivava sul profilo e nella barra non era acceso niente, cioe'
   // la navigazione smetteva di dire dove sei proprio dove sei arrivato.
-  const scheda = document.getElementById('side-me');
+  const scheda = document.getElementById('top-me');
   scheda?.classList.toggle('on', view === 'profile');
   if (view === 'profile') scheda?.setAttribute('aria-current', 'page');
   else scheda?.removeAttribute('aria-current');
+  // La vista corrente e' scritta sul guscio e sul contenitore: il riepilogo e' l'unica
+  // che vuole tutta la larghezza e nessuno scorrimento, e il CSS ha bisogno di saperlo
+  // da un attributo invece che indovinarlo dal figlio visibile.
+  document.getElementById('app-shell')?.setAttribute('data-vista', view);
+  document.querySelector('.app-view')?.setAttribute('data-vista', view);
   window.scrollTo({ top: 0 });
   if (view === 'history') loadHistory();
   if (view === 'stats') loadStats();
@@ -990,22 +996,46 @@ function switchView(view) {
 document.querySelectorAll('.nav-item').forEach(b =>
   b.addEventListener('click', () => switchView(b.dataset.view)));
 
-// Ogni voce apre una vista e basta. `data-scroll` resta previsto ma non usato: se
-// un domani servisse una voce che porta a un riquadro dentro una vista, il pezzo
-// c'e' gia' e aspetta che `loadStats()` abbia finito di scrivere.
-document.querySelectorAll('.side-item').forEach(b => b.addEventListener('click', () => {
-  switchView(b.dataset.view);
-  const bersaglio = b.dataset.scroll;
-  if (!bersaglio) return;
-  const vaiLi = (tentativi) => {
-    const el = document.getElementById(bersaglio);
-    if (el && !el.classList.contains('hidden')) { el.scrollIntoView({ block: 'start', behavior: 'smooth' }); return; }
-    if (tentativi > 0) setTimeout(() => vaiLi(tentativi - 1), 120);
-  };
-  setTimeout(() => vaiLi(12), 0);
-}));
+// ── Il tondo della barra in alto ────────────────────────────────────────────
+//
+// Le quattro voci hanno larghezze diverse — «Riepilogo» e' quasi il doppio di
+// «Storico» — quindi la posizione non si puo' scrivere in CSS come frazione di
+// riga: si misura. Al CSS arrivano due numeri, dove comincia e quanto e' largo,
+// e la transizione fa il resto.
+//
+// Due stati e non tre: **dove sei** (la voce accesa) e **dove andresti** (quella
+// sotto il puntatore o sotto il fuoco della tastiera). Il secondo dura quanto il
+// puntatore ci resta sopra; appena esce, il tondo torna sulla voce accesa. Sul
+// profilo nessuna delle quattro e' accesa e il tondo sparisce, invece di restare
+// fermo su una voce che non e' quella aperta.
+const listaAlta = document.getElementById('top-list');
 
-document.getElementById('side-me')?.addEventListener('click', () => switchView('profile'));
+function tondoSu(voce) {
+  if (!listaAlta) return;
+  if (!voce || !voce.offsetWidth) { listaAlta.classList.remove('tondo-acceso'); return; }
+  listaAlta.style.setProperty('--tondo-x', voce.offsetLeft + 'px');
+  listaAlta.style.setProperty('--tondo-w', voce.offsetWidth + 'px');
+  listaAlta.classList.add('tondo-acceso');
+}
+
+function tondoACasa() {
+  tondoSu(listaAlta?.querySelector('.top-item.on'));
+}
+
+listaAlta?.addEventListener('pointerleave', tondoACasa);
+listaAlta?.addEventListener('focusout', tondoACasa);
+document.querySelectorAll('.top-item').forEach(b => {
+  b.addEventListener('click', () => switchView(b.dataset.view));
+  b.addEventListener('pointerenter', () => tondoSu(b));
+  b.addEventListener('focus', () => tondoSu(b));
+});
+// La barra nasce nascosta sotto i 768px: li' le voci misurano zero e il tondo resta
+// spento finche' la finestra non si allarga. Stessa cosa quando cambiano le larghezze
+// perche' e' arrivato il carattere vero al posto di quello di sistema.
+window.addEventListener('resize', tondoACasa);
+document.fonts?.ready.then(tondoACasa);
+
+document.getElementById('top-me')?.addEventListener('click', () => switchView('profile'));
 
 userNameEl.addEventListener('click', () => switchView('profile'));
 
@@ -1022,12 +1052,12 @@ document.getElementById('profile-rename').addEventListener('click', async () => 
   loadRides();
 });
 
-// La scheda in fondo alla barra laterale. Dice due cose vere e nessuna di piu':
-// come ti chiami e in quante comitive sei. Il ruolo lo scrive solo se c'e'.
-function aggiornaBarraLaterale() {
-  const av = document.getElementById('side-av');
-  const nome = document.getElementById('side-nome');
-  const ruolo = document.getElementById('side-ruolo');
+// La scheda con la faccia, a destra nella barra in alto. Dice due cose vere e nessuna
+// di piu': come ti chiami e in quante comitive sei. Il ruolo lo scrive solo se c'e'.
+function aggiornaSchedaProfilo() {
+  const av = document.getElementById('top-av');
+  const nome = document.getElementById('top-nome');
+  const ruolo = document.getElementById('top-ruolo');
   if (!av || !nome || !ruolo) return;
   av.textContent = initials(myName || '?');
   nome.textContent = myName || '—';
@@ -1037,7 +1067,7 @@ function aggiornaBarraLaterale() {
 }
 
 function renderProfile() {
-  aggiornaBarraLaterale();
+  aggiornaSchedaProfilo();
   const av = document.getElementById('profile-avatar');
   if (myAvatar) {
     // Costruito con il DOM e non con innerHTML: l'indirizzo dell'avatar arriva da
@@ -4020,6 +4050,10 @@ async function render() {
   rendered = true;
   authView.classList.toggle('hidden', loggedIn);
   appShell.classList.toggle('hidden', !loggedIn);
+  // Finche' il guscio e' nascosto le voci misurano zero e il tondo non sa dove
+  // mettersi: appena compare, va sulla voce che il markup nasce con l'attributo
+  // acceso — «Passaggi», la vista da cui si parte.
+  if (loggedIn) tondoACasa();
   if (loggedIn) {
     await ensureProfile();
     userNameEl.textContent = myName;

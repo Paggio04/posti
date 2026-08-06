@@ -12,7 +12,10 @@
 //
 // Quello che si mette in cache e' solo il guscio: i file pubblici, identici per tutti.
 
-const VERSIONE = 'wetransport-v9';   // sale quando cambia il GUSCIO qui sotto
+const VERSIONE = 'wetransport-v10';  // sale quando cambia il GUSCIO qui sotto
+// v10 (06/08/2026): la barra laterale diventa una barra in alto con il tondo che
+// scivola, e il riepilogo prende tutta la larghezza senza scorrere. Cambiano
+// `index.html`, `style.css` e `app.js`.
 // v9 (01/08/2026): si segna un pagamento, la richiesta porta l'ora, il riepilogo del
 // mese si manda. Cambiano `index.html`, `style.css` e `app.js`.
 // v8 (01/08/2026): tre fasce e due sole soglie in `style.css`, l'avatar del profilo
