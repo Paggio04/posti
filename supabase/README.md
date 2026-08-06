@@ -14,6 +14,20 @@ select version, applied_at from public.schema_migrations order by version;
 Ogni file si registra da solo in quella tabella. Se una migrazione non compare, non è stata
 applicata: nessuna memoria da tenere a mente, nessun "mi pare di averlo già fatto".
 
+## Verificare da fuori che siano applicate
+
+`select version from public.schema_migrations` dice cosa il database crede di avere. Non dice se
+il **client** riesce a leggere quello che è stato aggiunto, e le due cose possono divergere: dalla
+`016` il permesso su `rides` è per colonna, quindi una colonna aggiunta da una migrazione che si
+dimentica di richiamare `blinda_coordinate()` esiste, è registrata, e nessun client la vede.
+
+```
+node --no-warnings supabase/test/sonde-fase7.mjs
+```
+
+Sola lettura, con la sola chiave pubblica. È il controllo che risponde alla domanda vera —
+«l'app funzionerà?» — invece che a «la migrazione è passata?».
+
 ## Ricreare il backend da zero
 
 Progetto Supabase nuovo → applicare tutti i file di `migrations/` in ordine. Non serve altro.

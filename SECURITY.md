@@ -78,5 +78,29 @@ Misurate il 31/07/2026 sul progetto di produzione. Il giorno in cui una di quest
 diverso, non è la sonda a essere rotta: è questa pagina a essere invecchiata, e la riga
 corrispondente della tabella va riscritta. Lo script lo dice da solo nell'ultima riga.
 
+### E la Fase 7: le migrazioni sono applicate, e applicate bene?
+
+```
+node --no-warnings supabase/test/sonde-fase7.mjs
+```
+
+Ventidue sonde, stessa chiave pubblica, sola lettura, e rispondono a una domanda che da fuori si
+può fare senza account — perché **il permesso per colonna vale per il ruolo e si valuta prima
+della RLS**. `200` con `[]` vuol dire che la colonna c'è e il permesso c'è; `42501` che il
+permesso manca; `42703` che la colonna non esiste, cioè che la migrazione non è passata.
+
+Guarda le due metà **insieme**, ed è il motivo per cui è un file solo: che le dieci colonne nuove
+siano leggibili, e che le quattro coordinate siano ancora chiuse. Il modo più facile di
+"riparare" la prima è un `grant select on rides`, che rimette C21 esattamente dov'era — una metà
+sola autorizzerebbe a rompere l'altra.
+
+Verifica anche che `create_group` risponda nelle due forme, con e senza `p_scade`: la `033`
+cancella la firma vecchia e ne crea una con un parametro in più che ha un default, e un
+`PGRST202` lì vuol dire che PostgREST non la trova — di solito perché la cache dello schema è
+vecchia, e si risolve con `notify pgrst, 'reload schema';`. Finché è così, «Crea gruppo» dà 404
+anche a migrazione applicata.
+
+**Misurate il 06/08/2026, subito dopo aver applicato la `026`-`033` in produzione: 22 su 22.**
+
 Il resto dello stato di sicurezza si riprova invece **dentro** il database, con i file
 `supabase/test/verifica-*.sql` che la CI esegue a ogni push (job `schema`).
