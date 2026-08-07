@@ -990,6 +990,45 @@ document.querySelectorAll('.nav-item').forEach(b =>
 
 document.getElementById('top-me')?.addEventListener('click', () => switchView('profile'));
 
+// ── L'interruttore del tema ────────────────────────────────────────────────
+//
+// La lettura sta in `tema.js`, che gira in `<head>` prima che si dipinga: qui c'e'
+// solo il gesto. L'app nasce chiara — e' cosi' che e' disegnata — e chi la gira se
+// la ritrova girata alla visita dopo.
+//
+// Il bottone mostra **dove andresti**, non dove sei: la luna sulla pagina chiara, il
+// sole su quella scura. `aria-pressed` invece dice lo stato vero, perche' quella e'
+// la domanda che fa chi ascolta la pagina.
+const tastoTema = document.getElementById('tema-tasto');
+
+function mostraTema(scuro) {
+  if (scuro) document.documentElement.setAttribute('data-tema', 'scuro');
+  else document.documentElement.removeAttribute('data-tema');
+  if (!tastoTema) return;
+  const verso = scuro ? 'chiaro' : 'scuro';
+  tastoTema.setAttribute('aria-pressed', String(scuro));
+  tastoTema.title = `Passa al tema ${verso}`;
+  tastoTema.setAttribute('aria-label', `Passa al tema ${verso}`);
+  tastoTema.innerHTML = `<svg width="17" height="17" aria-hidden="true"><use href="#i-${scuro ? 'sole' : 'luna'}"/></svg>`;
+  // Anche la barra del browser sul telefono segue il tema: altrimenti resta del
+  // colore dell'altro, ed e' la striscia piu' grande dello schermo a dirlo.
+  document.querySelector('meta[name="theme-color"]')
+    ?.setAttribute('content', scuro ? '#110C17' : '#EEF1F3');
+}
+
+mostraTema(document.documentElement.getAttribute('data-tema') === 'scuro');
+
+tastoTema?.addEventListener('click', () => {
+  const scuro = document.documentElement.getAttribute('data-tema') !== 'scuro';
+  mostraTema(scuro);
+  try {
+    localStorage.setItem('wt_tema', scuro ? 'scuro' : 'chiaro');
+  } catch {
+    // Memoria locale chiusa: il tema vale per questa visita e basta. Meglio di un
+    // errore in faccia per una preferenza estetica.
+  }
+});
+
 // --- Cambia nome ---
 document.getElementById('profile-rename').addEventListener('click', async () => {
   const name = await ask('Il tuo nome', { text: 'È quello che appare sul sedile.', value: myName });
@@ -3844,7 +3883,12 @@ function renderRides(rides) {
     head.appendChild(actions);
     card.appendChild(head);
 
-    card.appendChild(buildCar(ride));
+    // L'auto va sulla sua piastra: alla luce e' quel rettangolo scuro a farla
+    // vedere, al buio la piastra e' trasparente e il disegno e' identico.
+    const piastra = document.createElement('div');
+    piastra.className = 'car-piastra';
+    piastra.appendChild(buildCar(ride));
+    card.appendChild(piastra);
 
     // Chi è a bordo, in chiaro
     if (ride.seat_claims.length > 0) {

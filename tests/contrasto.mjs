@@ -15,8 +15,14 @@
 // superficie che qui non e' elencata. Le coppie vanno aggiunte quando nasce il
 // componente che le usa.
 //
-// **Un tema solo**, e il blocco letto e' uno: `:root`. Non c'e' un secondo giro per
-// `prefers-color-scheme`, perche' due palette sono due cose da mantenere.
+// **Due temi, e li misura tutti e due.** Da quando c'e' l'interruttore le stesure
+// sono due — `:root` e' quella chiara, `:root[data-tema="scuro"]` ridefinisce solo
+// cio' che cambia — e un controllo che ne guardasse una sola direbbe che l'app e'
+// a posto conoscendone meta'. Ogni coppia qui sotto gira due volte, e il nome del
+// tema compare accanto al rapporto: se ne cede una si vede subito quale.
+//
+// E' questo file la risposta al costo che D10 temeva («due palette sono due cose da
+// mantenere»): il costo resta, ma non lo paga chi legge il foglio sperando bene.
 //
 // Con il viola della palette `--primary` e `--primary-testo` sono tornati a essere
 // **due colori diversi**, non due nomi per uno. Il candy blue era chiaro e faceva
@@ -90,15 +96,28 @@ function token(testo) {
   return mappa;
 }
 
-const tema = token(blocco(':root'));
+// Il tema scuro non riscrive tutto: quello che non nomina lo eredita dal chiaro,
+// esattamente come fa il browser. Va steso qui sopra o il controllo misurerebbe
+// dei buchi al posto dei token ereditati.
+const chiaro = token(blocco(':root'));
+const TEMI = {
+  chiaro,
+  scuro: { ...chiaro, ...token(blocco(':root[data-tema="scuro"]')) },
+};
 const BIANCO = [1, 1, 1, 1];
 
 // --- le coppie che devono reggere ----------------------------------------------
 
-// [etichetta, primo piano, fondo, soglia]
+// [etichetta, primo piano, fondo, soglia, tema?]
 // Il primo piano e' un token (`--ink`), un colore scritto (`oklch(...)`) o BIANCO.
 // La soglia e' 4.5 per il testo normale, 3 per il testo grande e per le forme che
 // portano informazione senza essere testo (bordi, tracciati, anelli di fuoco).
+//
+// Il quinto campo dice **in quale tema** vale la coppia, e serve solo dove la cosa
+// misurata cambia davvero di posto fra i due — cioe' l'auto, che alla luce sta su
+// una piastra scura e al buio direttamente sulla pagina. Senza quel campo si
+// misurerebbe la piastra anche al buio, dove e' trasparente: un numero verde su
+// una cosa che non c'e'.
 const COPPIE = [
   ['testo normale su carta', '--ink', '--surface', 4.5],
   ['testo normale sul fondo', '--ink', '--bg', 4.5],
@@ -158,37 +177,47 @@ const COPPIE = [
   // 3:1, su **tutti e due** i fondi su cui l'auto compare: il pannello
   // dell'accesso e la scheda di un passaggio. E' la coppia che avrebbe fermato le
   // prime due stesure: scocca riempita di `--surface` faceva 1,42:1.
-  ['scocca dell\'auto, sul fondo pagina', '--scocca', '--bg', 3],
-  ['scocca dell\'auto, sulla scheda del passaggio', '--scocca', '--surface', 3],
+  // Alla luce l'auto sta sulla piastra, e la piastra e' l'unico fondo che ha.
+  ['scocca dell\'auto, sulla sua piastra', '--scocca', '--piastra', 3, 'chiaro'],
+  // Al buio la piastra e' trasparente, quindi sotto l'auto c'e' quello che c'era
+  // prima: la pagina, o la scheda del passaggio. Sono due fondi e vanno misurati
+  // tutti e due — e' la coppia che avrebbe fermato le prime due stesure di C40.
+  ['scocca dell\'auto, sul fondo pagina', '--scocca', '--bg', 3, 'scuro'],
+  ['scocca dell\'auto, sulla scheda del passaggio', '--scocca', '--surface', 3, 'scuro'],
   ['il vuoto di un posto, sulla scocca', '--posto', '--scocca', 3],
   ['il posto tuo, sulla scocca', '--tuo', '--scocca', 3],
   ['contorno di un posto, sul suo vuoto', '--posto-bordo', '--posto', 3],
-  ['contorno di un posto libero, sul suo vuoto', '--primary-testo', '--posto', 3],
-  ['iniziali dentro un posto', '--ink', '--posto', 4.5],
+  ['contorno di un posto libero, sul suo vuoto', '--posto-libero', '--posto', 3],
+  ['iniziali dentro un posto', '--posto-testo', '--posto', 4.5],
   ['iniziali dentro il posto tuo', '--tuo-su', '--tuo', 4.5],
   ['gomma sulla scocca', '--gomma', '--scocca', 3],
 
-  // Il benvenuto e' l'unico riquadro dove il candy blue prende tutta la superficie:
-  // il testo sotto il titolo e' un onyx schiarito, non l'onyx pieno, e va misurato.
+  // Il benvenuto e' l'unico riquadro dove il viola prende tutta la superficie: il
+  // bottone dentro e' il verso rovesciato, chiaro pieno con il viola scritto sopra.
   ['bottone chiaro dentro il benvenuto', '--primary', '--su-primario', 4.5],
 
 ];
 
 let bocciate = 0;
-// Il fondo su cui si stende un colore semitrasparente e' il nero della pagina, non
-// il bianco: qui sotto non c'e' piu' un foglio.
-const SOTTO = leggiOklch(tema['--bg']).slice(0, 3);
-for (const [etichetta, pp, fondo, soglia] of COPPIE) {
-  const rgbFondo = steso(leggiOklch(tema[fondo] ?? fondo), SOTTO);
-  const rgbPp = steso(pp === BIANCO ? BIANCO : leggiOklch(tema[pp] ?? pp), rgbFondo);
-  const r = rapporto(rgbPp, rgbFondo);
-  const passa = r >= soglia;
-  if (!passa) bocciate++;
-  console.log(`  ${passa ? '  ok' : '  NO'}  ${r.toFixed(2).padStart(5)}:1  (min ${soglia})  ${etichetta}`);
+for (const [nomeTema, tema] of Object.entries(TEMI)) {
+  console.log(`\n  — tema ${nomeTema} —`);
+  // Il fondo su cui si stende un colore semitrasparente e' il fondo pagina di
+  // **quel** tema: la stessa velatura sopra la carta chiara e sopra il buio non
+  // da' lo stesso colore, ed e' il genere di cosa che a occhio non si vede.
+  const sotto = leggiOklch(tema['--bg']).slice(0, 3);
+  for (const [etichetta, pp, fondo, soglia, soloTema] of COPPIE) {
+    if (soloTema && soloTema !== nomeTema) continue;
+    const rgbFondo = steso(leggiOklch(tema[fondo] ?? fondo), sotto);
+    const rgbPp = steso(pp === BIANCO ? BIANCO : leggiOklch(tema[pp] ?? pp), rgbFondo);
+    const r = rapporto(rgbPp, rgbFondo);
+    const passa = r >= soglia;
+    if (!passa) bocciate++;
+    console.log(`  ${passa ? '  ok' : '  NO'}  ${r.toFixed(2).padStart(5)}:1  (min ${soglia})  ${etichetta}`);
+  }
 }
 
 if (bocciate) {
   console.error(`\n  ${bocciate} coppie sotto soglia.\n`);
   process.exit(1);
 }
-console.log('\n  Tutte le coppie reggono la soglia AA.\n');
+console.log('\n  Tutte le coppie reggono la soglia AA nei due temi.\n');
