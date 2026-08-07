@@ -225,14 +225,16 @@
   --r-panel: 14px;
   /* Resta per le cose che sono cerchi davvero: le facce, i pallini, gli anelli. */
   --pill: 999px;
-  /* L'altezza della barra in alto, che da 768px in su e' l'unica cosa fra il
-     bordo dello schermo e la vista. Serve al riepilogo per sapere quanto spazio
-     gli resta: era un 57 scritto a mano dentro una `calc()`, cioe' un numero che
-     sarebbe rimasto quello anche cambiando la barra. */
-  --h-barra: 54px;
-  /* E la fascia in basso, che c'e' a ogni larghezza da quando la navigazione e'
-     una sola: il riepilogo deve togliere tutte e due per sapere quanto gli resta. */
-  --h-fascia: 58px;
+  /* Quanto sono alte le due fasce. Il riepilogo ci costruisce sopra una `calc()`
+     per sapere quanto spazio gli resta, quindi **questi numeri devono essere veri**:
+     erano 54 e 58 quando le fasce misurano 57/66 e 62, e quei dodici pixel di
+     bugia erano precisamente quello che finiva sotto la fascia.
+
+     La barra cresce a 768px perche' li' compare la riga del ruolo sotto il nome,
+     e la scheda con la faccia diventa di due righe. Misurato, non stimato — e
+     `min-height` sotto le tiene a questa altezza invece di lasciarle andare. */
+  --h-barra: 57px;
+  --h-fascia: 62px;
 
   /* ---- profondita' ------------------------------------------------------ */
   /* Una riga di luce sul bordo alto: e' come si legge un pannello smaltato
@@ -1930,8 +1932,12 @@ input[type="time"]::-webkit-calendar-picker-indicator { filter: invert(1) opacit
 
 /* La fascia c'e' anche qui, quindi lo spazio sotto resta: cambia solo di quanto,
    perche' su uno schermo grande la fascia e' la stessa ma la pagina respira di piu'. */
+/* Da qui la scheda con la faccia porta anche il ruolo, quindi e' di due righe e la
+   barra cresce. Il token lo dice, o le `calc()` che ci stanno sopra sbagliano. */
+@media (min-width: 768px) { :root { --h-barra: 66px; } }
+
 @media (min-width: 768px) {
-  .app-view { padding-top: 22px; padding-bottom: calc(var(--h-fascia) + 26px); }
+  .app-view { padding-top: 22px; padding-bottom: calc(var(--h-fascia) + env(safe-area-inset-bottom) + 26px); }
 }
 @media (min-width: 1280px) {
   .app-view { max-width: 1180px; }
@@ -2424,8 +2430,16 @@ input[type="time"]::-webkit-calendar-picker-indicator { filter: invert(1) opacit
   .app-view[data-vista="stats"] {
     display: flex;
     flex-direction: column;
-    min-height: calc(100dvh - var(--h-barra) - var(--h-fascia));
-    padding-bottom: 22px;
+    /* La vista si allunga fino al bordo **sotto la fascia**, e lo spazio in fondo
+       la tiene fuori: la fascia e' fissa e ci passerebbe sopra. Qui c'era un 22
+       secco, ed era giusto finche' a questa larghezza la fascia non esisteva —
+       da quando la navigazione e' una sola quel numero copriva i tre tasti. */
+    min-height: calc(100dvh - var(--h-barra));
+    /* Lo spazio proprio del riepilogo e' piu' stretto delle altre viste — e' una
+       tavola, non un elenco — ma la parte che tiene i tre tasti **sopra** la
+       fascia non si tocca: quella e' l'altezza della fascia, non un margine. */
+    padding-top: 14px;
+    padding-bottom: calc(var(--h-fascia) + env(safe-area-inset-bottom) + 12px);
   }
   .app-view[data-vista="stats"] > .view { display: flex; flex-direction: column; flex: 1 1 auto; }
   .app-view[data-vista="stats"] .dash { flex: 1 1 auto; }
