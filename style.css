@@ -197,6 +197,11 @@
   --r-panel: 14px;
   /* Resta per le cose che sono cerchi davvero: le facce, i pallini, gli anelli. */
   --pill: 999px;
+  /* L'altezza della barra in alto, che da 768px in su e' l'unica cosa fra il
+     bordo dello schermo e la vista. Serve al riepilogo per sapere quanto spazio
+     gli resta: era un 57 scritto a mano dentro una `calc()`, cioe' un numero che
+     sarebbe rimasto quello anche cambiando la barra. */
+  --h-barra: 57px;
 
   /* ---- profondita' ------------------------------------------------------ */
   /* Una riga di luce sul bordo alto: e' come si legge un pannello smaltato
@@ -721,6 +726,7 @@ input[type="time"]::-webkit-calendar-picker-indicator { filter: invert(1) opacit
     position: sticky;
     top: 0;
     z-index: 20;
+    min-height: var(--h-barra);
   }
   .top-brand {
     min-width: 0;
@@ -1928,9 +1934,11 @@ input[type="time"]::-webkit-calendar-picker-indicator { filter: invert(1) opacit
 
 /* ---- testata ---- */
 .dash-top { display: flex; align-items: center; gap: 12px; flex-wrap: wrap; }
-.dash-hi { flex: 1 1 200px; min-width: 0; }
+/* Titolo e giorno sulla stessa riga invece che uno sopra l'altro: sono due cose
+   corte, e impilate costavano venti pixel a una vista che li conta. */
+.dash-hi { flex: 1 1 200px; min-width: 0; display: flex; align-items: baseline; flex-wrap: wrap; gap: 3px 10px; }
 .dash-hi h1 { margin: 0; font-size: 1.3rem; font-weight: 700; letter-spacing: -0.035em; overflow-wrap: anywhere; }
-.dash-hi p { margin: 1px 0 0; color: var(--ink-soft); font-size: 0.76rem; overflow-wrap: anywhere; }
+.dash-hi p { margin: 0; color: var(--ink-soft); font-size: 0.76rem; overflow-wrap: anywhere; }
 .dash-gruppo {
   flex: 0 1 auto;
   background: transparent;
@@ -1954,65 +1962,38 @@ input[type="time"]::-webkit-calendar-picker-indicator { filter: invert(1) opacit
 }
 
 /* ---- la griglia ----------------------------------------------------------
-   **Un meccanismo solo, a ogni larghezza e a ogni altezza**, e sono due numeri:
+   **Il riepilogo non scorre di lato.** Prima le schede erano dieci e stavano in
+   un quaderno: colonne larghe quanto la finestra, si andava avanti di lato con
+   dei pallini sotto. Erano due schermate in piu' da scoprire a tentoni per una
+   vista il cui unico compito e' dire come siamo messi in un'occhiata — e una
+   cosa che si scopre scorrendo non e' in un'occhiata. Il quaderno non si e'
+   aggiustato: si e' tolto il motivo per cui esisteva, cioe' le schede di troppo.
 
-     --colonne  quante colonne di riquadri si vedono insieme  (la larghezza)
-     --righe    quanti riquadri stanno in una colonna         (l'altezza)
-
-   Le schede scorrono per colonne. Se le colonne che ne escono sono meno o
-   uguali a `--colonne`, si vede tutto insieme e non c'e' niente da scorrere: e'
-   il caso del monitor. Se sono di piu', si va avanti di lato, una colonna alla
-   volta, e sotto compaiono i pallini. Nessuna soglia decide «qui scorre e qui
-   no»: lo decide l'aritmetica fra quante schede ci sono e quante ne entrano.
-
-   **`--righe` lo detta l'altezza, non la larghezza,** ed e' la parte che prima
-   sbagliavo: la vista stava dentro la finestra ma le schede piu' alte — il
-   calendario, la settimana, i conti — venivano tagliate dai loro stessi bordi.
-   Un riquadro con tre quarti di calendario dentro non e' «senza scorrimento»,
-   e' un calendario rotto. Le due soglie qui sotto sono misurate sulla scheda
-   piu' alta che esista (il mese, che sotto i 240px non si legge piu'):
-
-     finestra >= 1000px   tre riquadri per colonna
-     finestra >=  620px   due
-     sotto                uno
-
-   L'ordine nel markup e' l'ordine in cui si riempiono le colonne, quindi e'
-   anche la composizione: i numeri, poi il denaro e il prossimo passaggio, poi il
-   calendario e le azioni, poi il conto della settimana. */
+   Restano sei riquadri, e sei sta in una griglia che si chiude a ogni misura:
+   tre colonne per due righe, due per tre, una per sei. Nessuna aritmetica da
+   fare a mano e nessun elemento che deve sapere quanti sono gli altri. */
 .dash .grid {
-  --righe: 2;
   --colonne: 1;
   display: grid;
-  grid-auto-flow: column;
-  grid-auto-columns: calc((100% - (var(--colonne) - 1) * 10px) / var(--colonne));
-  grid-template-rows: repeat(var(--righe), minmax(0, 1fr));
+  grid-template-columns: repeat(var(--colonne), minmax(0, 1fr));
   gap: 10px;
-  min-height: 0;
-  flex: 1 1 auto;
-  overflow-x: auto;
-  overflow-y: hidden;
-  scroll-snap-type: x mandatory;
-  scroll-behavior: smooth;
-  /* La barra di scorrimento non si mostra: il gesto e' laterale e i pallini sotto
-     dicono a che punto sei. Una barra orizzontale sotto nove riquadri sarebbe un
-     secondo indicatore che dice la stessa cosa, peggio. */
-  scrollbar-width: none;
+  min-width: 0;
 }
-.dash .grid::-webkit-scrollbar { display: none; }
-.dash .grid > * { scroll-snap-align: start; min-height: 0; overflow: hidden; }
 
-/* La striscia dei numeri si prende una colonna intera: sono cinque misure e sono
-   la risposta piu' corta alla domanda «come siamo messi», quindi stanno insieme e
-   stanno per prime. In colonna e non in fascia: cosi' e' un riquadro come gli
-   altri, e la griglia non ha bisogno di un'eccezione per lei. */
-.dash .g-kpi { grid-row: 1 / -1; display: flex; flex-direction: column; gap: 8px; }
-.dash .g-kpi > .k { flex: 1 1 0; }
+/* La striscia dei numeri sta in cima, per intero: sono quattro misure ed e' la
+   risposta piu' corta alla domanda «come siamo messi». Sopra i riquadri, non
+   dentro la griglia, perche' non e' un riquadro — e' il titolo in cifre. */
+.dash .numeri {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+  gap: 8px;
+}
 
 .dash .k {
   background: var(--surface);
   border: 1px solid var(--border);
   border-radius: var(--r-card);
-  padding: 11px 13px;
+  padding: 9px 13px;
   min-width: 0;
   display: flex;
   flex-direction: column;
@@ -2057,60 +2038,31 @@ input[type="time"]::-webkit-calendar-picker-indicator { filter: invert(1) opacit
   align-items: center;
   justify-content: flex-start;
   gap: 4px 8px;
-  margin-bottom: 10px;
+  margin-bottom: 8px;
   flex-wrap: wrap;
 }
-.dash .head > .pill, .dash .head > .sub:last-child { margin-left: auto; }
-.dash .pill {
-  flex: none;
-  background: transparent;
-  border: 1px solid var(--border);
-  border-radius: var(--r-chip);
-  padding: 2px 8px;
-  font-size: 0.67rem;
-  color: var(--ink-soft);
-  white-space: nowrap;
-}
-.dash .nuovo {
-  display: inline-block;
-  background: var(--tuo);
-  color: var(--tuo-su);
-  border-radius: var(--r-chip);
-  padding: 0 6px;
-  font-size: 0.66rem;
-  font-weight: 700;
-  letter-spacing: 0.04em;
-  vertical-align: 1px;
-  white-space: nowrap;
-}
+.dash .head > .sub:last-child { margin-left: auto; }
 
-/* ---- i due riquadri che riassumono ---- */
+/* ---- il carburante ----
+   L'unico riquadro che guarda indietro invece che avanti, ed e' l'unico che ha
+   un disegno: la linea dei sei mesi. Il «Vedi i conti →» che stava qui sotto
+   portava a una scheda che adesso e' a due dita di distanza, sulla stessa
+   schermata — un bottone che non porta da nessuna parte e' un bottone finto. */
 .dash .hero { background: var(--rilievo); border-color: var(--primary-bordo); }
-.dash .hero .pill { border-color: oklch(0.853 0.043 227 / 0.28); }
 .dash .hero .big {
   font-size: clamp(1.4rem, 2.1vw, 1.8rem); font-weight: 700; margin: 4px 0 2px;
   letter-spacing: -0.04em; font-variant-numeric: tabular-nums;
 }
 .dash .hero .d { color: var(--ink-soft); font-size: 0.68rem; overflow-wrap: anywhere; }
-.dash .hero .cta {
-  align-self: flex-start;
-  display: inline-flex;
-  align-items: center;
-  gap: 6px;
-  background: transparent;
-  color: var(--primary-testo);
-  border: 1px solid var(--primary-bordo);
-  border-radius: var(--r-chip);
-  padding: 5px 11px;
-  margin-top: 10px;
-  max-width: 100%;
-  font: inherit;
-  font-size: 0.7rem;
-  font-weight: 600;
-  cursor: pointer;
-  transition: background var(--t-fast) var(--ease-out), color var(--t-fast) var(--ease-out);
+/* La linea si prende quello che avanza nel riquadro invece di stare a 56px
+   fissi: e' l'unica cosa qui dentro che puo' crescere senza dire una bugia. */
+.dash .hero .via {
+  display: block;
+  width: 100%;
+  flex: 1 1 auto;
+  min-height: 56px;
+  margin-top: 8px;
 }
-.dash .hero .cta:hover { background: var(--primary); color: var(--su-primario); border-color: var(--primary); }
 
 /* ---- il prossimo passaggio ----
    E' l'unica scheda che risponde alla domanda del prodotto — «chi guida oggi, e c'e'
@@ -2155,45 +2107,6 @@ input[type="time"]::-webkit-calendar-picker-indicator { filter: invert(1) opacit
 }
 .dash .next .go:hover { background: var(--primary); color: var(--su-primario); }
 
-/* ---- calendario e agenda ---- */
-.dash .cal .dows, .dash .cal .days {
-  display: grid;
-  grid-template-columns: repeat(7, minmax(0, 1fr));
-  gap: 2px;
-  text-align: center;
-}
-.dash .cal .dows span {
-  color: var(--ink-soft); font-size: 0.64rem; padding-bottom: 4px;
-  letter-spacing: 0.08em; font-weight: 600;
-}
-.dash .cal .days span {
-  padding: 3px 0;
-  border-radius: var(--r-chip);
-  font-size: 0.7rem;
-  min-width: 0;
-  overflow: hidden;
-  font-family: 'IBM Plex Mono', ui-monospace, monospace;
-  font-variant-numeric: tabular-nums;
-}
-.dash .cal .days .fuori { color: var(--ink-soft); opacity: 0.35; }
-.dash .cal .days .ha { color: var(--primary-testo); box-shadow: inset 0 0 0 1px var(--primary-bordo); }
-.dash .cal .days .mio { background: var(--tuo); color: var(--tuo-su); font-weight: 700; }
-.dash .cal .days .oggi { background: var(--ink); color: var(--bg); font-weight: 700; }
-.dash .ag { display: flex; gap: 9px; align-items: center; padding: 5px 0; border-top: 1px solid var(--border); }
-.dash .ag .h {
-  flex: none;
-  width: 38px;
-  font-size: 0.68rem;
-  color: var(--primary-testo);
-  font-family: 'IBM Plex Mono', ui-monospace, monospace;
-}
-.dash .ag .t { flex: 1 1 auto; min-width: 0; font-size: 0.7rem; font-weight: 600; line-height: 1.25; overflow-wrap: anywhere; }
-.dash .ag .t small { display: block; font-weight: 400; color: var(--ink-soft); font-size: 0.67rem; }
-.dash .ag .chip { flex: none; width: 22px; height: 22px; border-radius: var(--r-chip); display: grid; place-items: center; }
-.dash .ag .chip svg { width: 13px; height: 13px; color: var(--primary-testo); }
-.dash .ag .chip.mia { background: var(--tuo); }
-.dash .ag .chip.mia svg { color: var(--tuo-su); }
-
 /* ---- le azioni ----
    Erano tre bottoni sciolti in una cella alta quanto le altre: sopra e sotto
    restava il nero, e in una tavola dove ogni cella e' piena quel vuoto si legge
@@ -2220,7 +2133,7 @@ input[type="time"]::-webkit-calendar-picker-indicator { filter: invert(1) opacit
   background: transparent;
   border: 0;
   border-radius: 0;
-  padding: 12px 6px;
+  padding: 10px 6px;
   text-align: center;
   min-width: 0;
   font: inherit;
@@ -2232,7 +2145,7 @@ input[type="time"]::-webkit-calendar-picker-indicator { filter: invert(1) opacit
 .dash .az:focus-visible { outline-offset: -3px; }
 .dash .az .o {
   flex: none;
-  width: 28px; height: 28px;
+  width: 26px; height: 26px;
   border-radius: var(--r-chip);
   background: var(--primary-soft);
   color: var(--primary-testo);
@@ -2240,9 +2153,15 @@ input[type="time"]::-webkit-calendar-picker-indicator { filter: invert(1) opacit
 }
 .dash .az .o svg { width: 15px; height: 15px; }
 .dash .az .t { font-size: 0.68rem; color: var(--ink-soft); line-height: 1.25; overflow-wrap: anywhere; }
+/* Da dove i tre bottoni ci stanno in riga, l'icona va **accanto** al nome invece
+   che sopra: la striscia perde trenta pixel di altezza e non perde niente
+   d'altro. Sul telefono resta in colonna, dove la riga non entrerebbe. */
+@media (min-width: 640px) {
+  .dash .az { flex-direction: row; gap: 8px; padding: 11px 8px; }
+}
 
 /* ---- barre di riempimento ---- */
-.dash .riemp { display: flex; align-items: center; gap: 8px; margin-bottom: 6px; }
+.dash .riemp { display: flex; align-items: center; gap: 8px; margin-bottom: 4px; }
 .dash .riemp:last-of-type { margin-bottom: 0; }
 .dash .riemp .n { flex: 0 1 108px; min-width: 0; font-size: 0.7rem; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .dash .riemp .n .tu { color: var(--tuo-testo); font-weight: 700; }
@@ -2272,7 +2191,7 @@ input[type="time"]::-webkit-calendar-picker-indicator { filter: invert(1) opacit
 .dash .piede b { color: var(--ink); }
 
 /* ---- attivita' recente ---- */
-.dash .att { display: flex; gap: 8px; align-items: flex-start; padding: 5px 0; }
+.dash .att { display: flex; gap: 8px; align-items: flex-start; padding: 4px 0; }
 .dash .att .av {
   flex: none;
   width: 24px; height: 24px;
@@ -2284,15 +2203,6 @@ input[type="time"]::-webkit-calendar-picker-indicator { filter: invert(1) opacit
 .dash .att .txt { flex: 1 1 auto; min-width: 0; font-size: 0.68rem; line-height: 1.35; overflow-wrap: anywhere; }
 .dash .att .txt small { display: block; color: var(--ink-soft); font-size: 0.67rem; margin-top: 1px; }
 .dash .att .when { flex: none; font-size: 0.66rem; color: var(--ink-soft); white-space: nowrap; padding-top: 2px; }
-
-/* ---- legenda della ciambella ---- */
-.dash .leg { display: flex; flex-direction: column; gap: 6px; font-size: 0.68rem; flex: 1 1 auto; min-width: 0; color: var(--ink-soft); }
-.dash .leg > div { display: flex; align-items: center; gap: 6px; }
-.dash .leg i { flex: none; width: 7px; height: 7px; border-radius: 50%; }
-.dash .leg .nm { flex: 1 1 auto; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-.dash .leg b { flex: none; color: var(--ink); font-variant-numeric: tabular-nums; }
-.dash .ciambella { display: flex; align-items: center; gap: 12px; flex: 1 1 auto; }
-.dash .ciambella svg { width: clamp(70px, 22%, 100px); height: auto; flex: none; }
 
 /* ---- partite aperte ---- */
 .dash .conti { display: flex; flex-wrap: wrap; column-gap: 20px; flex: 1 1 auto; align-content: flex-start; }
@@ -2425,10 +2335,7 @@ input[type="time"]::-webkit-calendar-picker-indicator { filter: invert(1) opacit
 .dash .grid > .card > .turno,
 .dash .grid > .card > .riemp,
 .dash .grid > .card > .att,
-.dash .g-agenda > div,
-.dash .g-agenda .ag,
-.dash .g-prossimo .riga { flex: 1 1 auto; }
-.dash .g-agenda > div { display: flex; flex-direction: column; }
+.dash .next .riga { flex: 1 1 auto; }
 
 /* Segnare un pagamento sta sulla riga del conto: il gesto accanto al numero che
    cambia, non in un'altra pagina. */
@@ -2446,31 +2353,6 @@ input[type="time"]::-webkit-calendar-picker-indicator { filter: invert(1) opacit
 }
 .dash .conto .salda:hover { border-color: var(--ok); color: var(--ok); }
 
-/* ---- i pallini del quaderno ----
-   Nascono spenti e `app.js` li accende solo se le schermate sono piu' di una: su un
-   monitor c'e' una schermata sola, e un indicatore con un pallino solo e' un
-   indicatore che non indica niente. Sono bottoni veri, non decorazioni: con la
-   tastiera si passa da una schermata all'altra senza saper scorrere di lato. */
-.dash-pagine { display: none; }
-.dash-pagine.acceso {
-  display: flex;
-  justify-content: center;
-  align-items: center;
-  gap: 7px;
-  padding: 8px 0 2px;
-}
-.dash-pagine button {
-  width: 22px; height: 3px;
-  padding: 0;
-  border: 0;
-  border-radius: var(--pill);
-  background: var(--border-strong);
-  cursor: pointer;
-  transition: background var(--t-fast) var(--ease-out), width var(--t-med) var(--ease-out);
-}
-.dash-pagine button.on { background: var(--primary); width: 34px; }
-.dash-pagine button:focus-visible { outline: 2px solid var(--primary-testo); outline-offset: 3px; }
-
 @media (max-width: 767px) {
   .dash-hi { flex: 1 1 auto; }
   .dash-hi h1 { font-size: 1.15rem; }
@@ -2479,57 +2361,37 @@ input[type="time"]::-webkit-calendar-picker-indicator { filter: invert(1) opacit
   .dash-top { gap: 8px; }
 }
 
-/* ---- quante colonne si vedono insieme ---- */
-@media (min-width: 768px)  { .dash .grid { --colonne: 3; } }
-@media (min-width: 1280px) { .dash .grid { --colonne: 4; } }
-/* Non c'e' una terza soglia di larghezza, e il conto dice perche': nove schede in
-   colonne da tre fanno tre colonne, piu' quella dei numeri fa quattro. Su un
-   monitor da 1280 in su, con la finestra alta abbastanza, il riepilogo si vede
-   tutto in una schermata sola senza che nessuno debba scorrere niente. */
+/* ---- quante colonne ----
+   Sei riquadri, e sei si divide per tre e per due: a ogni soglia la tavola si
+   chiude senza celle mezze vuote in fondo. Non c'e' una soglia a quattro — con
+   quattro colonne l'ultima riga ne avrebbe due, ed e' esattamente il buco che il
+   riepilogo si portava dietro da quando esiste. */
+@media (min-width: 640px)  { .dash .grid { --colonne: 2; } }
+@media (min-width: 1024px) { .dash .grid { --colonne: 3; } }
 
-/* ---- e quante schede stanno in una colonna ---- */
-/* Misurate sul calendario, che e' la scheda piu' alta che esista qui dentro: sotto
-   i 240px un mese diventa cinque righe di cifre schiacciate. */
-@media (min-height: 620px)  { .dash .grid { --righe: 2; } }
-@media (min-height: 1000px) { .dash .grid { --righe: 3; } }
-@media (max-height: 619px)  { .dash .grid { --righe: 1; } }
+/* ---- e la tavola riempie la schermata, senza pretendere di starci ----
+   Da 1024px in su i sei riquadri stanno in due righe: la vista si allunga fino
+   al bordo dello schermo e le due righe si dividono quello che avanza, cosi' la
+   pagina e' piena invece di finire a meta' con del nero sotto.
 
-/* **La tavola si chiude, non lascia un mezzo riquadro in fondo.**
-   Le schede sono nove. In colonne da tre fanno tre colonne piene; in colonne da
-   due ne fanno quattro e mezza, e quella meta' e' una cella vuota in fondo
-   all'ultima colonna — lo stesso buco che il riepilogo si portava dietro da
-   quando esiste. Basta che una scheda ne occupi due: il calendario, che e'
-   l'unica a cui l'altezza in piu' serve davvero, e a quel punto i conti tornano
-   (dieci caselle, cinque colonne piene, piu' quella dei numeri).
-   Vale solo dove le righe sono due: a tre non serve, a una non e' possibile. */
-@media (min-height: 620px) and (max-height: 999px) {
-  .dash .g-calendario { grid-row: span 2; }
+   `min-height` e **non** `height`, ed e' tutta la differenza con il quaderno di
+   prima: se lo schermo e' corto la pagina si allunga e si scorre di un dito,
+   invece di tagliare un riquadro o mandarlo in una schermata laterale che
+   nessuno trova. Fissare l'altezza e' quello che aveva costretto a inventare i
+   pallini. Sotto i 1024px si scorre in verticale come in ogni altra vista
+   dell'app: e' il gesto che il telefono conosce. */
+@media (min-width: 1024px) {
+  .app-view[data-vista="stats"] {
+    display: flex;
+    flex-direction: column;
+    min-height: calc(100dvh - var(--h-barra));
+    padding-bottom: 22px;
+  }
+  .app-view[data-vista="stats"] > .view { display: flex; flex-direction: column; flex: 1 1 auto; }
+  .app-view[data-vista="stats"] .dash { flex: 1 1 auto; }
+  .dash .grid { flex: 1 1 auto; align-content: stretch; }
 }
-
-/* **Il guscio si ferma all'altezza della finestra.** Da qui in giu' non c'e' piu' una
-   pagina che scorre: c'e' un rettangolo alto quanto lo schermo, e dentro ci sta il
-   riepilogo. Vale a ogni larghezza — il quaderno esiste apposta perche' valga anche
-   dove le schede non ci starebbero.
-
-   `100dvh` e non `100vh`: sul telefono la barra del browser entra ed esce, e con
-   l'unita' statica la fascia in basso finiva sotto il bordo dello schermo. */
-.app-shell[data-vista="stats"] { height: 100dvh; min-height: 0; overflow: hidden; }
-.app-shell[data-vista="stats"] .shell-col { min-height: 0; }
-.app-shell[data-vista="stats"] .app-view {
-  min-height: 0;
-  overflow: hidden;
-  display: flex;
-  flex-direction: column;
-  padding-top: 14px;
-  padding-bottom: 14px;
-}
-/* La fascia in basso e' fissa e coprirebbe l'ultima riga di riquadri: qui la vista
-   si ferma prima invece di passarci sotto. */
-@media (max-width: 767px) {
-  .app-shell[data-vista="stats"] .app-view { padding-bottom: calc(80px + env(safe-area-inset-bottom)); }
-}
-.app-shell[data-vista="stats"] #view-stats { min-height: 0; flex: 1 1 auto; display: flex; }
-.app-shell[data-vista="stats"] #view-stats .dash { flex: 1 1 auto; min-height: 0; }
+.dash .grid > .card { min-height: 168px; }
 
 /* Le altre viste sono elenchi, e un elenco largo 1600px si legge peggio di uno largo
    1180: la misura di lettura resta. Il riepilogo no — e' una tavola di riquadri

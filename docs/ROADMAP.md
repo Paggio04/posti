@@ -1398,6 +1398,76 @@ l'icona grigia centrata negli stati vuoti) non ci sono più.
 
 ---
 
+### C41 — Il riepilogo senza il quaderno, e ogni numero una volta sola — *fatto*
+
+Richiesta del proprietario, e il primo pezzo è la correzione del punto 6 di C40 qui sopra: **quei
+due scorrimenti fanno schifo.** Il quaderno — le colonne larghe quanto la finestra, i pallini sotto
+— era la risposta sbagliata alla domanda giusta. C40 aveva preso «il riepilogo non scorre» come un
+vincolo da rispettare a qualunque costo, e a quel costo si era comprato un gesto laterale che
+nessuno scopre da solo, per una vista il cui unico compito è dire come siamo messi **in
+un'occhiata**. Una cosa che si trova scorrendo non è in un'occhiata: era scorrimento con un altro
+nome, e per giunta uno che il telefono non suggerisce.
+
+**1. Non si è aggiustato il quaderno, si è tolto il motivo per cui esisteva.** Le schede erano
+dieci e non ci stavano; adesso sono sei e ci stanno. La griglia è una griglia normale — tre colonne
+per due righe sopra i 1024px, due per tre sopra i 640, una per sei sul telefono — e sei si divide
+per tre e per due, quindi la tavola si chiude a ogni misura senza celle mezze vuote in fondo.
+Nessun elemento deve più sapere quanti sono gli altri, e con il quaderno se ne sono andati
+`montaPagine()`, i pallini, `scroll-snap`, le due variabili `--righe`/`--colonne` e le quattro
+soglie di **altezza** che servivano a indovinare quante schede entrassero in una colonna.
+
+**2. `min-height` e non `height`, che è tutta la differenza.** Da 1024px in su la vista si allunga
+fino al bordo dello schermo e le due righe si dividono quello che avanza: la pagina è piena invece
+di finire a metà con del nero sotto. Ma se lo schermo è corto la pagina si allunga e si scorre di
+un dito, invece di tagliare un riquadro o mandarlo in una schermata laterale. **Fissare l'altezza è
+esattamente quello che aveva costretto a inventare i pallini.** Misurato su otto formati con
+Playwright: da 768px di finestra in su sta tutto in una schermata, sotto scorre in verticale come
+ogni altra vista dell'app, e in nessuno degli otto un riquadro è tagliato dai propri bordi.
+
+**3. Il calendario non serviva a niente, ed è vero.** Era la scheda più alta del riepilogo — è
+quella su cui erano state misurate le soglie di `--righe`, cioè **dettava l'impaginazione a tutte
+le altre** — e in cambio diceva quali giorni del mese hanno un'auto. Chi guarda il riepilogo vuole
+sapere della settimana che viene, non di quella passata: la stessa domanda ha già una risposta
+migliore due riquadri più in là, con dentro anche quanti posti sono presi.
+
+**4. Ogni numero compare una volta sola**, ed è la regola nuova da qui in avanti. L'inventario dei
+doppioni era imbarazzante: i **giorni scoperti** stavano in tre posti (la riga sotto il titolo, un
+riquadro dei numeri, il piede della settimana), il **saldo** in due (il riquadro e la pastiglia dei
+conti), i **passaggi in programma** in due, e i **prossimi sette giorni** avevano due schede intere
+— «Prossimi sette giorni» e «Occupazione settimanale» — di cui la prima mostrava le auto di *un*
+giorno solo, quasi sempre lo stesso passaggio già scritto in grande nella scheda accanto. Tre copie
+dello stesso conto non sono tre informazioni: sono una, ripetuta, che ruba il posto a quelle che
+mancano. Via l'agenda, via la pastiglia, via le due righe di troppo nella testata, e i riquadri dei
+numeri da cinque a quattro: «Posti disponibili» era un riquadro intero per un dato che sta nella
+riga sotto «Passaggi in programma», dove costa una riga.
+
+**5. Un difetto trovato mentre si contavano i doppioni:** «Passaggi nel mese» aveva sotto «N
+persone alla guida», e quel numero erano i guidatori **di sempre**, non quelli del mese. Due
+finestre temporali nello stesso riquadro, e nessuna delle due scritta. Adesso conta chi ha guidato
+nel mese, che è la cosa che il riquadro dice di dire.
+
+**6. Un giro solo sulle righe, e tre letture in parallelo.** `disegnaRiepilogo` passava tre volte
+sui passaggi — una per i conteggi, una per il carburante, una per il saldo — più un `filter`
+sull'intero elenco per ognuno dei sette giorni della settimana: nove passate per delle somme che si
+possono riempire tutte insieme. E i passaggi si aspettavano da soli prima che partissero le altre
+due interrogazioni, cioè due viaggi di rete in fila per tre domande indipendenti. Nello stesso giro
+è sparita `ridesTaken`, una mappa che veniva calcolata a ogni disegno e non era letta da nessuno.
+
+**7. Le ripetizioni nella scrittura, che sono l'altra faccia dei doppioni a schermo.** Il ternario
+del segno (`+ ` / `− ` e il valore assoluto) stava scritto a mano in otto punti: adesso è `firma()`,
+e per strada ha smesso di dire «+ 0,00 €», che è un modo per annunciare un credito di niente. Il
+plurale era un ternario ricopiato quindici volte: è `plurale()`. La testata del riepilogo era
+scritta in tre copie che divergevano a ogni ritocco: è `testata()`. Il `(getDay() + 6) % 7` che sa
+che la settimana comincia di lunedì stava in tre punti: è `giornoBreve()`. Con loro se n'è andato il
+CSS di ciò che non esiste più — il calendario, l'agenda, i pallini, e una legenda a ciambella
+rimasta nel foglio dopo che il grafico era diventato una riga in C40.
+
+**Fatto quando:** il giudizio resta di chi la usa. Quello che qui si può dire chiuso è che non c'è
+più un gesto laterale in nessuna delle otto misure, che nessun numero della vista compare due volte,
+e che `npm run check` è verde.
+
+---
+
 ## Revisione integrale del 27/07/2026 — cosa è uscito
 
 Lettura riga per riga di `app.js` (2103 righe), delle 17 migrazioni, del guscio (`sw.js`,
@@ -1464,5 +1534,5 @@ seconda volta che ripaga: il difetto peggiore era **fuori** dal file che stavo g
 | **D6** | Servizi esterni (C14) | Solo API native del browser: Web Share per l'invito, `.ics` per il calendario, link Maps con coordinate vere (dentro C9). Nessun SDK di terzi, nessuna analytics. |
 | **D7** | Estetica (C15) | Il difetto è che sembra generata dall'AI, non che sia brutta. Si tolgono gli effetti generici, si sceglie una tipografia vera, l'auto SVG diventa protagonista. Prova del nove: coperto il logo, si riconosce lo stesso. |
 | **D8** | Nome e dominio (C20) | Repo rinominato in `wetransport`; dominio proprio al momento dell'apertura al pubblico, non prima. |
-| **D10** | Palette e tema (C40) | Onyx `#020202` e candy blue `#B2D5E5`, **un tema solo**: niente `prefers-color-scheme`, perché due palette sono due cose da mantenere e nessuna delle due è la faccia dell'app. Un accento solo, e le due cose che dice — «si tocca», «è tuo» — si distinguono per **forma** (scritto/contornato contro pieno), non per tinta. Il riepilogo non scorre a nessuna misura: quello che non entra va nella schermata dopo, non compresso e non tagliato. |
+| **D10** | Palette e tema (C40) | Onyx `#020202` e candy blue `#B2D5E5`, **un tema solo**: niente `prefers-color-scheme`, perché due palette sono due cose da mantenere e nessuna delle due è la faccia dell'app. Un accento solo, e le due cose che dice — «si tocca», «è tuo» — si distinguono per **forma** (scritto/contornato contro pieno), non per tinta. Sul riepilogo la regola e' cambiata in C41: **niente gesto laterale, mai**. La vista si allunga fino al bordo dello schermo e riempie quello che ha; se lo schermo e' corto si scorre in verticale come in ogni altra vista, invece di mandare le schede in una schermata laterale che nessuno trova. Quello che non entra si toglie, non si nasconde — e ogni numero compare una volta sola. |
 | **D9** | Contrasto (C39) | Si calcola, non si stima. I rapporti nei commenti valgono finché nessuno tocca un token, cioè non valgono: `tests/contrasto.mjs` legge i token dal foglio di stile e sta dentro `npm run check`. Un colore che deve reggere due contrasti opposti (bianco sopra, se stesso come testo) è due token, non uno. |
