@@ -116,13 +116,17 @@
         · **la targa**, cioe' il marchio: fondo pieno d'inchiostro, lettere
           chiare, la riga di luce sul bordo alto. Si ribalta con il tema invece
           di seguirlo, come una piastrina avvitata su una parete;
-        · **la carta rigata**: una riga da un pixel ogni ventisei sul fondo
-          pagina. E' l'unica decorazione del foglio, e non contraddice
-          l'anti-riferimento del gradiente morbido — e' il suo contrario, una
-          riga netta a passo fisso che viene da un modulo prestampato.
+        · **le palette del tabellone**: l'ora di un passaggio non compare, si
+          **gira** — ogni cifra cala sulla sua cerniera come la paletta di un
+          tabellone delle partenze, una dopo l'altra da sinistra. E' l'unica
+          animazione decorativa del foglio, e si guadagna il posto perche' non
+          e' un effetto applicato a un numero: e' il gesto che fa l'oggetto da
+          cui tutto questo e' preso.
 
       Il criterio per aggiungerne una quarta: **deve venire da un oggetto vero
-      che si puo' nominare.** Se non si sa dire da cosa e' presa, e' decorazione.
+      che si puo' nominare, e deve funzionare guardandola.** Se non si sa dire da
+      cosa e' presa e' decorazione; e se si sa dirlo ma a video sporca, esce
+      comunque — e' la fine che ha fatto la rigatura della pagina che stava qui.
    ═══════════════════════════════════════════════════════════════════════════ */
 
 :root {
@@ -173,14 +177,6 @@
   --targa: oklch(0.215 0.030 304);
   --su-targa: oklch(0.956 0.004 236);
 
-  /* La rigatura della pagina. Non e' una texture e non e' un gradiente morbido:
-     e' una riga da un pixel ogni 26, cioe' la rigatura di un tabellone o di un
-     modulo prestampato. Si vede solo **fra** le schede — le schede sono piene e
-     ci stanno sopra — e serve a una cosa sola: dire che il fondo e' carta, non
-     il vuoto. Al buio scende di alfa perche' su nero una riga chiara pesa il
-     doppio di una riga scura su bianco. */
-  --riga-carta: oklch(0.235 0.030 304 / 0.05);
-  --passo-riga: 26px;
 
   /* ---- le righe ------------------------------------------------------- */
   /* --border separa e basta: non porta informazione, quindi non deve reggere
@@ -372,7 +368,6 @@
      targa chiara. */
   --targa: oklch(0.930 0.006 236);
   --su-targa: oklch(0.190 0.028 304);
-  --riga-carta: oklch(0.956 0.004 236 / 0.035);
   --luce: inset 0 1px 0 oklch(1 0 0 / 0.10);
 }
 
@@ -380,28 +375,20 @@
 
 html, body { height: 100%; }
 
-/* Il fondo e' carta rigata, e la rigatura e' l'unica decorazione di tutto il
-   foglio. Vale la pena scrivere perche' non contraddice gli anti-riferimenti:
-   quello che PRODUCT.md rifiuta e' il **gradiente morbido** — una sfumatura che
-   non ha bordi, non ha misura e non viene da nessun oggetto. Questa e' il suo
-   contrario esatto: una riga da un pixel, netta, a passo fisso, che viene da un
-   modulo prestampato. Si vede solo negli spazi fra le schede, che e' dove prima
-   c'era una superficie piatta senza nome.
-
-   Nessun `background-attachment: fixed`, ed e' una scelta e non una dimenticanza:
-   con la rigatura ferma sotto il contenuto che scorre l'effetto a video e'
-   **identico** — un motivo uniforme che si ripete ogni 26px non si distingue
-   fermo o in movimento — e in cambio non si paga il ridisegno a ogni scorrimento,
-   che su un telefono e' l'unica cosa di questa riga che si sarebbe potuta
-   sentire. Il contesto d'uso di PRODUCT.md e' un telefono in mano, non un
-   monitor. */
+/* Il fondo e' pieno, e ci ha provato a non esserlo.
+   Per una passata ha portato una rigatura — una riga da un pixel ogni ventisei,
+   presa da un modulo prestampato — e a video non regge: negli spazi fra le
+   schede si legge come una tessitura sporca invece che come carta, e su un
+   telefono, dove gli spazi fra le schede sono l'unica cosa che tiene separate
+   nove schede, sporcarli e' il contrario di quello che serve. E' rimasta il
+   tempo di guardarla e poi e' uscita.
+   Resta scritta qui perche' l'argomento con cui era entrata era buono («una riga
+   netta a passo fisso non e' il gradiente morbido degli anti-riferimenti») ed era
+   pure vero: non basta che una decorazione sia **giustificabile**, deve
+   funzionare guardandola. Il carattere lo fanno gli oggetti — la targa, il
+   tabellone, il biglietto — non il fondo su cui stanno. */
 body {
-  background-color: var(--bg);
-  background-image: repeating-linear-gradient(
-    to bottom,
-    var(--riga-carta) 0 1px,
-    transparent 1px var(--passo-riga)
-  );
+  background: var(--bg);
   color: var(--ink);
   font-size: 0.95rem;
   line-height: 1.55;
@@ -409,6 +396,24 @@ body {
 }
 
 .hidden { display: none !important; }
+
+/* Cio' che si ascolta ma non si vede. Nasce per un caso preciso — l'ora del
+   passaggio, che a video e' cinque palette separate e per chi ascolta deve
+   restare una frase sola — e il modo in cui e' scritta e' quello che conta:
+   `display: none` e `visibility: hidden` la toglierebbero **anche** ai lettori
+   di schermo, cioe' non servirebbe a niente. Un pixel ritagliato invece resta
+   nell'albero e si legge.
+   Non e' `text-indent: -9999px`: quella spinge il testo fuori pagina e su una
+   pagina in arabo o in ebraico lo spinge dalla parte sbagliata, allargando la
+   pagina di novemila pixel. */
+.solo-lettori {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  overflow: hidden;
+  clip-path: inset(50%);
+  white-space: nowrap;
+}
 
 h1, h2, h3 { text-wrap: balance; letter-spacing: -0.02em; }
 
@@ -626,7 +631,7 @@ a:hover { color: var(--primary-hover); }
    niente e' proprio la definizione di decorazione che il foglio si vieta.
 
    Togliendola resta l'oggetto che contava: l'auto sulla sua piastra scura,
-   appoggiata sulla carta rigata, con la frase sotto. E' il principio 3 di
+   appoggiata alla pagina, con la frase sotto. E' il principio 3 di
    PRODUCT.md preso alla lettera — l'auto e' la protagonista — invece di un
    riquadro che le stava intorno per abitudine. */
 
@@ -1016,6 +1021,27 @@ input[type="time"]::-webkit-calendar-picker-indicator { opacity: 0.6; cursor: po
 }
 .tema-tasto:hover { color: var(--primary-testo); border-color: var(--primary-bordo); }
 .tema-tasto:focus-visible { outline: 2px solid var(--primary-testo); outline-offset: 2px; }
+
+/* L'interruttore si **volta**, e la parola e' quella giusta: le due icone non
+   sono due stati di un bottone, sono le due facce di una targa: la luna da un
+   lato, il sole dall'altro. Toccandola gira, e il verso in cui gira dice dove
+   sei andato — a sinistra verso il buio, a destra verso la luce. E' il gesto
+   della paletta del tabellone sull'altro asse, ed e' l'unico modo di far dire a
+   un'animazione qualcosa che il colore da solo non dice: non che il tema **e'**
+   cambiato, ma **in che verso**.
+
+   La prospettiva e' corta e sta sul bottone: su un oggetto da 34 pixel serve
+   quella per vedere che si gira invece di schiacciarsi. L'animazione parte solo
+   quando `app.js` mette la classe, cioe' solo su un tocco: al primo disegno della
+   pagina il tema non e' cambiato, e annunciarlo sarebbe dire una cosa falsa. */
+.tema-tasto { perspective: 140px; }
+.tema-tasto svg.volta { animation: volta 400ms var(--ease-out); }
+.tema-tasto svg.volta.al-buio { --verso: -1; }
+.tema-tasto svg.volta.alla-luce { --verso: 1; }
+@keyframes volta {
+  from { transform: rotateY(calc(var(--verso, 1) * 180deg)); }
+  to { transform: rotateY(0); }
+}
 
 /* La scheda con la faccia, a destra nella barra in alto. Dice due cose vere e
    nessuna di piu': come ti chiami e in quante comitive sei; il ruolo lo scrive
@@ -1480,13 +1506,30 @@ input[type="time"]::-webkit-calendar-picker-indicator { opacity: 0.6; cursor: po
    righe di testo, non quanto la scheda — su un tabellone il filetto separa le
    colonne di una riga, non l'intero pannello. */
 .ride-ora {
+  position: relative;
   flex: none;
   display: flex;
   flex-direction: column;
   align-items: flex-start;
-  padding-right: 12px;
+  padding-right: 13px;
   margin-right: 3px;
-  border-right: 1px solid var(--border);
+}
+/* **La perforazione.** Era un filetto continuo da un pixel, e un filetto continuo
+   e' quello che separa due colonne di una tabella. Qui le due parti non sono due
+   colonne: sono il **tagliando** e il biglietto — l'ora e' la parte che si
+   strappa e si tiene in mano, ed e' per questo che sta staccata.
+   Sono tondi e non tratti, e la distinzione porta informazione invece di essere
+   un gusto: in questo foglio il **tratteggio** vuol dire vuoto (il sedile libero,
+   lo stato vuoto, il giorno scoperto). Una fila di buchi tondi non e' un vuoto,
+   e' una cosa fatta per essere strappata — e nessuno la confonde con l'altra. */
+.ride-ora::after {
+  content: '';
+  position: absolute;
+  top: 1px;
+  bottom: 1px;
+  right: 0;
+  width: 3px;
+  background: radial-gradient(circle, var(--border-strong) 0.9px, transparent 1.1px) 50% 0 / 3px 6px repeat-y;
 }
 /* L'interlettera negativa serve a una cosa sola, e si vede solo a video: nel
    monospaziato i due punti occupano una cella larga come una cifra, quindi
@@ -1501,6 +1544,49 @@ input[type="time"]::-webkit-calendar-picker-indicator { opacity: 0.6; cursor: po
   letter-spacing: -0.085em;
   font-variant-numeric: tabular-nums;
   color: var(--ink);
+  /* La prospettiva sta sul contenitore e non sulla singola paletta: cosi' le
+     cinque celle sono guardate dallo stesso punto, come cinque palette sulla
+     stessa fila di un tabellone. Su ognuna, ciascuna avrebbe il suo punto di
+     vista e la fila si incurverebbe. 260px e' corta — la deformazione si vede —
+     ma non tanto da far sembrare le cifre di lato una piu' grande dell'altra. */
+  perspective: 260px;
+  display: inline-flex;
+}
+
+/* ---- le palette del tabellone ----
+   Ogni carattere dell'ora cala sulla sua cerniera, e la cerniera sta **in alto**
+   (`transform-origin: 50% 0`): e' da la' che e' appesa la paletta di un tabellone
+   delle partenze, e cadendo scopre quella dopo. Partono da 90 gradi, cioe' di
+   taglio, invisibili perche' un rettangolo visto sul filo non ha superficie.
+
+   Il ritardo somma due conti e vale la pena leggerli separati:
+   · `var(--i) * 45ms` e' lo scaglionamento delle **schede**, lo stesso che porta
+     dentro la scheda del passaggio: l'ora di una scheda non puo' girare prima che
+     la sua scheda esista;
+   · `var(--n) * 65ms` e' la posizione della **paletta** nella fila, da sinistra.
+     E' l'ordine in cui si legge un'ora, ed e' l'ordine in cui gira un tabellone.
+
+   `backwards` tiene il taglio prima di cominciare, o le cinque cifre comparirebbero
+   tutte insieme e poi girerebbero: sarebbe l'informazione data due volte, e la
+   seconda in ritardo. Con `prefers-reduced-motion` la regola in fondo al foglio
+   spegne l'animazione, il riempimento in avanti cade con lei, e le palette restano
+   cinque caratteri in fila — cioe' l'ora, di scatto. */
+.ride-ora .ora i {
+  display: inline-block;
+  font-style: normal;
+  transform-origin: 50% 0;
+  backface-visibility: hidden;
+  animation: paletta 400ms var(--ease-out) backwards;
+  animation-delay: calc(var(--i, 0) * 45ms + var(--n, 0) * 65ms);
+}
+@keyframes paletta {
+  from { transform: rotateX(90deg); opacity: 0; }
+  /* Il 62% non e' un numero a caso: e' il punto in cui la paletta e' gia' piatta
+     e all'occhio l'ora e' leggibile. Il resto della curva serve a fermarla, e una
+     paletta vera si ferma perche' batte contro la fila, non perche' rimbalza —
+     nessun superamento, che sta fra gli anti-riferimenti di PRODUCT.md. */
+  62% { transform: rotateX(0); opacity: 1; }
+  to { transform: rotateX(0); opacity: 1; }
 }
 .ride-ora .lab {
   margin-top: 5px;
