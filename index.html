@@ -10,7 +10,7 @@
   <link rel="stylesheet" href="style.css" />
   <link rel="manifest" href="manifest.json" />
   <link rel="icon" href="icon.svg" type="image/svg+xml" />
-  <meta name="theme-color" content="#020202" />
+  <meta name="theme-color" content="#110C17" />
   <meta name="color-scheme" content="dark" />
 
   <!-- Netlify serve l'informativa sia come /privacy sia come /privacy.html, entrambe con
@@ -277,45 +277,21 @@
 
     <div class="shell-col">
 
-    <!-- Barra in alto. Da 768px in su prende il posto della fascia scura *e* della
-         pillola in basso: erano due navigazioni per le stesse cinque viste, e la
-         pillola centrata su uno schermo largo lasciava due terzi di riga vuota. Al
-         posto della colonna laterale di prima, che rubava 206px di larghezza proprio
-         al riepilogo — la vista che di larghezza ne vuole quanta gliene dai.
+    <!-- **Una navigazione sola, e sta in basso.** Fino a ieri ce n'erano due: una
+         fascia con quattro voci in alto da 768px in su, e una fascia con cinque in
+         basso sotto quella soglia. Due marcature, due elenchi di ascoltatori, due
+         indicatori — e ogni ritocco andava fatto due volte o le due divergevano.
 
-         **Una voce per vista, e nessuna vista due volte.** Quattro voci nel gruppo
-         centrale, una per vista, piu' la scheda con la faccia a destra: e' l'unica
-         cosa che porta al profilo.
-
-         Il tondo (`nav-tondo`) e' un elemento solo che scivola, non quattro sfondi che
-         si accendono a turno: e' il movimento a dire che sei passato da una vista
-         all'altra. Sotto il puntatore anticipa dove andresti, e appena il mouse esce
-         torna dove sei davvero. Lo posiziona `app.js`, perche' le voci hanno larghezze
-         diverse e nessuna griglia di percentuali le indovina. -->
-    <!-- Un `div` e non un `header`: il landmark `banner` della pagina e' uno solo, ed e'
-         la fascia scura qui sotto. Il gruppo delle voci ha gia' il suo `<nav>`. -->
-    <div class="top-nav">
-      <div class="top-brand"><svg width="20" height="20"><use href="#i-car"/></svg> <b>WeTransport</b></div>
-      <nav class="top-list" id="top-list" aria-label="Sezioni dell'app">
-        <span class="nav-tondo" aria-hidden="true"></span>
-        <button type="button" class="top-item on" data-view="home" aria-current="page">
-          <svg width="15" height="15"><use href="#i-car"/></svg><span>Passaggi</span></button>
-        <button type="button" class="top-item" data-view="stats">
-          <svg width="15" height="15"><use href="#i-chart"/></svg><span>Riepilogo</span></button>
-        <button type="button" class="top-item" data-view="groups">
-          <svg width="15" height="15"><use href="#i-users"/></svg><span>Comitive</span></button>
-        <button type="button" class="top-item" data-view="history">
-          <svg width="15" height="15"><use href="#i-history"/></svg><span>Storico</span></button>
-      </nav>
+         Adesso le quattro schede stanno **sempre** nella fascia in basso, che e'
+         dove sta il pollice e dove questa app si usa: in piedi, con una mano, cinque
+         minuti prima di partire. La barra qui sotto non naviga: porta il marchio e
+         te, e la scheda con la faccia e' l'unica cosa che apre il profilo. -->
+    <header class="topbar">
+      <div class="brand"><svg width="20" height="20"><use href="#i-car"/></svg> <b>WeTransport</b></div>
       <button type="button" class="top-me" id="top-me" title="Vai al profilo" aria-label="Il tuo profilo">
         <span class="top-av" id="top-av"></span>
         <span class="top-chi"><b id="top-nome"></b><small id="top-ruolo"></small></span>
       </button>
-    </div>
-
-    <header class="topbar">
-      <div class="brand"><svg width="22" height="22"><use href="#i-car"/></svg> WeTransport</div>
-      <button type="button" id="user-name" class="user-name-btn" title="Vai al profilo" aria-label="Il tuo profilo"></button>
     </header>
 
     <main class="app-view">
@@ -558,12 +534,14 @@
     </main>
     </div>
 
+    <!-- Quattro schede, nell'ordine in cui si guardano: prima cosa succede oggi,
+         poi come siamo messi, poi con chi, poi cos'e' stato. Il profilo non e' una
+         scheda — ce l'ha la faccia in alto — e sono quattro e non cinque per questo. -->
     <nav class="bottom-nav" aria-label="Navigazione principale">
-      <button type="button" class="nav-item" data-view="history" aria-label="Storico"><svg width="21" height="21"><use href="#i-history"/></svg><span>Storico</span></button>
-      <button type="button" class="nav-item" data-view="groups" aria-label="Comitive"><svg width="21" height="21"><use href="#i-users"/></svg><span>Comitive</span></button>
       <button type="button" class="nav-item active" data-view="home" aria-label="Passaggi" aria-current="page"><svg width="21" height="21"><use href="#i-car"/></svg><span>Passaggi</span></button>
       <button type="button" class="nav-item" data-view="stats" aria-label="Riepilogo"><svg width="21" height="21"><use href="#i-chart"/></svg><span>Riepilogo</span></button>
-      <button type="button" class="nav-item" data-view="profile" aria-label="Profilo"><svg width="21" height="21"><use href="#i-user"/></svg><span>Profilo</span></button>
+      <button type="button" class="nav-item" data-view="groups" aria-label="Comitive"><svg width="21" height="21"><use href="#i-users"/></svg><span>Comitive</span></button>
+      <button type="button" class="nav-item" data-view="history" aria-label="Storico"><svg width="21" height="21"><use href="#i-history"/></svg><span>Storico</span></button>
     </nav>
   </div>
 

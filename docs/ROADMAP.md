@@ -1398,6 +1398,64 @@ l'icona grigia centrata negli stati vuoti) non ci sono più.
 
 ---
 
+### C42 — Il viola, e una navigazione sola in basso — *fatto*
+
+Due richieste del proprietario, con la palette allegata e un esempio: **le quattro schede
+devono stare sotto, in una fascia**, e i colori sono i cinque della foto.
+
+**1. Le due navigazioni erano una di troppo, e quella di troppo era quella in alto.** Da C40
+esistevano una fascia con quattro voci in alto sopra i 768px e una con cinque voci in basso sotto
+quella soglia: due marcature, due elenchi di ascoltatori, due indicatori che si muovono, e ogni
+ritocco da fare due volte o le due divergevano. C40 le aveva volute entrambe con l'argomento che
+«la pillola centrata su uno schermo largo lascia due terzi di riga vuota» — vero della pillola
+flottante, non della fascia: quella si stende per intero e il gruppo delle schede si stringe al
+centro, che e' quello che fa adesso da 768px in su. Le schede sono **quattro** perche' il profilo
+non e' una vista fra le altre: ce l'ha la faccia in alto, che e' l'unica cosa che lo apre. Con la
+barra di sopra se ne sono andati `.top-item`, `.top-list`, `.nav-tondo`, `tondoSu()`,
+`tondoACasa()` e il secondo bottone del nome che esisteva solo sotto i 768px.
+
+Sul profilo la riga della fascia **si spegne** invece di restare ferma su una scheda che non e'
+quella aperta: e' la stessa regola che aveva il tondo di sopra, e vale la pena ripeterla — dire una
+cosa falsa e' peggio che non dire niente.
+
+**2. Cinque colori, cinque mestieri.** Il quasi-bianco e' l'inchiostro pieno, il viola e' cio' che
+si tocca e cio' che e' tuo, il viola cupo e' lo stesso premuto, il grigio-blu e' l'inchiostro tenue
+e la lamiera dell'auto, il viola-nero e' la carta e il fondo. Il fondo e' il viola-nero abbassato e
+le schede sono il viola-nero esatto, cosi' le schede sono dello stesso materiale del fondo invece
+di sembrarci appoggiate sopra.
+
+**3. `--primary` e `--primary-testo` sono tornati due colori diversi, e non e' un ripensamento: e'
+una misura.** Con il candy blue erano lo stesso valore, perche' un azzurro chiaro regge il testo
+sul buio *e* porta l'onyx sopra di se'. Il viola della palette e' scuro (L 0.53): come riempimento
+e' perfetto — con il quasi-bianco sopra fa 6:1, ed e' esattamente l'uso che ne fa l'esempio, i
+tondi pieni con l'icona chiara — ma come testo sul fondo farebbe **2.4:1**. Quindi `--primary` si
+riempie e `--primary-testo` e' lo stesso viola portato in alto di luminosita', per dove il colore
+e' scritto o e' un contorno. Due mestieri, due misure.
+
+**4. Quello che si e' ribaltato insieme all'accento.** Il verso «chiaro sopra scuro» era scritto a
+mano in cinque punti che davano per scontato un accento chiaro: il testo del benvenuto, la piega
+dentro il sedile tuo, le due righe di servizio dei riquadri «tuoi». Erano onyx schiariti — con il
+viola sarebbero stati invisibili. Adesso sono un token, `--su-primario-tenue`, e stanno dentro
+`npm run contrasto` invece che fuori. Stessa storia per le sei tinte degli avatar, che erano chiare
+con l'onyx sopra e ora sono scure con il quasi-bianco sopra.
+
+**5. La lamiera dell'auto e' salita, e la ragione e' una coppia sola.** Il posto **tuo** e' viola
+pieno, e il viola e' scuro: contro un grigio-blu a L 0.69 faceva 2.20:1, cioe' un sedile che
+sparisce nella scocca. La lamiera sta a L 0.80 perche' li' la coppia fa 3:1 — la misura la decide
+il controllo del contrasto, non l'occhio. E' la coppia piu' stretta di tutto il foglio.
+
+**6. I quattro PNG dell'icona erano rimasti al navy di due restyling fa.** `icon.svg` era stato
+aggiornato in C40, i PNG no — e sono quelli che finiscono davvero sulla schermata home di chi
+installa l'app. Adesso si rigenerano dal disegno con Chromium invece di essere ridisegnati a mano,
+quindi non possono piu' restare indietro. Con loro il `theme-color` delle quattro pagine e i due
+colori del manifesto.
+
+**Fatto quando:** `npm run check` e' verde, e le 44 coppie del contrasto sono state ricalcolate —
+non allentate. Quattro si erano rotte al primo giro e sono state sistemate spostando i token, non
+le soglie.
+
+---
+
 ### C41 — Il riepilogo senza il quaderno, e ogni numero una volta sola — *fatto*
 
 Richiesta del proprietario, e il primo pezzo è la correzione del punto 6 di C40 qui sopra: **quei
@@ -1534,5 +1592,5 @@ seconda volta che ripaga: il difetto peggiore era **fuori** dal file che stavo g
 | **D6** | Servizi esterni (C14) | Solo API native del browser: Web Share per l'invito, `.ics` per il calendario, link Maps con coordinate vere (dentro C9). Nessun SDK di terzi, nessuna analytics. |
 | **D7** | Estetica (C15) | Il difetto è che sembra generata dall'AI, non che sia brutta. Si tolgono gli effetti generici, si sceglie una tipografia vera, l'auto SVG diventa protagonista. Prova del nove: coperto il logo, si riconosce lo stesso. |
 | **D8** | Nome e dominio (C20) | Repo rinominato in `wetransport`; dominio proprio al momento dell'apertura al pubblico, non prima. |
-| **D10** | Palette e tema (C40) | Onyx `#020202` e candy blue `#B2D5E5`, **un tema solo**: niente `prefers-color-scheme`, perché due palette sono due cose da mantenere e nessuna delle due è la faccia dell'app. Un accento solo, e le due cose che dice — «si tocca», «è tuo» — si distinguono per **forma** (scritto/contornato contro pieno), non per tinta. Sul riepilogo la regola e' cambiata in C41: **niente gesto laterale, mai**. La vista si allunga fino al bordo dello schermo e riempie quello che ha; se lo schermo e' corto si scorre in verticale come in ogni altra vista, invece di mandare le schede in una schermata laterale che nessuno trova. Quello che non entra si toglie, non si nasconde — e ogni numero compare una volta sola. |
+| **D10** | Palette e tema (C40, rifatta in C42) | **Un tema solo**, e adesso sono i cinque colori della palette del proprietario: quasi-bianco `#EEF1F3`, viola `#8A22E7`, viola cupo, grigio-blu, viola-nero `#110C17`. Niente `prefers-color-scheme`, perche' due palette sono due cose da mantenere e nessuna delle due e' *la* faccia dell'app. Il fondo resta scuro: il contesto d'uso di PRODUCT.md e' in piedi al buio davanti a un portone. Un accento solo, e le due cose che dice — «si tocca», «e' tuo» — si distinguono per **forma** (scritto/contornato contro pieno), non per tinta. Il viola e' scuro, quindi si riempie con il chiaro sopra e si schiarisce quando e' scritto: `--primary` e `--primary-testo` sono due colori, non due nomi per uno. Sul riepilogo vale la regola di C41: niente gesto laterale, mai. |
 | **D9** | Contrasto (C39) | Si calcola, non si stima. I rapporti nei commenti valgono finché nessuno tocca un token, cioè non valgono: `tests/contrasto.mjs` legge i token dal foglio di stile e sta dentro `npm run check`. Un colore che deve reggere due contrasti opposti (bianco sopra, se stesso come testo) è due token, non uno. |

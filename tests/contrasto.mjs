@@ -15,12 +15,14 @@
 // superficie che qui non e' elencata. Le coppie vanno aggiunte quando nasce il
 // componente che le usa.
 //
-// **Un tema solo.** Prima ce n'erano due e questo file li leggeva tutti e due: il
-// blocco `:root` e quello dentro `prefers-color-scheme: dark`. Adesso l'app e' onyx
-// e basta, quindi il secondo blocco non esiste piu' e il giro e' uno. Il candy blue
-// non si sdoppia come si sdoppiava il navy — chiaro com'e', regge il testo sul buio
-// **e** l'onyx sopra di se' con lo stesso valore — quindi i token `--primary` e
-// `--primary-testo` hanno lo stesso colore e restano due nomi per due mestieri.
+// **Un tema solo**, e il blocco letto e' uno: `:root`. Non c'e' un secondo giro per
+// `prefers-color-scheme`, perche' due palette sono due cose da mantenere.
+//
+// Con il viola della palette `--primary` e `--primary-testo` sono tornati a essere
+// **due colori diversi**, non due nomi per uno. Il candy blue era chiaro e faceva
+// entrambi i mestieri con lo stesso valore; il viola e' scuro (L 0.53), quindi si
+// riempie col quasi-bianco sopra ma come testo sul fondo farebbe 2.4:1. La coppia
+// che l'ha imposto sta qui sotto ed e' l'unica ragione per cui i due token esistono.
 
 import { readFileSync } from 'node:fs';
 import { fileURLToPath } from 'node:url';
@@ -67,8 +69,9 @@ function leggiOklch(testo) {
 
 const css = readFileSync(join(RADICE, 'style.css'), 'utf8');
 
-// `:root { ... }` e' il tema chiaro; il blocco dentro `prefers-color-scheme: dark`
-// e' quello scuro, e ridefinisce solo i token che cambiano.
+// Ritaglia il corpo di una regola contando le graffe: qui serve solo per `:root`,
+// ma non sa niente di `:root` — se domani i token si spostano, si passa un altro
+// selettore e basta.
 function blocco(dopo) {
   const i = css.indexOf(dopo);
   if (i < 0) throw new Error(`blocco non trovato: ${dopo}`);
@@ -112,17 +115,21 @@ const COPPIE = [
   ['bordo di un campo, sulla carta', '--border-strong', '--surface', 3],
   ['bordo di un campo, sul fondo', '--border-strong', '--bg', 3],
 
-  ['candy blue come testo, su carta', '--primary-testo', '--surface', 4.5],
-  ['candy blue come testo, sul fondo', '--primary-testo', '--bg', 4.5],
-  ['candy blue come testo, sul suo velo', '--primary-testo', '--primary-soft', 4.5],
-  ['candy blue come testo, sul rilievo', '--primary-testo', '--rilievo', 4.5],
-  ['onyx sul candy blue pieno', '--su-primario', '--primary', 4.5],
-  ['onyx sul candy blue al passaggio', '--su-primario', '--primary-hover', 4.5],
+  ['viola come testo, su carta', '--primary-testo', '--surface', 4.5],
+  ['viola come testo, sul fondo', '--primary-testo', '--bg', 4.5],
+  ['viola come testo, sul suo velo', '--primary-testo', '--primary-soft', 4.5],
+  ['viola come testo, sul rilievo', '--primary-testo', '--rilievo', 4.5],
+  ['quasi-bianco sul viola pieno', '--su-primario', '--primary', 4.5],
+  ['quasi-bianco sul viola premuto', '--su-primario', '--primary-hover', 4.5],
+  // La riga di servizio dentro un riquadro pieno di viola: e' testo piccolo, quindi
+  // 4.5 anche se e' un sottotitolo. Stava scritta a mano nel foglio e non era qui.
+  ['riga tenue sul viola pieno', '--su-primario-tenue', '--primary', 4.5],
   ['anello di fuoco sul fondo pagina', '--primary-testo', '--bg', 3],
-  ['contorno del candy blue, sulla carta', '--primary-bordo', '--surface', 3],
+  ['contorno del viola, sulla carta', '--primary-bordo', '--surface', 3],
 
-  // «Questo e' tuo»: pieno con l'onyx sopra, e il contorno che lo circonda.
-  ['onyx su cio\' che e\' tuo', '--tuo-su', '--tuo', 4.5],
+  // «Questo e' tuo»: viola pieno con il quasi-bianco sopra, e il contorno intorno.
+  ['quasi-bianco su cio\' che e\' tuo', '--tuo-su', '--tuo', 4.5],
+  ['riga tenue su cio\' che e\' tuo', '--su-primario-tenue', '--tuo', 4.5],
   ['cio\' che e\' tuo, come testo su carta', '--tuo-testo', '--surface', 4.5],
   ['cio\' che e\' tuo, come testo sul suo velo', '--tuo-testo', '--tuo-velo', 4.5],
   ['contorno di cio\' che e\' tuo, sulla carta', '--tuo-bordo', '--surface', 3],
@@ -136,14 +143,14 @@ const COPPIE = [
 
   // Le sei tinte degli avatar (COLORI_AV in app.js): un cerchio con due lettere
   // dentro e' testo, e vale la soglia del testo. Sono sei perche' servono a
-  // distinguere sei persone, ma stanno tutte nella famiglia del candy blue e
-  // portano tutte l'onyx sopra: cambiano di luminosita' prima che di tinta.
-  ['iniziali sull\'avatar 1', '--su-primario', 'oklch(0.78 0.030 227)', 4.5],
-  ['iniziali sull\'avatar 2', '--su-primario', 'oklch(0.70 0.050 250)', 4.5],
-  ['iniziali sull\'avatar 3', '--su-primario', 'oklch(0.72 0.060 200)', 4.5],
-  ['iniziali sull\'avatar 4', '--su-primario', 'oklch(0.66 0.070 215)', 4.5],
-  ['iniziali sull\'avatar 5', '--su-primario', 'oklch(0.74 0.040 265)', 4.5],
-  ['iniziali sull\'avatar 6', '--su-primario', 'oklch(0.68 0.040 185)', 4.5],
+  // distinguere sei persone, ma stanno tutte nella famiglia del viola e portano
+  // tutte il quasi-bianco sopra: cambiano di tinta prima che di luminosita'.
+  ['iniziali sull\'avatar 1', '--su-primario', 'oklch(0.50 0.200 300)', 4.5],
+  ['iniziali sull\'avatar 2', '--su-primario', 'oklch(0.46 0.165 285)', 4.5],
+  ['iniziali sull\'avatar 3', '--su-primario', 'oklch(0.54 0.215 312)', 4.5],
+  ['iniziali sull\'avatar 4', '--su-primario', 'oklch(0.44 0.140 272)', 4.5],
+  ['iniziali sull\'avatar 5', '--su-primario', 'oklch(0.52 0.155 328)', 4.5],
+  ['iniziali sull\'avatar 6', '--su-primario', 'oklch(0.48 0.105 262)', 4.5],
   ['iniziali sull\'avatar tuo', '--tuo-su', '--tuo', 4.5],
 
   // L'auto. La scocca e' un elemento non testuale che porta informazione — se non
@@ -156,19 +163,15 @@ const COPPIE = [
   ['il vuoto di un posto, sulla scocca', '--posto', '--scocca', 3],
   ['il posto tuo, sulla scocca', '--tuo', '--scocca', 3],
   ['contorno di un posto, sul suo vuoto', '--posto-bordo', '--posto', 3],
-  ['contorno di un posto libero, sul suo vuoto', '--primary', '--posto', 3],
+  ['contorno di un posto libero, sul suo vuoto', '--primary-testo', '--posto', 3],
   ['iniziali dentro un posto', '--ink', '--posto', 4.5],
   ['iniziali dentro il posto tuo', '--tuo-su', '--tuo', 4.5],
   ['gomma sulla scocca', '--gomma', '--scocca', 3],
 
   // Il benvenuto e' l'unico riquadro dove il candy blue prende tutta la superficie:
   // il testo sotto il titolo e' un onyx schiarito, non l'onyx pieno, e va misurato.
-  ['testo del benvenuto', 'oklch(0.30 0.03 227)', '--primary', 4.5],
-  ['bottone scuro dentro il benvenuto', '--primary', '--su-primario', 4.5],
+  ['bottone chiaro dentro il benvenuto', '--primary', '--su-primario', 4.5],
 
-  // La striscia dei numeri quando e' tua: etichetta e nota sono onyx schiarito
-  // sopra il candy blue pieno.
-  ['etichetta di un numero tuo', 'oklch(0.30 0.03 227)', '--tuo', 4.5],
 ];
 
 let bocciate = 0;
