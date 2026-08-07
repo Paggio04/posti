@@ -104,6 +104,46 @@ test('robots.txt e sitemap.xml ci sono e si parlano', async ({ request }) => {
   }
 });
 
+// L'interruttore del tema, e il motivo per cui questo test esiste: il gesto vive
+// in `app.js`, e nessun controllo del repo lo guardava. Lint vede che la funzione
+// compila, il controllo del contrasto vede che i due temi reggono le soglie — ma
+// che *toccare il bottone* cambi davvero il tema, ribalti `aria-pressed` e giri la
+// faccia della targa lo vede solo un browser. Ed e' un bottone in cima a ogni
+// schermata dell'app.
+//
+// Guarda quattro cose insieme perche' sono la stessa cosa detta a chi guarda, a chi
+// ascolta e a chi rilegge: il tema sulla radice, lo stato in `aria-pressed`, la
+// faccia mostrata (che e' **dove andresti**, non dove sei) e la classe che fa
+// partire la voltata. La quinta e' che la scelta resti scelta dopo un ricaricamento.
+test('l\'interruttore del tema gira la pagina, e la scelta resta', async ({ page }) => {
+  await page.goto('/');
+  // Nessun accesso vero: si scopre il guscio, che e' dove sta la barra in alto.
+  await page.evaluate(() => {
+    document.getElementById('auth-view').classList.add('hidden');
+    document.getElementById('app-shell').classList.remove('hidden');
+  });
+
+  const tasto = page.locator('#tema-tasto');
+  // L'app nasce chiara, quindi il bottone mostra la luna: dove andresti.
+  await expect(tasto).toHaveAttribute('aria-pressed', 'false');
+  expect(await tasto.locator('use').getAttribute('href')).toBe('#i-luna');
+  // Al primo disegno non deve girare niente: non c'e' stato nessun cambio da dire.
+  expect(await tasto.locator('svg').getAttribute('class')).toBeNull();
+
+  await tasto.click();
+
+  await expect(page.locator('html')).toHaveAttribute('data-tema', 'scuro');
+  await expect(tasto).toHaveAttribute('aria-pressed', 'true');
+  await expect(tasto).toHaveAttribute('aria-label', 'Passa al tema chiaro');
+  expect(await tasto.locator('use').getAttribute('href')).toBe('#i-sole');
+  // E la targa si volta, nel verso di dove sei andato.
+  expect(await tasto.locator('svg').getAttribute('class')).toBe('volta al-buio');
+
+  // La scelta e' scritta, e `tema.js` la applica prima che il browser dipinga.
+  await page.reload();
+  await expect(page.locator('html')).toHaveAttribute('data-tema', 'scuro');
+});
+
 test('la pagina 404 risponde 404 e non si fa indicizzare', async ({ request }) => {
   const r = await request.get('/questo-indirizzo-non-esiste');
   expect(r.status()).toBe(404);
