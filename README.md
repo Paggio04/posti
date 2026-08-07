@@ -1,4 +1,4 @@
-# 📍 Posti
+# 📍 WeTransport
 
 Chi guida oggi? Chi sale? App per organizzare i passaggi in macchina della comitiva:
 i guidatori pubblicano la macchina del giorno, gli altri prenotano il posto tappando sul sedile.

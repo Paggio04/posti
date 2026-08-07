@@ -1,23 +1,95 @@
 # Product
 
-## Register
+<!-- impeccable:product-schema 1 -->
 
-product
+## Platform
+
+web
 
 ## Users
 
-Una comitiva di amici che si organizza i passaggi in auto, e — dopo T2 — chi sta nella stessa
-zona senza conoscere nessuno. Il contesto d'uso non è una scrivania: è in piedi, di corsa, con
-una mano sola, spesso al buio davanti a un portone, cinque minuti prima di partire. Da qui in
-avanti ogni scelta visiva si giudica in quella situazione, non su uno schermo grande e fermo.
+Una comitiva di amici che si organizza i passaggi in auto, e — da ora dichiaratamente — chi sta
+nella stessa zona senza conoscere nessuno: il lavoro si giudica su **T2, l'app aperta a chiunque**,
+non più solo sul gruppo che si conosce già. Il contesto d'uso non è una scrivania: è in piedi, di
+corsa, con una mano sola, spesso al buio davanti a un portone, cinque minuti prima di partire. Da
+qui in avanti ogni scelta visiva si giudica in quella situazione, non su uno schermo grande e fermo.
 
 Il lavoro da fare è uno e si legge in tre secondi: **chi guida oggi, e c'è posto per me.**
+
+Progettare per T2 significa che fiducia, identità di chi guida, segnalazione e blocco non sono
+funzioni di servizio da nascondere in un menù: sono parte della decisione di salire in macchina con
+una persona che non si conosce.
 
 ## Product Purpose
 
 Chi guida pubblica la propria auto, gli altri prenotano un sedile preciso. Sostituisce il gruppo
 di messaggi dove i passaggi si perdono fra cento messaggi. Funziona quando nessuno deve chiedere
 "allora chi passa a prendermi?".
+
+## Positioning
+
+Il posto non è un numero che scala, è **un sedile scelto tappando sulla pianta dell'auto**. È il
+meccanismo che una chat di gruppo, un foglio condiviso o una bacheca di annunci non possono
+imitare: rende visibile a colpo d'occhio chi è già a bordo e dove resta spazio, e trasforma "ci sto
+anch'io" in una prenotazione con un vincolo vero dietro (un posto per persona per auto).
+
+Il secondo elemento di posizione è l'opposto di un social: **l'appartenenza a una comitiva è il
+confine dei dati**, non una funzione di scoperta. Un passaggio si vede se sei nel gruppo che lo
+ospita, se hai un posto su quell'auto, se è aperto alla tua zona (25 km dal punto di partenza) o se
+è pubblico. Aprirsi agli sconosciuti in T2 avviene dentro quel confine, non rimuovendolo.
+
+## Operating Context
+
+- **Telefono, in movimento, spesso con rete pessima.** Installabile come PWA; senza linea si apre
+  l'ultimo guscio salvato e l'app dice chiaramente che la linea manca invece di fingere.
+- **Momento d'uso corto e ripetuto**: si apre per sapere chi guida, si prenota, si chiude. Non c'è
+  una sessione lunga da riempire.
+- **Il gruppo esiste già fuori dall'app** (la comitiva, la chat): l'app non deve ricostruire quella
+  socialità, deve togliere una domanda ricorrente da quella chat.
+- **Il denaro circola fra amici, non attraverso l'app.** I conti in sospeso e i pagamenti sono una
+  contabilità condivisa di ciò che ci si deve; l'app non incassa e non trasferisce nulla.
+- **Realtime**: la vista si invalida da sola quando qualcuno prenota, quindi due persone che
+  guardano lo stesso sedile nello stesso momento è uno scenario normale, non un caso limite.
+- La roadmap è il piano di lavoro vivo (`docs/ROADMAP.md`), le decisioni architetturali stanno in
+  `docs/adr/`: entrambi sono contesto vincolante per capire perché una cosa è com'è, e la roadmap
+  registra anche le idee **scartate**, che non vanno riproposte.
+
+## Capabilities and Constraints
+
+- **Sito statico senza build step.** HTML/CSS/JS vanilla, deploy su Netlify dalla root. Nessun
+  bundler: quello che si scrive è quello che viene servito.
+- **Nessun backend proprio.** Supabase per auth e Postgres; tutta la sicurezza vive nel database
+  (RLS + trigger) e il client è non fidato per definizione. La anon key è pubblica per design.
+- **Il service worker mette in cache il guscio, mai dati né sessioni.** Vincolo dichiarato e
+  motivato: una copia di dati sarebbe una copia che l'esportazione non mostra e la cancellazione
+  non porta via.
+- **Ciò che regge la mancanza di rete non dipende dalla rete**: `rete.js` non importa niente e
+  prova la rete con una richiesta vera invece di fidarsi di `navigator.onLine`.
+- Funzioni presenti a schema: passaggi e sedili, gruppi, richieste di passaggio (con ora), lista
+  d'attesa, commenti, amministratore e segnalazioni, cancellazione account, passaggi in zona,
+  coordinate riservate, pagamenti e conti, registro eventi, ricorrenze. Migrazioni numerate fino
+  alla `025`.
+- Un posto per persona per auto (vincolo `unique`); il guidatore gestisce la propria auto e può
+  liberare i sedili; chi blocca una persona smette di vederla nei due sensi; un amministratore
+  legge la coda delle segnalazioni e nessuno può promuoversi da solo.
+- **Aperto e non chiuso, e vincolante per il resto**: le notifiche a scheda chiusa sono ferme.
+  Tabella e trigger esistono dalla `017` e la coda si riempie, ma `VAPID_PUBLIC_KEY` è vuota, la
+  Edge Function non è mai stata eseguita, `pg_cron` è spento e nel client non c'è una riga che
+  legga quella tabella. Tre cantieri della Fase 7 non esistono finché questo non si accende.
+- CI bloccante su lint, validazione HTML, scansione segreti, migrazioni riapplicate da zero e
+  Playwright sull'anteprima della PR e sul sito vivo. `main` è protetto da un ruleset versionato
+  con status check obbligatori e nessun bypass: **si arriva a main solo per PR**.
+
+## Brand Commitments
+
+- **Il nome è WeTransport**, deciso il 20/07/2026 rinominando `Posti`. Vale ovunque: titoli,
+  manifest, pagine, README, dominio `wetransport.netlify.app`. Non va reintrodotto "Posti".
+  Quello che resta aperto è **solo la rinomina del repo GitHub** (`Paggio04/posti`) e della
+  cartella locale: finché non si fa, lo stesso prodotto ha tre nomi e cercare "wetransport" su
+  GitHub non trova niente.
+- Tagline in uso: **"chi guida oggi?"**.
+- L'app è senza scopo di lucro e lo dichiara nella privacy: niente linguaggio da prodotto
+  commerciale, niente promesse di scala.
 
 ## Brand Personality
 
@@ -26,6 +98,35 @@ posti", "l'auto di Marco è piena" — e allo stesso tempo si vede che l'ha fatt
 delle opinioni: scelte visibili, niente compromessi morbidi, cura anche dove nessuno guarda. Lo
 stesso tono dei commenti nel codice e della roadmap. Mai il registro da prodotto: niente
 "Bentornato", niente "Gestisci le tue preferenze".
+
+## Evidence on Hand
+
+**C'è:**
+
+- **Dati veri di prova**: account e passaggi reali su cui ragionare per stati pieni, liste
+  popolate e casi limite. Gli stati pieni non vanno immaginati.
+- **Asset grafici originali e vincolanti**: l'SVG dei sedili (il pezzo che nessun altro ha), le
+  icone (`icon.svg`, `icona-*.png`) e i font in `fonts/`.
+- **Screenshot e collaudo a video** dell'app in uso.
+
+**Non c'è, e non va inventato:** testimonianze, recensioni, numeri d'uso, dimensione della base
+utenti, loghi di partner, casi studio, benchmark, prezzi. L'app è online e funzionante ma non ha
+ancora una base di utenti reali a regime: qualunque prova sociale sarebbe fabbricata.
+
+## Product Principles
+
+1. **Una domanda, tre secondi.** Ogni schermata si giudica su quanto in fretta risponde a "chi
+   guida oggi, e c'è posto per me". Ciò che non serve a quella risposta compete con essa.
+2. **Il confine dei dati è un impegno, non un'impostazione.** Chi vede cosa è deciso nel database e
+   spiegato all'utente; nessuna schermata può suggerire una visibilità diversa da quella reale.
+3. **Progettare per la rete peggiore, non per la migliore.** Offline, lentezza e fallimento sono
+   stati normali e vanno detti in chiaro, mai mascherati da caricamento infinito.
+4. **In T2 la fiducia è parte del prodotto.** Identità di chi guida, segnalazione, blocco e
+   sospensione sono percorsi di prima classe, perché salire in auto con uno sconosciuto è la
+   decisione vera che l'app chiede di prendere.
+5. **Onestà artigianale.** Niente prove sociali finte, niente linguaggio da prodotto scalabile,
+   niente promesse che il database non mantiene, e una cifra sui conti si può sempre aprire e
+   verificare voce per voce.
 
 ## Anti-references
 
