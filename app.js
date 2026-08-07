@@ -1950,15 +1950,20 @@ async function loadHistory() {
 // ══════════════════════════════════════════════════════════════════════════
 // Il riepilogo.
 //
-// Una sola funzione perche' una sola lettura: le quattro interrogazioni partono
-// insieme e da li' in poi si contano le stesse righe piu' volte, invece di
-// chiedere al database una somma per riquadro. Con una comitiva vera sono
-// centinaia di righe, non milioni.
+// Una sola funzione perche' una sola lettura: le tre interrogazioni partono
+// insieme e da li' in poi si contano le stesse righe **in un giro solo**,
+// invece di chiedere al database una somma per riquadro. Con una comitiva vera
+// sono centinaia di righe, non milioni.
 //
 // Regola valida per ogni riquadro qui sotto: **se il dato non c'e', il riquadro
 // non c'e'**. Nessun numero finto, nessun trattino messo li' per riempire il
 // disegno. Un cruscotto che mostra zeri inventati e' peggio di uno spazio vuoto,
 // perche' lo zero si legge come una misura.
+//
+// E la regola aggiunta in C41: **ogni numero compare una volta sola.** I giorni
+// scoperti stavano in tre punti — la riga in cima, un riquadro dei numeri e il
+// piede della settimana — e tre copie dello stesso conto non sono tre
+// informazioni: sono una, ripetuta, che ruba il posto a quelle che mancano.
 // ══════════════════════════════════════════════════════════════════════════
 async function loadStats() {
   const box = document.getElementById('stats-content');
@@ -1969,8 +1974,7 @@ async function loadStats() {
   // consegnare una pagina vuota — che chi guarda legge come «e' rotto», non come
   // «manca un gruppo». Le tre uscite qui sotto dicono cosa manca e cosa fare.
   if (!currentGroupId) {
-    box.innerHTML = `<div class="dash-top"><div class="dash-hi"><h1>Riepilogo</h1>
-      <p>Serve una comitiva: il riepilogo somma i passaggi di un gruppo.</p></div></div>
+    box.innerHTML = `${testata('Serve una comitiva: il riepilogo somma i passaggi di un gruppo.')}
       <section class="card"><div class="head"><h3>Nessuna comitiva selezionata</h3></div>
       <p class="vuoto">Crea un gruppo o entra con un codice invito dalla vista Comitiva,
       poi torna qui.</p>
@@ -1987,8 +1991,7 @@ async function loadStats() {
     // Un errore qui dentro lasciava lo scheletro a girare per sempre. Meglio dire
     // che e' andata storta, e come rimediare, che una pagina che finge di caricare.
     console.error('riepilogo:', err);
-    box.innerHTML = `<div class="dash-top"><div class="dash-hi"><h1>Riepilogo</h1>
-      <p>Qualcosa non ha funzionato nel caricare i dati.</p></div></div>
+    box.innerHTML = `${testata('Qualcosa non ha funzionato nel caricare i dati.')}
       <section class="card"><div class="head"><h3>Riepilogo non disponibile</h3></div>
       <p class="vuoto">Ricarica la pagina. Se continua, è un difetto: il dettaglio è nella
       console del browser.</p>
@@ -1997,152 +2000,33 @@ async function loadStats() {
   }
 }
 
-// ── Il quaderno del riepilogo ───────────────────────────────────────────────
-// Il riepilogo non scorre in verticale a nessuna larghezza (vedi style.css). Dove
-// le schede non ci stanno tutte insieme, la griglia diventa una fila di schermate
-// larghe quanto la finestra: qui si contano, si disegnano i pallini e si tiene
-// acceso quello giusto.
-//
-// Quante siano non lo decide questo codice: lo decide il CSS impaginando, e si
-// legge da `scrollWidth`. Cosi' non c'e' un secondo posto che deve sapere quante
-// righe entrano in una schermata, e i due non possono divergere.
-function montaPagine(box) {
-  const griglia = box.querySelector('.grid');
-  const barra = box.querySelector('#dash-pagine');
-  if (!griglia || !barra) return;
-
-  // **Il passo e' una colonna, non una schermata**, e la differenza si vede solo
-  // quando le due non coincidono: sul tablet si vedono tre colonne su quattro,
-  // quindi c'e' una sola posizione in piu' dove fermarsi, non un'altra schermata
-  // intera. Dividere la larghezza totale per quella visibile dava 1,336 e
-  // arrotondava a 1, cioe' «nessun pallino» su una vista che invece scorreva.
-  const passo = () => {
-    const prima = griglia.firstElementChild;
-    return Math.max(1, (prima ? prima.getBoundingClientRect().width : griglia.clientWidth) + 10);
-  };
-  const quante = () =>
-    Math.max(1, Math.round((griglia.scrollWidth - griglia.clientWidth) / passo()) + 1);
-  const attuale = () => Math.round(griglia.scrollLeft / passo());
-
-  function disegna() {
-    const n = quante();
-    barra.classList.toggle('acceso', n > 1);
-    if (n <= 1) { barra.innerHTML = ''; return; }
-    if (barra.children.length !== n) {
-      barra.innerHTML = '';
-      for (let i = 0; i < n; i++) {
-        const b = document.createElement('button');
-        b.type = 'button';
-        b.setAttribute('role', 'tab');
-        // Il pallino e' un bottone vero: con la tastiera si passa da una
-        // schermata all'altra senza dover saper scorrere di lato.
-        b.setAttribute('aria-label', `Schermata ${i + 1} di ${n}`);
-        b.addEventListener('click', () => {
-          griglia.scrollTo({ left: i * passo(), behavior: 'smooth' });
-        });
-        barra.appendChild(b);
-      }
-    }
-    accendi();
-  }
-
-  function accendi() {
-    const i = attuale();
-    [...barra.children].forEach((b, k) => {
-      b.classList.toggle('on', k === i);
-      b.setAttribute('aria-selected', k === i ? 'true' : 'false');
-    });
-  }
-
-  griglia.addEventListener('scroll', accendi, { passive: true });
-  // La larghezza della griglia cambia con la finestra **e** con la fascia in alto
-  // che compare a 768px: `resize` da solo si perde il secondo caso quando il
-  // riquadro cambia senza che cambi la finestra.
-  new ResizeObserver(disegna).observe(griglia);
-  disegna();
-}
-
 async function disegnaRiepilogo(box) {
-
-  let sq = supabase
-    .from('rides')
-    .select('id, ride_date, depart_time, origin, destination, seats, driver_id, fuel_per_person, driver:profiles!rides_driver_id_fkey(display_name), seat_claims(passenger_id, ospite_nome, invitato_da, passenger:profiles!seat_claims_passenger_id_fkey(display_name))');
-  sq = sq.eq('group_id', currentGroupId);
-  const { data, error } = await sq;
-  // Non si scrive un messaggio a mano: si lascia salire, cosi' l'errore vero finisce
-  // in console e il riquadro di sopra e' l'unico posto che decide cosa mostrare.
-  if (error) throw error;
-  if (!data) throw new Error('nessun dato dai passaggi');
-
-  // Le tre tabelle della 022-024. `eventi` non ha chiavi esterne (e' un registro
-  // storico: deve sopravvivere a cio' che racconta), quindi PostgREST non puo'
-  // unirla a `profiles` da solo e i nomi si risolvono qui sotto.
-  const oggi = todayISO();
-  const domani = todayISO(1);
-  const [pagRes, evRes] = await Promise.all([
+  // **Le tre letture partono insieme.** Prima i passaggi si aspettavano da soli e
+  // le altre due partivano dopo: due viaggi di rete in fila per tre domande che
+  // non dipendono l'una dall'altra.
+  const [resPassaggi, resPagamenti, resEventi] = await Promise.all([
+    supabase.from('rides').select(CAMPI_RIEPILOGO).eq('group_id', currentGroupId),
     supabase.from('pagamenti').select('da_utente, a_utente, importo, quando').eq('group_id', currentGroupId),
     supabase.from('eventi').select('tipo, attore, quando').eq('group_id', currentGroupId)
-      .order('quando', { ascending: false }).limit(6),
+      .order('quando', { ascending: false }).limit(5),
   ]);
-  const pagamenti = pagRes.data ?? [];
-  const eventi = evRes.data ?? [];
+  // Non si scrive un messaggio a mano: si lascia salire, cosi' l'errore vero finisce
+  // in console e chi ha chiamato e' l'unico posto che decide cosa mostrare.
+  if (resPassaggi.error) throw resPassaggi.error;
+  const passaggi = resPassaggi.data;
+  if (!passaggi) throw new Error('nessun dato dai passaggi');
+  // Le altre due non fermano niente: se mancano manca un riquadro, non la pagina.
+  // `eventi` non ha chiavi esterne (e' un registro storico: deve sopravvivere a
+  // cio' che racconta), quindi PostgREST non puo' unirla a `profiles` da solo e i
+  // nomi si risolvono qui sotto, con quelli gia' letti dai passaggi.
+  const pagamenti = resPagamenti.data ?? [];
+  const eventi = resEventi.data ?? [];
 
-  // ── Un giro solo sui passaggi, e tutte le somme che servono ───────────────
-  const drives = new Map();      // guidatore -> {name, n}
-  const drives30 = new Map();    // idem, ultimi 30 giorni
-  const ridesTaken = new Map();  // passeggero -> {name, n}
-  const nomePer = new Map();
+  const oggi = todayISO();
   const trentaFa = isoMeno(oggi, 30);
-  for (const r of data) {
-    nomePer.set(r.driver_id, nomeDi(r.driver));
-    const d = drives.get(r.driver_id) ?? { name: nomeDi(r.driver), n: 0 };
-    d.n++; drives.set(r.driver_id, d);
-    if (r.ride_date >= trentaFa && r.ride_date <= oggi) {
-      const d30 = drives30.get(r.driver_id) ?? { name: nomeDi(r.driver), n: 0 };
-      d30.n++; drives30.set(r.driver_id, d30);
-    }
-    for (const c of r.seat_claims) {
-      // Un ospite non e' una persona di questa applicazione: il posto si conta a
-      // chi lo ha portato, che e' la stessa regola con cui `saldo_con` gli mette
-      // addosso la quota (031). Due regole diverse qui e nel database vorrebbero
-      // dire due totali diversi per la stessa cosa.
-      const chi = chiRisponde(c);
-      if (!chi) continue;
-      nomePer.set(chi, c.passenger_id ? nomeDi(c.passenger) : (nomePer.get(chi) ?? 'Qualcuno'));
-      const p = ridesTaken.get(chi) ?? { name: nomePer.get(chi) ?? 'Qualcuno', n: 0 };
-      p.n++; ridesTaken.set(chi, p);
-    }
-  }
-  const futuri = data
-    .filter(r => r.ride_date >= oggi)
-    .sort((a, b) => (a.ride_date + (a.depart_time || '')).localeCompare(b.ride_date + (b.depart_time || '')));
-  const prossimo = futuri[0] || null;
-  const liberiTot = futuri.reduce((s, r) => s + Math.max(0, (r.seats || 0) - r.seat_claims.length), 0);
-  const guidoIo = futuri.find(r => r.driver_id === currentUser.id) || null;
   const inizioMese = oggi.slice(0, 8) + '01';
-  const nelMese = data.filter(r => r.ride_date >= inizioMese && r.ride_date <= oggi).length;
 
-  // ── Il carburante ripartito, mese per mese ───────────────────────────────
-  // Non e' quanto e' stato **pagato** (quello sta in `pagamenti`): e' quanto
-  // valgono le quote dei posti occupati, cioe' la spesa che la comitiva si e'
-  // divisa. Le due cose vanno tenute separate o il saldo non torna.
-  const perMese = new Map();
-  for (const r of data) {
-    const q = Number(r.fuel_per_person) || 0;
-    if (!q || !r.seat_claims.length) continue;
-    const m = (r.ride_date || '').slice(0, 7);
-    const v = perMese.get(m) ?? { tot: 0, n: 0 };
-    v.tot += q * r.seat_claims.length;
-    v.n += 1;
-    perMese.set(m, v);
-  }
-  const mesiFinestra = ultimiMesi(oggi, 6);
-  const serie = mesiFinestra.map(m => perMese.get(m)?.tot ?? 0);
-  const meseCorr = perMese.get(oggi.slice(0, 7)) ?? { tot: 0, n: 0 };
-  const mesePrec = perMese.get(mesiFinestra[mesiFinestra.length - 2]) ?? { tot: 0, n: 0 };
-  const delta = mesePrec.tot > 0 ? Math.round(((meseCorr.tot - mesePrec.tot) / mesePrec.tot) * 100) : null;
-
-  // ── Il mio saldo, con l'aritmetica di saldo_con() ────────────────────────
+  // ── I conti fra me e gli altri, con l'aritmetica di saldo_con() ───────────
   const dovutoDaMe = new Map();   // guidatore -> quanto gli devo
   const dovutoAMe = new Map();    // passeggero -> quanto mi deve
   const quantiCon = new Map();    // altra persona -> quanti passaggi in ballo
@@ -2163,23 +2047,65 @@ async function disegnaRiepilogo(box) {
     if (!p || giorno < p) primaCon.set(id, giorno);
   };
   const tratta = (r) => (r.origin ? `${r.origin} → ` : '') + (r.destination || '—');
-  for (const r of data) {
-    const q = Number(r.fuel_per_person) || 0;
-    if (!q) continue;
+
+  // ── Un giro solo sui passaggi, e tutte le somme che servono ───────────────
+  // Erano tre giri sulle stesse righe — i conteggi, il carburante, il saldo —
+  // piu' un `filter` per ognuno dei sette giorni della settimana. Le somme sono
+  // diverse, le righe sono le stesse: si passa una volta e si riempiono tutte.
+  const perGiorno = new Map();    // giorno ISO -> i passaggi di quel giorno
+  const turni30 = new Map();      // guidatore -> {nome, n}, ultimi 30 giorni
+  const perMese = new Map();      // mese '2026-08' -> {tot, n} di carburante diviso
+  const nomePer = new Map();      // id -> nome, per ogni persona che compare qui
+  const guidaNelMese = new Set();
+  let nelMese = 0;
+  for (const r of passaggi) {
+    nomePer.set(r.driver_id, nomeDi(r.driver));
+    const delGiorno = perGiorno.get(r.ride_date);
+    if (delGiorno) delGiorno.push(r); else perGiorno.set(r.ride_date, [r]);
+
+    if (r.ride_date >= trentaFa && r.ride_date <= oggi) {
+      const t = turni30.get(r.driver_id) ?? { nome: nomeDi(r.driver), n: 0 };
+      t.n++; turni30.set(r.driver_id, t);
+    }
+    if (r.ride_date >= inizioMese && r.ride_date <= oggi) {
+      nelMese++;
+      guidaNelMese.add(r.driver_id);
+    }
+
+    // Il carburante ripartito non e' quanto e' stato **pagato** (quello sta in
+    // `pagamenti`): e' quanto valgono le quote dei posti occupati, cioe' la spesa
+    // che la comitiva si e' divisa. Le due cose vanno tenute separate o il saldo
+    // non torna.
+    const quota = Number(r.fuel_per_person) || 0;
+    if (quota && r.seat_claims.length) {
+      const mese = r.ride_date.slice(0, 7);
+      const v = perMese.get(mese) ?? { tot: 0, n: 0 };
+      v.tot += quota * r.seat_claims.length;
+      v.n += 1;
+      perMese.set(mese, v);
+    }
+
     for (const c of r.seat_claims) {
+      if (c.passenger_id) nomePer.set(c.passenger_id, nomeDi(c.passenger));
+      if (!quota) continue;
+      // Un ospite non e' una persona di questa applicazione: il posto si conta a
+      // chi lo ha portato, che e' la stessa regola con cui `saldo_con` gli mette
+      // addosso la quota (031). Due regole diverse qui e nel database vorrebbero
+      // dire due totali diversi per la stessa cosa.
       const chi = chiRisponde(c);
       if (chi === currentUser.id && r.driver_id !== currentUser.id) {
-        dovutoDaMe.set(r.driver_id, (dovutoDaMe.get(r.driver_id) || 0) + q);
+        dovutoDaMe.set(r.driver_id, (dovutoDaMe.get(r.driver_id) || 0) + quota);
         segna(r.driver_id, r.ride_date);
-        voce(r.driver_id, r.ride_date, `Posto sulla sua auto · ${tratta(r)}`, -q);
+        voce(r.driver_id, r.ride_date, `Posto sulla sua auto · ${tratta(r)}`, -quota);
       } else if (r.driver_id === currentUser.id && chi && chi !== currentUser.id) {
-        dovutoAMe.set(chi, (dovutoAMe.get(chi) || 0) + q);
+        dovutoAMe.set(chi, (dovutoAMe.get(chi) || 0) + quota);
         segna(chi, r.ride_date);
         voce(chi, r.ride_date, `Posto sulla tua auto · ${tratta(r)}`
-          + (c.passenger_id ? '' : ` (ospite: ${c.ospite_nome})`), q);
+          + (c.passenger_id ? '' : ` (ospite: ${c.ospite_nome})`), quota);
       }
     }
   }
+
   for (const pg of pagamenti) {
     const imp = Number(pg.importo) || 0;
     if (pg.da_utente === currentUser.id) {
@@ -2204,174 +2130,184 @@ async function disegnaRiepilogo(box) {
     .sort((a, b) => b.v - a.v);
   const saldo = partite.reduce((s, p) => s + p.v, 0);
 
+  // ── Quel che resta da qui in avanti ──────────────────────────────────────
+  const futuri = passaggi
+    .filter(r => r.ride_date >= oggi)
+    .sort((a, b) => (a.ride_date + (a.depart_time || '')).localeCompare(b.ride_date + (b.depart_time || '')));
+  const prossimo = futuri[0] ?? null;
+  const liberiTot = futuri.reduce((s, r) => s + Math.max(0, (r.seats || 0) - r.seat_claims.length), 0);
+
   // ── I prossimi sette giorni: chi guida, e i giorni senza nessuno ─────────
   const settimana = [];
   for (let i = 0; i < 7; i++) {
-    const g = todayISO(i);
-    const dellaGiornata = data.filter(r => r.ride_date === g)
-      .sort((a, b) => (a.depart_time || '').localeCompare(b.depart_time || ''));
-    const posti = dellaGiornata.reduce((s, r) => s + (r.seats || 0), 0);
-    const presi = dellaGiornata.reduce((s, r) => s + r.seat_claims.length, 0);
-    settimana.push({ giorno: g, rides: dellaGiornata, posti, presi });
+    const giorno = todayISO(i);
+    const rides = perGiorno.get(giorno) ?? [];
+    settimana.push({
+      giorno,
+      rides,
+      posti: rides.reduce((s, r) => s + (r.seats || 0), 0),
+      presi: rides.reduce((s, r) => s + r.seat_claims.length, 0),
+    });
   }
-  const scoperti = settimana.filter(s => s.rides.length === 0).length;
-  const primoScoperto = settimana.find(s => s.rides.length === 0);
+  const scoperti = settimana.filter(g => !g.rides.length).length;
+  const primoScoperto = settimana.find(g => !g.rides.length);
   const postiSett = settimana.reduce((s, g) => s + g.posti, 0);
   const presiSett = settimana.reduce((s, g) => s + g.presi, 0);
 
-  // L'agenda mostra il primo giorno che ha qualcosa: oggi se c'e', altrimenti
-  // il primo giorno pieno. Un'agenda vuota su "oggi" non dice niente.
-  const giornoAgenda = settimana.find(s => s.giorno === oggi && s.rides.length)
-    || settimana.find(s => s.rides.length) || settimana[0];
-
-  // ── L'occupazione di domani ──────────────────────────────────────────────
-  const diDomani = data.filter(r => r.ride_date === domani);
-  const postiDom = diDomani.reduce((s, r) => s + (r.seats || 0), 0);
-  const occupatiDom = diDomani.reduce((s, r) => s + r.seat_claims.length, 0);
-
-  // ── Il calendario del mese ───────────────────────────────────────────────
-  const conPassaggio = new Set(data.map(r => r.ride_date));
-  const guidoIl = new Set(data.filter(r => r.driver_id === currentUser.id).map(r => r.ride_date));
+  // ── Il carburante degli ultimi sei mesi ──────────────────────────────────
+  const mesiFinestra = ultimiMesi(oggi, 6);
+  const serie = mesiFinestra.map(m => perMese.get(m)?.tot ?? 0);
+  const meseCorr = perMese.get(oggi.slice(0, 7)) ?? { tot: 0, n: 0 };
+  const mesePrec = perMese.get(mesiFinestra[mesiFinestra.length - 2]) ?? { tot: 0, n: 0 };
+  const delta = mesePrec.tot > 0 ? Math.round(((meseCorr.tot - mesePrec.tot) / mesePrec.tot) * 100) : null;
 
   // ── Da qui in giu' si scrive, non si calcola piu' ────────────────────────
-  const eur = (n) => (Math.round(n * 100) / 100).toLocaleString('it-IT',
-    { minimumFractionDigits: 2, maximumFractionDigits: 2 }) + ' €';
-  const ico = (id, w = 15) => `<svg width="${w}" height="${w}" aria-hidden="true"><use href="#i-${id}"/></svg>`;
-  const iniz = (n) => (String(n || '?').trim()[0] || '?').toUpperCase();
   const mio = (id) => id === currentUser.id;
   const nomeCorto = (id) => mio(id) ? 'Tu' : (nomePer.get(id) || 'Qualcuno');
 
-  const kpi = [];
-  kpi.push(guidoIo
-    ? box_k('mio', 'Il tuo prossimo turno', dataBreve(guidoIo.ride_date),
-        `${(guidoIo.depart_time || '').slice(0, 5)} · ${guidoIo.origin || '—'} → ${guidoIo.destination || ''}`)
-    : box_k('', 'Il tuo prossimo turno', '—', 'non sei alla guida di nessun passaggio'));
-  kpi.push(box_k('', 'Passaggi nel mese', String(nelMese),
-    `${drives.size} ${drives.size === 1 ? 'persona alla guida' : 'persone alla guida'}`));
-  kpi.push(box_k('mio', 'Il tuo saldo', (saldo >= 0 ? '+ ' : '− ') + eur(Math.abs(saldo)),
-    partite.length ? `${partite.length} ${partite.length === 1 ? 'conto in sospeso' : 'conti in sospeso'}` : 'nessun conto in sospeso'));
-  kpi.push(scoperti
-    ? box_k('allerta', 'Giorni scoperti', String(scoperti),
-        `il primo: ${dataBreve(primoScoperto.giorno)}`)
-    : box_k('', 'Giorni scoperti', '0', 'sette giorni tutti coperti'));
-  kpi.push(box_k('', 'Posti disponibili', String(liberiTot), 'sui passaggi in programma'));
-
-  function box_k(cls, lab, val, nota) {
-    return `<div class="k${cls ? ' ' + cls : ''}"><div class="lab">${escapeHtml(lab)}</div>` +
-      `<div class="val">${escapeHtml(val)}</div><div class="nota">${escapeHtml(nota)}</div></div>`;
-  }
+  // I quattro numeri in cima sono la risposta piu' corta alla domanda «come
+  // siamo messi», e **nessuno di loro e' ripetuto piu' in basso**: i passaggi in
+  // programma non stanno piu' nella riga della testata, i giorni scoperti non
+  // stanno piu' nel piede della settimana, il saldo non sta piu' nella pastiglia
+  // dei conti. Erano cinque: «Posti disponibili» diceva un numero che ora sta
+  // nella nota qui accanto, dove costa una riga invece di un riquadro.
+  const numeri = [
+    tessera('', 'Passaggi in programma', String(futuri.length),
+      plurale(liberiTot, 'posto libero', 'posti liberi')),
+    tessera('', 'Passaggi nel mese', String(nelMese),
+      plurale(guidaNelMese.size, 'persona alla guida', 'persone alla guida')),
+    tessera('mio', 'Il tuo saldo', firma(saldo),
+      partite.length ? plurale(partite.length, 'conto in sospeso', 'conti in sospeso') : 'nessun conto in sospeso'),
+    scoperti
+      ? tessera('allerta', 'Giorni scoperti', String(scoperti), `il primo: ${dataBreve(primoScoperto.giorno)}`)
+      : tessera('', 'Giorni scoperti', '0', 'sette giorni tutti coperti'),
+  ].join('');
 
   // Il grafico: si disegna solo se ci sono due mesi con qualcosa dentro. Una
   // linea costruita su un punto solo e' una decorazione, non una misura.
-  const mesiPieni = serie.filter(v => v > 0).length;
   const via = sparkline(serie);
-
-  const heroCarb = `
-    <section class="card hero g-carburante">
-      <div class="head">
-        <span class="sub">Carburante ripartito · mese corrente</span>
-      </div>
+  const cardCarburante = `
+    <section class="card hero">
+      <div class="head"><span class="sub">Carburante ripartito · mese corrente</span></div>
       <div class="big">${escapeHtml(eur(meseCorr.tot))}</div>
       <div class="d">${
         delta === null ? 'primo mese con le quote registrate' :
         `${delta >= 0 ? '+' : '−'}${Math.abs(delta)}% sul mese precedente`
       }${meseCorr.n ? ` · ${escapeHtml(eur(meseCorr.tot / meseCorr.n))} per passaggio` : ''}</div>
-      ${mesiPieni >= 2 ? `
-      <svg viewBox="0 0 250 56" preserveAspectRatio="none" role="img"
-           aria-label="Andamento del carburante ripartito negli ultimi sei mesi"
-           style="width:100%;height:56px;margin-top:8px;display:block">
+      ${serie.filter(v => v > 0).length >= 2 ? `
+      <svg class="via" viewBox="0 0 250 56" preserveAspectRatio="none" role="img"
+           aria-label="Andamento del carburante ripartito negli ultimi sei mesi">
         <defs><linearGradient id="grad-carb" x1="0" y1="0" x2="0" y2="1">
           <stop offset="0" stop-color="var(--primary)" stop-opacity=".28"/>
           <stop offset="1" stop-color="var(--primary)" stop-opacity="0"/></linearGradient></defs>
         <path d="${via} L250,56 L0,56 Z" fill="url(#grad-carb)"/>
         <path d="${via}" fill="none" stroke="var(--primary)" stroke-width="2" vector-effect="non-scaling-stroke"/>
       </svg>` : ''}
-      <button type="button" class="cta" data-vai="conti">Vedi i conti →</button>
     </section>`;
 
+  const liberiProssimo = prossimo ? Math.max(0, (prossimo.seats || 0) - prossimo.seat_claims.length) : 0;
   const cardProssimo = prossimo ? `
-    <section class="card next g-prossimo">
+    <section class="card next">
       <div class="head"><span class="sub">Prossimo passaggio · ${escapeHtml(dataBreve(prossimo.ride_date))}</span></div>
       <div class="titolo">${escapeHtml((prossimo.depart_time || '').slice(0, 5))} · ${escapeHtml(prossimo.origin || '—')} → ${escapeHtml(prossimo.destination || '')}</div>
       <div class="riga${mio(prossimo.driver_id) ? ' tua' : ''}"><span>Conducente</span><b>${escapeHtml(nomeCorto(prossimo.driver_id))}</b></div>
-      <div class="riga"><span>Occupazione</span><b>${prossimo.seat_claims.length} / ${prossimo.seats} · ${Math.max(0, prossimo.seats - prossimo.seat_claims.length)} ${Math.max(0, prossimo.seats - prossimo.seat_claims.length) === 1 ? 'disponibile' : 'disponibili'}</b></div>
+      <div class="riga"><span>Occupazione</span><b>${prossimo.seat_claims.length} / ${prossimo.seats} · ${escapeHtml(plurale(liberiProssimo, 'disponibile', 'disponibili'))}</b></div>
       <div class="riga"><span>Ritrovo</span><b>${escapeHtml(prossimo.origin || 'da concordare')}</b></div>
       <div class="riga"><span>${prossimo.seat_claims.length === 1 ? 'Passeggero' : 'Passeggeri'}</span><b>${
         prossimo.seat_claims.length
-          ? prossimo.seat_claims.map(c => escapeHtml(c.passenger_id ? nomeCorto(c.passenger_id) : `${c.ospite_nome} (ospite)`)).join(' · ')
+          ? prossimo.seat_claims.map(c => escapeHtml(c.passenger_id ? nomeCorto(c.passenger_id) : `${nomeOccupante(c)} (ospite)`)).join(' · ')
           : 'nessuno, per ora'}</b></div>
       <button type="button" class="go" data-vai="home" aria-label="Vai al passaggio">→</button>
     </section>` : `
-    <section class="card next g-prossimo">
+    <section class="card next">
       <div class="head"><span class="sub">Prossimo passaggio</span></div>
       <div class="titolo">Nessun passaggio in programma</div>
       <div class="riga"><span>Guidi tu?</span><b>Pubblica la tua auto dalla Home</b></div>
       <button type="button" class="go" data-vai="home" aria-label="Vai alla Home">→</button>
     </section>`;
 
-  // Il calendario del mese: le settimane cominciano di lunedi', come si usa qui.
-  const primo = new Date(oggi.slice(0, 8) + '01T00:00:00');
-  const scarto = (primo.getDay() + 6) % 7;
-  const celle = [];
-  for (let i = 0; i < 42; i++) {
-    const d = new Date(primo);
-    d.setDate(1 - scarto + i);
-    const iso = isoDi(d);
-    if (i >= 35 && d.getMonth() !== primo.getMonth()) break;
-    const cls = [];
-    if (d.getMonth() !== primo.getMonth()) cls.push('fuori');
-    if (iso === oggi) cls.push('oggi');
-    else if (guidoIl.has(iso)) cls.push('mio');
-    else if (conPassaggio.has(iso)) cls.push('ha');
-    celle.push(`<span class="${cls.join(' ')}">${d.getDate()}</span>`);
-  }
-
-  const cardCal = `
-    <section class="card cal g-calendario">
-      <div class="head"><h3>${escapeHtml(meseInLettere(oggi))}</h3><span class="sub">oggi · tuoi turni · con auto</span></div>
-      <div class="dows"><span>L</span><span>M</span><span>M</span><span>G</span><span>V</span><span>S</span><span>D</span></div>
-      <div class="days">${celle.join('')}</div>
+  const cardSettimana = `
+    <section class="card">
+      <div class="head"><h3>Occupazione settimanale</h3></div>
+      ${settimana.map(g => {
+        // Con piu' di un'auto nello stesso giorno il nome di chi guida la prima
+        // sarebbe una mezza verita': si dice quante sono.
+        const guidatori = new Set(g.rides.map(r => r.driver_id));
+        const suo = guidatori.has(currentUser.id);
+        const perc = g.posti ? (g.presi / g.posti) * 100 : 0;
+        const et = `${giornoBreve(g.giorno)} · ` + (
+          guidatori.size === 0 ? 'scoperto'
+          : guidatori.size > 1 ? `${guidatori.size} auto`
+          : nomeCorto(g.rides[0].driver_id).toLowerCase());
+        return `<div class="riemp">
+          <span class="n">${suo ? `<span class="tu">${escapeHtml(et)}</span>` : escapeHtml(et)}</span>
+          <span class="bar"><i style="width:${perc.toFixed(0)}%;background:${
+            !g.posti ? 'transparent' : suo ? 'var(--tuo)' : 'var(--ink-soft)'}"></i></span>
+          <span class="p">${g.posti ? `${g.presi}/${g.posti}` : '—'}</span>
+        </div>`;
+      }).join('')}
+      <div class="piede"><b>${presiSett}/${postiSett}</b> posti assegnati nei sette giorni</div>
     </section>`;
 
-  const cardAgenda = `
-    <section class="card g-agenda">
-      <div class="head"><h3>Prossimi sette giorni</h3>${postiDom > 0
-        ? `<span class="pill">domani · ${diDomani.length} ${diDomani.length === 1 ? 'auto' : 'auto'} · <b>${occupatiDom}/${postiDom}</b> posti</span>`
-        : '<span class="pill">domani · nessuna auto</span>'}</div>
-      <div>
-        ${giornoAgenda.rides.length
-          ? giornoAgenda.rides.slice(0, 3).map(r => {
-              const pieno = r.seat_claims.length >= (r.seats || 0);
-              return `<div class="ag">
-                <span class="h">${escapeHtml((r.depart_time || '').slice(0, 5) || '—')}</span>
-                <div class="t">${escapeHtml(r.origin || '—')} → ${escapeHtml(r.destination || '')}
-                  <small>${escapeHtml(nomeCorto(r.driver_id))} · ${r.seat_claims.length}/${r.seats}${pieno ? ' completo' : ''}</small></div>
-                <span class="chip${mio(r.driver_id) ? ' mia' : ''}">${ico('car', 13)}</span>
-              </div>`;
-            }).join('') + (giornoAgenda.rides.length > 3
-              ? `<div class="resto">e altri ${giornoAgenda.rides.length - 3}</div>`
-              : '')
-          : '<p class="vuoto" style="margin:0">Nessun passaggio nei prossimi sette giorni.</p>'}
-      </div>
+  const turni = [...turni30.entries()].sort((a, b) => b[1].n - a[1].n).slice(0, 5);
+  const totTurni = turni.reduce((s, [, v]) => s + v.n, 0);
+  const mieiTurni = turni30.get(currentUser.id)?.n ?? 0;
+  const cardTurni = `
+    <section class="card">
+      <div class="head"><h3>Distribuzione turni</h3><span class="sub">ultimi 30 giorni</span></div>
+      ${turni.length ? turni.map(([id, v]) => `<div class="turno">
+          <span class="n">${mio(id) ? '<b>Tu</b>' : escapeHtml(v.nome)}</span>
+          <span class="bar"><i style="width:${((v.n / turni[0][1].n) * 100).toFixed(0)}%;background:${
+            mio(id) ? 'var(--tuo)' : 'var(--ink-soft)'}"></i><em>${v.n}</em></span>
+        </div>`).join('') + `<div class="piede"><b class="tuo">${Math.round((mieiTurni / totTurni) * 100)}%</b> dei turni a tuo carico</div>`
+      : '<p class="vuoto">Negli ultimi trenta giorni non ha guidato nessuno.</p>'}
     </section>`;
 
-  const ETICHETTA = {
-    passaggio_pubblicato: 'ha pubblicato un passaggio',
-    passaggio_annullato: 'ha annullato un passaggio',
-    posto_preso: 'ha preso un posto',
-    posto_liberato: 'ha liberato un posto',
-    membro_entrato: 'è entrato nella comitiva',
-    pagamento_registrato: 'ha registrato un pagamento',
-  };
+  const cardConti = `
+    <section class="card" id="dash-conti">
+      <div class="head"><h3>Conti in sospeso</h3></div>
+      ${partite.length ? `<div class="conti">${partite.slice(0, CONTI_IN_VISTA).map(p => {
+        const n = quantiCon.get(p.id) || 0;
+        const da = primaCon.get(p.id);
+        // Le voci in ordine di tempo, dalla piu' recente: la contestazione parte
+        // quasi sempre dall'ultima cosa successa.
+        const voci = [...(vociCon.get(p.id) ?? [])].sort((a, b) => String(b.quando).localeCompare(String(a.quando)));
+        return `<div class="conto-blocco">
+          <div class="conto">
+          <div class="av" style="background:${coloreDi(p.id)}">${escapeHtml(iniziale(nomePer.get(p.id)))}</div>
+          <button type="button" class="chi" data-dettaglio="${p.id}" aria-expanded="false" aria-controls="voci-${p.id}">${escapeHtml(nomePer.get(p.id) || 'Qualcuno')}<small>${escapeHtml(plurale(n, 'passaggio', 'passaggi'))}${da ? ` · dal ${escapeHtml(dataBreve(da))}` : ''} · da cosa nasce</small></button>
+          <span class="imp ${versoDi(p.v)}">${escapeHtml(firma(p.v))}</span>
+          <button type="button" class="salda" data-salda="${p.id}" data-verso="${p.v >= 0 ? 'ricevuto' : 'pagato'}"
+                  data-quanto="${Math.abs(p.v).toFixed(2)}"
+                  title="${p.v >= 0 ? 'Segna che ti ha pagato' : 'Segna che l\'hai pagato'}">${p.v >= 0 ? 'Ricevuto' : 'Pagato'}</button>
+          </div>
+          <div class="voci hidden" id="voci-${p.id}">
+            ${voci.map(v => `<div class="riga-voce">
+              <span class="q">${escapeHtml(dataBreve(v.quando))}</span>
+              <span class="t">${escapeHtml(v.testo)}</span>
+              <span class="i ${versoDi(v.importo)}">${escapeHtml(firma(v.importo))}</span>
+            </div>`).join('')}
+            <div class="riga-voce somma">
+              <span class="q"></span><span class="t">Totale</span>
+              <span class="i ${versoDi(p.v)}">${escapeHtml(firma(p.v))}</span>
+            </div>
+          </div>
+        </div>`;
+      }).join('')}</div>
+      <div class="piede">${partite.length > CONTI_IN_VISTA ? `<span class="resto">${partite.length - CONTI_IN_VISTA === 1
+        ? 'e un altro conto aperto' : `e altri ${partite.length - CONTI_IN_VISTA} conti aperti`}</span>` : ''}<button type="button" class="cta-vuoto" id="salda-tutto">Salda tutto (${partite.length})</button><button type="button" class="cta-vuoto" id="conto-mese">Conto del mese</button></div>`
+      : `<p class="vuoto">Nessun conto in sospeso. Compaiono qui quando chi guida indica un «€ a testa».</p>
+      <div class="piede">Gli importi li vedete solo tu e la persona interessata.</div>`}
+    </section>`;
 
   const cardAttivita = `
-    <section class="card g-attivita">
+    <section class="card">
       <div class="head"><h3>Attività recente</h3></div>
-      ${eventi.length ? eventi.slice(0, 5).map(e => {
+      ${eventi.length ? eventi.map(e => {
         const chi = nomeCorto(e.attore);
         return `<div class="att">
-          <div class="av" style="background:${mio(e.attore) ? 'var(--tuo)' : coloreDi(e.attore)}">${escapeHtml(iniz(chi))}</div>
-          <div class="txt"><b>${escapeHtml(chi)}</b> — ${ETICHETTA[e.tipo] || escapeHtml(e.tipo)}</div>
+          <div class="av" style="background:${mio(e.attore) ? 'var(--tuo)' : coloreDi(e.attore)}">${escapeHtml(iniziale(chi))}</div>
+          <div class="txt"><b>${escapeHtml(chi)}</b> — ${ETICHETTA_EVENTO[e.tipo] || escapeHtml(e.tipo)}</div>
           <span class="when">${escapeHtml(quandoBreve(e.quando))}</span>
         </div>`;
       }).join('')
@@ -2383,131 +2319,24 @@ async function disegnaRiepilogo(box) {
   // navigazione, a pochi centimetri: lo stesso doppione della voce Profilo nel menu'.
   // Qui restano solo le cose che si **fanno** e che da qui non si potrebbero fare
   // altrimenti. Sono flex, quindi tre riempiono la riga esattamente come cinque.
-  const AZIONI = [
-    ['plus', 'Pubblica<br>un passaggio', 'offerta'],
-    ['walk', 'Cerco<br>un passaggio', 'richiesta'],
-    ['users', 'Invita<br>un membro', 'invita'],
-  ];
-  const cardAzioni = `<div class="azioni g-azioni">${AZIONI.map(([i, t, a]) =>
-    `<button type="button" class="az" data-azione="${a}"><span class="o">${ico(i)}</span><span class="t">${t}</span></button>`).join('')}</div>`;
+  const azioni = `<div class="azioni">${AZIONI_RIEPILOGO.map(([icona, testo, azione]) =>
+    `<button type="button" class="az" data-azione="${azione}"><span class="o">${iconaSvg(icona)}</span><span class="t">${escapeHtml(testo)}</span></button>`).join('')}</div>`;
 
-  const GIORNI = ['lun', 'mar', 'mer', 'gio', 'ven', 'sab', 'dom'];
-  const nomeGiorno = (iso) => GIORNI[(new Date(iso + 'T00:00:00').getDay() + 6) % 7];
-  const cardSettimana = `
-    <section class="card g-settimana">
-      <div class="head"><h3>Occupazione settimanale</h3></div>
-      ${settimana.map(g => {
-        // Con piu' di un'auto nello stesso giorno il nome di chi guida la prima
-        // sarebbe una mezza verita': si dice quante sono.
-        const guidatori = new Set(g.rides.map(r => r.driver_id));
-        const suo = guidatori.has(currentUser.id);
-        const perc = g.posti ? (g.presi / g.posti) * 100 : 0;
-        const et = `${nomeGiorno(g.giorno)} · ` + (
-          g.rides.length === 0 ? 'scoperto'
-          : guidatori.size > 1 ? `${guidatori.size} auto`
-          : nomeCorto(g.rides[0].driver_id).toLowerCase());
-        return `<div class="riemp">
-          <span class="n">${suo ? `<span class="tu">${escapeHtml(et)}</span>` : escapeHtml(et)}</span>
-          <span class="bar"><i style="width:${perc.toFixed(0)}%;background:${
-            !g.posti ? 'transparent' : suo ? 'var(--tuo)' : 'var(--ink-soft)'}"></i></span>
-          <span class="p">${g.posti ? `${g.presi}/${g.posti}` : '—'}</span>
-        </div>`;
-      }).join('')}
-      <div class="piede"><b>${presiSett}/${postiSett}</b> posti assegnati${
-        scoperti ? ` · <b class="allarme">${scoperti} ${scoperti === 1 ? 'giorno scoperto' : 'giorni scoperti'}</b>` : ' · nessun giorno scoperto'}</div>
-    </section>`;
-
-  const turni = [...drives30.entries()].sort((a, b) => b[1].n - a[1].n).slice(0, 5);
-  const totTurni = turni.reduce((s, [, v]) => s + v.n, 0);
-  const mieiTurni = drives30.get(currentUser.id)?.n ?? 0;
-  const cardTurni = turni.length ? `
-    <section class="card g-turni">
-      <div class="head"><div><h3>Distribuzione turni</h3><span class="sub">ultimi 30 giorni</span></div></div>
-      ${turni.map(([id, v]) => {
-        const suo = mio(id);
-        return `<div class="turno">
-          <span class="n">${suo ? '<b>Tu</b>' : escapeHtml(v.name)}</span>
-          <span class="bar"><i style="width:${totTurni ? ((v.n / turni[0][1].n) * 100).toFixed(0) : 0}%;background:${suo ? 'var(--tuo)' : 'var(--ink-soft)'}"></i><em>${v.n}</em></span>
-        </div>`;
-      }).join('')}
-      <div class="piede"><b class="tuo">${totTurni ? Math.round((mieiTurni / totTurni) * 100) : 0}%</b> dei turni a tuo carico</div>
-    </section>` : `
-    <section class="card g-turni">
-      <div class="head"><div><h3>Distribuzione turni</h3><span class="sub">ultimi 30 giorni</span></div></div>
-      <p class="vuoto">Negli ultimi trenta giorni non ha guidato nessuno.</p>
-    </section>`;
-
-  const cardConti = `
-    <section class="card g-conti" id="dash-conti">
-      <div class="head"><h3>Conti in sospeso</h3>
-        <span class="pill">Saldo: <b class="${saldo >= 0 ? 'avere' : 'dare'}">${saldo >= 0 ? '+ ' : '− '}${escapeHtml(eur(Math.abs(saldo)))}</b></span></div>
-      ${partite.length ? `<div class="conti">${partite.slice(0, 2).map(p => {
-        const n = quantiCon.get(p.id) || 0;
-        const da = primaCon.get(p.id);
-        // Le voci in ordine di tempo, dalla piu' recente: la contestazione parte
-        // quasi sempre dall'ultima cosa successa.
-        const voci = [...(vociCon.get(p.id) ?? [])].sort((a, b) => String(b.quando).localeCompare(String(a.quando)));
-        return `<div class="conto-blocco">
-          <div class="conto">
-          <div class="av" style="background:${coloreDi(p.id)}">${escapeHtml(iniz(nomePer.get(p.id)))}</div>
-          <button type="button" class="chi" data-dettaglio="${p.id}" aria-expanded="false" aria-controls="voci-${p.id}">${escapeHtml(nomePer.get(p.id) || 'Qualcuno')}<small>${n} ${n === 1 ? 'passaggio' : 'passaggi'}${da ? ` · dal ${escapeHtml(dataBreve(da))}` : ''} · da cosa nasce</small></button>
-          <span class="imp ${p.v >= 0 ? 'avere' : 'dare'}">${p.v >= 0 ? '+ ' : '− '}${escapeHtml(eur(Math.abs(p.v)))}</span>
-          <button type="button" class="salda" data-salda="${p.id}" data-verso="${p.v >= 0 ? 'ricevuto' : 'pagato'}"
-                  data-quanto="${Math.abs(p.v).toFixed(2)}"
-                  title="${p.v >= 0 ? 'Segna che ti ha pagato' : 'Segna che l\'hai pagato'}">${p.v >= 0 ? 'Ricevuto' : 'Pagato'}</button>
-          </div>
-          <div class="voci hidden" id="voci-${p.id}">
-            ${voci.map(v => `<div class="riga-voce">
-              <span class="q">${escapeHtml(dataBreve(v.quando))}</span>
-              <span class="t">${escapeHtml(v.testo)}</span>
-              <span class="i ${v.importo >= 0 ? 'avere' : 'dare'}">${v.importo >= 0 ? '+ ' : '− '}${escapeHtml(eur(Math.abs(v.importo)))}</span>
-            </div>`).join('')}
-            <div class="riga-voce somma">
-              <span class="q"></span><span class="t">Totale</span>
-              <span class="i ${p.v >= 0 ? 'avere' : 'dare'}">${p.v >= 0 ? '+ ' : '− '}${escapeHtml(eur(Math.abs(p.v)))}</span>
-            </div>
-          </div>
-        </div>`;
-      }).join('')}</div>`
-      : '<p class="vuoto">Nessun conto in sospeso. Compaiono qui quando chi guida indica un «€ a testa».</p>'}
-      <div class="piede">${partite.length > 2 ? `<span class="resto">e altri ${partite.length - 2} conti aperti</span>` : ''}${partite.length ? `<button type="button" class="cta-vuoto" id="salda-tutto">Salda tutto (${partite.length})</button><button type="button" class="cta-vuoto" id="conto-mese">Riepilogo del mese</button>` : 'Gli importi li vedete solo tu e la persona interessata.'}</div>
-    </section>`;
-
-  box.innerHTML =
-    `<div class="dash-top">
-      <div class="dash-hi">
-        <h1>Riepilogo</h1>
-        <p>${escapeHtml(oggiInLettere())} · ${futuri.length} ${futuri.length === 1 ? 'passaggio in programma' : 'passaggi in programma'}${
-          scoperti ? ` · ${scoperti} ${scoperti === 1 ? 'giorno scoperto' : 'giorni scoperti'}` : ''}</p>
-      </div>
-      <span class="dash-gruppo">${escapeHtml(nomeComitiva())}</span>
-      <span class="dash-av">${escapeHtml(iniz(myName))}</span>
-    </div>
-
+  box.innerHTML = testata(oggiInLettere(), true)
+    + `<div class="numeri">${numeri}</div>
     <div class="grid">
-      <div class="g-kpi">${kpi.join('')}</div>
-      ${heroCarb}
       ${cardProssimo}
-      ${cardCal}
-      ${cardAzioni}
+      ${cardCarburante}
       ${cardSettimana}
       ${cardTurni}
-      ${cardAttivita}
-      ${cardAgenda}
       ${cardConti}
+      ${cardAttivita}
     </div>
-    <div class="dash-pagine" id="dash-pagine" role="tablist" aria-label="Schermate del riepilogo"></div>`;
-
-  // Il quaderno: quante schermate ci sono lo sa solo il browser, dopo aver
-  // impaginato. Se ce n'e' una sola i pallini non compaiono — un indicatore con
-  // un pallino solo non indica niente — e su un monitor e' esattamente il caso.
-  montaPagine(box);
+    ${azioni}`;
 
   // I riquadri portano da qualche parte: nessun bottone qui sopra e' finto.
-  box.querySelectorAll('[data-vai]').forEach(b => b.addEventListener('click', () => {
-    if (b.dataset.vai === 'home') switchView('home');
-    if (b.dataset.vai === 'conti') document.getElementById('dash-conti')?.scrollIntoView({ block: 'start' });
-  }));
+  box.querySelectorAll('[data-vai="home"]').forEach(b => b.addEventListener('click', () => switchView('home')));
+
   // ── Segnare un pagamento ────────────────────────────────────────────────
   // La tabella `pagamenti` esiste dalla 022 e il saldo la sottrae gia': mancava solo
   // il gesto, e senza quello il numero poteva solo crescere. L'importo arriva
@@ -2542,8 +2371,7 @@ async function disegnaRiepilogo(box) {
   box.querySelectorAll('[data-dettaglio]').forEach(b => b.addEventListener('click', () => {
     const pannello = document.getElementById('voci-' + b.dataset.dettaglio);
     if (!pannello) return;
-    const aperto = pannello.classList.toggle('hidden');
-    b.setAttribute('aria-expanded', String(!aperto));
+    b.setAttribute('aria-expanded', String(pannello.classList.toggle('hidden') === false));
   }));
 
   // ── C25: saldare tutto in un colpo ──────────────────────────────────────
@@ -2552,14 +2380,14 @@ async function disegnaRiepilogo(box) {
   // saldo per aria, cioe' esattamente lo stato che questo bottone deve chiudere.
   document.getElementById('salda-tutto')?.addEventListener('click', async () => {
     if (bloccaSeSospeso('saldare i conti')) return;
-    const daPagare = partite.filter(p => p.v < 0).reduce((s, p) => s - p.v, 0);
-    const daIncassare = partite.filter(p => p.v > 0).reduce((s, p) => s + p.v, 0);
+    const daPagare = partite.reduce((s, p) => p.v < 0 ? s - p.v : s, 0);
+    const daIncassare = partite.reduce((s, p) => p.v > 0 ? s + p.v : s, 0);
     const dettaglio = [
       daPagare > 0 ? `${eur(daPagare)} che paghi tu` : null,
       daIncassare > 0 ? `${eur(daIncassare)} che hai ricevuto` : null,
     ].filter(Boolean).join(' e ');
     if (!await conferma(`Azzerare tutti i conti (${partite.length})?`, {
-      testo: `Si registrano ${partite.length} ${partite.length === 1 ? 'pagamento' : 'pagamenti'}: ${dettaglio}. `
+      testo: `Si registrano ${plurale(partite.length, 'pagamento', 'pagamenti')}: ${dettaglio}. `
         + 'Segnare un pagamento non lo esegue: dice che è già avvenuto.',
       azione: 'Segna tutto saldato',
     })) return;
@@ -2573,15 +2401,15 @@ async function disegnaRiepilogo(box) {
     }));
     const { error } = await supabase.from('pagamenti').insert(righe);
     if (error) { toast(friendlyError(error)); return; }
-    toast(`Conti azzerati: ${righe.length} ${righe.length === 1 ? 'pagamento registrato' : 'pagamenti registrati'}.`);
+    toast(`Conti azzerati: ${plurale(righe.length, 'pagamento registrato', 'pagamenti registrati')}.`);
     loadStats();
   });
 
-  // Il riepilogo del mese: i numeri ci sono gia' tutti, mancava il modo di mandarli.
+  // Il conto del mese: i numeri ci sono gia' tutti, mancava il modo di mandarli.
   document.getElementById('conto-mese')?.addEventListener('click', () => {
     const righe = [`WeTransport · ${nomeComitiva()} · ${meseInLettere(oggi)}`,
       `Carburante diviso questo mese: ${eur(meseCorr.tot)}`,
-      `Il mio saldo: ${saldo >= 0 ? '+ ' : '− '}${eur(Math.abs(saldo))}`, ''];
+      `Il mio saldo: ${firma(saldo)}`, ''];
     for (const p of partite) {
       righe.push(p.v >= 0
         ? `${nomePer.get(p.id) || 'Qualcuno'} mi deve ${eur(p.v)}`
@@ -2606,15 +2434,90 @@ async function disegnaRiepilogo(box) {
     // dov'e' il bottone e decide lei.
     if (a === 'richiesta') {
       switchView('home');
-      const b = document.getElementById('request-toggle');
-      b?.scrollIntoView({ block: 'center', behavior: 'smooth' });
-      b?.focus({ preventScroll: true });
+      const tasto = document.getElementById('request-toggle');
+      tasto?.scrollIntoView({ block: 'center', behavior: 'smooth' });
+      tasto?.focus({ preventScroll: true });
     }
     if (a === 'invita') switchView('groups');
   }));
 }
 
 // ── Attrezzi del riepilogo ─────────────────────────────────────────────────
+
+// Le colonne che servono al riepilogo. Stavano scritte dentro la chiamata, su una
+// riga lunga il doppio dello schermo: li' nessuno le rileggeva piu'.
+const CAMPI_RIEPILOGO = 'id, ride_date, depart_time, origin, destination, seats, driver_id,'
+  + ' fuel_per_person, driver:profiles!rides_driver_id_fkey(display_name),'
+  + ' seat_claims(passenger_id, ospite_nome, invitato_da,'
+  + ' passenger:profiles!seat_claims_passenger_id_fkey(display_name))';
+
+// Il registro degli eventi parla per codici: qui diventano italiano. E' una
+// tabella di traduzione, non un calcolo — non ha ragione di rinascere a ogni
+// disegno del riepilogo.
+const ETICHETTA_EVENTO = {
+  passaggio_pubblicato: 'ha pubblicato un passaggio',
+  passaggio_annullato: 'ha annullato un passaggio',
+  posto_preso: 'ha preso un posto',
+  posto_liberato: 'ha liberato un posto',
+  membro_entrato: 'è entrato nella comitiva',
+  pagamento_registrato: 'ha registrato un pagamento',
+};
+
+// Quanti conti si vedono per intero prima della riga «e altri N». Erano due
+// perche' due ne entravano nel riquadro alto meta' schermata del quaderno; il
+// riquadro adesso e' piu' alto e il terzo ci sta senza spingere niente.
+const CONTI_IN_VISTA = 3;
+
+// Le tre cose che si **fanno** dal riepilogo e che da qui non si potrebbero fare
+// altrimenti: icona, etichetta, azione.
+// Le tre etichette non hanno piu' un `<br>` in mezzo: dove i bottoni stanno in
+// riga andrebbe tolto, dove stanno in colonna il testo va a capo da solo.
+const AZIONI_RIEPILOGO = [
+  ['plus', 'Pubblica un passaggio', 'offerta'],
+  ['walk', 'Cerco un passaggio', 'richiesta'],
+  ['users', 'Invita un membro', 'invita'],
+];
+
+// La riga in cima al riepilogo. La scrivono in tre — la vista buona e i due
+// riquadri che dicono cosa manca — e prima erano tre copie della stessa
+// marcatura, che divergevano a ogni ritocco.
+function testata(sottotitolo, conComitiva = false) {
+  return `<div class="dash-top">
+      <div class="dash-hi"><h1>Riepilogo</h1><p>${escapeHtml(sottotitolo)}</p></div>
+      ${conComitiva ? `<span class="dash-gruppo">${escapeHtml(nomeComitiva())}</span>
+      <span class="dash-av">${escapeHtml(iniziale(myName))}</span>` : ''}
+    </div>`;
+}
+
+// Uno dei quattro numeri in cima: etichetta, valore, e la riga che lo qualifica.
+function tessera(cls, etichetta, valore, nota) {
+  return `<div class="k${cls ? ' ' + cls : ''}"><div class="lab">${escapeHtml(etichetta)}</div>`
+    + `<div class="val">${escapeHtml(valore)}</div><div class="nota">${escapeHtml(nota)}</div></div>`;
+}
+
+// Gli euro con il segno davanti, dal punto di vista di chi guarda: «+ 4,50 €».
+// Il ternario con il meno unicode stava scritto a mano in otto punti, e bastava
+// dimenticarne uno per avere due modi di dire la stessa cifra nella stessa vista.
+const eur = (n) => (Math.round(n * 100) / 100).toLocaleString('it-IT',
+  { minimumFractionDigits: 2, maximumFractionDigits: 2 }) + ' €';
+const firma = (n) => {
+  // Lo zero non ha verso: «+ 0,00 €» dice che sei in credito di niente, che e' una
+  // frase che non vuol dire niente. Si arrotonda prima di guardare il segno, o un
+  // saldo da mezzo centesimo si prende il piu'.
+  const v = Math.round(n * 100) / 100;
+  return (v > 0 ? '+ ' : v < 0 ? '− ' : '') + eur(Math.abs(v));
+};
+const versoDi = (n) => (n >= 0 ? 'avere' : 'dare');
+
+// «1 passaggio», «3 passaggi». Il plurale e' una regola, non un ternario da
+// ricopiare quindici volte.
+const plurale = (n, uno, molti) => `${n} ${n === 1 ? uno : molti}`;
+
+// La lettera dentro il tondo di una persona.
+const iniziale = (nome) => (String(nome || '?').trim()[0] || '?').toUpperCase();
+
+const iconaSvg = (id, w = 15) =>
+  `<svg width="${w}" height="${w}" aria-hidden="true"><use href="#i-${id}"/></svg>`;
 
 // Il tondo colorato accanto a un nome. Deriva dall'id, quindi la stessa persona
 // ha lo stesso colore in tutti i riquadri e fra una visita e l'altra — senza
@@ -2734,6 +2637,9 @@ function setDate(date) {
 // ══════════════════════════════════════════════════════════════════════════
 let vistaSettimana = false;
 const GIORNI_BREVI = ['lun', 'mar', 'mer', 'gio', 'ven', 'sab', 'dom'];
+// La settimana comincia di lunedi', come si usa qui. Lo sapevano in tre punti
+// diversi con lo stesso `(getDay() + 6) % 7` copiato: adesso lo sa questa riga.
+const giornoBreve = (iso) => GIORNI_BREVI[(new Date(iso + 'T12:00:00').getDay() + 6) % 7];
 
 dayWeek.addEventListener('click', () => {
   if (vistaSettimana) { setDate(todayISO()); return; }
@@ -2794,7 +2700,7 @@ async function loadWeek() {
     const testa = document.createElement('div');
     testa.className = 'week-testa';
     const gg = new Date(giorno + 'T12:00:00');
-    testa.innerHTML = `<b>${GIORNI_BREVI[(gg.getDay() + 6) % 7]}</b> <span>${gg.getDate()}</span>`;
+    testa.innerHTML = `<b>${giornoBreve(giorno)}</b> <span>${gg.getDate()}</span>`;
     col.appendChild(testa);
 
     if (scoperto) {
