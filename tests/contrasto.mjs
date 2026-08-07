@@ -134,6 +134,13 @@ const COPPIE = [
   ['bordo di un campo, sulla carta', '--border-strong', '--surface', 3],
   ['bordo di un campo, sul fondo', '--border-strong', '--bg', 3],
 
+  // La targa del marchio: e' l'unico oggetto che si **ribalta** con il tema
+  // invece di seguirlo — inchiostro con le lettere chiare alla luce, il contrario
+  // al buio — e per questo va misurata nei due temi come tutto il resto: e'
+  // proprio nei ribaltamenti che una coppia cede senza che nessuno lo veda.
+  ['lettere sulla targa del marchio', '--su-targa', '--targa', 4.5],
+  ['la targa contro il fondo pagina', '--targa', '--bg', 3],
+
   ['viola come testo, su carta', '--primary-testo', '--surface', 4.5],
   ['viola come testo, sul fondo', '--primary-testo', '--bg', 4.5],
   ['viola come testo, sul suo velo', '--primary-testo', '--primary-soft', 4.5],

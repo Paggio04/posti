@@ -97,10 +97,46 @@
    allo stesso raggio» sta fra gli anti-riferimenti di PRODUCT.md, ed era vero —
    ventidue pixel su qualsiasi cosa, dalla scheda alla pastiglia. Un oggetto
    piccolo e uno grande non hanno lo stesso spigolo nemmeno nel mondo vero.
+
+   ── E una quarta regola, che e' arrivata dopo ────────────────────────────────
+
+   4. **Il riferimento fisico si disegna, non si dichiara.** Le tre regole qui
+      sopra erano scritte da un pezzo e il foglio le rispettava sui colori; ma
+      la targa smaltata, il tabellone e il biglietto restavano parole in un
+      commento, e in pagina il lavoro lo facevano gli stessi mezzi di qualsiasi
+      altra app — maiuscolette sans, superfici lisce, l'orario di un passaggio
+      in grigio piccolo dentro un sottotitolo. Coperto il nome, si capiva che
+      app fosse (l'auto lo diceva), ma non **chi** l'avesse fatta.
+
+      Tre cose la stampano, e nessuna delle tre e' un colore nuovo:
+
+        · **il carattere a larghezza fissa** e' il carattere delle *targhette* —
+          ogni etichetta maiuscola che nomina qualcosa, non solo le cifre. E'
+          quello che l'occhio riconosce come «scritto sopra un oggetto»;
+        · **la targa**, cioe' il marchio: fondo pieno d'inchiostro, lettere
+          chiare, la riga di luce sul bordo alto. Si ribalta con il tema invece
+          di seguirlo, come una piastrina avvitata su una parete;
+        · **la carta rigata**: una riga da un pixel ogni ventisei sul fondo
+          pagina. E' l'unica decorazione del foglio, e non contraddice
+          l'anti-riferimento del gradiente morbido — e' il suo contrario, una
+          riga netta a passo fisso che viene da un modulo prestampato.
+
+      Il criterio per aggiungerne una quarta: **deve venire da un oggetto vero
+      che si puo' nominare.** Se non si sa dire da cosa e' presa, e' decorazione.
    ═══════════════════════════════════════════════════════════════════════════ */
 
 :root {
   color-scheme: light;
+
+  /* ---- i due caratteri, come token ------------------------------------- */
+  /* Erano scritti per esteso in quindici punti del foglio — `font-family:
+     var(--font-mono)` copiato a mano ogni volta che
+     serviva una cifra. Da qui in avanti sono due token, e il motivo non e'
+     l'economia di battute: il monospaziato in questo foglio ha **un mestiere
+     preciso** (le cifre e le targhette stampate, vedi sotto), e un mestiere si
+     tiene in un posto solo. */
+  --font-sans: 'IBM Plex Sans', system-ui, sans-serif;
+  --font-mono: 'IBM Plex Mono', ui-monospace, monospace;
 
   /* ---- i fondi -------------------------------------------------------- */
   /* **Il tema di casa e' quello chiaro**, ed e' la carta della palette: il
@@ -123,6 +159,28 @@
   /* Il riquadro che riassume: un velo di viola invece di un grigio piu' scuro,
      perche' su carta chiara «un gradino piu' in la'» si legge come tinta. */
   --rilievo: oklch(0.945 0.030 301);
+
+  /* ---- la targa smaltata ------------------------------------------------ */
+  /* Il riferimento fisico del foglio e' scritto in cima da sempre — «una targa
+     smaltata scura con le lettere chiare sopra» — ed era l'unica cosa del
+     riferimento che in pagina **non c'era**: il nome dell'app stava scritto in
+     grigio accanto a un'icona, come il nome di qualsiasi cosa.
+     Adesso il marchio e' quella targa, e sono due token perche' e' l'unico
+     oggetto della pagina che si **ribalta** con il tema invece di seguirlo: alla
+     luce e' inchiostro con le lettere chiare, al buio e' il quasi-bianco con le
+     lettere scure. In tutti e due i casi e' la cosa piu' contrastata dello
+     schermo, che e' quello che fa una targa avvitata a un muro. */
+  --targa: oklch(0.215 0.030 304);
+  --su-targa: oklch(0.956 0.004 236);
+
+  /* La rigatura della pagina. Non e' una texture e non e' un gradiente morbido:
+     e' una riga da un pixel ogni 26, cioe' la rigatura di un tabellone o di un
+     modulo prestampato. Si vede solo **fra** le schede — le schede sono piene e
+     ci stanno sopra — e serve a una cosa sola: dire che il fondo e' carta, non
+     il vuoto. Al buio scende di alfa perche' su nero una riga chiara pesa il
+     doppio di una riga scura su bianco. */
+  --riga-carta: oklch(0.235 0.030 304 / 0.05);
+  --passo-riga: 26px;
 
   /* ---- le righe ------------------------------------------------------- */
   /* --border separa e basta: non porta informazione, quindi non deve reggere
@@ -238,8 +296,12 @@
 
   /* ---- profondita' ------------------------------------------------------ */
   /* Una riga di luce sul bordo alto: e' come si legge un pannello smaltato
-     illuminato da sopra, e costa un pixel invece di un alone. */
-  --luce: inset 0 1px 0 oklch(0.956 0.004 236 / 0.08);
+     illuminato da sopra, e costa un pixel invece di un alone.
+     Il valore era un quasi-bianco all'8%, ed era stato scelto quando il foglio
+     aveva un tema solo, quello scuro: sulla carta chiara un bianco all'8% e'
+     esattamente niente. Qui sale, e sopra i riempimenti scuri — il viola pieno,
+     la targa — e' la riga che li fa sembrare smaltati invece che stampati. */
+  --luce: inset 0 1px 0 oklch(1 0 0 / 0.28);
   /* Le due sole ombre del foglio, e stanno dove una cosa galleggia davvero. */
   --shadow-1: 0 2px 6px oklch(0 0 0 / 0.5);
   --shadow-2: 0 8px 30px oklch(0 0 0 / 0.65), 0 2px 8px oklch(0 0 0 / 0.5);
@@ -253,7 +315,7 @@
   --t-fast: 140ms;
   --t-med: 220ms;
 
-  font-family: 'IBM Plex Sans', system-ui, sans-serif;
+  font-family: var(--font-sans);
 }
 
 /* ═══════════════════════════════════════════════════════════════════════════
@@ -304,14 +366,42 @@
   --ok-pieno: oklch(0.55 0.12 165);
   --ok-soft: oklch(0.255 0.050 165);
   --piastra: transparent;
+  /* La targa si ribalta: al buio e' lei la cosa chiara, con l'inchiostro sopra.
+     E' l'unico oggetto del foglio che scambia i due estremi **al contrario**
+     della pagina, ed e' voluto — una targa avvitata su una parete scura e' una
+     targa chiara. */
+  --targa: oklch(0.930 0.006 236);
+  --su-targa: oklch(0.190 0.028 304);
+  --riga-carta: oklch(0.956 0.004 236 / 0.035);
+  --luce: inset 0 1px 0 oklch(1 0 0 / 0.10);
 }
 
 * { box-sizing: border-box; margin: 0; }
 
 html, body { height: 100%; }
 
+/* Il fondo e' carta rigata, e la rigatura e' l'unica decorazione di tutto il
+   foglio. Vale la pena scrivere perche' non contraddice gli anti-riferimenti:
+   quello che PRODUCT.md rifiuta e' il **gradiente morbido** — una sfumatura che
+   non ha bordi, non ha misura e non viene da nessun oggetto. Questa e' il suo
+   contrario esatto: una riga da un pixel, netta, a passo fisso, che viene da un
+   modulo prestampato. Si vede solo negli spazi fra le schede, che e' dove prima
+   c'era una superficie piatta senza nome.
+
+   Nessun `background-attachment: fixed`, ed e' una scelta e non una dimenticanza:
+   con la rigatura ferma sotto il contenuto che scorre l'effetto a video e'
+   **identico** — un motivo uniforme che si ripete ogni 26px non si distingue
+   fermo o in movimento — e in cambio non si paga il ridisegno a ogni scorrimento,
+   che su un telefono e' l'unica cosa di questa riga che si sarebbe potuta
+   sentire. Il contesto d'uso di PRODUCT.md e' un telefono in mano, non un
+   monitor. */
 body {
-  background: var(--bg);
+  background-color: var(--bg);
+  background-image: repeating-linear-gradient(
+    to bottom,
+    var(--riga-carta) 0 1px,
+    transparent 1px var(--passo-riga)
+  );
   color: var(--ink);
   font-size: 0.95rem;
   line-height: 1.55;
@@ -336,10 +426,84 @@ a:hover { color: var(--primary-hover); }
    incolonnate, ed e' esattamente il riferimento fisico di PRODUCT.md. Vale per ore,
    posti, prezzi, codici e percentuali — non per il testo. */
 .num {
-  font-family: 'IBM Plex Mono', ui-monospace, monospace;
+  font-family: var(--font-mono);
   font-weight: 500;
   font-variant-numeric: tabular-nums;
 }
+
+/* ── LE TARGHETTE ──────────────────────────────────────────────────────────
+   **Le etichette minuscole del foglio sono stampate, non scritte.**
+
+   Questa e' la riga da cui viene la maggior parte del carattere che l'app non
+   aveva. Le targhette maiuscole c'erano gia' — sopra ogni scheda, sopra ogni
+   campo, sopra ogni riquadro del riepilogo — ma erano nello stesso carattere del
+   testo, e una maiuscoletta sans spaziata e' la cosa piu' vista che esista: la
+   fa uguale ogni pannello di controllo di ogni prodotto. Nel monospaziato la
+   stessa etichetta diventa **una scritta serigrafata**: la larghezza fissa dei
+   caratteri e' la cosa che l'occhio riconosce come «stampato su un oggetto», e
+   il foglio quel carattere ce l'aveva gia' in casa per le cifre.
+
+   Il criterio di cosa entra qui e' preciso, o diventa un vezzo: **si stampa cio'
+   che nomina, non cio' che dice.** L'intestazione di una scheda («LE TUE AUTO»)
+   nomina la scheda, l'etichetta di un campo («POSTI») nomina il campo: sono
+   targhette avvitate sopra la cosa. Il contenuto — i titoli, le frasi, i
+   sottotitoli — resta nel sans, che e' il carattere di quello che si legge.
+
+   Qui c'e' **solo** il carattere, e ogni componente si tiene la sua interlettera
+   qualche punto piu' stretta di prima: nel monospaziato la spaziatura c'e' gia'
+   dentro al carattere, e sommarci 0,09em sopra fa una fila di lettere sciolte
+   invece di una scritta. */
+:where(
+  label,
+  .oauth-divider,
+  .add-card h2,
+  .walkers-card h2,
+  .history-day-title,
+  .card-title,
+  .fermate-titolo,
+  .dash .k .lab,
+  .dash .card h3,
+  .week-testa b
+) {
+  font-family: var(--font-mono);
+}
+
+/* ── LA TARGA ──────────────────────────────────────────────────────────────
+   Il marchio, e sta in due punti: la barra in alto dentro l'app e la riga in
+   cima al modulo d'accesso. Prima erano due scritte grigie con un'icona viola
+   accanto — cioe' il nome dell'app messo come si mette il nome di qualsiasi
+   cosa, e la prima ragione per cui coperto il logo questa app sembrava
+   un'altra.
+
+   Adesso e' l'oggetto che il foglio dichiara dalla prima riga: una **targa
+   smaltata**, con il fondo pieno d'inchiostro e le lettere chiare sopra, il
+   nome serigrafato nel monospaziato e la riga di luce sul bordo alto. E' la cosa
+   piu' contrastata dello schermo, che e' esattamente il posto che ha una targa
+   avvitata a un muro.
+
+   L'icona dell'auto qui **non e' viola**, ed e' un guadagno che va oltre il
+   marchio: era l'ultimo posto in cui il viola faceva il decoratore invece di
+   dire «questo si tocca». Il marchio non si tocca — non porta da nessuna parte,
+   dice solo dove sei — e adesso lo si vede dal colore come dal resto. */
+.targa {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  flex: none;
+  padding: 5px 11px 5px 9px;
+  border-radius: var(--r-chip);
+  background: var(--targa);
+  color: var(--su-targa);
+  box-shadow: var(--luce);
+  font-family: var(--font-mono);
+  font-weight: 500;
+  font-size: 0.8rem;
+  letter-spacing: 0.05em;
+  text-transform: uppercase;
+  white-space: nowrap;
+}
+.targa svg { color: inherit; flex: none; }
+.targa b { font-weight: 500; }
 
 /* ================= AUTH =================
 
@@ -387,7 +551,7 @@ a:hover { color: var(--primary-hover); }
   padding: 26px 24px 22px;
 }
 
-/* La riga del marchio: il nome a sinistra, i quattro posti a destra. E' anche il
+/* La riga del marchio: la targa a sinistra, i quattro posti a destra. E' anche il
    bordo alto del modulo, quindi la riga di stacco sotto non e' decorazione — separa
    l'intestazione dal contenuto come su un biglietto stampato. */
 .auth-marchio {
@@ -397,13 +561,7 @@ a:hover { color: var(--primary-hover); }
   padding-bottom: 14px;
   margin-bottom: 18px;
   border-bottom: 1px solid var(--border);
-  font-weight: 700;
-  font-size: 0.85rem;
-  letter-spacing: 0.02em;
-  text-transform: uppercase;
-  color: var(--ink);
 }
-.auth-marchio svg { color: var(--primary-testo); flex: none; }
 
 /* La striscia dei quattro posti. Quattro rettangoli come i sedili dell'auto vera,
    non quattro pallini: la forma e' la stessa che si tocca dentro l'app. */
@@ -459,9 +617,18 @@ a:hover { color: var(--primary-hover); }
    dell'email sotto la piega — il difetto da cui e' partito tutto questo, e c'e' un
    test che non lo fa tornare.
 
-   Il cartello e' una targa: fondo pieno, un bordo chiaro da un pixel, spigoli
-   appena smussati. Non cambia con la finestra perche' e' un oggetto stampato, non una
-   superficie dell'interfaccia. */
+   **Il cartello non ha piu' una scatola sua, e il cartello e' l'auto.**
+   Aveva `background: var(--bg)` e un contorno viola, e quella riga era giusta
+   quando l'app aveva un tema solo: sul viola-nero un rettangolo di fondo pagina
+   dentro un pannello si vedeva. Da quando il tema di casa e' quello chiaro,
+   `--bg` **e'** la pagina: era una scatola col fondo identico a cio' su cui
+   stava, cioe' un contorno viola intorno a niente. E un contorno viola intorno a
+   niente e' proprio la definizione di decorazione che il foglio si vieta.
+
+   Togliendola resta l'oggetto che contava: l'auto sulla sua piastra scura,
+   appoggiata sulla carta rigata, con la frase sotto. E' il principio 3 di
+   PRODUCT.md preso alla lettera — l'auto e' la protagonista — invece di un
+   riquadro che le stava intorno per abitudine. */
 
 .auth-cartello { display: none; }
 
@@ -472,13 +639,15 @@ a:hover { color: var(--primary-hover); }
     gap: 24px;
     width: min(560px, 100%);
     margin: 0 auto;
-    padding: 20px 24px;
-    background: var(--bg);
-    border: 1px solid var(--primary-bordo);
-    border-radius: var(--r-card);
+    padding: 4px 0;
     color: var(--ink);
   }
   .auth-cartello .car-svg { flex: none; width: 98px; margin: 0; }
+  /* Da quando il cartello non ha una scatola sua, la piastra **e'** il cartello:
+     prende la riga di luce sul bordo alto come ogni altra superficie smaltata del
+     foglio, e un po' di respiro intorno all'auto perche' e' l'unica cosa
+     stampata su di lei. */
+  .auth-cartello .car-piastra { flex: none; padding: 14px 18px 12px; box-shadow: var(--luce); }
   .cartello-testo { min-width: 0; }
   .cartello-riga { font-size: 1.02rem; line-height: 1.35; letter-spacing: -0.02em; }
   .cartello-riga b { font-weight: 700; }
@@ -509,10 +678,14 @@ a:hover { color: var(--primary-hover); }
     justify-self: end;
     width: min(340px, 100%);
     margin: 48px;
-    padding: 32px 28px 26px;
+    padding: 0;
     text-align: center;
   }
-  .auth-cartello .car-svg { width: 142px; margin-bottom: 6px; }
+  .auth-cartello .car-svg { width: 158px; margin-bottom: 0; }
+  /* La piastra **stringe** intorno all'auto invece di allargarsi alla colonna: un
+     cartello e' grande quanto quello che c'e' stampato sopra, e tirato a 340px
+     diventava un quadrato scuro con un'auto piccola in mezzo. */
+  .auth-cartello .car-piastra { padding: 18px 20px 14px; margin: 0 auto 16px; }
   .auth-form-panel { grid-area: 1 / 2; justify-content: flex-start; padding: 48px; }
 }
 
@@ -526,9 +699,9 @@ a:hover { color: var(--primary-hover); }
   gap: 14px;
   margin: 18px 0;
   color: var(--ink-soft);
-  font-size: 0.78rem;
-  font-weight: 600;
-  letter-spacing: 0.08em;
+  font-size: 0.74rem;
+  font-weight: 500;
+  letter-spacing: 0.02em;
   text-transform: uppercase;
 }
 .oauth-divider::before,
@@ -543,9 +716,9 @@ a:hover { color: var(--primary-hover); }
 
 label {
   display: block;
-  font-size: 0.78rem;
-  font-weight: 600;
-  letter-spacing: 0.04em;
+  font-size: 0.74rem;
+  font-weight: 500;
+  letter-spacing: 0.01em;
   text-transform: uppercase;
   color: var(--ink-soft);
   margin-bottom: 14px;
@@ -560,6 +733,13 @@ input, select, textarea {
   border-radius: var(--r-btn);
   color: var(--ink);
   font: inherit;
+  /* Il carattere va **riscritto**, non ereditato, e da quando le targhette sono
+     nel monospaziato non e' un dettaglio: un `<input>` sta dentro la sua
+     `<label>`, e `font: inherit` gli passava il carattere dell'etichetta. Cioe'
+     l'indirizzo email si scriveva in monospaziato perche' sopra c'era scritto
+     EMAIL. Le targhette sono stampate sull'oggetto; quello che ci si scrive
+     dentro e' testo, e il testo e' nel sans. */
+  font-family: var(--font-sans);
   font-size: 0.95rem;
   letter-spacing: normal;
   text-transform: none;
@@ -569,6 +749,16 @@ input, select, textarea {
    in qualche browser, ed e' l'unica cosa bianca dell'app. */
 select option { background: var(--surface); color: var(--ink); }
 
+/* I campi che contengono **solo cifre** stanno nel monospaziato, come ogni altra
+   cifra del foglio: un'ora e' un'ora anche mentre la si scrive, e le due cifre
+   dell'ora incolonnate con quelle dei minuti sono il motivo per cui il carattere
+   a larghezza fissa esiste. Vale per l'ora, la data e il contributo in euro; non
+   vale per l'email, il nome e le note, che sono testo. */
+input[type="time"], input[type="date"], input[type="number"] {
+  font-family: var(--font-mono);
+  font-variant-numeric: tabular-nums;
+}
+
 input::placeholder, textarea::placeholder { color: var(--segnaposto); }
 input:hover, select:hover, textarea:hover { border-color: var(--primary-bordo); }
 
@@ -577,10 +767,17 @@ input:focus-visible, select:focus-visible, textarea:focus-visible {
   border-color: var(--primary-testo);
   box-shadow: 0 0 0 3px var(--primary-soft);
 }
-/* Le icone native dei campi data e ora nascono nere su fondo nero: invisibili.
-   Il filtro le ribalta, che e' l'unico modo di ricolorarle da CSS. */
+/* Le icone native dei campi data e ora. Nascono nere, che sul buio e' invisibile:
+   il filtro le ribalta, ed e' l'unico modo di ricolorarle da CSS.
+   **Ma va ribaltato solo al buio.** Questa riga e' nata quando l'app aveva un tema
+   solo, quello scuro, ed e' rimasta com'era quando e' arrivato il chiaro: sulla
+   carta bianca rendeva bianca l'icona, cioe' invisibile esattamente come prima —
+   il calendario della pastiglia del giorno era un quadratino vuoto. Da qui in poi
+   il chiaro se la tiene nera e solo lo scuro la ribalta. */
 input[type="date"]::-webkit-calendar-picker-indicator,
-input[type="time"]::-webkit-calendar-picker-indicator { filter: invert(1) opacity(0.55); cursor: pointer; }
+input[type="time"]::-webkit-calendar-picker-indicator { opacity: 0.6; cursor: pointer; }
+:root[data-tema="scuro"] input[type="date"]::-webkit-calendar-picker-indicator,
+:root[data-tema="scuro"] input[type="time"]::-webkit-calendar-picker-indicator { filter: invert(1); }
 
 /* Password con occhio.
    L'etichetta sta fuori da .pw-wrap: dentro, avrebbe associato a se' anche il bottone
@@ -656,6 +853,36 @@ input[type="time"]::-webkit-calendar-picker-indicator { filter: invert(1) opacit
 .btn-ghost:hover { color: var(--ink); border-color: var(--border-strong); }
 
 .btn-small { padding: 6px 12px; font-size: 0.8rem; }
+
+/* ── LO SMALTO ─────────────────────────────────────────────────────────────
+   Ogni riempimento pieno del foglio porta una riga di luce sul bordo alto, e
+   sono tutti nella stessa lista perche' sono lo stesso materiale: il viola pieno
+   di un bottone, di una pastiglia accesa, di un avatar, del riquadro «tuo» del
+   riepilogo. Il token `--luce` c'era da sempre, lo usava **un elemento solo** (la
+   scheda dell'accesso) e nel tema chiaro valeva un bianco all'8%, cioe' niente.
+
+   Non e' un'ombra e non contraddice la regola delle ombre: non ha distanza, non
+   sfuma, e' un pixel sul bordo. E' come si legge una superficie smaltata sotto
+   una luce che viene da sopra — la targa del riferimento fisico — e su tutti
+   questi oggetti la differenza fra «un rettangolo colorato» e «un oggetto» e'
+   esattamente quel pixel.
+
+   `:where()` perche' la specificita' deve restare zero: e' una finitura, e la
+   deve poter scavalcare qualunque componente che abbia un'ombra propria da dire. */
+:where(
+  .btn-primary,
+  .btn-pericolo,
+  .tab.active,
+  .group-pill.active,
+  .filtro.on,
+  .place-badge.mine,
+  .history-chip.driver,
+  .top-av,
+  .profile-avatar,
+  .dash .k.mio,
+  .welcome,
+  .offline-bar
+) { box-shadow: var(--luce); }
 
 /* Il bottone di Google. Sta qui e non nella sezione dell'accesso, ed e' una
    lezione presa a video: scritto la' era **prima** di `.btn`, stessa specificita',
@@ -853,16 +1080,11 @@ input[type="time"]::-webkit-calendar-picker-indicator { filter: invert(1) opacit
   z-index: 10;
 }
 
-.brand {
-  font-weight: 700;
-  font-size: 0.86rem;
-  letter-spacing: 0.06em;
-  text-transform: uppercase;
-  display: flex;
-  align-items: center;
-  gap: 9px;
-}
-.brand svg { color: var(--primary-testo); }
+/* Il marchio nella barra e' la stessa targa del modulo d'accesso, e non e' un
+   riuso per risparmiare righe: e' la stessa targa **anche nel mondo vero** — la
+   piastrina che c'e' sulla porta e' quella che c'e' sul biglietto. `min-width: 0`
+   perche' a 360px accanto alla faccia lo spazio e' contato. */
+.brand { min-width: 0; }
 
 .user-name-btn {
   background: transparent;
@@ -898,16 +1120,26 @@ input[type="time"]::-webkit-calendar-picker-indicator { filter: invert(1) opacit
   to { opacity: 1; transform: none; }
 }
 
+/* Il titolo di una vista, e la riga che gli sta sotto.
+   A 1,35rem senza filetto era un titolo timido: la stessa misura del nome di un
+   gruppo dentro una scheda, in una pagina di cui e' l'intestazione. Adesso e' un
+   gradino sopra tutto il resto e chiude con un filetto che attraversa la pagina —
+   la testata di una sezione stampata, che e' la stessa grammatica del biglietto e
+   del tabellone usata qui alla scala piu' grande.
+   L'icona non e' piu' viola per la stessa ragione del conteggio: dice quello che
+   dice il titolo accanto, quindi ripete e non informa. */
 .view-title {
   display: flex;
   align-items: center;
-  gap: 10px;
-  font-size: 1.35rem;
+  gap: 11px;
+  font-size: 1.55rem;
   font-weight: 700;
-  letter-spacing: -0.03em;
-  margin-bottom: 4px;
+  letter-spacing: -0.035em;
+  padding-bottom: 11px;
+  margin-bottom: 11px;
+  border-bottom: 1px solid var(--border);
 }
-.view-title svg { color: var(--primary-testo); }
+.view-title svg { color: var(--ink); flex: none; }
 .view-subtitle { color: var(--ink-soft); font-size: 0.9rem; margin-bottom: 22px; max-width: 62ch; }
 
 /* ================= COME FUNZIONA / BENVENUTO ================= */
@@ -1058,7 +1290,7 @@ input[type="time"]::-webkit-calendar-picker-indicator { filter: invert(1) opacit
 
 /* Il codice invito e' un codice: monospaziato, spaziato, e si copia toccandolo. */
 .group-code {
-  font-family: 'IBM Plex Mono', ui-monospace, monospace;
+  font-family: var(--font-mono);
   font-weight: 500;
   font-variant-numeric: tabular-nums;
   letter-spacing: 0.14em;
@@ -1074,20 +1306,44 @@ input[type="time"]::-webkit-calendar-picker-indicator { filter: invert(1) opacit
 /* Riepilogo giorno */
 .day-stats { display: flex; gap: 8px; flex-wrap: wrap; align-items: center; margin-bottom: 20px; }
 
+/* I tre conteggi del giorno: **una lettura da tabellone, non tre pastiglie.**
+   Erano «3 auto» in grassetto sans dentro un contorno arrotondato, cioe' la
+   pastiglia-statistica che ha qualsiasi pannello di qualsiasi cosa. Il contenuto
+   e' identico e cambia solo come e' composto: la cifra grande e monospaziata, la
+   parola sotto-dimensionata e maiuscola accanto. E' come si legge un contatore
+   meccanico, e a parita' di pixel dice il numero prima della parola — che e'
+   l'ordine in cui lo si cerca.
+
+   L'icona resta viola perche' e' l'unica cosa che lega il conteggio alla scheda
+   che si tocca (l'auto, il posto libero, chi e' a bordo). */
 .stat-chip {
   display: inline-flex;
-  align-items: center;
-  gap: 8px;
+  align-items: baseline;
+  gap: 7px;
   background: var(--surface);
   border: 1px solid var(--border);
   border-radius: var(--r-chip);
-  padding: 8px 13px;
-  font-size: 0.84rem;
+  padding: 7px 12px;
+  font-family: var(--font-mono);
+  font-size: 0.68rem;
   font-weight: 500;
+  letter-spacing: 0.02em;
+  text-transform: uppercase;
   color: var(--ink-soft);
 }
-.stat-chip svg { color: var(--primary-testo); }
-.stat-chip strong { color: var(--ink); font-weight: 700; font-variant-numeric: tabular-nums; }
+/* L'icona ripete l'etichetta che le sta accanto — un'auto accanto alla parola
+   «auto» — quindi non porta informazione e per la regola del foglio non puo'
+   essere viola: il viola vuol dire «si tocca» o «e' tuo», e un conteggio non e'
+   nessuna delle due. Prende l'inchiostro tenue del testo che accompagna. */
+.stat-chip svg { color: var(--ink-soft); align-self: center; }
+.stat-chip strong {
+  color: var(--ink);
+  font-weight: 500;
+  font-size: 1.12rem;
+  line-height: 1;
+  letter-spacing: -0.02em;
+  font-variant-numeric: tabular-nums;
+}
 
 .turn-hint {
   border: 1px solid var(--primary-bordo);
@@ -1111,9 +1367,9 @@ input[type="time"]::-webkit-calendar-picker-indicator { filter: invert(1) opacit
 }
 
 .add-card h2 {
-  font-size: 0.82rem;
-  font-weight: 700;
-  letter-spacing: 0.06em;
+  font-size: 0.76rem;
+  font-weight: 500;
+  letter-spacing: 0.02em;
   text-transform: uppercase;
   color: var(--ink-soft);
   padding-bottom: 12px;
@@ -1142,9 +1398,9 @@ input[type="time"]::-webkit-calendar-picker-indicator { filter: invert(1) opacit
 }
 
 .walkers-card h2 {
-  font-size: 0.78rem;
-  font-weight: 700;
-  letter-spacing: 0.06em;
+  font-size: 0.74rem;
+  font-weight: 500;
+  letter-spacing: 0.02em;
   text-transform: uppercase;
   color: var(--ink-soft);
   margin-bottom: 12px;
@@ -1201,19 +1457,58 @@ input[type="time"]::-webkit-calendar-picker-indicator { filter: invert(1) opacit
   transition: border-color var(--t-fast) var(--ease-out);
 }
 .ride-card:hover { border-color: var(--border-strong); }
-.ride-card.mia { border-color: var(--tuo-bordo); }
+/* Quando ci sei dentro tu la scheda prende il bordo viola, **e** una fascia piena
+   sul lato sinistro. Il bordo da solo era un pixel di tinta su un rettangolo
+   grande: in una griglia di sei schede la propria non si trovava con un colpo
+   d'occhio, che e' l'unica cosa che quel segnale deve fare.
+   E' un'ombra interna e non un `border-left` piu' spesso perche' il bordo spesso
+   sposta il contenuto di due pixel: la fascia sta **sopra** la scheda, tagliata
+   dal raggio dello spigolo, e non muove niente. Non e' profondita' finta — non
+   sfuma, non ha distanza, e' una banda stampata sul bordo. */
+.ride-card.mia { border-color: var(--tuo-bordo); box-shadow: inset 3px 0 0 var(--tuo); }
 
 .ride-head { display: flex; justify-content: space-between; align-items: start; gap: 8px; }
+.ride-info { flex: 1 1 auto; min-width: 0; }
 .ride-route { font-weight: 700; font-size: 1rem; letter-spacing: -0.02em; }
 .ride-sub { color: var(--ink-soft); font-size: 0.84rem; margin-top: 2px; }
-/* L'ora e' la prima cosa che si cerca: monospaziata e un gradino piu' grande del
-   resto della riga, come su un tabellone. */
+
+/* ---- la colonna dell'ora ----
+   La cifra grande a sinistra, con la sua targhetta sotto e una riga che la stacca
+   dal resto: e' la matrice di un tabellone delle partenze. Il perche' sta in
+   `app.js`, dove la colonna si costruisce.
+   `align-self: stretch` sulla riga verticale no: la riga e' alta quanto le due
+   righe di testo, non quanto la scheda — su un tabellone il filetto separa le
+   colonne di una riga, non l'intero pannello. */
 .ride-ora {
-  font-family: 'IBM Plex Mono', ui-monospace, monospace;
+  flex: none;
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  padding-right: 12px;
+  margin-right: 3px;
+  border-right: 1px solid var(--border);
+}
+/* L'interlettera negativa serve a una cosa sola, e si vede solo a video: nel
+   monospaziato i due punti occupano una cella larga come una cifra, quindi
+   «18:30» si legge «18 : 30» con due buchi in mezzo. Stretta di 0,085em l'ora
+   torna un numero unico invece di quattro cifre e un segno — e le cifre non ne
+   soffrono, perche' nel monospaziato hanno gia' dentro la loro aria. */
+.ride-ora .ora {
+  font-family: var(--font-mono);
   font-weight: 500;
-  font-size: 0.98rem;
-  color: var(--primary-testo);
+  font-size: 1.38rem;
+  line-height: 1;
+  letter-spacing: -0.085em;
+  font-variant-numeric: tabular-nums;
+  color: var(--ink);
+}
+.ride-ora .lab {
+  margin-top: 5px;
+  font-family: var(--font-mono);
+  font-size: 0.6rem;
   letter-spacing: 0.02em;
+  text-transform: uppercase;
+  color: var(--ink-soft);
 }
 .maps-link {
   display: inline-flex; align-items: center; gap: 4px; margin-top: 2px;
@@ -1368,7 +1663,7 @@ input[type="time"]::-webkit-calendar-picker-indicator { filter: invert(1) opacit
 }
 .seat-text {
   text-anchor: middle;
-  font-family: 'IBM Plex Sans', system-ui, sans-serif;
+  font-family: var(--font-sans);
   font-size: 14px;
   font-weight: 700;
   fill: var(--posto-testo);
@@ -1466,9 +1761,9 @@ input[type="time"]::-webkit-calendar-picker-indicator { filter: invert(1) opacit
 /* Il giorno e' un'intestazione di colonna, non un titolo: piccola, spaziata, con la
    riga sotto che lega insieme i passaggi di quel giorno. */
 .history-day-title {
-  font-size: 0.74rem;
-  font-weight: 700;
-  letter-spacing: 0.09em;
+  font-size: 0.72rem;
+  font-weight: 500;
+  letter-spacing: 0.02em;
   text-transform: uppercase;
   color: var(--ink-soft);
   padding-bottom: 7px;
@@ -1531,7 +1826,7 @@ input[type="time"]::-webkit-calendar-picker-indicator { filter: invert(1) opacit
 
 .fermate-box { border-top: 1px solid var(--border); margin: 14px 0 0; padding: 12px 0 0; }
 .fermate-titolo {
-  font-size: 0.72rem; font-weight: 700; letter-spacing: 0.08em; text-transform: uppercase;
+  font-size: 0.70rem; font-weight: 500; letter-spacing: 0.02em; text-transform: uppercase;
   color: var(--ink-soft); margin-bottom: 8px;
 }
 .fermate-elenco { display: flex; gap: 6px; flex-wrap: wrap; margin-bottom: 8px; }
@@ -1572,7 +1867,7 @@ input[type="time"]::-webkit-calendar-picker-indicator { filter: invert(1) opacit
   font-size: 0.72rem; color: var(--ink-soft);
   font-variant-numeric: tabular-nums;
 }
-.week-testa b { color: var(--ink); text-transform: uppercase; letter-spacing: 0.06em; font-size: 0.7rem; }
+.week-testa b { color: var(--ink); text-transform: uppercase; letter-spacing: 0.01em; font-size: 0.68rem; font-weight: 500; }
 .week-auto, .week-vuoto {
   display: flex; align-items: baseline; gap: 6px; flex-wrap: wrap;
   width: 100%;
@@ -1587,7 +1882,7 @@ input[type="time"]::-webkit-calendar-picker-indicator { filter: invert(1) opacit
   cursor: pointer;
 }
 .week-auto:hover, .week-vuoto:hover { border-color: var(--border-strong); }
-.week-auto b { font-family: 'IBM Plex Mono', ui-monospace, monospace; font-weight: 500; }
+.week-auto b { font-family: var(--font-mono); font-weight: 500; }
 .week-auto span { flex: 1 1 auto; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .week-auto em { font-style: normal; color: var(--ok); }
 .week-auto.pieno em { color: var(--ink-soft); }
@@ -1842,7 +2137,7 @@ input[type="time"]::-webkit-calendar-picker-indicator { filter: invert(1) opacit
   margin-top: 18px;
 }
 .card-title {
-  font-size: 0.78rem; font-weight: 700; letter-spacing: 0.06em; text-transform: uppercase;
+  font-size: 0.74rem; font-weight: 500; letter-spacing: 0.02em; text-transform: uppercase;
   color: var(--ink-soft); margin-bottom: 6px;
 }
 .card-sub { color: var(--ink-soft); font-size: 0.86rem; margin-bottom: 14px; max-width: 66ch; }
@@ -2047,8 +2342,8 @@ input[type="time"]::-webkit-calendar-picker-indicator { filter: invert(1) opacit
   justify-content: center;
 }
 .dash .k .lab {
-  font-size: 0.67rem; color: var(--ink-soft); overflow-wrap: anywhere;
-  letter-spacing: 0.05em; text-transform: uppercase; font-weight: 600;
+  font-size: 0.65rem; color: var(--ink-soft); overflow-wrap: anywhere;
+  letter-spacing: 0.01em; text-transform: uppercase; font-weight: 500;
 }
 .dash .k .val {
   font-size: 1.25rem; font-weight: 700; margin-top: 3px; letter-spacing: -0.03em;
@@ -2076,8 +2371,8 @@ input[type="time"]::-webkit-calendar-picker-indicator { filter: invert(1) opacit
 }
 .dash .card > .piede { margin-top: auto; }
 .dash .card h3 {
-  margin: 0; font-size: 0.72rem; font-weight: 700; overflow-wrap: anywhere;
-  letter-spacing: 0.06em; text-transform: uppercase;
+  margin: 0; font-size: 0.70rem; font-weight: 500; overflow-wrap: anywhere;
+  letter-spacing: 0.01em; text-transform: uppercase;
 }
 .dash .sub { color: var(--ink-soft); font-size: 0.68rem; overflow-wrap: anywhere; }
 .dash .head {
@@ -2220,7 +2515,7 @@ input[type="time"]::-webkit-calendar-picker-indicator { filter: invert(1) opacit
   text-align: right;
   font-size: 0.67rem;
   color: var(--ink-soft);
-  font-family: 'IBM Plex Mono', ui-monospace, monospace;
+  font-family: var(--font-mono);
 }
 .dash .piede {
   display: flex;
@@ -2289,7 +2584,7 @@ input[type="time"]::-webkit-calendar-picker-indicator { filter: invert(1) opacit
 .dash .conto .chi:hover small { color: var(--primary-testo); }
 .dash .conto .imp {
   flex: none; font-weight: 600;
-  font-family: 'IBM Plex Mono', ui-monospace, monospace; white-space: nowrap;
+  font-family: var(--font-mono); white-space: nowrap;
 }
 .dash .conto .imp.dare { color: var(--danger); }
 .dash .conto .imp.avere { color: var(--ok); }
@@ -2306,9 +2601,9 @@ input[type="time"]::-webkit-calendar-picker-indicator { filter: invert(1) opacit
   font-size: 0.66rem;
 }
 .dash .riga-voce { display: flex; align-items: baseline; gap: 8px; padding: 2px 0; }
-.dash .riga-voce .q { flex: none; width: 46px; color: var(--ink-soft); font-family: 'IBM Plex Mono', ui-monospace, monospace; }
+.dash .riga-voce .q { flex: none; width: 46px; color: var(--ink-soft); font-family: var(--font-mono); }
 .dash .riga-voce .t { flex: 1 1 auto; min-width: 0; overflow-wrap: anywhere; color: var(--ink-soft); }
-.dash .riga-voce .i { flex: none; font-family: 'IBM Plex Mono', ui-monospace, monospace; white-space: nowrap; }
+.dash .riga-voce .i { flex: none; font-family: var(--font-mono); white-space: nowrap; }
 .dash .riga-voce .i.dare { color: var(--danger); }
 .dash .riga-voce .i.avere { color: var(--ok); }
 .dash .riga-voce.somma { border-top: 1px solid var(--border); margin-top: 4px; padding-top: 5px; }
@@ -2337,7 +2632,7 @@ input[type="time"]::-webkit-calendar-picker-indicator { filter: invert(1) opacit
 .dash .turno .bar i { display: block; height: 100%; border-radius: var(--r-chip); flex: none; }
 .dash .turno .bar em {
   position: absolute; right: 7px; font-size: 0.67rem; color: var(--ink-soft); font-style: normal;
-  font-family: 'IBM Plex Mono', ui-monospace, monospace;
+  font-family: var(--font-mono);
 }
 
 .dash .vuoto { color: var(--ink-soft); font-size: 0.7rem; }

@@ -3789,7 +3789,38 @@ function renderRides(rides) {
 
     const head = document.createElement('div');
     head.className = 'ride-head';
+
+    // L'ora, e sta a sinistra grande come su un tabellone.
+    //
+    // Era «· ore 18:30» in coda al sottotitolo grigio, cioe' il dato piu' cercato
+    // di tutta la scheda scritto come una nota a margine: la domanda del prodotto
+    // e' «chi guida oggi, e c'e' posto per me», e la seconda cosa che si guarda
+    // dopo il posto libero e' a che ora si parte. Qui e' una cifra monospaziata in
+    // colonna sua, staccata dal resto da una riga: la matrice di un tabellone
+    // delle partenze, che e' il riferimento fisico dichiarato in PRODUCT.md.
+    //
+    // Nera e non viola, e non e' un dettaglio: il viola in questo foglio vuol dire
+    // «si tocca» o «e' tuo», e un orario non e' nessuna delle due cose. La regola
+    // stava scritta e questo era uno dei punti in cui il foglio non la rispettava.
+    //
+    // Senza orario la colonna non c'e' affatto, invece di un trattino: una casella
+    // vuota su un tabellone dice «orario soppresso», e qui vorrebbe dire soltanto
+    // che chi guida non l'ha scritto.
+    if (ride.depart_time) {
+      const ora = document.createElement('div');
+      ora.className = 'ride-ora';
+      const cifre = document.createElement('b');
+      cifre.className = 'ora';
+      cifre.textContent = ride.depart_time.slice(0, 5);
+      const lab = document.createElement('span');
+      lab.className = 'lab';
+      lab.textContent = 'parte';
+      ora.append(cifre, lab);
+      head.appendChild(ora);
+    }
+
     const info = document.createElement('div');
+    info.className = 'ride-info';
     const route = document.createElement('div');
     route.className = 'ride-route';
     route.textContent = ride.origin ? `${ride.origin} → ${ride.destination}` : ride.destination;
@@ -3806,8 +3837,9 @@ function renderRides(rides) {
     }
     const sub = document.createElement('div');
     sub.className = 'ride-sub';
-    const time = ride.depart_time ? ` · ore ${ride.depart_time.slice(0, 5)}` : '';
-    sub.textContent = DAY_FMT.format(new Date(ride.ride_date + 'T12:00:00')) + time;
+    // Il giorno e basta: l'ora e' passata nella colonna a sinistra, e ripeterla
+    // qui vorrebbe dire scrivere due volte lo stesso numero nella stessa scheda.
+    sub.textContent = DAY_FMT.format(new Date(ride.ride_date + 'T12:00:00'));
     info.appendChild(sub);
     const drv = document.createElement('div');
     drv.className = 'ride-sub';
