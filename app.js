@@ -1001,7 +1001,12 @@ document.getElementById('top-me')?.addEventListener('click', () => switchView('p
 // la domanda che fa chi ascolta la pagina.
 const tastoTema = document.getElementById('tema-tasto');
 
-function mostraTema(scuro) {
+// `gira` dice se il bottone deve **voltarsi**, e non e' un vezzo che si potrebbe
+// leggere dallo stato: e' la differenza fra un gesto e un disegno iniziale. La
+// stessa funzione serve due momenti — il tocco e il primo disegno della pagina —
+// e voltarsi al primo disegno vorrebbe dire annunciare un cambio che non c'e'
+// stato. Il movimento dice lo stato, o non c'e' (PRODUCT.md, principio 2).
+function mostraTema(scuro, gira = false) {
   if (scuro) document.documentElement.setAttribute('data-tema', 'scuro');
   else document.documentElement.removeAttribute('data-tema');
   if (!tastoTema) return;
@@ -1009,7 +1014,15 @@ function mostraTema(scuro) {
   tastoTema.setAttribute('aria-pressed', String(scuro));
   tastoTema.title = `Passa al tema ${verso}`;
   tastoTema.setAttribute('aria-label', `Passa al tema ${verso}`);
-  tastoTema.innerHTML = `<svg width="17" height="17" aria-hidden="true"><use href="#i-${scuro ? 'sole' : 'luna'}"/></svg>`;
+  // La targa a due facce: la luna su una, il sole sull'altra, e per passare da una
+  // all'altra si **volta**. Il segno lo dice il verso in cui si e' andati — a
+  // sinistra verso il buio, a destra verso la luce — cosi' il gesto non e' una
+  // rotazione generica ma il verso di quel comando. Lo `<svg>` viene sostituito, e
+  // l'elemento nuovo fa partire l'animazione da solo: senza `gira` la classe non
+  // c'e' e non parte niente.
+  tastoTema.innerHTML = `<svg width="17" height="17" aria-hidden="true"`
+    + `${gira ? ` class="volta ${scuro ? 'al-buio' : 'alla-luce'}"` : ''}`
+    + `><use href="#i-${scuro ? 'sole' : 'luna'}"/></svg>`;
   // Anche la barra del browser sul telefono segue il tema: altrimenti resta del
   // colore dell'altro, ed e' la striscia piu' grande dello schermo a dirlo.
   document.querySelector('meta[name="theme-color"]')
@@ -1020,7 +1033,7 @@ mostraTema(document.documentElement.getAttribute('data-tema') === 'scuro');
 
 tastoTema?.addEventListener('click', () => {
   const scuro = document.documentElement.getAttribute('data-tema') !== 'scuro';
-  mostraTema(scuro);
+  mostraTema(scuro, true);
   try {
     localStorage.setItem('wt_tema', scuro ? 'scuro' : 'chiaro');
   } catch {
@@ -3806,16 +3819,51 @@ function renderRides(rides) {
     // Senza orario la colonna non c'e' affatto, invece di un trattino: una casella
     // vuota su un tabellone dice «orario soppresso», e qui vorrebbe dire soltanto
     // che chi guida non l'ha scritto.
+    //
+    // **E gira.** Ogni carattere sta in un elemento suo perche' un tabellone delle
+    // partenze non scrive l'ora, la **gira**: le palette calano una dopo l'altra
+    // da sinistra, e l'ordine e' quello perche' e' l'ordine in cui si leggono. Il
+    // foglio di stile ci attacca l'animazione e il ritardo, che sale col numero
+    // della paletta (`--n`); qui si costruiscono solo le celle, cinque, quante
+    // sono i caratteri di «18:30» compresi i due punti — sul tabellone vero anche
+    // il separatore e' una paletta, e gira insieme alle altre.
+    //
+    // Con `prefers-reduced-motion` non gira niente e l'ora c'e' comunque: il
+    // foglio spegne l'animazione, e senza animazione le celle sono cinque pezzi di
+    // testo in fila, cioe' esattamente l'ora. Non c'e' uno stato di partenza da
+    // cui l'informazione debba essere liberata.
     if (ride.depart_time) {
+      const orario = ride.depart_time.slice(0, 5);
       const ora = document.createElement('div');
       ora.className = 'ride-ora';
+
+      // **Per chi ascolta l'ora resta una frase, non cinque pezzi.** Cinque celle
+      // `inline-block` non sono piu' un testo unico: un lettore di schermo le
+      // annuncia una per una — «uno, otto, due punti, tre, zero» — ed e' il prezzo
+      // che le palette si portano dietro per il fatto di dover girare (una
+      // trasformazione non si applica a un elemento in linea, quindi le celle
+      // devono essere blocchi). Il prezzo si paga qui: la frase vera sta scritta
+      // per intero in un pixel ritagliato, e il disegno che la compone diventa
+      // decorazione dichiarata. Anche la targhetta «parte» esce dall'albero,
+      // perche' quella parola e' gia' dentro la frase.
+      const letto = document.createElement('span');
+      letto.className = 'solo-lettori';
+      letto.textContent = `Parte alle ${orario}`;
+
       const cifre = document.createElement('b');
       cifre.className = 'ora';
-      cifre.textContent = ride.depart_time.slice(0, 5);
+      cifre.setAttribute('aria-hidden', 'true');
+      for (const [n, carattere] of [...orario].entries()) {
+        const paletta = document.createElement('i');
+        paletta.textContent = carattere;
+        paletta.style.setProperty('--n', n);
+        cifre.appendChild(paletta);
+      }
       const lab = document.createElement('span');
       lab.className = 'lab';
+      lab.setAttribute('aria-hidden', 'true');
       lab.textContent = 'parte';
-      ora.append(cifre, lab);
+      ora.append(letto, cifre, lab);
       head.appendChild(ora);
     }
 
