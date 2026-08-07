@@ -10,7 +10,6 @@ const appShell = document.getElementById('app-shell');
 const authForm = document.getElementById('auth-form');
 const authMessage = document.getElementById('auth-message');
 const nameLabel = document.getElementById('name-label');
-const userNameEl = document.getElementById('user-name');
 const groupPills = document.getElementById('group-pills');
 const dayToday = document.getElementById('day-today');
 const dayTomorrow = document.getElementById('day-tomorrow');
@@ -950,33 +949,26 @@ function switchView(view) {
   for (const v of VIEWS) {
     document.getElementById('view-' + v).classList.toggle('hidden', v !== view);
   }
-  // Il tondo della navigazione scivola sulla scheda attiva: la sua colonna la
-  // passa il codice al CSS, letta dall'ordine vero dei pulsanti, per non tenere
-  // l'elenco delle viste scritto in due posti che possono divergere.
-  const schede = [...document.querySelectorAll('.nav-item')];
-  schede.forEach((b, i) => {
+  // La riga di due pixel scivola sulla scheda aperta, e la sua colonna la passa il
+  // codice al CSS leggendola dall'**ordine vero** dei pulsanti: cosi' l'elenco delle
+  // viste non e' scritto in due posti che possono divergere.
+  const fascia = document.querySelector('.bottom-nav');
+  let aperta = false;
+  document.querySelectorAll('.nav-item').forEach((b, i) => {
     const attiva = b.dataset.view === view;
     b.classList.toggle('active', attiva);
     if (attiva) {
+      aperta = true;
       b.setAttribute('aria-current', 'page');
-      document.querySelector('.bottom-nav')?.style.setProperty('--nav-i', i);
+      fascia?.style.setProperty('--nav-i', i);
     } else {
       b.removeAttribute('aria-current');
     }
   });
-  // La barra in alto segue le stesse viste. Non usa `.nav-item` di proposito:
-  // quel ciclo qui sopra ricava la colonna del tondo dalla **posizione** del
-  // pulsante nell'elenco, e otto pulsanti al posto di cinque lo manderebbero
-  // a segnare una colonna che non esiste.
-  document.querySelectorAll('.top-item').forEach(b => {
-    const attiva = b.dataset.view === view;
-    b.classList.toggle('on', attiva);
-    if (attiva) b.setAttribute('aria-current', 'page'); else b.removeAttribute('aria-current');
-  });
-  tondoACasa();
-  // Il profilo non ha una voce: ce l'ha la scheda con la faccia, a destra. Senza
-  // questa riga si arrivava sul profilo e nella barra non era acceso niente, cioe'
-  // la navigazione smetteva di dire dove sei proprio dove sei arrivato.
+  // Il profilo non e' una scheda: ce l'ha la faccia in alto. Li' la riga si spegne
+  // invece di restare ferma su una scheda che non e' quella aperta — dire una cosa
+  // falsa e' peggio che non dire niente.
+  fascia?.classList.toggle('spenta', !aperta);
   const scheda = document.getElementById('top-me');
   scheda?.classList.toggle('on', view === 'profile');
   if (view === 'profile') scheda?.setAttribute('aria-current', 'page');
@@ -996,48 +988,46 @@ function switchView(view) {
 document.querySelectorAll('.nav-item').forEach(b =>
   b.addEventListener('click', () => switchView(b.dataset.view)));
 
-// ── Il tondo della barra in alto ────────────────────────────────────────────
-//
-// Le quattro voci hanno larghezze diverse — «Riepilogo» e' quasi il doppio di
-// «Storico» — quindi la posizione non si puo' scrivere in CSS come frazione di
-// riga: si misura. Al CSS arrivano due numeri, dove comincia e quanto e' largo,
-// e la transizione fa il resto.
-//
-// Due stati e non tre: **dove sei** (la voce accesa) e **dove andresti** (quella
-// sotto il puntatore o sotto il fuoco della tastiera). Il secondo dura quanto il
-// puntatore ci resta sopra; appena esce, il tondo torna sulla voce accesa. Sul
-// profilo nessuna delle quattro e' accesa e il tondo sparisce, invece di restare
-// fermo su una voce che non e' quella aperta.
-const listaAlta = document.getElementById('top-list');
-
-function tondoSu(voce) {
-  if (!listaAlta) return;
-  if (!voce || !voce.offsetWidth) { listaAlta.classList.remove('tondo-acceso'); return; }
-  listaAlta.style.setProperty('--tondo-x', voce.offsetLeft + 'px');
-  listaAlta.style.setProperty('--tondo-w', voce.offsetWidth + 'px');
-  listaAlta.classList.add('tondo-acceso');
-}
-
-function tondoACasa() {
-  tondoSu(listaAlta?.querySelector('.top-item.on'));
-}
-
-listaAlta?.addEventListener('pointerleave', tondoACasa);
-listaAlta?.addEventListener('focusout', tondoACasa);
-document.querySelectorAll('.top-item').forEach(b => {
-  b.addEventListener('click', () => switchView(b.dataset.view));
-  b.addEventListener('pointerenter', () => tondoSu(b));
-  b.addEventListener('focus', () => tondoSu(b));
-});
-// La barra nasce nascosta sotto i 768px: li' le voci misurano zero e il tondo resta
-// spento finche' la finestra non si allarga. Stessa cosa quando cambiano le larghezze
-// perche' e' arrivato il carattere vero al posto di quello di sistema.
-window.addEventListener('resize', tondoACasa);
-document.fonts?.ready.then(tondoACasa);
-
 document.getElementById('top-me')?.addEventListener('click', () => switchView('profile'));
 
-userNameEl.addEventListener('click', () => switchView('profile'));
+// ── L'interruttore del tema ────────────────────────────────────────────────
+//
+// La lettura sta in `tema.js`, che gira in `<head>` prima che si dipinga: qui c'e'
+// solo il gesto. L'app nasce chiara — e' cosi' che e' disegnata — e chi la gira se
+// la ritrova girata alla visita dopo.
+//
+// Il bottone mostra **dove andresti**, non dove sei: la luna sulla pagina chiara, il
+// sole su quella scura. `aria-pressed` invece dice lo stato vero, perche' quella e'
+// la domanda che fa chi ascolta la pagina.
+const tastoTema = document.getElementById('tema-tasto');
+
+function mostraTema(scuro) {
+  if (scuro) document.documentElement.setAttribute('data-tema', 'scuro');
+  else document.documentElement.removeAttribute('data-tema');
+  if (!tastoTema) return;
+  const verso = scuro ? 'chiaro' : 'scuro';
+  tastoTema.setAttribute('aria-pressed', String(scuro));
+  tastoTema.title = `Passa al tema ${verso}`;
+  tastoTema.setAttribute('aria-label', `Passa al tema ${verso}`);
+  tastoTema.innerHTML = `<svg width="17" height="17" aria-hidden="true"><use href="#i-${scuro ? 'sole' : 'luna'}"/></svg>`;
+  // Anche la barra del browser sul telefono segue il tema: altrimenti resta del
+  // colore dell'altro, ed e' la striscia piu' grande dello schermo a dirlo.
+  document.querySelector('meta[name="theme-color"]')
+    ?.setAttribute('content', scuro ? '#110C17' : '#EEF1F3');
+}
+
+mostraTema(document.documentElement.getAttribute('data-tema') === 'scuro');
+
+tastoTema?.addEventListener('click', () => {
+  const scuro = document.documentElement.getAttribute('data-tema') !== 'scuro';
+  mostraTema(scuro);
+  try {
+    localStorage.setItem('wt_tema', scuro ? 'scuro' : 'chiaro');
+  } catch {
+    // Memoria locale chiusa: il tema vale per questa visita e basta. Meglio di un
+    // errore in faccia per una preferenza estetica.
+  }
+});
 
 // --- Cambia nome ---
 document.getElementById('profile-rename').addEventListener('click', async () => {
@@ -1046,7 +1036,6 @@ document.getElementById('profile-rename').addEventListener('click', async () => 
   const { error } = await supabase.from('profiles').update({ display_name: name.trim().slice(0, 40) }).eq('id', currentUser.id);
   if (error) { toast('Errore: ' + error.message); return; }
   myName = name.trim().slice(0, 40);
-  userNameEl.textContent = myName;
   renderProfile();
   toast('Nome aggiornato.');
   loadRides();
@@ -2482,10 +2471,12 @@ const AZIONI_RIEPILOGO = [
 // riquadri che dicono cosa manca — e prima erano tre copie della stessa
 // marcatura, che divergevano a ogni ritocco.
 function testata(sottotitolo, conComitiva = false) {
+  // La faccia non sta qui. Ci stava quando la barra in alto la mostrava solo da
+  // 768px in su; adesso la barra c'e' sempre e la porta lei, a due centimetri di
+  // distanza — due volte la stessa iniziale sullo stesso schermo.
   return `<div class="dash-top">
       <div class="dash-hi"><h1>Riepilogo</h1><p>${escapeHtml(sottotitolo)}</p></div>
-      ${conComitiva ? `<span class="dash-gruppo">${escapeHtml(nomeComitiva())}</span>
-      <span class="dash-av">${escapeHtml(iniziale(myName))}</span>` : ''}
+      ${conComitiva ? `<span class="dash-gruppo">${escapeHtml(nomeComitiva())}</span>` : ''}
     </div>`;
 }
 
@@ -2522,13 +2513,14 @@ const iconaSvg = (id, w = 15) =>
 // Il tondo colorato accanto a un nome. Deriva dall'id, quindi la stessa persona
 // ha lo stesso colore in tutti i riquadri e fra una visita e l'altra — senza
 // tenere da nessuna parte una tabella di colori.
-// Sei tinte, e tutte e sei portano il bianco delle iniziali ad almeno 4.5:1 nei due
-// temi (`npm run contrasto`). Due non ce la facevano: il verde `--ok`, che al buio si
-// schiarisce fino a 3.7:1, e il grigio a 0.6 di luminosita', fermo a 3.9:1 in
-// entrambi. Un avatar e' un cerchio con due lettere dentro: e' testo, e vale la
-// stessa soglia del testo.
-const COLORI_AV = ['oklch(0.78 0.030 227)', 'oklch(0.70 0.050 250)', 'oklch(0.72 0.060 200)',
-  'oklch(0.66 0.070 215)', 'oklch(0.74 0.040 265)', 'oklch(0.68 0.040 185)'];
+// Sei tinte, tutte nella famiglia del viola della palette: cambiano di tinta e di
+// luminosita' quel tanto che basta a distinguere sei persone, senza diventare sei
+// accenti in un'app che ne ha uno. Sono **scure** perche' sopra ci va il
+// quasi-bianco: con il candy blue erano chiare e sopra ci andava l'onyx, ed e' il
+// verso che si e' ribaltato insieme all'accento. Un avatar e' un cerchio con due
+// lettere dentro: e' testo, e vale la soglia del testo (`npm run contrasto`).
+const COLORI_AV = ['oklch(0.50 0.200 300)', 'oklch(0.46 0.165 285)', 'oklch(0.54 0.215 312)',
+  'oklch(0.44 0.140 272)', 'oklch(0.52 0.155 328)', 'oklch(0.48 0.105 262)'];
 function coloreDi(id) {
   let h = 0;
   for (const c of String(id || '')) h = (h * 31 + c.charCodeAt(0)) >>> 0;
@@ -3284,7 +3276,8 @@ function sagomaAuto(H) {
 // dal riferimento che mi e' stato dato — che pero' e' un'auto **di profilo**, e
 // di profilo un sedile non si puo' toccare: qui la vista resta dall'alto e di
 // quel disegno si prende il vocabolario, non l'inquadratura. Stessa ragione per
-// cui i fari sono candy blue e non ciano al neon: i colori dell'app sono due.
+// cui i fari sono viola e non ciano al neon: i colori dell'app sono quelli della
+// palette, e nessuno di piu'.
 //
 // Tutto quello che sta a destra si ricava da quello che sta a sinistra.
 function finitureAuto(svg, H, righe) {
@@ -3890,7 +3883,12 @@ function renderRides(rides) {
     head.appendChild(actions);
     card.appendChild(head);
 
-    card.appendChild(buildCar(ride));
+    // L'auto va sulla sua piastra: alla luce e' quel rettangolo scuro a farla
+    // vedere, al buio la piastra e' trasparente e il disegno e' identico.
+    const piastra = document.createElement('div');
+    piastra.className = 'car-piastra';
+    piastra.appendChild(buildCar(ride));
+    card.appendChild(piastra);
 
     // Chi è a bordo, in chiaro
     if (ride.seat_claims.length > 0) {
@@ -4113,13 +4111,8 @@ async function render() {
   rendered = true;
   authView.classList.toggle('hidden', loggedIn);
   appShell.classList.toggle('hidden', !loggedIn);
-  // Finche' il guscio e' nascosto le voci misurano zero e il tondo non sa dove
-  // mettersi: appena compare, va sulla voce che il markup nasce con l'attributo
-  // acceso — «Passaggi», la vista da cui si parte.
-  if (loggedIn) tondoACasa();
   if (loggedIn) {
     await ensureProfile();
-    userNameEl.textContent = myName;
     await loadBlocked();
     applicaSospensione();
     await loadGroups();
