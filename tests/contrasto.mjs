@@ -161,6 +161,11 @@ const COPPIE = [
   ['contorno di cio\' che e\' tuo, sulla carta', '--tuo-bordo', '--surface', 3],
 
   ['errore sul suo velo', '--danger', '--danger-soft', 4.5],
+  // Il bordo di un pannello di stato dice dove finisce l'avviso: porta
+  // informazione, quindi 1.4.11 e soglia 3. Erano scritti a mano nel foglio.
+  ['bordo dell\'errore, sul suo velo', '--danger-bordo', '--danger-soft', 3],
+  ['bordo dell\'errore, sulla carta', '--danger-bordo', '--surface', 3],
+  ['bordo della conferma, sul suo velo', '--ok-bordo', '--ok-soft', 3],
   ['errore su carta', '--danger', '--surface', 4.5],
   ['bianco sul bottone distruttivo', BIANCO, '--danger-pieno', 4.5],
   ['bianco sulla barra senza rete', BIANCO, '--danger-pieno', 4.5],

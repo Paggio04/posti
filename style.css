@@ -235,9 +235,16 @@
      fine. PRODUCT.md chiede che non siano **soli** a dirlo, e infatti ogni
      posto in cui compaiono ha anche una parola o una forma. */
   --danger: oklch(0.505 0.200 25);
+  /* Il bordo di un pannello di stato **porta informazione** — dice dove finisce
+     l'avviso — quindi vale la 1.4.11 e la soglia e' 3:1. Erano tre colori scritti
+     a mano nel foglio, tarati sul tema scuro di allora e rimasti fermi quando i
+     temi sono diventati due: fuori dal controllo del contrasto, come tutti quelli
+     che sono gia' stati chiusi. Questi erano gli ultimi. */
+  --danger-bordo: oklch(0.590 0.190 25);
   --danger-pieno: oklch(0.505 0.200 25);
   --danger-soft: oklch(0.945 0.035 25);
   --ok: oklch(0.480 0.110 165);
+  --ok-bordo: oklch(0.560 0.110 165);
   --ok-deep: oklch(0.480 0.110 165);
   --ok-pieno: oklch(0.480 0.110 165);
   --ok-soft: oklch(0.945 0.035 165);
@@ -355,9 +362,11 @@
   --tuo-velo: oklch(0.295 0.075 301);
   --tuo-bordo: oklch(0.610 0.185 301);
   --danger: oklch(0.72 0.16 25);
+  --danger-bordo: oklch(0.640 0.170 25);
   --danger-pieno: oklch(0.53 0.20 25);
   --danger-soft: oklch(0.265 0.070 25);
   --ok: oklch(0.80 0.13 165);
+  --ok-bordo: oklch(0.640 0.110 165);
   --ok-deep: oklch(0.80 0.13 165);
   --ok-pieno: oklch(0.55 0.12 165);
   --ok-soft: oklch(0.255 0.050 165);
@@ -950,7 +959,7 @@ input[type="time"]::-webkit-calendar-picker-indicator { opacity: 0.6; cursor: po
   font-weight: 500;
   color: var(--danger);
   background: var(--danger-soft);
-  border: 1px solid oklch(0.42 0.12 25);
+  border: 1px solid var(--danger-bordo);
   border-radius: var(--r-btn);
   padding: 11px 14px;
   line-height: 1.5;
@@ -960,7 +969,7 @@ input[type="time"]::-webkit-calendar-picker-indicator { opacity: 0.6; cursor: po
 .auth-message.ok {
   color: var(--ok);
   background: var(--ok-soft);
-  border-color: oklch(0.40 0.09 165);
+  border-color: var(--ok-bordo);
   animation: entra var(--t-med) var(--ease-out);
 }
 
@@ -2010,15 +2019,38 @@ input[type="time"]::-webkit-calendar-picker-indicator { opacity: 0.6; cursor: po
 .profile-email { color: var(--ink-soft); font-size: 0.87rem; }
 .profile-actions {
   display: grid;
-  grid-template-columns: repeat(2, minmax(0, 1fr));
+  grid-template-columns: repeat(3, minmax(0, 1fr));
   gap: 10px;
   margin-bottom: 16px;
 }
-.profile-actions .btn-full { margin-top: 0; }
 @media (max-width: 767px) {
   .profile-actions { grid-template-columns: minmax(0, 1fr); }
 }
-.btn-danger-full { color: var(--danger); border-color: oklch(0.42 0.12 25); }
+
+/* La cancellazione dell'account sta per conto suo, staccata da una riga e con
+   scritto cosa porta via. Non e' un riquadro d'allarme — sarebbe un pannello
+   rosso che urla in una pagina dove non e' successo niente — e' lo stesso foglio
+   con una riga in piu' sopra e la frase che dice la conseguenza. */
+.zona-pericolo {
+  border-top: 1px solid var(--border);
+  margin: 26px 0 16px;
+  padding-top: 16px;
+  display: flex;
+  align-items: center;
+  gap: 14px 18px;
+  flex-wrap: wrap;
+}
+.zona-pericolo-testo {
+  flex: 1 1 300px;
+  min-width: 0;
+  color: var(--ink-soft);
+  font-size: 0.85rem;
+  line-height: 1.5;
+  max-width: 60ch;
+}
+.zona-pericolo .btn { flex: none; margin-top: 0; }
+.profile-actions .btn-full { margin-top: 0; }
+.btn-danger-full { color: var(--danger); border-color: var(--danger-bordo); }
 .btn-danger-full:hover { background: var(--danger-soft); border-color: var(--danger); }
 .profile-hint { color: var(--ink-soft); font-size: 0.85rem; margin-top: 20px; max-width: 60ch; }
 
