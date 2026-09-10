@@ -47,9 +47,21 @@ jobs:
           git diff --exit-code -- vendor/supabase-js.esm.js \
             || (echo "vendor/ non corrisponde: lancia 'npm run vendor' e committa il risultato" && exit 1)
 
+      # **Cerca fra i file scritti a mano, e due cartelle restano fuori.**
+      # `node_modules/` non e' nel repo: frugarci dentro vuol dire cercare segreti nel
+      # codice di qualcun altro, e il 10/09 e' successo — `@supabase/supabase-js` scrive
+      # «never expose your `service_role` key» nei propri commenti, e questo passo e'
+      # diventato rosso su una modifica che non aveva committato nessuna chiave.
+      # `vendor/` e' generato e contiene `sb_secret_` come **prefisso** che la libreria
+      # confronta per riconoscere il tipo di chiave, non una chiave. Escluderlo non apre
+      # un buco: il passo qui sopra lo rigenera e fallisce se una sola riga e' diversa,
+      # che e' un controllo piu' forte di una ricerca di parole.
       - name: Nessun segreto committato
         run: |
-          ! grep -rEn "sb_secret|service_role|SUPABASE_SERVICE" --include='*.js' --include='*.html' --include='*.toml' . || (echo "Trovata chiave segreta nel repo" && exit 1)
+          ! grep -rEn "sb_secret|service_role|SUPABASE_SERVICE" \
+              --include='*.js' --include='*.html' --include='*.toml' \
+              --exclude-dir=node_modules --exclude-dir=vendor . \
+            || (echo "Trovata chiave segreta nel repo" && exit 1)
 
   # Le migrazioni devono ricreare il backend da zero, e devono poter essere rilanciate
   # senza rompersi. Il vecchio supabase-setup.sql non faceva ne' l'una ne' l'altra cosa.
