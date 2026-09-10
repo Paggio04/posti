@@ -146,7 +146,19 @@ self.addEventListener('fetch', (e) => {
         return await fetch(req);
       } catch {
         const cache = await caches.open(VERSIONE);
+        // **Netlify toglie `.html` dai collegamenti quando pubblica**: quello che nel
+        // sorgente e' `href="privacy.html"` arriva al browser come `href="/privacy"`.
+        // In cache la pagina sta col suo nome di file, quindi senza questa riga il
+        // link, offline, non trova niente e cade sul ripiego qui sotto — cioe' apre
+        // il guscio dell'app al posto dell'informativa. E' peggio di un errore:
+        // sembra funzionare. Si sente adesso perche' `offline.html` ha in fondo i
+        // collegamenti alle due pagine scritte, ed e' la pagina che per definizione
+        // si guarda senza rete.
+        const conEstensione = url.pathname !== '/' && !url.pathname.endsWith('.html')
+          ? await cache.match(url.pathname + '.html')
+          : null;
         return (await cache.match(req, { ignoreVary: true }))
+          ?? conEstensione
           ?? (await cache.match('/index.html'))
           ?? (await cache.match('/offline.html'))
           ?? Response.error();

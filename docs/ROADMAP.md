@@ -1660,6 +1660,20 @@ Google, e chi la compilava leggeva chi tratta i suoi dati soltanto una volta ent
 titolare, il contatto e le due pagine stanno nel piede della schermata d'accesso, e in
 registrazione c'è la riga che dice cosa si sta accettando.
 
+**E la CI ha trovato quello che i controlli locali non potevano vedere, per la terza volta.**
+Netlify **toglie `.html` dai collegamenti quando pubblica**: `href="privacy.html"` scritto nel
+sorgente arriva al browser come `href="/privacy"`. Due conseguenze, e la seconda è quella vera:
+
+1. I controlli che guardavano la stringa dell'indirizzo misuravano l'impostazione di un
+   fornitore invece del collegamento — verdi in locale, rossi in anteprima, sulla stessa
+   identica pagina. Ora guardano **dove porta** il link, normalizzando le due grafie.
+2. **Offline quel link apriva la pagina sbagliata.** In cache la pagina sta col suo nome di
+   file, il link chiede l'altro, `cache.match` non trovava niente e il gestore `navigate`
+   cadeva sul ripiego: il guscio dell'app al posto dell'informativa. Non un errore — una
+   pagina sbagliata che sembra funzionare, sulla pagina che *per definizione* si guarda senza
+   rete, visto che «sei senza rete» adesso ha quei due collegamenti in fondo. `sw.js` riprova
+   con l'estensione prima di ripiegare, e il controllo sta dentro il test dell'offline.
+
 Il piede è dentro una colonna nuova (`.auth-colonna`) invece che accanto al riquadro: il pannello
 resta un flex con **un** figlio, quindi la centratura, il salto a due colonne da 1280px e i due
 `padding` delle fasce strette continuano a valere senza toccarli. Misurato a 360×780, che è il

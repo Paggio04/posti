@@ -81,6 +81,17 @@ test('l\'app si apre anche senza rete', async ({ page, context }) => {
   await expect(page.locator('#auth-view')).toBeAttached();
   // E lo deve dire, invece di mostrare una schermata ferma senza spiegazioni.
   await expect(page.locator('#offline-bar')).toBeVisible();
+
+  // **E i collegamenti in fondo a «sei senza rete» devono aprire quello che dicono.**
+  // Netlify toglie `.html` quando pubblica, quindi il link scritto `privacy.html`
+  // chiede `/privacy`, mentre in cache la pagina sta col suo nome di file. Senza la
+  // riga che riprova con l'estensione (`sw.js`, gestore `navigate`), quel link cadeva
+  // sul ripiego e apriva **il guscio dell'app** al posto dell'informativa: non un
+  // errore, una pagina sbagliata che sembra funzionare. Ed e' proprio la pagina che
+  // per definizione si guarda senza rete.
+  await page.goto('/privacy', { waitUntil: 'domcontentloaded' });
+  await expect(page.locator('h1')).toHaveText('Informativa privacy');
+
   await context.setOffline(false);
 });
 
@@ -202,6 +213,18 @@ test('la posizione non e\' spenta dagli header', async ({ browser }) => {
 
 // --- Le voci della checklist pre-lancio che solo un browser puo' misurare ---
 
+// **Dove porta un collegamento, non com'e' scritto.** Netlify toglie `.html` quando
+// pubblica: `href="privacy.html"` nel sorgente arriva al browser come `href="/privacy"`.
+// Un controllo sulla stringa misurerebbe quindi l'impostazione di un fornitore invece
+// del collegamento, e sarebbe rosso in anteprima e verde in locale sulla stessa
+// identica pagina. Questo normalizza le due grafie a una: `/privacy`, `/termini`.
+async function pagine(zona) {
+  const href = await zona.locator('a[href]:not([href^="mailto:"])').evaluateAll(
+    (nodi) => nodi.map((n) => n.getAttribute('href')),
+  );
+  return href.map((h) => new URL(h, 'https://wetransport.netlify.app/').pathname.replace(/\.html$/, ''));
+}
+
 // La schermata d'accesso e' l'unica pagina che un motore di ricerca e un lettore di
 // schermo vedono da fuori, e non aveva **nessun** titolo di primo livello: partiva da
 // h2, e l'unico h1 del progetto lo scriveva `app.js` dentro il riepilogo, cioe' dopo
@@ -223,9 +246,9 @@ test('titolare, informativa e termini si leggono prima di entrare', async ({ pag
   await expect(piede).toContainText('Elia Paggetti');
   await expect(piede.locator('a[href^="mailto:"]')).toBeVisible();
 
-  for (const pagina of ['privacy.html', 'termini.html']) {
-    await expect(piede.locator(`a[href="${pagina}"]`)).toBeVisible();
-    expect((await request.get('/' + pagina)).status()).toBe(200);
+  for (const pagina of ['/privacy', '/termini']) {
+    expect(await pagine(piede), pagina).toContain(pagina);
+    expect((await request.get(pagina + '.html')).status()).toBe(200);
   }
 });
 
@@ -237,8 +260,7 @@ test('la riga di accettazione compare solo in registrazione', async ({ page }) =
   await page.locator('#mode-signup').click();
   const riga = page.locator('.auth-accetto');
   await expect(riga).toBeVisible();
-  await expect(riga.locator('a[href="termini.html"]')).toBeVisible();
-  await expect(riga.locator('a[href="privacy.html"]')).toBeVisible();
+  expect(await pagine(riga)).toEqual(expect.arrayContaining(['/termini', '/privacy']));
 });
 
 test('la pagina dei termini esiste e dice di cosa risponde chi guida', async ({ page }) => {
