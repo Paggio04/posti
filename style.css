@@ -546,9 +546,16 @@ a:hover { color: var(--primary-hover); }
   padding: 32px 20px 48px;
 }
 
-.auth-card {
+/* La colonna che il pannello centra: prima era il riquadro stesso, adesso e' il
+   riquadro **piu'** il piede legale. La misura sta qui, cosi' il piede e' largo
+   quanto il modulo invece di allargarsi a tutta la colonna della griglia. */
+.auth-colonna {
   width: 100%;
   max-width: 420px;
+}
+
+.auth-card {
+  width: 100%;
   background: var(--surface);
   border: 1px solid var(--border);
   border-radius: var(--r-panel);
@@ -592,7 +599,7 @@ a:hover { color: var(--primary-hover); }
   transform: translateY(-1px);
 }
 
-.auth-card h2 {
+.auth-card h1 {
   font-size: 1.6rem;
   font-weight: 700;
   line-height: 1.1;
@@ -983,7 +990,7 @@ input[type="time"]::-webkit-calendar-picker-indicator { opacity: 0.6; cursor: po
   display: grid;
   place-items: center;
 }
-.auth-success h2 { margin-bottom: 10px; }
+.auth-success h1 { margin-bottom: 10px; }
 .auth-success .btn { margin-top: 8px; }
 
 /* ================= GUSCIO ================= */
@@ -2298,7 +2305,7 @@ input[type="time"]::-webkit-calendar-picker-indicator { opacity: 0.6; cursor: po
 @media (max-width: 767px) {
   .auth-form-panel { padding: 24px 16px 44px; align-items: start; }
   .auth-card { padding: 22px 20px 20px; }
-  .auth-card h2 { font-size: 1.45rem; }
+  .auth-card h1 { font-size: 1.45rem; }
   .form-row-end { justify-content: stretch; }
   .form-row-end .btn { flex: 1; }
   .day-bar, .group-bar { flex-direction: column; align-items: stretch; }
@@ -2832,3 +2839,112 @@ input[type="time"]::-webkit-calendar-picker-indicator { opacity: 0.6; cursor: po
    1180: la misura di lettura resta. Il riepilogo no — e' una tavola di riquadri
    affiancati, e ogni pixel in piu' e' una colonna che smette di andare a capo. */
 .app-view[data-vista="stats"] { max-width: none; }
+
+/* ---- Le due pagine scritte: informativa e termini ----
+   Stavano in un `<style>` dentro `privacy.html`, e quando le pagine sono diventate
+   due la copia sarebbe diventata la solita coppia che diverge a ogni ritocco. Una
+   pagina di sole intestazioni e paragrafi ha bisogno di una cosa sola per essere
+   scorribile — una gerarchia che si veda — e quella qui e' 1.25rem contro 0.95rem:
+   due misure quasi uguali non sono una gerarchia. */
+.testo-legale { max-width: 68ch; margin: 0 auto; padding: 40px 20px 80px; }
+.testo-legale h1 { margin-bottom: 8px; }
+.testo-legale h2 { font-size: 1.25rem; font-weight: 700; margin: 32px 0 8px; }
+.testo-legale p, .testo-legale li { color: var(--ink-soft); font-size: 0.95rem; }
+.testo-legale ul { padding-left: 20px; }
+.testo-legale li { margin-bottom: 6px; }
+.testo-legale table { width: 100%; border-collapse: collapse; margin: 12px 0; font-size: 0.9rem; }
+.testo-legale th, .testo-legale td { text-align: left; padding: 8px 10px; border-bottom: 1px solid var(--border); color: var(--ink-soft); vertical-align: top; }
+.testo-legale th { color: var(--ink); font-weight: 600; }
+
+/* Il piede delle due pagine: si va all'altra, o si torna indietro. Va a capo da solo
+   sul telefono invece di stringere tre link su una riga sola. */
+.testo-legale-fondo {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px 20px;
+  margin-top: 40px;
+  padding-top: 18px;
+  border-top: 1px solid var(--border);
+  font-size: 0.9rem;
+}
+/* Le due pagine corte — 404 e senza rete — sono centrate: il piede le segue. */
+.testo-legale-fondo.centrato { justify-content: center; }
+
+/* ---- Il piede della schermata d'accesso ----
+   **Sta qui perche' e' il momento in cui i dati si raccolgono.** L'informativa era
+   raggiungibile da un solo punto, dentro la scheda Profilo, cioe' *dopo* l'accesso:
+   chi crea un account leggeva chi tratta i suoi dati soltanto una volta dentro. Il
+   titolare, il contatto e le due pagine stanno dove si guarda prima di entrare.
+   E' un piede, non un pannello: inchiostro tenue, una riga di stacco, nessuna
+   scatola. Lo spazio verticale sul telefono e' l'unica cosa che scarseggia. */
+.auth-fondo {
+  padding: 0 20px 28px;
+  text-align: center;
+  font-size: 0.78rem;
+  line-height: 1.6;
+  color: var(--ink-soft);
+}
+.auth-fondo p { margin: 0; }
+.auth-fondo .auth-fondo-chi { margin-bottom: 4px; }
+.auth-fondo a { color: inherit; text-decoration: underline; text-underline-offset: 2px; }
+.auth-fondo a:hover { color: var(--ink); }
+
+/* La riga che compare solo in registrazione, sopra il bottone: e' li' che si accetta
+   qualcosa, quindi e' li' che va detto. In accesso non c'e' niente da accettare e la
+   riga sparisce, tabulazione compresa. */
+.auth-accetto {
+  display: none;
+  margin: -4px 0 14px;
+  font-size: 0.78rem;
+  line-height: 1.55;
+  color: var(--ink-soft);
+}
+.auth-accetto a { color: inherit; text-decoration: underline; text-underline-offset: 2px; }
+.auth-accetto a:hover { color: var(--ink); }
+form.signup .auth-accetto { display: block; }
+
+/* ---- «Questa non e' l'app vera» ----
+   Compare solo sulle anteprime di deploy (vedi `rete.js`). Sta **fuori dal flusso**
+   di proposito: sull'accesso c'e' un test che misura dove finisce il bottone a
+   360x780, e un avviso che sposta la pagina lo farebbe fallire dicendo una cosa
+   falsa sul sito vivo, dove questo avviso non c'e'. `pointer-events: none` perche'
+   e' un cartello, non un comando: non deve mai rubare un tocco alla fascia sotto. */
+.ambiente-chip {
+  position: fixed;
+  left: 8px;
+  bottom: 8px;
+  z-index: 200;
+  margin: 0;
+  padding: 5px 10px;
+  border-radius: var(--r-btn);
+  border: 1px solid var(--danger);
+  background: var(--surface);
+  color: var(--ink);
+  font-size: 0.72rem;
+  font-weight: 600;
+  pointer-events: none;
+}
+
+/* ---- «Vai al contenuto» ----
+   Vive fuori dallo schermo e ci torna solo col fuoco: e' il primo elemento
+   tabulabile una volta dentro l'app, e salta la barra in alto. Non e'
+   `display: none` — quella lo toglierebbe anche alla tabulazione, cioe' a
+   chiunque ne abbia bisogno. */
+.salta-al-contenuto {
+  position: absolute;
+  left: 12px;
+  top: -100px;
+  z-index: 100;
+  padding: 10px 16px;
+  border-radius: var(--r-btn);
+  background: var(--surface);
+  border: 1px solid var(--primary);
+  color: var(--ink);
+  font-size: 0.9rem;
+  font-weight: 600;
+  text-decoration: none;
+}
+/* Nessuna transizione: col fuoco e' **subito** dove si vede. Un salto che scivola
+   dentro in duecento millisecondi si misura mezzo fuori schermo, e a chi arriva con
+   la tastiera quel movimento non dice niente che la posizione non dica gia'. */
+.salta-al-contenuto:focus-visible { top: 12px; }

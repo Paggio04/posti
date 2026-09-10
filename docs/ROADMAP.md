@@ -1637,6 +1637,95 @@ seconda volta che ripaga: il difetto peggiore era **fuori** dal file che stavo g
 
 ---
 
+## Fase 10 — La checklist pre-lancio (10/09/2026)
+
+Una passata su una checklist scritta a parte, applicata a questo repo. Interessa meno il
+risultato dei singoli cantieri e più **dove i controlli non arrivavano**: tre difetti su
+quattro erano invisibili a lint, `html-validate` e ai test SQL, che è la stessa forma della
+lezione di `Permissions-Policy`.
+
+### C44 — Le due pagine scritte, e dove si raggiungono — *fatto*
+
+Mancavano i **termini e condizioni**, ed è la voce più pesante per un'app che mette persone in
+macchina con altre persone: `termini.html` dice che WeTransport è una bacheca e non un servizio
+di trasporto, che non verifica patenti né coperture, che la quota della benzina è ripartizione
+di spese e non una tariffa — con scritto dov'è il confine oltre il quale non è più car pooling —
+le regole di condotta, la sospensione, cosa non è garantito, i limiti di responsabilità con dolo
+e colpa grave lasciati fuori perché escluderli sarebbe nullo, e il foro del consumatore, che è
+inderogabile.
+
+L'altra metà conta quanto la pagina: **l'informativa era raggiungibile da un punto solo, dentro
+la scheda Profilo, cioè dopo l'accesso.** La registrazione raccoglie email, nome e la foto di
+Google, e chi la compilava leggeva chi tratta i suoi dati soltanto una volta entrato. Ora il
+titolare, il contatto e le due pagine stanno nel piede della schermata d'accesso, e in
+registrazione c'è la riga che dice cosa si sta accettando.
+
+**E la CI ha trovato quello che i controlli locali non potevano vedere, per la terza volta.**
+Netlify **toglie `.html` dai collegamenti quando pubblica**: `href="privacy.html"` scritto nel
+sorgente arriva al browser come `href="/privacy"`. Due conseguenze, e la seconda è quella vera:
+
+1. I controlli che guardavano la stringa dell'indirizzo misuravano l'impostazione di un
+   fornitore invece del collegamento — verdi in locale, rossi in anteprima, sulla stessa
+   identica pagina. Ora guardano **dove porta** il link, normalizzando le due grafie.
+2. **Offline quel link apriva la pagina sbagliata.** In cache la pagina sta col suo nome di
+   file, il link chiede l'altro, `cache.match` non trovava niente e il gestore `navigate`
+   cadeva sul ripiego: il guscio dell'app al posto dell'informativa. Non un errore — una
+   pagina sbagliata che sembra funzionare, sulla pagina che *per definizione* si guarda senza
+   rete, visto che «sei senza rete» adesso ha quei due collegamenti in fondo. `sw.js` riprova
+   con l'estensione prima di ripiegare, e il controllo sta dentro il test dell'offline.
+
+Il piede è dentro una colonna nuova (`.auth-colonna`) invece che accanto al riquadro: il pannello
+resta un flex con **un** figlio, quindi la centratura, il salto a due colonne da 1280px e i due
+`padding` delle fasce strette continuano a valere senza toccarli. Misurato a 360×780, che è il
+difetto da cui era partita tutta la schermata: il bottone «Accedi» chiude a 518 su 780 e il piede
+a 744, cioè si entra ancora senza scorrere.
+
+### C45 — `index.html` non aveva nessun `<h1>` — *fatto*
+
+La schermata d'accesso partiva da `h2`, e l'unico titolo di primo livello del progetto lo
+scriveva `app.js` dentro il riepilogo — cioè **dopo** l'accesso. È l'unica pagina che un motore
+di ricerca e un lettore di schermo vedono da fuori, e non aveva un titolo.
+
+`html-validate` non poteva vederlo: non è un errore di sintassi. È il terzo difetto di questa
+famiglia dopo l'header della geolocalizzazione, e la regola che ne esce è la stessa: **un
+controllo che compila non è un controllo che misura.** Ora ogni vista ha un titolo di primo
+livello e uno solo — quelle nascoste sono `display: none`, quindi fuori dall'albero — e la vista
+dei passaggi ce l'ha per chi ascolta, perché a video il suo nome lo porta la scheda attiva in
+basso. Con lui è arrivato «Vai al contenuto», primo elemento tabulabile dentro l'app.
+
+### C46 — La registrazione era un elenco di chi ha un account — *fatto*
+
+L'accesso rispondeva già con una frase sola per email sbagliata e password sbagliata. La
+registrazione no: diceva «questa email è già registrata», e lo diceva **in due modi** — il
+messaggio d'errore, e un secondo controllo sul campo che Supabase lascia vuoto *proprio* per non
+farlo capire. Cioè il codice aggirava di proposito l'offuscamento del fornitore.
+
+Con un elenco di indirizzi si sapeva chi ha un account su WeTransport. Ora la schermata di
+conferma è una sola e la frase regge in tutti e due i casi, senza promettere una posta che
+potrebbe non arrivare; lo stesso vale per il reset della password, che prima mostrava
+`error.message` grezzo. **Il compromesso è vero e va detto**: chi si è dimenticato di essersi
+iscritto non lo scopre più da qui, lo scopre provando ad accedere. È esattamente la gentilezza da
+cui quelle due righe erano arrivate, ed è il motivo per cui il controllo che non le fa tornare è
+un controllo di **forma** — cerca quelle stringhe nel file servito, come
+`verifica-acl-funzioni.sql` fa con le funzioni.
+
+### C47 — Il battito, e le tre voci che il repo non può chiudere — *metà*
+
+**Fatto:** `.github/workflows/battito.yml` controlla ogni mezz'ora che la home risponda **e** che
+PostgREST risponda, che è la parte che conta — una GET sulla home la serve la CDN di Netlify e
+sarebbe verde anche con Supabase spento, che sul piano gratuito succede da solo per inattività.
+Fallendo apre una segnalazione, invece di finire in un registro che non apre nessuno.
+
+**Non fatto, e non si fa dal repo** — sta in `README.md`, «Cosa si imposta a mano», e le righe
+gialle in `SECURITY.md` sono quelle: il secondo progetto Supabase per le anteprime (oggi
+un'anteprima è l'app **con i dati veri dentro**, e `rete.js` ci mette un cartello che avvisa senza
+separare niente), il ripristino di un backup provato almeno una volta, il minimo password e il
+confronto con le password rubate nella dashboard, l'error tracking, e le email transazionali da un
+dominio proprio. Nessuna di queste è chiusa: sono elencate perché **una voce dichiarata aperta è
+diversa da una voce dimenticata**.
+
+---
+
 ## Decisioni prese dopo la prima stesura
 
 | # | Punto | Scelta |

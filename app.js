@@ -4,6 +4,18 @@ import { SUPABASE_URL, SUPABASE_ANON_KEY, VAPID_PUBLIC_KEY } from './config.js';
 const supabase = createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
 const SITE_URL = 'https://wetransport.netlify.app';
 
+// **Dieci, e non sei.** Sei caratteri e' il default di Supabase, cioe' un numero
+// scelto per non dare fastidio a nessuno: una password di sei caratteri si prova
+// tutta. Questa riga vale per gli account **nuovi** — chi ne ha gia' uno rientra
+// con la password che ha, perche' altrimenti l'app lo chiuderebbe fuori.
+//
+// Questo e' il controllo del browser, che serve a dirlo prima di mandare la
+// richiesta: **quello che vale davvero e' il minimo impostato nella dashboard di
+// Supabase**, che e' l'unico che un client non puo' saltare. Vanno tenuti uguali,
+// e insieme al minimo va acceso il confronto con gli elenchi di password rubate
+// (Auth → Policies). Sta scritto in README.md, sezione «Cosa si imposta a mano».
+const PASSWORD_MINIMO = 10;
+
 // --- DOM ---
 const authView = document.getElementById('auth-view');
 const appShell = document.getElementById('app-shell');
@@ -138,8 +150,24 @@ function setAuthMode(mode) {
     ? 'Nome, email e una password. Poi ti serve il codice di una comitiva, o ne crei una tua.'
     : 'Accedi e vedi i posti liberi della comitiva.';
   authSubmit.textContent = signup ? 'Crea account' : 'Accedi';
+  // La riga di accettazione compare col modo, e con `display: none` esce anche
+  // dalla tabulazione: in accesso non c'e' niente da accettare.
+  authForm.classList.toggle('signup', signup);
   document.getElementById('forgot-btn').classList.toggle('hidden', signup);
-  document.getElementById('password').setAttribute('autocomplete', signup ? 'new-password' : 'current-password');
+  const pw = document.getElementById('password');
+  pw.setAttribute('autocomplete', signup ? 'new-password' : 'current-password');
+  // **La lunghezza minima vale per chi la password la sta scegliendo, non per chi
+  // la sta usando.** Se restasse anche in accesso, chi ha un account creato quando
+  // il minimo era sei caratteri si troverebbe il proprio browser a rifiutare la
+  // password giusta — cioe' l'app lo chiuderebbe fuori dal suo account per una
+  // regola pensata per gli account nuovi.
+  if (signup) {
+    pw.setAttribute('minlength', String(PASSWORD_MINIMO));
+    pw.setAttribute('placeholder', `Almeno ${PASSWORD_MINIMO} caratteri`);
+  } else {
+    pw.removeAttribute('minlength');
+    pw.setAttribute('placeholder', 'La tua password');
+  }
   showAuthMessage('');
 }
 
@@ -169,8 +197,14 @@ document.getElementById('forgot-btn').addEventListener('click', async () => {
     || await ask('Reimposta password', { text: 'A quale email mandiamo il link?', type: 'email', placeholder: 'nome@esempio.it' });
   if (!email) return;
   const { error } = await supabase.auth.resetPasswordForEmail(email, { redirectTo: SITE_URL });
-  if (error) showAuthMessage(error.message);
-  else showAuthMessage(`Ti abbiamo inviato un link per reimpostare la password a ${email}.`, true);
+  // **La stessa frase nei due casi, e non e' una svista.** Un messaggio diverso
+  // quando l'indirizzo non ha un account trasforma questo campo in un elenco:
+  // si prova una email per volta e si scopre chi c'e' dentro. L'errore vero, se
+  // c'e', lo si legge nei log di Supabase — non lo si racconta a chi sta provando.
+  // Resta detto l'unico caso che chi scrive puo' risolvere da solo: aver sbagliato
+  // a scrivere l'indirizzo.
+  if (error) console.warn('resetPasswordForEmail:', error.message);
+  showAuthMessage(`Se ${email} ha un account, il link per reimpostare la password è in arrivo. Controlla anche lo spam.`, true);
 });
 
 document.getElementById('success-back').addEventListener('click', () => {
@@ -188,11 +222,7 @@ authForm.addEventListener('submit', async (e) => {
     authSubmit.disabled = true;
     const { error } = await supabase.auth.signInWithPassword({ email, password });
     authSubmit.disabled = false;
-    if (error) {
-      showAuthMessage(error.message.includes('not confirmed')
-        ? 'Devi prima confermare l\'email: controlla la posta in arrivo.'
-        : 'Email o password non corrette. Riprova.');
-    }
+    if (error) showAuthMessage(erroreAccesso(error, 'accesso'));
     return;
   }
 
@@ -204,21 +234,35 @@ authForm.addEventListener('submit', async (e) => {
   }
   if (!authForm.reportValidity()) return;
   authSubmit.disabled = true;
-  const { data, error } = await supabase.auth.signUp({
+  const { error } = await supabase.auth.signUp({
     email, password,
     options: { data: { display_name: name } },
   });
   authSubmit.disabled = false;
-  if (error) {
-    showAuthMessage(error.message.includes('already registered')
-      ? 'Questa email è già registrata: prova ad accedere.'
-      : error.message);
+  // **«Questo indirizzo ha gia' un account» non e' un errore da mostrare: e' la
+  // stessa schermata dell'altro caso.** Supabase lo nasconde da solo quando
+  // nella dashboard e' acceso l'offuscamento — restituisce un utente finto e
+  // nessun errore — ma quella e' un'impostazione che vive fuori da questo repo e
+  // che nessun controllo qui puo' vedere. Se e' spenta, l'errore arriva: assorbirlo
+  // qui vuol dire che il comportamento e' lo stesso nelle due configurazioni,
+  // invece di dipendere da una casella che qualcuno potrebbe girare per sbaglio.
+  const giaRegistrato = /already registered|already exists|user_already/i.test(error?.message || '')
+    || error?.code === 'user_already_exists';
+  if (error && !giaRegistrato) {
+    showAuthMessage(erroreAccesso(error, 'registrazione'));
     return;
   }
-  if (data.user?.identities?.length === 0) {
-    showAuthMessage('Questa email è già registrata: prova ad accedere.');
-    return;
-  }
+  // **Qui non si dice se l'indirizzo era gia' registrato, e prima si diceva due
+  // volte.** C'era un messaggio che lo annunciava, e c'era un secondo controllo che
+  // guardava il campo che Supabase lascia vuoto proprio per non farlo capire — cioe'
+  // il contrario di quello che quel campo vuoto sta li' a fare. Le due righe insieme
+  // rendevano la registrazione un oracolo: con un elenco di indirizzi si sapeva chi
+  // ha un account su WeTransport. Il controllo di forma che non le fa tornare sta in
+  // `tests/smoke.spec.js`, e cerca proprio quelle due stringhe nel file servito.
+  //
+  // Adesso la schermata e' una sola, e la frase regge in tutti e due i casi senza
+  // promettere una posta che potrebbe non arrivare: se l'indirizzo e' libero il
+  // link di conferma c'e', se e' gia' preso si entra da «Accedi».
   document.getElementById('success-email').textContent = email;
   authCard.classList.add('hidden');
   authSuccess.classList.remove('hidden');
@@ -241,6 +285,35 @@ function credentials() {
 function showAuthMessage(msg, ok = false) {
   authMessage.textContent = msg;
   authMessage.classList.toggle('ok', ok);
+}
+
+// **Gli errori dell'accesso si traducono, non si inoltrano.** `error.message` di
+// Supabase e' una frase inglese scritta per chi sviluppa: in una pagina italiana
+// e' rumore, e su un modulo di accesso e' anche informazione di troppo — dice se
+// un account esiste, se e' bloccato, se e' scattato un limite di tentativi.
+// Quello che serve a chi sta davanti allo schermo sono tre casi: la password non
+// va, l'email non e' confermata, e ci hai provato troppe volte di fila. Tutto il
+// resto e' una frase sola, e il dettaglio resta nella console e nei log del
+// fornitore, dove lo legge chi deve.
+function erroreAccesso(error, modo = 'accesso') {
+  const m = (error?.message || '').toLowerCase();
+  if (m.includes('not confirmed')) return 'Devi prima confermare l\'email: controlla la posta in arrivo.';
+  if (m.includes('rate limit') || m.includes('too many') || error?.status === 429) {
+    return 'Troppi tentativi di fila. Aspetta qualche minuto e riprova.';
+  }
+  if (m.includes('invalid login') || m.includes('invalid credentials')) return 'Email o password non corrette. Riprova.';
+  if (m.includes('password') && m.includes('least')) {
+    return `La password deve essere di almeno ${PASSWORD_MINIMO} caratteri.`;
+  }
+  if (m.includes('weak') || m.includes('pwned') || m.includes('compromised')) {
+    return 'Questa password compare in elenchi di password rubate: scegline un\'altra.';
+  }
+  console.warn(modo + ':', error?.message);
+  // Il ripiego dice il vero per il modulo in cui si e': su una registrazione
+  // «email o password non corrette» sarebbe una frase che non c'entra niente.
+  return modo === 'registrazione'
+    ? 'Non e\' stato possibile creare l\'account. Riprova fra poco.'
+    : 'Email o password non corrette. Riprova.';
 }
 
 async function ensureProfile() {

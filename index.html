@@ -26,8 +26,11 @@
   <meta property="og:title" content="WeTransport — chi guida oggi?" />
   <meta property="og:description" content="Chi guida pubblica la propria auto, gli altri prenotano il posto. I passaggi del tuo gruppo, senza caos." />
   <meta property="og:url" content="https://wetransport.netlify.app/" />
-  <meta property="og:image" content="https://wetransport.netlify.app/icona-512.png" />
-  <meta name="twitter:card" content="summary" />
+  <meta property="og:image" content="https://wetransport.netlify.app/anteprima.png" />
+  <meta property="og:image:width" content="1200" />
+  <meta property="og:image:height" content="630" />
+  <meta property="og:image:alt" content="WeTransport — chi guida oggi? Un'auto vista dall'alto con due posti presi e due liberi." />
+  <meta name="twitter:card" content="summary_large_image" />
 
   <!-- Dati strutturati. Nessun autore e nessun editore qui dentro: il titolare sta
        nell'informativa, dove serve, e non c'e' motivo di moltiplicare il nome di una
@@ -100,6 +103,13 @@
   <section id="auth-view" class="auth-view">
     <div class="auth-form-panel">
 
+      <!-- **Una colonna sola dentro il pannello.** I due riquadri (modulo e «controlla
+           la posta») e il piede legale stanno impilati qui: il pannello resta un flex
+           con **un** figlio, quindi tutte le sue misure — centratura, il salto a due
+           colonne da 1280px, i due `padding` delle fasce strette — continuano a valere
+           come prima. La larghezza massima e' passata dal riquadro alla colonna. -->
+      <div class="auth-colonna">
+
       <div class="auth-card" id="auth-card">
         <p class="auth-marchio"><span class="targa"><svg width="18" height="18"><use href="#i-car"/></svg> <b>WeTransport</b></span>
           <!-- I quattro posti. Sta qui e non sotto il titolo perche' a destra del
@@ -110,7 +120,7 @@
           <span class="auth-posti" id="auth-posti" role="img" aria-label="Restano due posti.">
             <i></i><i></i><i></i><i></i>
           </span></p>
-        <h2 id="auth-title">Chi guida oggi?</h2>
+        <h1 id="auth-title">Chi guida oggi?</h1>
         <p id="auth-subtitle" class="auth-subtitle">Accedi e vedi i posti liberi della comitiva.</p>
 
         <div class="oauth-buttons">
@@ -130,9 +140,11 @@
           </label>
           <label for="password" class="field-label">Password</label>
           <span class="pw-wrap">
-            <input type="password" id="password" required minlength="6" autocomplete="current-password" placeholder="Minimo 6 caratteri" />
+            <input type="password" id="password" required autocomplete="current-password" placeholder="La tua password" />
             <button type="button" id="pw-toggle" class="pw-toggle" aria-label="Mostra password"><svg width="18" height="18"><use href="#i-eye"/></svg></button>
           </span>
+          <p class="auth-accetto">Creando l&apos;account accetti i <a href="termini.html">termini e condizioni</a>
+            e hai letto l&apos;<a href="privacy.html">informativa privacy</a>.</p>
           <button type="submit" id="auth-submit" class="btn btn-primary btn-big btn-full">Accedi</button>
           <button type="button" id="forgot-btn" class="link-btn">Hai dimenticato la password?</button>
         </form>
@@ -153,10 +165,28 @@
 
       <div class="auth-card auth-success hidden" id="auth-success">
         <div class="auth-success-icon"><svg width="40" height="40"><use href="#i-mail"/></svg></div>
-        <h2>Controlla la posta</h2>
-        <p class="auth-subtitle">Abbiamo inviato un link di conferma a<br /><strong id="success-email"></strong></p>
-        <p class="auth-subtitle">Aprilo per attivare l'account, poi torna qui e accedi.</p>
+        <h1>Controlla la posta</h1>
+        <!-- **La frase regge in tutti e due i casi**, ed e' il motivo per cui e'
+             scritta cosi'. Questa schermata compare anche quando l'indirizzo ha
+             gia' un account: dirlo qui trasformerebbe la registrazione in un modo
+             per scoprire chi c'e' dentro. E non promette una posta che potrebbe
+             non arrivare — dice a cosa serve se arriva, e cosa fare se non arriva. -->
+        <p class="auth-subtitle">Se <strong id="success-email"></strong> non ha gi&agrave; un account,
+          il link per attivarlo &egrave; in arrivo l&igrave;.</p>
+        <p class="auth-subtitle">Aprilo, poi torna qui e accedi. Se invece un account con questa email
+          c'&egrave; gi&agrave;, entra direttamente da &laquo;Accedi&raquo;. Controlla anche lo spam.</p>
         <button type="button" id="success-back" class="btn btn-secondary btn-full">Torna all'accesso</button>
+      </div>
+
+      <!-- Il piede. Chi tratta i dati e le due pagine scritte stanno **prima**
+           dell'accesso, perche' e' qui che i dati si raccolgono: prima erano
+           raggiungibili da un punto solo, dentro la scheda Profilo, cioe' dopo. -->
+      <div class="auth-fondo">
+        <p class="auth-fondo-chi">WeTransport &egrave; gestito da Elia Paggetti, a titolo personale e senza scopo di lucro.
+          <a href="mailto:eli.paggioo@gmail.com">eli.paggioo@gmail.com</a></p>
+        <p><a href="privacy.html">Informativa privacy</a> &middot; <a href="termini.html">Termini e condizioni</a></p>
+      </div>
+
       </div>
 
     </div>
@@ -282,6 +312,11 @@
   <!-- APP -->
   <div id="app-shell" class="app-shell hidden">
 
+    <!-- Primo elemento tabulabile dentro l'app, e non c'e' nella schermata
+         d'accesso perche' li' non c'e' niente da saltare: la casella dell'email
+         e' gia' la prima cosa. -->
+    <a class="salta-al-contenuto" href="#contenuto">Vai al contenuto</a>
+
     <div class="shell-col">
 
     <!-- **Una navigazione sola, e sta in basso.** Fino a ieri ce n'erano due: una
@@ -307,7 +342,7 @@
       </div>
     </header>
 
-    <main class="app-view">
+    <main class="app-view" id="contenuto" tabindex="-1">
 
       <!-- Account sospeso: si legge tutto, non si scrive piu' niente -->
       <div id="sospeso-banner" class="sospeso-banner hidden" role="alert">
@@ -319,6 +354,7 @@
 
       <!-- HOME -->
       <section id="view-home" class="view">
+        <h1 class="solo-lettori">Passaggi</h1>
 
         <div id="welcome" class="welcome hidden">
           <h2>Benvenuto su WeTransport</h2>
@@ -441,7 +477,7 @@
 
       <!-- STORICO -->
       <section id="view-history" class="view hidden">
-        <h2 class="view-title"><svg width="20" height="20"><use href="#i-history"/></svg> Storico</h2>
+        <h1 class="view-title"><svg width="20" height="20"><use href="#i-history"/></svg> Storico</h1>
         <p class="view-subtitle">Tutti i viaggi passati: chi ha guidato e chi era a bordo.</p>
         <div class="history-filtri" role="group" aria-label="Filtra lo storico">
           <button type="button" id="storico-miei" class="filtro" aria-pressed="false">Solo i miei passaggi</button>
@@ -457,7 +493,7 @@
 
       <!-- GRUPPI -->
       <section id="view-groups" class="view hidden">
-        <h2 class="view-title"><svg width="20" height="20"><use href="#i-users"/></svg> Le tue comitive</h2>
+        <h1 class="view-title"><svg width="20" height="20"><use href="#i-users"/></svg> Le tue comitive</h1>
         <p class="view-subtitle">Crea una comitiva, invita gli amici col codice, gestisci i membri.</p>
         <div class="group-actions-row">
           <button type="button" id="group-create" class="btn btn-primary"><svg width="15" height="15"><use href="#i-plus"/></svg> Crea gruppo</button>
@@ -479,7 +515,7 @@
 
       <!-- PROFILO -->
       <section id="view-profile" class="view hidden">
-        <h2 class="view-title"><svg width="20" height="20"><use href="#i-user"/></svg> Profilo</h2>
+        <h1 class="view-title"><svg width="20" height="20"><use href="#i-user"/></svg> Profilo</h1>
         <div class="profile-card">
           <div class="profile-avatar" id="profile-avatar"></div>
           <div class="profile-info">

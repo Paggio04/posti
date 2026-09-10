@@ -81,6 +81,17 @@ test('l\'app si apre anche senza rete', async ({ page, context }) => {
   await expect(page.locator('#auth-view')).toBeAttached();
   // E lo deve dire, invece di mostrare una schermata ferma senza spiegazioni.
   await expect(page.locator('#offline-bar')).toBeVisible();
+
+  // **E i collegamenti in fondo a «sei senza rete» devono aprire quello che dicono.**
+  // Netlify toglie `.html` quando pubblica, quindi il link scritto `privacy.html`
+  // chiede `/privacy`, mentre in cache la pagina sta col suo nome di file. Senza la
+  // riga che riprova con l'estensione (`sw.js`, gestore `navigate`), quel link cadeva
+  // sul ripiego e apriva **il guscio dell'app** al posto dell'informativa: non un
+  // errore, una pagina sbagliata che sembra funzionare. Ed e' proprio la pagina che
+  // per definizione si guarda senza rete.
+  await page.goto('/privacy', { waitUntil: 'domcontentloaded' });
+  await expect(page.locator('h1')).toHaveText('Informativa privacy');
+
   await context.setOffline(false);
 });
 
@@ -99,8 +110,19 @@ test('robots.txt e sitemap.xml ci sono e si parlano', async ({ request }) => {
   const xml = await sitemap.text();
   // Ogni indirizzo elencato deve rispondere davvero: un sitemap con un 404 dentro e' peggio
   // che non averlo, perche' dice al motore di ricerca una cosa falsa.
-  for (const loc of [...xml.matchAll(/<loc>([^<]+)<\/loc>/g)].map((m) => m[1])) {
-    expect((await request.get(loc)).status(), loc).toBe(200);
+  //
+  // **Il dominio si controlla, il percorso si chiede qui.** Chiedere l'indirizzo
+  // assoluto misurerebbe sempre la produzione, anche girando sull'anteprima di una
+  // pull request: una pagina nuova nel sitemap farebbe fallire la propria anteprima
+  // perche' sul sito vivo non c'e' ancora — cioe' il controllo direbbe «rotto» a una
+  // modifica giusta, e non direbbe niente su quella sbagliata. Il dominio dichiarato
+  // resta comunque verificato, che e' l'altra meta' del lavoro di questo test.
+  const loc = [...xml.matchAll(/<loc>([^<]+)<\/loc>/g)].map((m) => m[1]);
+  expect(loc.length).toBeGreaterThan(0);
+  for (const indirizzo of loc) {
+    expect(new URL(indirizzo).origin, indirizzo).toBe('https://wetransport.netlify.app');
+    const percorso = new URL(indirizzo).pathname;
+    expect((await request.get(percorso)).status(), percorso).toBe(200);
   }
 });
 
@@ -187,4 +209,113 @@ test('la posizione non e\' spenta dagli header', async ({ browser }) => {
   // Il permesso e' concesso dal contesto: se fallisce non e' l'utente, e' la policy.
   expect(esito).toBe('ok');
   await ctx.close();
+});
+
+// --- Le voci della checklist pre-lancio che solo un browser puo' misurare ---
+
+// **Dove porta un collegamento, non com'e' scritto.** Netlify toglie `.html` quando
+// pubblica: `href="privacy.html"` nel sorgente arriva al browser come `href="/privacy"`.
+// Un controllo sulla stringa misurerebbe quindi l'impostazione di un fornitore invece
+// del collegamento, e sarebbe rosso in anteprima e verde in locale sulla stessa
+// identica pagina. Questo normalizza le due grafie a una: `/privacy`, `/termini`.
+async function pagine(zona) {
+  const href = await zona.locator('a[href]:not([href^="mailto:"])').evaluateAll(
+    (nodi) => nodi.map((n) => n.getAttribute('href')),
+  );
+  return href.map((h) => new URL(h, 'https://wetransport.netlify.app/').pathname.replace(/\.html$/, ''));
+}
+
+// La schermata d'accesso e' l'unica pagina che un motore di ricerca e un lettore di
+// schermo vedono da fuori, e non aveva **nessun** titolo di primo livello: partiva da
+// h2, e l'unico h1 del progetto lo scriveva `app.js` dentro il riepilogo, cioe' dopo
+// l'accesso. `html-validate` non poteva vederlo: non e' un errore di sintassi.
+test('la pagina pubblica ha un titolo di primo livello, e uno solo', async ({ page }) => {
+  await page.goto('/');
+  const visibili = page.locator('h1:visible');
+  await expect(visibili).toHaveCount(1);
+  await expect(visibili).toHaveText('Chi guida oggi?');
+});
+
+// L'informativa era raggiungibile da un punto solo, dentro la scheda Profilo: chi
+// creava un account leggeva chi tratta i suoi dati soltanto una volta entrato. Le due
+// pagine e il titolare stanno dove i dati si raccolgono.
+test('titolare, informativa e termini si leggono prima di entrare', async ({ page, request }) => {
+  await page.goto('/');
+  const piede = page.locator('.auth-fondo');
+  await expect(piede).toBeVisible();
+  await expect(piede).toContainText('Elia Paggetti');
+  await expect(piede.locator('a[href^="mailto:"]')).toBeVisible();
+
+  for (const pagina of ['/privacy', '/termini']) {
+    expect(await pagine(piede), pagina).toContain(pagina);
+    expect((await request.get(pagina + '.html')).status()).toBe(200);
+  }
+});
+
+// In registrazione si accetta qualcosa, quindi in registrazione va detto; in accesso
+// non c'e' niente da accettare e la riga sparisce, tabulazione compresa.
+test('la riga di accettazione compare solo in registrazione', async ({ page }) => {
+  await page.goto('/');
+  await expect(page.locator('.auth-accetto')).toBeHidden();
+  await page.locator('#mode-signup').click();
+  const riga = page.locator('.auth-accetto');
+  await expect(riga).toBeVisible();
+  expect(await pagine(riga)).toEqual(expect.arrayContaining(['/termini', '/privacy']));
+});
+
+test('la pagina dei termini esiste e dice di cosa risponde chi guida', async ({ page }) => {
+  await page.goto('/termini.html');
+  await expect(page.locator('h1')).toHaveText('Termini e condizioni');
+  // Le due cose che questa pagina esiste per dire, e che nessun'altra pagina dice.
+  await expect(page.locator('body')).toContainText('Non è un servizio di trasporto');
+  await expect(page.locator('body')).toContainText('assicurativa');
+});
+
+// Il primo elemento tabulabile dentro l'app salta la barra in alto. Non e'
+// `display: none` — quella lo toglierebbe anche alla tabulazione, cioe' a chi serve.
+test('«vai al contenuto» e\' il primo elemento tabulabile dentro l\'app', async ({ page }) => {
+  await page.goto('/');
+  await page.evaluate(() => {
+    document.getElementById('auth-view').classList.add('hidden');
+    document.getElementById('app-shell').classList.remove('hidden');
+  });
+  await page.keyboard.press('Tab');
+  const primo = page.locator(':focus');
+  await expect(primo).toHaveClass(/salta-al-contenuto/);
+  // Col fuoco rientra sullo schermo: un salto che non si vede non lo usa nessuno.
+  const riquadro = await primo.boundingBox();
+  expect(riquadro.y).toBeGreaterThanOrEqual(0);
+  // E porta davvero da qualche parte.
+  await expect(page.locator('#contenuto')).toHaveCount(1);
+});
+
+// **Un controllo di forma, come quelli SQL sulle funzioni.** La registrazione diceva
+// «questa email e' gia' registrata» in due modi: il messaggio d'errore, e il controllo
+// su `identities.length === 0`, che e' il modo per aggirare l'offuscamento di Supabase.
+// Insieme facevano della registrazione un elenco: si prova un indirizzo per volta e si
+// scopre chi ha un account. Questo test non guarda un comportamento, guarda che quelle
+// due righe non tornino — perche' tornerebbero come una gentilezza verso chi si e'
+// dimenticato di essersi iscritto, che e' esattamente il modo in cui erano arrivate.
+test('la registrazione non dice se un indirizzo ha gia\' un account', async ({ request }) => {
+  const sorgente = await (await request.get('/app.js')).text();
+  expect(sorgente).not.toContain('Questa email è già registrata');
+  // Il campo che Supabase lascia vuoto per non far capire che l'account c'e' gia':
+  // guardarlo e' il modo di aggirare l'offuscamento, quindi non deve comparire.
+  expect(sorgente).not.toContain('identities');
+});
+
+// L'anteprima social era l'icona quadrata da 512: in chat arrivava ritagliata e
+// piccola, e l'app si condivide da dentro (C14).
+test('l\'anteprima social e\' 1200x630 e c\'e\' davvero', async ({ page, request }) => {
+  await page.goto('/');
+  const src = await page.locator('meta[property="og:image"]').getAttribute('content');
+  // Il tag dichiara l'indirizzo assoluto del sito vivo, perche' e' quello che serve a
+  // chi legge l'anteprima. Il file pero' si chiede **a questo** indirizzo: altrimenti
+  // il controllo sull'anteprima di una pull request misurerebbe la produzione, cioe'
+  // sarebbe verde anche per una modifica che l'immagine non ce l'ha.
+  const risposta = await request.get(new URL(src).pathname);
+  expect(risposta.status()).toBe(200);
+  expect(risposta.headers()['content-type']).toContain('image');
+  await expect(page.locator('meta[property="og:image:width"]')).toHaveAttribute('content', '1200');
+  await expect(page.locator('meta[property="og:image:height"]')).toHaveAttribute('content', '630');
 });
