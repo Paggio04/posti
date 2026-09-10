@@ -16,22 +16,9 @@
   <meta property="og:title" content="Informativa privacy — WeTransport" />
   <meta property="og:description" content="Quali dati raccoglie WeTransport, perché, per quanto tempo, e come esportarli o cancellarli da soli." />
   <meta property="og:url" content="https://wetransport.netlify.app/privacy" />
-  <style>
-    .privacy { max-width: 68ch; margin: 0 auto; padding: 40px 20px 80px; }
-    .privacy h1 { margin-bottom: 8px; }
-    /* 1.05rem contro 0.95rem di corpo: due misure quasi uguali non fanno una
-       gerarchia, e su una pagina lunga di sole intestazioni e paragrafi la
-       gerarchia e' l'unica cosa che la rende scorribile. */
-    .privacy h2 { font-size: 1.25rem; font-weight: 700; margin: 32px 0 8px; }
-    .privacy p, .privacy li { color: var(--ink-soft); font-size: 0.95rem; }
-    .privacy ul { padding-left: 20px; }
-    .privacy table { width: 100%; border-collapse: collapse; margin: 12px 0; font-size: 0.9rem; }
-    .privacy th, .privacy td { text-align: left; padding: 8px 10px; border-bottom: 1px solid var(--border); color: var(--ink-soft); vertical-align: top; }
-    .privacy th { color: var(--ink); font-weight: 600; }
-  </style>
 </head>
 <body>
-  <main class="privacy">
+  <main class="testo-legale">
     <h1>Informativa privacy</h1>
     <p>WeTransport è un'app senza scopo di lucro per organizzare i passaggi in auto. Questa pagina
     dice quali dati raccoglie, perché, per quanto tempo, e cosa puoi farci tu.</p>
@@ -175,7 +162,11 @@
     <p>WeTransport non è pensato per chi ha meno di 14 anni, l'età sotto la quale in Italia serve il
     consenso di chi esercita la responsabilità genitoriale.</p>
 
-    <p><a href="index.html">← Torna a WeTransport</a></p>
+    <nav class="testo-legale-fondo" aria-label="Pagine di servizio">
+      <a href="index.html">← Torna a WeTransport</a>
+      <a href="termini.html">Termini e condizioni</a>
+      <a href="mailto:eli.paggioo@gmail.com">Scrivi al titolare</a>
+    </nav>
   </main>
 </body>
 </html>

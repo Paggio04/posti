@@ -12,7 +12,7 @@
 //
 // Quello che si mette in cache e' solo il guscio: i file pubblici, identici per tutti.
 
-const VERSIONE = 'wetransport-v12';  // sale quando cambia il GUSCIO qui sotto
+const VERSIONE = 'wetransport-v13';  // sale quando cambia il GUSCIO qui sotto
 // v10 (06/08/2026): la barra laterale diventa una barra in alto con il tondo che
 // scivola, e il riepilogo prende tutta la larghezza senza scorrere. Cambiano
 // `index.html`, `style.css` e `app.js`.
@@ -27,6 +27,11 @@ const VERSIONE = 'wetransport-v12';  // sale quando cambia il GUSCIO qui sotto
 // codice vecchi: barra laterale senza stile in cima alla pagina e Statistiche vuota.
 // Il perche' e il come stanno nel gestore `fetch`, in fondo. Non era la VERSIONE a
 // mancare: quel numero dice **quale** cache, non **quando** preferirla alla rete.
+// v13 (10/09/2026): i termini e condizioni sono una pagina nuova del guscio, e le tre
+// che c'erano gia' sono cambiate tutte — il titolo di primo livello, il piede legale
+// sull'accesso, «vai al contenuto». Quattro file su quattro: senza questa riga chi ha
+// l'app gia' installata continuerebbe a vedere una schermata d'accesso senza un link
+// all'informativa, che e' precisamente il difetto che questa modifica chiude.
 // v5 (01/08/2026): il riepilogo rifatto sul disegno concordato — barra laterale nuova
 // in `index.html`, l'intero blocco della dashboard in `style.css`, `loadStats()`
 // riscritta in `app.js`. Tre file del guscio su tre: senza questa riga non l'avrebbe
@@ -42,6 +47,7 @@ const GUSCIO = [
   '/index.html',
   '/offline.html',
   '/privacy.html',
+  '/termini.html',
   '/style.css',
   '/app.js',
   '/rete.js',
