@@ -36,6 +36,17 @@ jobs:
       - name: Contrasto AA nei due temi (bloccante)
         run: npm run contrasto
 
+      # `vendor/supabase-js.esm.js` e' generato, e `vendor/README.md` dice che va
+      # rigenerato invece che modificato. Questo lo verifica invece di sperarlo: se
+      # qualcuno lo corregge a mano, o alza la versione della libreria senza rilanciare
+      # `npm run vendor`, qui diventa rosso. E' la stessa forma di
+      # `verifica-acl-funzioni.sql`: non guarda una funzionalita', guarda il **modo**.
+      - name: La libreria in `vendor/` e' quella che il comando produce
+        run: |
+          npm run vendor
+          git diff --exit-code -- vendor/supabase-js.esm.js \
+            || (echo "vendor/ non corrisponde: lancia 'npm run vendor' e committa il risultato" && exit 1)
+
       - name: Nessun segreto committato
         run: |
           ! grep -rEn "sb_secret|service_role|SUPABASE_SERVICE" --include='*.js' --include='*.html' --include='*.toml' . || (echo "Trovata chiave segreta nel repo" && exit 1)

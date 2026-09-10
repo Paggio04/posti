@@ -12,7 +12,7 @@
 //
 // Quello che si mette in cache e' solo il guscio: i file pubblici, identici per tutti.
 
-const VERSIONE = 'wetransport-v13';  // sale quando cambia il GUSCIO qui sotto
+const VERSIONE = 'wetransport-v14';  // sale quando cambia il GUSCIO qui sotto
 // v10 (06/08/2026): la barra laterale diventa una barra in alto con il tondo che
 // scivola, e il riepilogo prende tutta la larghezza senza scorrere. Cambiano
 // `index.html`, `style.css` e `app.js`.
@@ -27,6 +27,9 @@ const VERSIONE = 'wetransport-v13';  // sale quando cambia il GUSCIO qui sotto
 // codice vecchi: barra laterale senza stile in cima alla pagina e Statistiche vuota.
 // Il perche' e il come stanno nel gestore `fetch`, in fondo. Non era la VERSIONE a
 // mancare: quel numero dice **quale** cache, non **quando** preferirla alla rete.
+// v14 (10/09/2026): la libreria di Supabase non arriva piu' da jsDelivr, sta in
+// `vendor/`. E' guscio a tutti gli effetti — senza questa riga chi ha l'app gia' aperta
+// continuerebbe a chiedere il CDN, cioe' la modifica non sarebbe successa per lui.
 // v13 (10/09/2026): i termini e condizioni sono una pagina nuova del guscio, e le tre
 // che c'erano gia' sono cambiate tutte — il titolo di primo livello, il piede legale
 // sull'accesso, «vai al contenuto». Quattro file su quattro: senza questa riga chi ha
@@ -54,6 +57,7 @@ const GUSCIO = [
   '/accesso.js',
   '/tema.js',
   '/config.js',
+  '/vendor/supabase-js.esm.js',
   '/manifest.json',
   '/icon.svg',
   '/icona-192.png',
@@ -66,17 +70,16 @@ const GUSCIO = [
   '/fonts/ibm-plex-mono-latin-500-normal.woff2',
 ];
 
-// app.js importa questo modulo come prima riga: senza, non parte niente. Se resta fuori
-// dalla cache, "apre offline" e' una promessa che il primo import smentisce.
-const SUPABASE_JS = 'https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/+esm';
+// **La libreria non e' piu' un'eccezione, e' una riga del GUSCIO qui sopra.** Stava a
+// parte perche' arrivava da un'altra origine e la sua messa in cache poteva fallire senza
+// che l'installazione fallisse con lei; adesso e' un file di questo sito come gli altri,
+// quindi se manca l'installazione deve fallire — un guscio senza la libreria non apre
+// l'app, e fingere di essersi installati sarebbe la bugia peggiore.
 
 self.addEventListener('install', (e) => {
   e.waitUntil((async () => {
     const cache = await caches.open(VERSIONE);
     await cache.addAll(GUSCIO);
-    // Il CDN puo' non rispondere adesso, e non e' un motivo per non installarsi: ci
-    // riprova al primo caricamento con la rete.
-    try { await cache.add(SUPABASE_JS); } catch { /* la prossima volta */ }
     await self.skipWaiting();
   })());
 });
@@ -208,9 +211,12 @@ self.addEventListener('fetch', (e) => {
     return;
   }
 
-  // Caratteri, icone e il modulo del CDN: prima la cache, cosi' parte subito e parte
-  // anche offline, poi si aggiorna in sottofondo per la volta dopo.
-  if (url.origin === self.location.origin || url.hostname === 'cdn.jsdelivr.net') {
+  // Caratteri e icone: prima la cache, cosi' parte subito e parte anche offline, poi si
+  // aggiorna in sottofondo per la volta dopo. Il ramo nominava anche `cdn.jsdelivr.net`,
+  // e non lo nomina piu' perche' non c'e' piu' niente che venga da fuori: la libreria di
+  // Supabase e' un file di questo sito, quindi passa da qui come un carattere. La CSP dice
+  // la stessa cosa in un altro modo — `script-src 'self'`, senza eccezioni.
+  if (url.origin === self.location.origin) {
     e.respondWith((async () => {
       const cache = await caches.open(VERSIONE);
       const salvata = await cache.match(req, { ignoreVary: true });

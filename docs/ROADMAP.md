@@ -1618,7 +1618,8 @@ seconda volta che ripaga: il difetto peggiore era **fuori** dal file che stavo g
 
 **Idee raccolte, da valutare (nessuna decisa)**
 
-1. **Ospitare `supabase-js` invece di prenderlo da jsDelivr.** Chiude tre cose in un colpo: il
+1. ~~**Ospitare `supabase-js` invece di prenderlo da jsDelivr.**~~ — **fatta il 10/09/2026**, vedi
+   C48. Chiudeva tre cose in un colpo: il
    numero di arrivo di C16 (73,5 KB e 9 richieste da un'altra origine, più della metà del peso
    totale), l'ultima riga di terze parti nella CSP, e l'ultimo destinatario nell'informativa. È il
    seguito naturale di quello che si è fatto con i caratteri.
@@ -1708,6 +1709,48 @@ iscritto non lo scopre più da qui, lo scopre provando ad accedere. È esattamen
 cui quelle due righe erano arrivate, ed è il motivo per cui il controllo che non le fa tornare è
 un controllo di **forma** — cerca quelle stringhe nel file servito, come
 `verifica-acl-funzioni.sql` fa con le funzioni.
+
+### C48 — La libreria di Supabase entra nel repo — *fatto*
+
+Era l'*idea 1* della revisione del 27/07, ed è la stessa mossa dei caratteri di C15.
+`vendor/supabase-js.esm.js` è `@supabase/supabase-js` 2.116.0 impacchettata in un file solo
+da `npm run vendor`; provenienza e aggiornamento in `vendor/README.md`.
+
+Le tre cose che chiude erano già scritte: l'ultimo terzo esce dalla CSP (`script-src 'self'`,
+**senza eccezioni**), esce dall'informativa (i responsabili tornano due, Supabase e Netlify), e
+i 73,5 KB in nove richieste verso un'altra origine diventano un file dalla stessa origine,
+dentro il `GUSCIO`.
+
+**La quarta l'ha portata chi la usa, ed è più concreta delle tre.** Fuori da GitHub Actions —
+una sandbox dietro un proxy, una rete con una lista bianca — `cdn.jsdelivr.net` non si
+raggiunge, quindi `app.js` non partiva affatto e **sei controlli end-to-end su diciotto
+fallivano per una ragione che non c'entrava niente col codice in prova**. Un test che non si
+può eseguire dove si scrive non protegge chi scrive: proteggeva solo il ramo. Adesso in una
+sandbox senza rete verso l'esterno ne passano diciassette su diciotto, e in venti secondi
+invece di quattro minuti. Il diciottesimo chiede a Supabase se una password è giusta: quello
+ha bisogno del backend, e nessun impacchettamento lo toglie.
+
+Il prezzo, e va detto perché è l'altra faccia: **gli aggiornamenti non arrivano più da soli.**
+La `@2` di jsDelivr portava le patch senza chiedere niente; una versione fissata no. Il che
+rende `npm audit` e Dependabot su questo repo una cosa che serve davvero, invece di una
+formalità su un repo che a runtime non dipendeva da niente.
+
+### C49 — Su un'anteprima non si entra — *fatto, ed è una toppa dichiarata*
+
+C47 lascia aperta la separazione degli ambienti: le anteprime parlano col database di
+produzione, e il secondo progetto Supabase non si fa dal repo. Questo non la chiude — la
+rende innocua nel caso che conta. Su qualunque host che non sia il sito vivo o `localhost`,
+`app.js` chiude i tre modi di entrare (password, Google, recupero) e lo scrive nel riquadro.
+
+**Quello che protegge e quello che no.** Protegge dalle distrazioni: qualcuno apre il link di
+un'anteprima da una discussione, entra col proprio account e pubblica un'auto vera in una
+comitiva vera. Non protegge da nessun attacco, e crederlo sarebbe peggio che non averlo: la
+chiave anon è pubblica per progetto, chi vuole parla col database senza passare da questa
+pagina. Cio' che protegge i dati restano le policy RLS.
+
+`localhost` resta fuori perché lì chi apre l'app è chi la scrive. Il divieto vero sta
+all'inizio dei gestori, non nei bottoni spenti — un bottone spento si riaccende dagli
+strumenti del browser in due secondi, e c'è un controllo che prova proprio quello.
 
 ### C47 — Il battito, e le tre voci che il repo non può chiudere — *metà*
 

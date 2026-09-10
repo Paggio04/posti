@@ -2,6 +2,13 @@
 // L'indirizzo arriva da playwright.config.js (BASE_URL): l'anteprima della PR in CI,
 // il sito vivo se non specificato.
 const { test, expect } = require('@playwright/test');
+const { sbloccaAnteprima } = require('./anteprima');
+
+// Su un'anteprima l'accesso e' chiuso (vedi `app.js`, `ambienteEstraneo`). Questi
+// controlli misurano il modulo d'accesso, quindi dichiarano di sapere dove sono: senza,
+// misurerebbero il blocco invece di cio' che sono scritti per misurare. Il blocco ha un
+// controllo suo, in fondo, e quello parte da un contesto pulito.
+test.beforeEach(async ({ page }) => { await sbloccaAnteprima(page); });
 
 test('la pagina di accesso si carica e funziona', async ({ page }) => {
   const errors = [];
@@ -318,4 +325,41 @@ test('l\'anteprima social e\' 1200x630 e c\'e\' davvero', async ({ page, request
   expect(risposta.headers()['content-type']).toContain('image');
   await expect(page.locator('meta[property="og:image:width"]')).toHaveAttribute('content', '1200');
   await expect(page.locator('meta[property="og:image:height"]')).toHaveAttribute('content', '630');
+});
+
+// **Il blocco delle anteprime, e questo parte da un contesto pulito.**
+// Tutti i controlli qui sopra dichiarano di sapere dove sono (`test.beforeEach`), perche'
+// misurano il modulo d'accesso e non il blocco. Questo fa il contrario: nasce senza la
+// scappatoia, cosi' vede quello che vedrebbe una persona che apre il link di un'anteprima
+// da una discussione.
+//
+// La regola vale nei due sensi, quindi l'attesa dipende da dove sta girando: sul sito vivo
+// e in locale si deve poter entrare, ovunque altro no. Un controllo che si aspettasse
+// sempre il blocco sarebbe rosso in produzione — cioe' misurerebbe l'indirizzo invece
+// della regola.
+test('su un\'anteprima non si entra, sul sito vivo sì', async ({ browser, baseURL }) => {
+  const host = new URL(baseURL).hostname;
+  const deveBloccare = host !== 'wetransport.netlify.app'
+    && !['localhost', '127.0.0.1', '[::1]'].includes(host);
+
+  const ctx = await browser.newContext({ baseURL });
+  const page = await ctx.newPage();
+  await page.goto('/');
+
+  const avviso = page.locator('#anteprima-blocco');
+  if (deveBloccare) {
+    await expect(avviso).toBeVisible();
+    await expect(avviso).toContainText('wetransport.netlify.app');
+    // I due modi di entrare e il recupero della password: tutti e tre chiusi.
+    await expect(page.locator('#auth-submit')).toBeDisabled();
+    await expect(page.locator('#oauth-google')).toBeDisabled();
+    await expect(page.locator('#forgot-btn')).toBeDisabled();
+    // E cambiare modo non li riapre: `setAuthMode` li rimette giù.
+    await page.locator('#mode-signup').click();
+    await expect(page.locator('#auth-submit')).toBeDisabled();
+  } else {
+    await expect(avviso).toBeHidden();
+    await expect(page.locator('#auth-submit')).toBeEnabled();
+  }
+  await ctx.close();
 });

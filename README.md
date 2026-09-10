@@ -5,7 +5,7 @@ i guidatori pubblicano la macchina del giorno, gli altri prenotano il posto tapp
 
 ## Stack
 
-- **Frontend:** HTML/CSS/JS vanilla (nessuna build, deploy statico)
+- **Frontend:** HTML/CSS/JS vanilla (nessuna build, deploy statico). **Nessun dominio di terzi:** caratteri e libreria di Supabase stanno nel repo — `fonts/README.md` e `vendor/README.md` dicono perché e come si aggiornano
 - **Backend:** [Supabase](https://supabase.com) — autenticazione email/password + database Postgres con Row Level Security
 - **Hosting:** [Netlify](https://netlify.com)
 
@@ -32,6 +32,12 @@ Serve un **server**, non `file://`: `app.js` è un modulo ES e da `file://` il b
 npm ci
 npx serve .        # oppure: python3 -m http.server 8000
 ```
+
+I controlli end-to-end girano anche qui, non solo in CI: `BASE_URL=http://localhost:3000 npm run
+test:e2e`. Uno solo ha bisogno che il browser raggiunga davvero Supabase — quello che verifica il
+messaggio di password sbagliata — e su una rete che non ci arriva fallisce da solo, senza portarsi
+dietro gli altri. Fino al 10/09/2026 ne fallivano sei, perché `app.js` prendeva la libreria da un
+CDN: adesso sta in `vendor/`.
 
 Da `localhost` funziona l'accesso con email e password; **non** "Continua con Google", perché
 `localhost` non è fra gli indirizzi di reindirizzo autorizzati sul progetto Supabase.

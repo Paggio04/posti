@@ -2903,6 +2903,21 @@ input[type="time"]::-webkit-calendar-picker-indicator { opacity: 0.6; cursor: po
 .auth-accetto a:hover { color: var(--ink); }
 form.signup .auth-accetto { display: block; }
 
+/* Il blocco sull'accesso di un'anteprima. Ha il peso di un avviso e non di una
+   decorazione: bordo pieno del colore che questa palette usa per «attenzione», e
+   sta dentro il riquadro invece che sopra la pagina, perche' parla di una cosa
+   sola — quello che stai per fare qui sotto. */
+.anteprima-blocco {
+  margin: 0 0 18px;
+  padding: 11px 13px;
+  border: 1px solid var(--danger);
+  border-radius: var(--r-card);
+  background: var(--danger-soft);
+  color: var(--ink);
+  font-size: 0.83rem;
+  line-height: 1.5;
+}
+
 /* ---- «Questa non e' l'app vera» ----
    Compare solo sulle anteprime di deploy (vedi `rete.js`). Sta **fuori dal flusso**
    di proposito: sull'accesso c'e' un test che misura dove finisce il bottone a

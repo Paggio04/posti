@@ -12,9 +12,14 @@
     # un errore che sembra un rifiuto suo. Le altre tre restano vuote perche' quelle non
     # servono davvero a nessuno qui.
     Permissions-Policy = "camera=(), microphone=(), geolocation=(self), payment=()"
-    # I caratteri stanno nel repo: Google esce da style-src e da font-src, e font-src
-    # diventa 'self' invece di un dominio altrui. Una regola che si stringe, non si allarga.
-    Content-Security-Policy = "default-src 'self'; script-src 'self' https://cdn.jsdelivr.net; worker-src 'self'; connect-src 'self' https://ggjhvsnhzwapdulcjgkh.supabase.co wss://ggjhvsnhzwapdulcjgkh.supabase.co https://cdn.jsdelivr.net; style-src 'self' 'unsafe-inline'; font-src 'self'; img-src 'self' data: https://*.googleusercontent.com; base-uri 'self'; form-action 'self'; frame-ancestors 'none'; object-src 'none'; upgrade-insecure-requests"
+    # **Nessun dominio di terzi, in nessuna direttiva.** I caratteri stanno nel repo dal
+    # 27/07 (Google fuori da style-src e font-src); dal 10/09 ci sta anche la libreria di
+    # Supabase, e con lei esce jsDelivr da script-src e da connect-src. `script-src 'self'`
+    # senza eccezioni e' il punto di arrivo: ogni riga tolta qui e' un terzo in meno che
+    # vede chi apre l'app, e una voce in meno nell'informativa. Resta 'unsafe-inline' su
+    # style-src, che e' l'ultimo allentamento e ha una ragione diversa (gli stili che
+    # app.js scrive sugli elementi).
+    Content-Security-Policy = "default-src 'self'; script-src 'self'; worker-src 'self'; connect-src 'self' https://ggjhvsnhzwapdulcjgkh.supabase.co wss://ggjhvsnhzwapdulcjgkh.supabase.co; style-src 'self' 'unsafe-inline'; font-src 'self'; img-src 'self' data: https://*.googleusercontent.com; base-uri 'self'; form-action 'self'; frame-ancestors 'none'; object-src 'none'; upgrade-insecure-requests"
 
 # Il service worker non si mette in cache come gli altri file: e' lui che decide la cache
 # di tutto il resto, quindi una copia vecchia terrebbe in vita un guscio vecchio. Il
