@@ -7,6 +7,7 @@
 // Senza quelli i test si saltano invece di fallire: non tutti gli ambienti hanno
 // un database su cui e' lecito scrivere.
 const { test, expect } = require('@playwright/test');
+const { sbloccaAnteprima } = require('./anteprima');
 
 const A = process.env.WT_TEST_EMAIL_A;
 const B = process.env.WT_TEST_EMAIL_B;
@@ -47,7 +48,7 @@ async function vaiA(page, vista) {
   await expect(page.locator(`#view-${vista}`)).toBeVisible();
 }
 
-test('due utenti, una comitiva: pubblicare, entrare col codice, prenotare un sedile', async ({ browser }) => {
+test('due utenti, una comitiva: pubblicare, entrare col codice, prenotare un sedile', async ({ browser, baseURL }) => {
   test.skip(!A || !B || !PW, 'Servono WT_TEST_EMAIL_A, WT_TEST_EMAIL_B e WT_TEST_PASSWORD');
   // Un viaggio completo fra due utenti: molti passi, due schede, il realtime da aspettare.
   // I 30 secondi buoni per uno smoke test qui non bastano.
@@ -56,8 +57,12 @@ test('due utenti, una comitiva: pubblicare, entrare col codice, prenotare un sed
   const nomeGruppo = 'Collaudo ' + Date.now().toString().slice(-6);
   const destinazione = 'Mare ' + Date.now().toString().slice(-4);
 
-  const ctxA = await browser.newContext();
-  const ctxB = await browser.newContext();
+  // `browser.newContext()` non eredita le opzioni di `use`, quindi l'indirizzo di
+  // base va passato a mano: senza, `page.goto('/')` non saprebbe dove andare.
+  const ctxA = await browser.newContext({ baseURL });
+  const ctxB = await browser.newContext({ baseURL });
+  await sbloccaAnteprima(ctxA);
+  await sbloccaAnteprima(ctxB);
   const ada = await ctxA.newPage();
   const bruno = await ctxB.newPage();
 
@@ -132,7 +137,7 @@ test('due utenti, una comitiva: pubblicare, entrare col codice, prenotare un sed
 // Le policy corrispondenti sono gia' coperte da supabase/test/verifica-sicurezza.sql:
 // qui si prova il cablaggio che solo un browser esegue (il dialogo, i toast, la lista
 // dei bloccati, la vista che cambia da sola).
-test('segnalare e bloccare: il dialogo, la lista dei bloccati, e la vista che cambia', async ({ browser }) => {
+test('segnalare e bloccare: il dialogo, la lista dei bloccati, e la vista che cambia', async ({ browser, baseURL }) => {
   test.skip(!A || !B || !PW, 'Servono WT_TEST_EMAIL_A, WT_TEST_EMAIL_B e WT_TEST_PASSWORD');
   // Come il test sopra: due schede, molti passi, il realtime da aspettare.
   test.setTimeout(180_000);
@@ -140,8 +145,12 @@ test('segnalare e bloccare: il dialogo, la lista dei bloccati, e la vista che ca
   const nomeGruppo = 'Segnalazioni ' + Date.now().toString().slice(-6);
   const destinazione = 'Lago ' + Date.now().toString().slice(-4);
 
-  const ctxA = await browser.newContext();
-  const ctxB = await browser.newContext();
+  // `browser.newContext()` non eredita le opzioni di `use`, quindi l'indirizzo di
+  // base va passato a mano: senza, `page.goto('/')` non saprebbe dove andare.
+  const ctxA = await browser.newContext({ baseURL });
+  const ctxB = await browser.newContext({ baseURL });
+  await sbloccaAnteprima(ctxA);
+  await sbloccaAnteprima(ctxB);
   const ada = await ctxA.newPage();
   const bruno = await ctxB.newPage();
 
