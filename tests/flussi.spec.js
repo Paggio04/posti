@@ -79,7 +79,11 @@ test('due utenti, una comitiva: pubblicare, entrare col codice, prenotare un sed
   const cardGruppo = ada.locator('.group-card', { hasText: nomeGruppo });
   await expect(cardGruppo).toBeVisible({ timeout: 15000 });
   const codice = (await cardGruppo.locator('.group-code').textContent()).trim();
-  expect(codice).toHaveLength(6);
+  // Due formati, e vanno accettati tutti e due finche' la `034` non e' applicata
+  // ovunque: sei caratteri di esadecimale (il `default` della `003`) oppure otto
+  // sull'alfabeto senza `I`, `L`, `O`, `0`, `1` (C24). Un `toHaveLength(6)` qui
+  // diventerebbe rosso il giorno della migrazione, su un comportamento corretto.
+  expect(codice).toMatch(/^([A-F0-9]{6}|[ABCDEFGHJKMNPQRSTUVWXYZ23456789]{8})$/);
 
   // --- Ada pubblica la propria auto ---
   await vaiA(ada, 'home');
@@ -93,8 +97,17 @@ test('due utenti, una comitiva: pubblicare, entrare col codice, prenotare un sed
   await expect(bruno.locator('#app-shell')).toBeVisible({ timeout: 20000 });
   await expect(bruno.locator('.ride-card', { hasText: destinazione })).toHaveCount(0);
 
-  // --- Bruno entra col codice e a quel punto la vede ---
+  // --- Un codice sbagliato non dice niente di piu' di quel che deve (C24) ---
+  // Il rifiuto arriva come `null` e non come eccezione, e la frase e' **una** per i due
+  // modi di non entrare. E' il pezzo che nessun test SQL puo' guardare, perche' vive nel
+  // cablaggio fra la risposta vuota e il messaggio; e il tentativo sbagliato viene
+  // contato, ma dieci l'ora sono molti piu' di quelli che un giro di test consuma.
   await vaiA(bruno, 'groups');
+  await bruno.locator('#group-join').click();
+  await rispondiAlDialogo(bruno, 'ZZZZZZZZ');
+  await expect(bruno.locator('#toast')).toContainText('Codice non valido', { timeout: 15000 });
+
+  // --- Bruno entra col codice e a quel punto la vede ---
   await bruno.locator('#group-join').click();
   await rispondiAlDialogo(bruno, codice);
   await expect(bruno.locator('.group-card', { hasText: nomeGruppo })).toBeVisible({ timeout: 15000 });

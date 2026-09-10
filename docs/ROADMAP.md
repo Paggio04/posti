@@ -740,36 +740,54 @@ codice pubblicato usi. Verificato in `supabase/test/verifica-permessi.sql`, in C
 controllo è quello che tiene onesti gli altri tre — chiudere è facile, chiudere senza rompere
 l'ingresso in comitiva no.
 
-### C24 — I codici invito si indovinano, da autenticato — *aperto il 31/07/2026, non ancora affrontato*
+### C24 — I codici invito si indovinano, da autenticato — *fatto il 10/09/2026 con la `034`*
 
 Nato scrivendo la riga «Codici invito / enumerazione» di `SECURITY.md`, che prima prometteva una
 cosa che non è vera. La `020` chiude la parte che riguarda chi **non** ha un account; resta quella
 che riguarda chi ce l'ha, ed è la più seria delle due — perché a quel punto un codice indovinato non
 si limita a rivelarsi.
 
-**Quando.** Dopo la Fase A, cioè dopo che `018`, `019` e `020` sono applicate e la PR #11 è fusa.
-Prima non ha senso: tocca lo stesso schema, e la Fase A è più urgente.
+**I tre rimedi, in ordine di rapporto valore/costo, e ci sono tutti e tre.**
 
-**Perché non adesso.** Cambia i codici che le persone si sono già scambiate a voce. È una decisione
-del proprietario, non un fix da fare di iniziativa.
+1. **Allungare il codice e allargarne l'alfabeto.** Il `default` della `003` era
+   `upper(substr(md5(random()::text), 1, 6))`: sei caratteri di **esadecimale**, cioè sedici
+   simboli e 16.777.216 codici, mentre sei caratteri ne lasciano immaginare due miliardi. La
+   distanza fra le due cifre *era* il difetto, e guardando la lunghezza non si vedeva. Adesso 31
+   simboli (Crockford meno la `U`: niente `I`, `L`, `O`, `0`, `1`, che sono le coppie che si
+   sbagliano leggendo a voce) e otto posizioni: **852.891.037.441**, cinquantamila volte tanto. Il
+   caso viene da `gen_random_uuid()`, che nel core di Postgres attinge a `pg_strong_random` — non
+   da `random()`, che è un generatore deterministico per sessione.
+2. **Uniformare l'errore** di `join_group`. Fatto, e **ribalta una scelta della `033`** invece di
+   ignorarla: quella voleva due messaggi distinti perché tacere costerebbe a chi ha in mano un
+   codice legittimo ma scaduto, mandandolo a ricontrollare le lettere di un codice giusto.
+   L'argomento non si butta, si soddisfa altrove — **una frase sola che nomina tutti e due i
+   casi**. È la stessa mossa di C46 sulla registrazione.
+3. **Un limite di tentativi** per utente: dieci sbagliati l'ora, in `tentativi_invito`, RLS accesa
+   e nessuna policy come la coda della `017`.
 
-**I tre rimedi, in ordine di rapporto valore/costo.**
+**La cosa che si è imparata scrivendolo, ed è invisibile a chi legge il codice:** un
+`raise exception` **annulla la transazione**, e con lei il contatore appena incrementato. Un
+limite di tentativi scritto nel modo naturale — incrementa, poi solleva l'errore — conta zero
+tentativi per sempre: resta verde a ogni prova a mano e non frena niente. Per questo il rifiuto di
+`join_group` non è più un'eccezione ma un **`null`**, e per questo la `034` è una di quelle che si
+applicano **dopo** aver pubblicato il codice (il verso opposto alle 012-014): il codice vecchio
+farebbe `data.id` su un `null`. Il codice nuovo regge tutti e due gli schemi, quindi l'ordine è
+pubblica-poi-applica e non c'è finestra scoperta.
 
-1. **Allungare il codice e allargarne l'alfabeto**, scartando i caratteri che si confondono
-   leggendoli a voce. I codici già distribuiti restano validi: cambia il `default` della colonna,
-   non le righe già scritte. Da sola rende le altre due un lusso.
-2. **Uniformare l'errore** di `join_group`, così che i casi che oggi si distinguono rispondano allo
-   stesso modo.
-3. **Un limite di tentativi** per utente. È l'unico dei tre che aggiunge stato da mantenere, ed è il
-   meno urgente se si fa la prima.
+**Quello che la roadmap dava per costo, e non lo era.** «Cambia i codici che le persone si sono
+già scambiate a voce» era la ragione per cui questo cantiere aspettava una decisione del
+proprietario: non vale, perché cambia il `default` della colonna e non le righe già scritte. Un
+codice esadecimale ricevuto due settimane fa continua a far entrare, e c'è un controllo apposta
+(controllo 2 di `verifica-codici-invito.sql`).
 
-*Fatto quando*: il `default` della colonna `code` produce codici del formato nuovo, `join_group`
-risponde uguale nei casi che oggi distingue, e la riga «Codici invito / enumerazione» di
-`SECURITY.md` passa da ⚠️ a ✅ con accanto il comando che lo prova.
+*Fatto:* il `default` produce il formato nuovo, `join_group` risponde uguale nei due casi che
+distingueva, e la riga di `SECURITY.md` è passata a ✅. Verificato in
+`supabase/test/verifica-codici-invito.sql`, in CI, provato al contrario su ciascuno dei tre
+rimedi, più il cablaggio lato browser in `tests/flussi.spec.js` — che è l'unico posto da cui si
+vede la frase che l'utente legge davvero.
 
-**La misura del buco, i numeri e il modo in cui si sfrutta non stanno qui**: sono nel vault, che è
-privato. Questo repo è pubblico, e finché C24 è aperto quel dettaglio descrive una cosa che
-funziona adesso.
+**Resta fuori una cosa sola, e va detta**: i rate limit di Supabase sull'API restano non misurati
+da nessuno. Non sono più l'unica difesa, che era il punto.
 
 ---
 
@@ -828,7 +846,7 @@ risponde di più a quella prova è l'auto, che nessun altro ha. **Il giudizio fi
 telefono in mano**: qui dentro il browser è girato per davvero, ma un'app che si usa di corsa in
 piedi si valuta in piedi.
 
-### C16 — Peso e velocità sul telefono — *misurato il 27/07/2026; il numero di arrivo manca ancora*
+### C16 — Peso e velocità sul telefono — *rimisurato il 10/09/2026: il numero di arrivo c'è, e metà è andata all'indietro*
 1287 righe di CSS e 1822 di JS senza build, più supabase-js da CDN. Misurare prima di ottimizzare, e
 la misura ha già cambiato l'idea di dove sia il problema.
 
@@ -853,11 +871,47 @@ guardato quel numero sarebbe stato lavoro sulla metà più piccola.
 (passaggi ‖ richieste ‖ coordinate ‖ i due della rotazione dei turni). Sono le quattro attese in
 fila, non il numero di query, a fare il tempo su rete lenta.
 
-*Fatto quando:* c'è un numero di partenza e uno di arrivo, non un'impressione. **Il numero di
-partenza c'è** (43,7 + 73,5 KB, 8 query, 4 attese). Il numero di arrivo arriverà quando si sceglierà
-cosa fare, e le tre strade sono già visibili: ospitare un bundle di supabase-js con dentro solo auth
-+ postgrest + realtime, accorpare profilo/bloccati/comitive in una sola chiamata, e misurare il
-tempo alla prima schermata con la rete strozzata invece che dalla fibra di casa.
+#### Il numero di arrivo (10/09/2026), e le due metà vanno in direzioni opposte
+
+Rimisurato **sul filo del sito vivo**, non in locale: `curl` con `Accept-Encoding: br` su
+`wetransport.netlify.app`, che è quello che riceve un telefono. La compressione di Netlify non
+coincide con un `brotli -q 11` fatto qui — su `index.html` sono 12,5 KB contro 11,0 — e usare il
+numero locale avrebbe fatto sembrare l'app più leggera di quanto è.
+
+| Cosa | 27/07 | 10/09 | |
+|---|---|---|---|
+| `index.html` | 6,6 KB | **12,5 KB** | il piede legale, il JSON-LD, le due pagine nuove |
+| `style.css` | 10,7 KB | **33,9 KB** | 1287 righe → 2965: Fasi 8, 9 e 10 |
+| `app.js` | 24,0 KB | **63,8 KB** | 1822 righe → 4361: i quattordici cantieri di Fase 7 |
+| il resto del guscio proprio | 2,4 KB | **1,5 KB** | `rete.js`, `config.js`, `manifest.json`, `icon.svg` |
+| **guscio proprio, stesso elenco del 27/07** | **43,7 KB** | **111,7 KB** | |
+| `tema.js` + `accesso.js` | — | 2,6 KB | non esistevano |
+| carattere IBM Plex Sans 400 | — | 22,6 KB | nel repo da C15, già compresso: la compressione non lo tocca |
+| **supabase-js** | **73,5 KB in 9 richieste, altra origine** | **56,9 KB in 1, stessa origine** | C48 |
+| **prima schermata, tutto** | | **191,8 KB** | |
+
+**La libreria è andata come doveva e l'app no**, ed è il fatto che conta: C48 ha tolto 16,6 KB,
+otto richieste e una connessione TLS verso un'altra origine — e nel frattempo il guscio proprio è
+**più che raddoppiato**. Il numero che il 27/07 era il più grosso (la libreria pesa più di tutto
+il sito) oggi non lo è più: `app.js` e `style.css` insieme fanno 97,7 KB contro 56,9. Chi ottimizza
+oggi guarda dalla parte opposta di chi ottimizzava a luglio, ed è esattamente il motivo per cui
+questo cantiere pretende una misura invece di un'impressione.
+
+**Le attese sono peggiorate, e questa è la riga da leggere per prima.** Erano 8 query in **4**
+attese incatenate; oggi la prima schermata utile ne vuole 7 in **6**: `mio_profilo()` → persone
+bloccate → comitive → **garage** (`caricaAuto`, arrivata con C33) → (passaggi ‖ richieste) →
+**coordinate** (che da C21 non può più stare in parallelo: vuole gli id dei passaggi che sta
+aspettando). Più due in sottofondo per «tocca a te guidare», che non trattengono il disegno. Su
+rete lenta sono le attese in fila a fare il tempo, non il numero di query: due in più rispetto a
+luglio sono la regressione vera di questo cantiere.
+
+*Fatto:* c'è un numero di partenza e uno di arrivo, che era il criterio. **Cosa fare adesso non è
+più una scelta fra tre strade uguali**, perché la misura le ha ordinate: (1) accorpare
+profilo/bloccati/comitive/garage in **una** chiamata sola — toglie tre attese su sei ed è la sola
+che agisce sul numero peggiorato; (2) guardare `style.css` e `app.js`, che sono i due file più
+pesanti e nessuno ha mai potato; (3) il tempo alla prima schermata con la rete strozzata, che
+resta da fare e che nessun `curl` può dare. La prima delle tre è un cambio di schema e di client
+insieme: è un cantiere suo, non una riga da aggiungere qui.
 
 ### C17 — Spezzare `app.js`
 L'ADR 001 dice di rivedere la scelta "un file solo" oltre le 2-3k righe di JS: **al 27/07/2026 sono
@@ -909,9 +963,21 @@ nuova su **come si legge lo stato vero** (repo, sito servito, schema applicato) 
 ricordarlo, e `audit-vault.py` è pulito. La lezione che resta: *le note invecchiano in silenzio, il
 sistema vivo no* — quindi si guarda quello per primo.
 
-### C20 — Un nome solo
-Oggi sono tre: repo `posti`, cartella `C:\Progetti\posti`, dominio `wetransport.netlify.app`.
+### C20 — Un nome solo — *metà: nel repo il nome è uno, il repo no*
+Erano tre: repo `posti`, cartella `C:\Progetti\posti`, dominio `wetransport.netlify.app`.
 Cercare "wetransport" su GitHub non trova niente.
+
+**Fatto il 10/09/2026, ed è durato una riga.** Cercando il nome vecchio dentro il repo salta fuori
+in **un posto solo**: il titolo di `README.md`, «📍 Posti». Tutto il resto — `index.html`,
+`manifest.json`, `sitemap.xml`, `package.json`, il service worker, i test — diceva già
+WeTransport. Non è una buona notizia a metà: il titolo del README è la prima riga che legge
+chiunque apra il progetto, quindi era esattamente il posto peggiore in cui lasciarlo. Ora c'è anche
+una riga che dice che il repository si chiama ancora `posti` e che quella è l'ultima metà aperta:
+una voce dichiarata aperta è diversa da una voce dimenticata.
+
+**Resta la metà che non si fa da qui**, e sono quattro gesti in un momento in cui non c'è altro a
+metà: rinominare il repository nelle impostazioni di GitHub, ricollegare Netlify, cambiare il
+remoto dei cloni, e aggiornare i percorsi negli script di `Strumenti/` e nella nota del vault.
 
 **Deciso:**
 - **Repo rinominato in `wetransport`.** GitHub tiene attivi i vecchi indirizzi, ma vanno comunque
@@ -1766,6 +1832,42 @@ separare niente), il ripristino di un backup provato almeno una volta, il minimo
 confronto con le password rubate nella dashboard, l'error tracking, e le email transazionali da un
 dominio proprio. Nessuna di queste è chiusa: sono elencate perché **una voce dichiarata aperta è
 diversa da una voce dimenticata**.
+
+---
+
+## Fase 11 — Quello che restava (10/09/2026)
+
+Non un tema nuovo: la coda dei cantieri lasciati aperti dalle fasi precedenti, presi tutti nello
+stesso giro. C24 chiude l'ultima riga gialla vera di `SECURITY.md`, C16 ha finalmente il suo numero
+di arrivo, C20 il suo pezzo di repo, e C50 sana l'unico pezzo di schema che viveva solo in
+produzione. Restano fuori, e restano scritte, solo le voci che vogliono una dashboard, un telefono
+o due persone — `README.md`, «Cosa si imposta a mano».
+
+### C50 — Lo scarto in produzione — *fatto: `035`*
+
+Non un difetto di sicurezza: un difetto di **ricostruibilità**, che è la promessa su cui poggia
+tutto il resto. Il confronto del 26/07/2026 fra il database vivo e `supabase/migrations/` tornava
+su tutto — 16 tabelle, 9 trigger, 4 tabelle in realtime — con una sola eccezione: in produzione
+esistono `rls_auto_enable()` e l'event trigger `ensure_rls`, che accendono la Row Level Security
+su ogni tabella nuova di `public`, e **nessuna migrazione li creava**.
+
+Non si notava, perché le migrazioni accendono comunque la RLS a mano riga per riga: il database
+della CI e quello vero si comportano uguale finché nessuno dimentica quella riga. Il giorno che la
+dimentica, la produzione perdona e la copia ricostruita no — due sistemi che divergono proprio nel
+caso in cui la differenza conta.
+
+Due cose scritte facendolo, e la seconda è la solita:
+
+- **Il filtro guarda lo schema, non il nome.** Il trigger scatta su ogni `create table` della
+  sessione, e metà dei file di `supabase/test/` ne crea di temporanee: accendere la RLS su
+  `atteso_acl` farebbe fallire un controllo per un motivo che non c'entra niente.
+- **Dopo la `035` nessuna migrazione crea più tabelle**, quindi in CI quell'event trigger non
+  scatterebbe mai: dichiarato e mai eseguito, cioè verde qualunque cosa ci sia scritta dentro.
+  `verifica-rls-di-serie.sql` crea una tabella apposta e ne guarda `relrowsecurity`. È C45 nella
+  sua forma più secca — un controllo che compila non è un controllo che misura — ed è ormai la
+  quarta volta che questa frase serve.
+
+*Fatto quando:* una migrazione li dichiara e un controllo li esegue. Tutti e due sì.
 
 ---
 

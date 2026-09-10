@@ -55,17 +55,14 @@ begin
   update groups set scade_il = current_date - 1 where id = g;
 
   -- ===== 2. Col codice non ci si entra piu' =====
+  -- Dalla 034 il rifiuto non e' piu' un'eccezione ma un `null`: l'errore uniforme di
+  -- C24 non puo' essere un `raise`, perche' un `raise` annullerebbe il conteggio dei
+  -- tentativi insieme al resto della transazione. Il messaggio che distingueva questo
+  -- caso da «codice inesistente» sta ora in una frase sola, lato client.
   perform set_config('test.uid', carla::text, true);
-  ok := false;
-  begin
-    perform public.join_group(codice);
-  exception when others then
-    ok := true;
-    if sqlerrm not like '%chiusa%' then
-      raise exception '2 ROTTO: il codice di una comitiva chiusa risponde «%», che manda a ricontrollare un codice giusto', sqlerrm;
-    end if;
-  end;
-  if not ok then raise exception '2 ROTTO: si entra in una comitiva gia'' chiusa'; end if;
+  if public.join_group(codice) is not null then
+    raise exception '2 ROTTO: si entra in una comitiva gia'' chiusa';
+  end if;
   if exists (select 1 from group_members where group_id = g and user_id = carla) then
     raise exception '2 ROTTO: l''ingresso e'' stato registrato lo stesso';
   end if;
