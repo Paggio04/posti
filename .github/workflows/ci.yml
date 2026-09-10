@@ -20,8 +20,19 @@ jobs:
       - name: Sintassi JavaScript
         run: |
           node --check app.js
+          for f in mod/*.js; do node --check "$f"; done
           node --check config.js
           node --check playwright.config.js
+
+      # `node --check` guarda un file per volta, ESLint tratta un import come una
+      # dichiarazione e basta: nessuno dei due si accorge che un modulo chiede un nome
+      # che un altro non esporta. Lo scopre il browser, a pagina aperta, con un errore
+      # che parla del file sbagliato. Da C17 i moduli sono tredici, e questo controllo
+      # e' il solo che guarda i fili fra loro — compreso il caso opposto, un `export`
+      # che non chiede piu' nessuno, che su un file appena spezzato e' quasi sempre un
+      # resto.
+      - name: I moduli si chiedono solo nomi che esistono
+        run: node tests/moduli.mjs
 
       - name: Lint JavaScript (bloccante)
         run: npm run lint
