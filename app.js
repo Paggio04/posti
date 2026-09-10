@@ -1328,6 +1328,10 @@ document.getElementById('notifiche-spegni')?.addEventListener('click', async () 
 });
 
 // --- Gruppi ---
+// Una frase sola per i due modi in cui un codice non fa entrare (C24): scriverne due
+// distinte direbbe a chi tira a indovinare quali codici esistono.
+const CODICE_RIFIUTATO = 'Codice non valido, o quella comitiva è già chiusa.';
+
 async function createGroupFlow() {
   const name = await ask('Nuovo gruppo', { text: 'Il nome che vedranno gli amici.', placeholder: 'es. Comitiva del mare' });
   if (!name || !name.trim()) return;
@@ -1353,17 +1357,24 @@ async function createGroupFlow() {
 }
 
 async function joinGroupFlow() {
-  const code = await ask('Entra in un gruppo', { text: 'Fatti mandare il codice da un amico.', placeholder: 'Codice invito (6 caratteri)' });
+  const code = await ask('Entra in un gruppo', { text: 'Fatti mandare il codice da un amico.', placeholder: 'Codice invito' });
   if (!code || !code.trim()) return;
   const { data, error } = await supabase.rpc('join_group', { p_code: code.trim() });
   if (error) {
-    // Tre esiti e non due (C38): «chiusa» non e' «sbagliato», e dirlo uguale
-    // manderebbe a ricontrollare le lettere di un codice giusto.
-    toast(error.message.includes('chiusa') ? 'Quella comitiva è chiusa: il codice non vale più.'
-      : error.message.includes('Codice') ? 'Codice non valido, ricontrolla.'
+    // C24: dalla 034 il rifiuto arriva come `null` qui sotto, non come eccezione. Le
+    // due righe che leggono i messaggi vecchi restano finche' la migrazione non e'
+    // applicata — e' la stessa precauzione del commit «il codice regge lo schema
+    // vecchio e quello nuovo, cosi' l'ordine non conta».
+    toast(error.message.includes('Troppi tentativi') ? 'Troppi codici sbagliati: riprova fra un\'ora.'
+      : /chiusa|Codice/.test(error.message) ? CODICE_RIFIUTATO
       : 'Errore: ' + error.message);
     return;
   }
+  // Codice inesistente e comitiva chiusa rispondono uguale (C24, rimedio 2): la
+  // differenza fra i due direbbe che quel codice esiste. La frase li nomina tutti e
+  // due, cosi' chi ha in mano un codice legittimo ma scaduto sa cosa guardare — che
+  // era l'argomento con cui C38 aveva voluto due messaggi distinti.
+  if (!data) { toast(CODICE_RIFIUTATO); return; }
   await loadGroups();
   selectGroup(data.id);
   renderGroupsView();

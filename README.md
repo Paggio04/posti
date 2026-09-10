@@ -1,7 +1,11 @@
-# 📍 Posti
+# 📍 WeTransport
 
 Chi guida oggi? Chi sale? App per organizzare i passaggi in macchina della comitiva:
 i guidatori pubblicano la macchina del giorno, gli altri prenotano il posto tappando sul sedile.
+
+> **Il repository si chiama ancora `posti`** — è l'unico pezzo del nome vecchio rimasto, e non
+> si rinomina da qui: si fa dalle impostazioni di GitHub, insieme al collegamento Netlify e al
+> remoto dei cloni. È l'ultima riga aperta di C20 in [docs/ROADMAP.md](docs/ROADMAP.md).
 
 ## Stack
 

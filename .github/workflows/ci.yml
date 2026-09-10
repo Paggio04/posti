@@ -116,6 +116,12 @@ jobs:
       - name: Ogni funzione dichiara chi puo' chiamarla
         run: psql -v ON_ERROR_STOP=1 -q -f supabase/test/verifica-acl-funzioni.sql
 
+      # Dopo la 035 nessuna migrazione crea piu' tabelle, quindi l'event trigger che
+      # accende la RLS non scatterebbe mai da solo: senza questo passo sarebbe
+      # dichiarato e mai eseguito.
+      - name: Una tabella nuova di `public` nasce con la RLS accesa
+        run: psql -v ON_ERROR_STOP=1 -q -f supabase/test/verifica-rls-di-serie.sql
+
       - name: Le comitive sono davvero separate
         run: psql -v ON_ERROR_STOP=1 -q -f supabase/test/verifica-isolamento.sql
 
@@ -151,6 +157,9 @@ jobs:
 
       - name: Una comitiva a tempo si chiude, ma i suoi dati restano
         run: psql -v ON_ERROR_STOP=1 -q -f supabase/test/verifica-comitiva-a-tempo.sql
+
+      - name: Un codice invito non si indovina, e i vecchi valgono ancora
+        run: psql -v ON_ERROR_STOP=1 -q -f supabase/test/verifica-codici-invito.sql
 
       - name: Un ritardo annunciato arriva a chi e' a bordo, e una volta per numero
         run: psql -v ON_ERROR_STOP=1 -q -f supabase/test/verifica-ritardo.sql
