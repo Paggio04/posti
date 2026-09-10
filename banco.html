@@ -1,0 +1,310 @@
+<!DOCTYPE html>
+<html lang="it">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<meta name="robots" content="noindex, nofollow" />
+<title>Banco di prova — WeTransport</title>
+<!--
+  IL BANCO DI PROVA. Non e' l'app: e' l'app con dei dati inventati, per poterla
+  guardare senza entrare. Serve perche' quattro viste su cinque stanno dietro il
+  login e gli account di prova non esistono ancora (W5), quindi senza questa
+  pagina il restyling si disegnerebbe alla cieca.
+
+  Collega `style.css` **vero**: quello che si approva qui e' quello che si
+  pubblica. Fuori dal sitemap, fuori dal guscio del service worker, `noindex`.
+-->
+<link rel="stylesheet" href="style.css" />
+<style>
+  /* Solo il telaio del banco, che nell'app non esiste. */
+  .banco-barra {
+    position: sticky; top: 0; z-index: 50; display: flex; gap: 10px; align-items: center;
+    padding: 8px 14px; background: var(--targa); color: var(--su-targa);
+    font-size: 0.78rem; letter-spacing: 0.02em;
+  }
+  .banco-barra b { font-weight: 700; letter-spacing: 0.06em; text-transform: uppercase; }
+  .banco-barra button {
+    font: inherit; font-weight: 600; cursor: pointer; padding: 5px 10px;
+    background: transparent; color: inherit; border: 1px solid currentColor; border-radius: var(--r-btn);
+  }
+  .banco-barra .cresc { margin-left: auto; opacity: 0.75; }
+</style>
+</head>
+<body>
+
+<div class="banco-barra">
+  <b>Banco</b>
+  <span>Riepilogo · dati inventati</span>
+  <button type="button" id="gira">Gira il tema</button>
+  <span class="cresc">La barra non fa parte dell'app</span>
+</div>
+
+<div class="app-lynk">
+
+  <!-- ══ LA COLONNA ══════════════════════════════════════════════════════ -->
+  <aside class="lato">
+    <div class="lato-testa">
+      <span class="targa">
+        <svg viewBox="0 0 24 16" aria-hidden="true"><path d="M2 11h20v3H2z" fill="currentColor"/><path d="M4 11l2-5h12l2 5" fill="none" stroke="currentColor" stroke-width="1.6"/></svg>
+        WeTransport
+      </span>
+      <button type="button" class="lato-piega" aria-label="Riduci la colonna">
+        <svg viewBox="0 0 20 20" aria-hidden="true"><path d="M3 5h14M3 10h9M3 15h14" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" fill="none"/></svg>
+      </button>
+    </div>
+
+    <nav class="lato-voci" aria-label="Viste">
+      <a class="voce" href="#"><span class="ico"><svg class="i" viewBox="0 0 20 20" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="M3 12.5h14M4.5 12.5V16h2v-1.5M13.5 14.5V16h2v-3.5"/><path d="M4.6 12.5l1.7-4.4A1.5 1.5 0 0 1 7.7 7h4.6a1.5 1.5 0 0 1 1.4 1.1l1.7 4.4"/><circle cx="6.6" cy="12.4" r=".5" fill="currentColor" stroke="none"/><circle cx="13.4" cy="12.4" r=".5" fill="currentColor" stroke="none"/></svg></span>Passaggi</a>
+      <a class="voce attiva" href="#" aria-current="page"><span class="ico"><svg class="i" viewBox="0 0 20 20" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="6" height="6" rx="1"/><rect x="11" y="3" width="6" height="6" rx="1"/><rect x="3" y="11" width="6" height="6" rx="1"/><rect x="11" y="11" width="6" height="6" rx="1"/></svg></span>Riepilogo</a>
+      <a class="voce" href="#"><span class="ico"><svg class="i" viewBox="0 0 20 20" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><circle cx="7.5" cy="7" r="2.6"/><path d="M3 16.5c0-2.3 2-3.8 4.5-3.8s4.5 1.5 4.5 3.8"/><path d="M13.2 5.2a2.6 2.6 0 0 1 0 5M14.5 12.9c1.6.4 2.5 1.7 2.5 3.6"/></svg></span>Comitive</a>
+      <a class="voce" href="#"><span class="ico"><svg class="i" viewBox="0 0 20 20" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="M7 5.5h10M7 10h10M7 14.5h10"/><circle cx="3.6" cy="5.5" r=".9" fill="currentColor" stroke="none"/><circle cx="3.6" cy="10" r=".9" fill="currentColor" stroke="none"/><circle cx="3.6" cy="14.5" r=".9" fill="currentColor" stroke="none"/></svg></span>Storico<span class="pallino">3</span></a>
+      <a class="voce" href="#"><span class="ico"><svg class="i" viewBox="0 0 20 20" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><circle cx="10" cy="7" r="3"/><path d="M4 17c0-3 2.7-4.6 6-4.6S16 14 16 17"/></svg></span>Profilo</a>
+    </nav>
+
+    <!-- Al posto di «Upgrade to Pro»: l'invito a installarla, che esiste da C12
+         e non ha mai avuto una casa. -->
+    <section class="lato-promo">
+      <h2>Tienila sul telefono</h2>
+      <p>Installata si apre in un tocco, e mostra l'ultima giornata anche senza rete.</p>
+      <button type="button" class="btn-promo">Installa l'app</button>
+    </section>
+
+    <div class="lato-io">
+      <span class="av" style="background: oklch(0.470 0.090 247)">EP</span>
+      <span class="io-chi"><b>Elia Paggetti</b><small>Amministratore</small></span>
+      <span class="io-freccia"><svg class="i" viewBox="0 0 20 20" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="M6 8.5 10 12.5 14 8.5"/></svg></span>
+    </div>
+  </aside>
+
+  <!-- ══ IL CORPO ════════════════════════════════════════════════════════ -->
+  <div class="corpo">
+
+    <header class="cima">
+      <label class="cerca">
+        <svg viewBox="0 0 20 20" aria-hidden="true"><circle cx="9" cy="9" r="6" fill="none" stroke="currentColor" stroke-width="1.8"/><path d="M13.5 13.5L18 18" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/></svg>
+        <input type="search" placeholder="Cerca persone, destinazioni, fermate" />
+        <kbd>⌘K</kbd>
+      </label>
+      <button type="button" class="tondo" aria-label="Avvisi"><span class="bollino"></span><svg class="i" viewBox="0 0 20 20" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="M5.4 13.4V9a4.6 4.6 0 1 1 9.2 0v4.4l1.2 1.8H4.2Z"/><path d="M8.2 17.2a2 2 0 0 0 3.6 0"/></svg></button>
+      <button type="button" class="tondo" aria-label="Gira il tema" id="gira-2"><svg class="i" viewBox="0 0 20 20" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="M15.6 11.9A6 6 0 1 1 8.1 4.4a5 5 0 0 0 7.5 7.5Z"/></svg></button>
+      <button type="button" class="btn-cima">+ Offri un passaggio</button>
+      <button type="button" class="tondo" aria-label="Altro"><svg class="i" viewBox="0 0 20 20" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><circle cx="5" cy="10" r="1.1" fill="currentColor" stroke="none"/><circle cx="10" cy="10" r="1.1" fill="currentColor" stroke="none"/><circle cx="15" cy="10" r="1.1" fill="currentColor" stroke="none"/></svg></button>
+    </header>
+
+    <div class="testa-vista">
+      <div>
+        <h1>Mercoledì 10 settembre</h1>
+        <p>Riepilogo della Comitiva del mare · 5 persone</p>
+      </div>
+      <label class="periodo">
+        <svg viewBox="0 0 20 20" aria-hidden="true"><rect x="3" y="4" width="14" height="13" rx="2" fill="none" stroke="currentColor" stroke-width="1.6"/><path d="M3 8h14M7 2v4M13 2v4" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"/></svg>
+        <select>
+          <option>Ultimi 30 giorni</option>
+          <option>Ultimi 7 giorni</option>
+          <option>Questo mese</option>
+          <option>Ultimi 90 giorni</option>
+        </select>
+      </label>
+    </div>
+
+    <!-- ── I quattro numeri ─────────────────────────────────────────────── -->
+    <div class="numeri" id="numeri"></div>
+
+    <!-- ── La settimana e i turni ───────────────────────────────────────── -->
+    <div class="fila-due">
+      <section class="scheda">
+        <div class="scheda-testa">
+          <div><h2>Occupazione settimanale</h2><p>Posti presi sui posti offerti, giorno per giorno</p></div>
+          <label class="scelta"><select><option>Questa settimana</option><option>La prossima</option></select></label>
+        </div>
+        <div class="grafico" id="grafico"></div>
+      </section>
+
+      <section class="scheda">
+        <div class="scheda-testa">
+          <div><h2>Distribuzione turni</h2></div>
+          <label class="scelta"><select><option>30 giorni</option><option>90 giorni</option></select></label>
+        </div>
+        <div class="ciambella-riga">
+          <div class="ciambella" id="ciambella"></div>
+          <ul class="legenda" id="legenda"></ul>
+        </div>
+      </section>
+    </div>
+
+    <!-- ── Le tre schede in fondo ───────────────────────────────────────── -->
+    <div class="fila-tre">
+      <section class="scheda">
+        <div class="scheda-testa"><h2>Conti in sospeso</h2><button type="button" class="btn-tenue">Salda tutto</button></div>
+        <div id="conti"></div>
+        <div class="scheda-piede"><span>Gli importi li vedete solo tu e la persona interessata.</span></div>
+      </section>
+
+      <section class="scheda">
+        <div class="scheda-testa"><h2>Attività recente</h2><button type="button" class="btn-tenue">Storico</button></div>
+        <div id="attivita"></div>
+      </section>
+
+      <section class="scheda">
+        <div class="scheda-testa"><h2>Prossimi passaggi</h2><button type="button" class="btn-tenue">Calendario</button></div>
+        <div id="prossimi"></div>
+      </section>
+    </div>
+
+  </div>
+</div>
+
+<script type="module">
+// I dati sono inventati, le voci no: sono esattamente quelle che il Riepilogo
+// calcola oggi in mod/storico.js.
+const AV = ['oklch(0.470 0.090 247)', 'oklch(0.440 0.070 210)', 'oklch(0.455 0.075 285)',
+  'oklch(0.425 0.065 180)', 'oklch(0.480 0.085 265)', 'oklch(0.410 0.060 200)'];
+const S = (d) => `<svg class="i" viewBox="0 0 20 20" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round">${d}</svg>`;
+const ICO = {
+  auto: S('<path d="M3 12.5h14M4.5 12.5V16h2v-1.5M13.5 14.5V16h2v-3.5"/><path d="M4.6 12.5l1.7-4.4A1.5 1.5 0 0 1 7.7 7h4.6a1.5 1.5 0 0 1 1.4 1.1l1.7 4.4"/>'),
+  griglia: S('<rect x="3" y="3" width="6" height="6" rx="1"/><rect x="11" y="3" width="6" height="6" rx="1"/><rect x="3" y="11" width="6" height="6" rx="1"/><rect x="11" y="11" width="6" height="6" rx="1"/>'),
+  euro: S('<path d="M14 5.6A5 5 0 0 0 6.2 8M6.2 12a5 5 0 0 0 7.8 2.4M3.6 8.6h6M3.6 11.4h6"/>'),
+  allerta: S('<path d="M10 3.4 17.2 16H2.8Z"/><path d="M10 8v3.4"/>'),
+};
+const iniz = (n) => n.split(' ').map((p) => p[0]).join('').slice(0, 2).toUpperCase();
+
+// ── Le quattro tessere, ognuna con la sua linea vera ────────────────────
+// Le serie si calcolano dai passaggi gia' scaricati: nessuna query in piu',
+// nessun numero inventato quando questo sara' l'app.
+function linea(vals, w = 210, h = 40) {
+  const max = Math.max(...vals, 1), min = Math.min(...vals, 0);
+  const x = (i) => (i / (vals.length - 1)) * w;
+  const y = (v) => h - ((v - min) / (max - min || 1)) * (h - 4) - 2;
+  let d = `M ${x(0)} ${y(vals[0])}`;
+  for (let i = 1; i < vals.length; i++) {
+    const xm = (x(i - 1) + x(i)) / 2;
+    d += ` C ${xm} ${y(vals[i - 1])} ${xm} ${y(vals[i])} ${x(i)} ${y(vals[i])}`;
+  }
+  return `<svg class="linea" viewBox="0 0 ${w} ${h}" preserveAspectRatio="none" aria-hidden="true">
+    <path d="${d} L ${w} ${h} L 0 ${h} Z" class="linea-velo"/><path d="${d}" class="linea-tratto"/></svg>`;
+}
+const tessere = [
+  { lab: 'Passaggi in programma', val: '6', nota: 'il primo domani, 07:40', ico: ICO.auto,
+    serie: [1, 0, 2, 1, 3, 2, 1, 2, 0, 1, 2, 3] },
+  { lab: 'Passaggi nel mese', val: '19', nota: 'di cui 7 guidati da te', ico: ICO.griglia,
+    serie: [2, 1, 3, 2, 0, 1, 2, 3, 2, 1, 3, 2] },
+  { lab: 'Il tuo saldo', val: '− 7,00 €', nota: 'verso due persone', ico: ICO.euro, mio: true,
+    serie: [0, -2, -2, -4.5, -4.5, -2, -2, -4.5, -7, -7, -7, -7] },
+  { lab: 'Giorni scoperti', val: '2', nota: 'il primo: giovedì 11', ico: ICO.allerta, allerta: true,
+    serie: [0, 1, 0, 0, 2, 1, 0, 1, 2, 1, 2, 2] },
+];
+document.getElementById('numeri').innerHTML = tessere.map((t) => `
+  <article class="k${t.mio ? ' mio' : ''}${t.allerta ? ' allerta' : ''}">
+    <div class="k-alto"><span class="k-ico">${t.ico}</span><span class="k-lab">${t.lab}</span></div>
+    <div class="k-val">${t.val}</div>
+    <div class="k-nota">${t.nota}</div>
+    ${linea(t.serie)}
+  </article>`).join('');
+
+// ── L'occupazione settimanale, ad area come nella foto ───────────────────
+const sett = [['lun', 2, 4], ['mar', 3, 4], ['mer', 1, 3], ['gio', 0, 0], ['ven', 3, 4], ['sab', 1, 2], ['dom', 0, 0]];
+{
+  const W = 640, H = 190, P = { l: 30, r: 8, t: 10, b: 26 };
+  const max = Math.max(...sett.map(([, , o]) => o), 1);
+  const x = (i) => P.l + (i / (sett.length - 1)) * (W - P.l - P.r);
+  const y = (v) => H - P.b - (v / max) * (H - P.t - P.b);
+  const cur = (get) => {
+    let d = `M ${x(0)} ${y(get(sett[0]))}`;
+    for (let i = 1; i < sett.length; i++) {
+      const xm = (x(i - 1) + x(i)) / 2;
+      d += ` C ${xm} ${y(get(sett[i - 1]))} ${xm} ${y(get(sett[i]))} ${x(i)} ${y(get(sett[i]))}`;
+    }
+    return d;
+  };
+  const presi = cur((r) => r[1]);
+  document.getElementById('grafico').innerHTML = `
+  <svg viewBox="0 0 ${W} ${H}" class="area" role="img" aria-label="Posti presi sui posti offerti, per giorno della settimana">
+    ${[0, 1, 2, 3, 4].map((n) => `<line x1="${P.l}" x2="${W - P.r}" y1="${y(n * max / 4)}" y2="${y(n * max / 4)}" class="griglia"/>
+      <text x="${P.l - 8}" y="${y(n * max / 4) + 4}" class="asse" text-anchor="end">${Math.round(n * max / 4)}</text>`).join('')}
+    <path d="${cur((r) => r[2])} L ${x(sett.length - 1)} ${y(0)} L ${x(0)} ${y(0)} Z" class="area-offerti"/>
+    <path d="${presi} L ${x(sett.length - 1)} ${y(0)} L ${x(0)} ${y(0)} Z" class="area-velo"/>
+    <path d="${presi}" class="area-tratto"/>
+    ${sett.map(([g, p], i) => `<circle cx="${x(i)}" cy="${y(p)}" r="4" class="punto"/>
+      <text x="${x(i)}" y="${H - 6}" class="asse" text-anchor="middle">${g}</text>`).join('')}
+  </svg>`;
+}
+
+// ── La ciambella dei turni ───────────────────────────────────────────────
+const turni = [['Ada Ferrari', 9], ['Bruno Sala', 6], ['Carla Moretti', 4], ['Dario Neri', 1]];
+{
+  const tot = turni.reduce((s, [, v]) => s + v, 0);
+  const R = 54, C = 2 * Math.PI * R;
+  let off = 0;
+  const archi = turni.map(([, v], i) => {
+    const len = (v / tot) * C;
+    const s = `<circle cx="70" cy="70" r="${R}" fill="none" stroke="${AV[i]}" stroke-width="22"
+      stroke-dasharray="${len - 3} ${C - len + 3}" stroke-dashoffset="${-off}" transform="rotate(-90 70 70)"/>`;
+    off += len;
+    return s;
+  }).join('');
+  document.getElementById('ciambella').innerHTML = `
+    <svg viewBox="0 0 140 140" role="img" aria-label="Turni di guida per persona">
+      <circle cx="70" cy="70" r="${R}" fill="none" stroke="var(--surface-2)" stroke-width="22"/>
+      ${archi}
+      <text x="70" y="68" class="ciambella-n" text-anchor="middle">${tot}</text>
+      <text x="70" y="84" class="ciambella-lab" text-anchor="middle">passaggi</text>
+    </svg>`;
+  document.getElementById('legenda').innerHTML = turni.map(([n, v], i) => `
+    <li><span class="pt" style="background:${AV[i]}"></span>
+      <span class="lg-n">${n}</span>
+      <span class="lg-v">${v} <small>(${Math.round(v / tot * 100)}%)</small></span></li>`).join('');
+}
+
+// ── Conti in sospeso ─────────────────────────────────────────────────────
+const conti = [
+  ['Ada Ferrari', '4 passaggi · dal 12 ago', -9, 'Pagato'],
+  ['Bruno Sala', '2 passaggi · dal 28 ago', 4.5, 'Ricevuto'],
+  ['Carla Moretti', '1 passaggio · dal 3 set', -2.5, 'Pagato'],
+  ['Dario Neri', '3 passaggi · dal 30 ago', 6, 'Ricevuto'],
+];
+const eur = (n) => (n < 0 ? '− ' : '+ ') + Math.abs(n).toLocaleString('it-IT', { minimumFractionDigits: 2 }) + ' €';
+document.getElementById('conti').innerHTML = conti.map(([n, s, v, a], i) => `
+  <div class="riga">
+    <span class="av" style="background:${AV[i % AV.length]}">${iniz(n)}</span>
+    <span class="riga-chi"><b>${n}</b><small>${s}</small></span>
+    <span class="riga-imp ${v < 0 ? 'dare' : 'avere'}">${eur(v)}</span>
+    <button type="button" class="btn-riga">${a}</button>
+  </div>`).join('');
+
+// ── Attività recente ─────────────────────────────────────────────────────
+const att = [
+  ['Bruno Sala', 'ha preso un posto', "sull'auto di Ada, domani", '2 min'],
+  ['Ada Ferrari', 'ha pubblicato un passaggio', 'Piazza Dante → Stazione', '1 ora'],
+  ['Carla Moretti', 'ha annunciato un ritardo', 'di 10 minuti, oggi 08:10', '3 ore'],
+  ['Dario Neri', 'è entrato nella comitiva', 'col codice invito', '5 ore'],
+];
+document.getElementById('attivita').innerHTML = att.map(([n, a, s, q], i) => `
+  <div class="riga">
+    <span class="av" style="background:${AV[i % AV.length]}">${iniz(n)}</span>
+    <span class="riga-chi"><b>${n}</b> ${a}<small>${s}</small></span>
+    <span class="riga-quando">${q} fa</span>
+  </div>`).join('');
+
+// ── Prossimi passaggi ────────────────────────────────────────────────────
+const pross = [
+  ['11', 'SET', 'Piazza Dante → Stazione', '07:40 · guida Ada', ['AF', 'BS', 'CM'], 1],
+  ['12', 'SET', 'Stazione → Piazza Dante', '18:15 · guidi tu', ['BS', 'DN'], 0],
+  ['13', 'SET', 'Piazza Dante → Mare', '09:00 · guida Bruno', ['AF', 'CM', 'DN'], 2],
+];
+document.getElementById('prossimi').innerHTML = pross.map(([g, m, t, s, facce, piu]) => `
+  <div class="riga">
+    <span class="data"><b>${g}</b><small>${m}</small></span>
+    <span class="riga-chi"><b>${t}</b><small>${s}</small></span>
+    <span class="facce">${facce.map((f, i) => `<i class="av av-piccolo" style="background:${AV[i]}">${f}</i>`).join('')}${piu ? `<i class="av av-piccolo av-piu">+${piu}</i>` : ''}</span>
+  </div>`).join('');
+
+// ── L'interruttore del tema, che nell'app e' la lunetta in alto ──────────
+const gira = () => {
+  const scuro = document.documentElement.getAttribute('data-tema') === 'scuro';
+  document.documentElement.setAttribute('data-tema', scuro ? 'chiaro' : 'scuro');
+};
+document.getElementById('gira').addEventListener('click', gira);
+document.getElementById('gira-2').addEventListener('click', gira);
+</script>
+</body>
+</html>
