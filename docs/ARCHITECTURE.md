@@ -34,7 +34,8 @@ Principi:
 | File | Cosa fa | Perché è separato |
 |---|---|---|
 | `index.html` | Guscio, sprite delle icone, dati strutturati | — |
-| `app.js` | Tutta l'app: auth, gruppi, passaggi, sedili, realtime | Un file solo finché non supera 2-3k righe (ADR 001) |
+| `app.js` | **Solo l'avvio**: `render()`, cioè chi disegna cosa e in che ordine | 51 righe. Era l'app intera fino a C17, e 4400 righe sono il doppio della soglia dell'ADR 001 |
+| `mod/*.js` | L'app, in tredici moduli ES: `auth`, `gruppi`, `passaggi`, `scheda`, `storico`, `persone`, `zona`, `schede`, `notifiche`, `nucleo`, `dialogo`, `auto-svg`, `supabase` | Nessuna build, import nativi. Lo stato condiviso sta in `nucleo.js` e si cambia coi suoi setter: a un `let` importato non si assegna. `tests/moduli.mjs` verifica che ogni nome chiesto sia davvero esportato — né `node --check` né ESLint guardano i fili fra i file |
 | `rete.js` | Avviso "sei senza rete" e registrazione del service worker | **Non importa niente**: deve funzionare quando `app.js` non parte |
 | `sw.js` | Cache del guscio, apertura offline | Gira in un altro mondo (`self`, nessun DOM) |
 | `config.js` | URL e publishable key di Supabase | Pubblici per design |

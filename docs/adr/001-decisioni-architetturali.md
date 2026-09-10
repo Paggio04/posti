@@ -7,6 +7,15 @@ Contesto: ambiente di sviluppo senza Node; app piccola; deploy statico.
 Decisione: niente React/Vite; ES modules nativi, supabase-js da CDN.
 Conseguenze: zero supply chain npm, deploy istantaneo; in cambio niente typing né componenti riusabili. Rivedere se l'app supera ~2–3k righe di JS.
 
+**Rivista il 10/09/2026 (C17), e la soglia ha fatto il suo mestiere.** `app.js` era arrivato a
+4400 righe: i moduli ES nativi restano, la build continua a non esserci, ma il file è diventato
+tredici — `mod/`, più `app.js` che li mette insieme. Due cose sono cambiate anche rispetto a
+questa riga: supabase-js **non arriva più da un CDN** (C48, sta in `vendor/`), e la soglia va
+riscritta per file singolo invece che per applicazione, perché adesso c'è più di un file.
+Nuova soglia: **nessun modulo sopra le ~800 righe**; oggi il più grosso ne ha 816 e
+`mod/scheda.js` 797, quindi si è già al limite e la prossima cosa che cresce va divisa, non
+aggiunta.
+
 ## 2. Sicurezza nel database (RLS + trigger), client non fidato
 Decisione: ogni regola di accesso e integrità (un posto per giorno, no auto doppie, no viaggi passati) è policy RLS o trigger Postgres; il client fa solo UX.
 Conseguenze: la anon key può essere pubblica; qualunque client alternativo resta vincolato. I messaggi d'errore dei trigger sono in italiano e mostrati direttamente.

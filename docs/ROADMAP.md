@@ -913,12 +913,66 @@ pesanti e nessuno ha mai potato; (3) il tempo alla prima schermata con la rete s
 resta da fare e che nessun `curl` può dare. La prima delle tre è un cambio di schema e di client
 insieme: è un cantiere suo, non una riga da aggiungere qui.
 
-### C17 — Spezzare `app.js`
-L'ADR 001 dice di rivedere la scelta "un file solo" oltre le 2-3k righe di JS: **al 27/07/2026 sono
-1822** — le Fasi 3 e 4 ne hanno aggiunte 500 — quindi la soglia bassa è vicina e quella alta no.
-Quando si supera: moduli ES separati (auth, gruppi, passaggi, render), sempre senza build. **Non
-prima**: dividere presto costa e non rende. Il conto si rifà qui, non a memoria:
-`node -e "console.log(require('fs').readFileSync('app.js','utf8').split('\n').length)"`.
+### C17 — Spezzare `app.js` — *fatto il 10/09/2026: tredici moduli e un avvio da 51 righe*
+L'ADR 001 diceva di rivedere la scelta "un file solo" oltre le 2-3k righe di JS. **Al 27/07/2026
+erano 1822** e la riga qui sotto diceva «non prima: dividere presto costa e non rende». Al
+10/09/2026 sono **4400**: la Fase 7 ne ha aggiunte quattordici cantieri, le Fasi 8-10 il resto. La
+soglia alta è stata superata di una volta e mezza.
+
+`app.js` è ora `mod/` più un `app.js` di **51 righe**, che contiene `render()` — l'unica funzione
+che conosce tutti gli altri — e nient'altro:
+
+| | righe | |
+|---|---|---|
+| `mod/storico.js` | 835 | storico, riepilogo, conti, formattatori |
+| `mod/scheda.js` | 814 | la scheda di un passaggio: sedili, ritrovo, calendario, commenti |
+| `mod/gruppi.js` | 631 | comitive, codice, fermate, regole, quota |
+| `mod/passaggi.js` | 613 | il giorno, l'offerta, il realtime, il caricamento |
+| `mod/persone.js` | 324 | segnalare, bloccare, sospendere, portarsi via i propri dati |
+| `mod/zona.js` | 292 | la zona, il garage |
+| `mod/auth.js` | 287 | entrare, registrarsi, il proprio profilo |
+| `mod/nucleo.js` | 205 | riferimenti al DOM, stato condiviso, aiutanti puri, avvisi |
+| `mod/auto-svg.js` | 180 | la macchina disegnata |
+| `mod/schede.js` | 172 | la navigazione fra le viste, la scheda Profilo |
+| `mod/notifiche.js` | 107 | gli avvisi sul telefono |
+| `mod/dialogo.js` | 98 | il dialogo al posto di `prompt()` e `confirm()` |
+| `mod/supabase.js` | 70 | il client, e dove sta girando l'app |
+
+**Come, ed è la parte che vale più della divisione.** Le righe non sono state riscritte: sono state
+**spostate**, sezione per sezione, seguendo i marcatori `// --- ... ---` che il file aveva già. Un
+conto riga per riga fra il prima e il dopo dice che le uniche differenze sono quelle volute — le
+intestazioni dei tredici file, le liste di `import` e `export`, e diciannove assegnazioni diventate
+chiamate a un setter. Su un file di 4400 righe la domanda «mi sono perso qualcosa?» non si risponde
+rileggendo: si risponde contando.
+
+**I due ostacoli veri, che non si vedono progettando la divisione:**
+
+1. **A un `let` importato non si assegna.** Un modulo ES può *leggere* un `let` esportato da un
+   altro e vederlo cambiare — i legami sono vivi — ma assegnarlo è un errore, e il browser lo dice
+   in un modo che non somiglia alla causa. Sedici valori attraversavano un confine in scrittura
+   (`currentUser` lo mette l'accesso, `currentGroupId` le comitive, `currentDate` il giorno):
+   passano dai setter di `mod/nucleo.js` e dei tre moduli che ne hanno uno proprio. Il conto delle
+   **assegnazioni** era piccolo — due o tre per valore — mentre quello delle **letture** era di
+   centinaia: è per questo che i setter costano poco e riscrivere ogni lettura in `stato.x` sarebbe
+   costato tutto.
+2. **Gli import formano cicli, e reggono solo su una `function` dichiarata.** `mod/auth.js` chiama
+   `render()` che sta in `app.js`, che importa `mod/auth.js`. Una funzione dichiarata nasce già
+   pronta quando il ciclo si chiude; a un `const` si arriverebbe prima che esista, e l'errore
+   sarebbe a pagina aperta.
+
+**Il controllo che è nato con la divisione.** `node --check` guarda un file per volta ed ESLint
+tratta un `import` come una dichiarazione e basta: per tutti e due `import { pippo } from
+'./nucleo.js'` è corretto anche se `nucleo.js` non ha mai sentito nominare `pippo`. Con tredici
+moduli e sessantotto fili è esattamente ciò che non si tiene a mente, quindi `tests/moduli.mjs`
+confronta gli uni con gli altri — **e nei due versi**: anche un `export` che non chiede più nessuno
+è rosso, perché su un file appena spezzato è quasi sempre un resto. Ne ha trovati quattro subito.
+
+*Fatto quando:* nessun modulo sopra le ~800 righe (la soglia nuova dell'ADR 001), `npm run check`
+verde, e la pagina che si apre senza un errore in console. **Cosa non prova**: i diciotto controlli
+end-to-end che passano in locale guardano la schermata d'accesso e il guscio. Tutto quello che sta
+**dopo il login** è codice spostato e non ancora eseguito da nessuno — ed è la stessa riga che il
+vault scrive da luglio (W6, il collaudo a video). Questa è la modifica che la rende più urgente:
+non aggiunge comportamenti, ma li sposta tutti.
 
 ---
 

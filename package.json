@@ -4,11 +4,12 @@
   "private": true,
   "description": "Organizza i passaggi in macchina della comitiva. Sito statico: queste dipendenze sono strumenti di sviluppo, non servono per servire l'app — supabase-js c'e' solo perche' `npm run vendor` la impacchetta in vendor/, che e' cio' che il browser carica.",
   "scripts": {
-    "lint": "eslint app.js config.js sw.js rete.js accesso.js tema.js",
+    "lint": "eslint app.js mod config.js sw.js rete.js accesso.js tema.js",
     "validate": "html-validate index.html privacy.html termini.html 404.html offline.html",
     "test:e2e": "playwright test",
     "contrasto": "node tests/contrasto.mjs",
-    "check": "npm run lint && npm run validate && npm run contrasto",
+    "moduli": "node tests/moduli.mjs",
+    "check": "npm run lint && npm run validate && npm run moduli && npm run contrasto",
     "vendor": "esbuild node_modules/@supabase/supabase-js/dist/index.mjs --bundle --format=esm --minify --target=es2020 --legal-comments=none --platform=browser --outfile=vendor/supabase-js.esm.js"
   },
   "devDependencies": {

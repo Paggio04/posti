@@ -12,7 +12,10 @@
 //
 // Quello che si mette in cache e' solo il guscio: i file pubblici, identici per tutti.
 
-const VERSIONE = 'wetransport-v14';  // sale quando cambia il GUSCIO qui sotto
+const VERSIONE = 'wetransport-v15';  // sale quando cambia il GUSCIO qui sotto
+// v15 (10/09/2026): `app.js` si e' spezzato in tredici moduli (C17). Sono file del
+// guscio come gli altri e vanno tutti elencati: chi ha l'app installata li chiede al
+// primo avvio, e senza queste righe la pagina offline resterebbe un guscio senza codice.
 // v10 (06/08/2026): la barra laterale diventa una barra in alto con il tondo che
 // scivola, e il riepilogo prende tutta la larghezza senza scorrere. Cambiano
 // `index.html`, `style.css` e `app.js`.
@@ -53,6 +56,22 @@ const GUSCIO = [
   '/termini.html',
   '/style.css',
   '/app.js',
+  // I tredici moduli di C17. In ordine alfabetico, che e' anche l'ordine in cui si
+  // leggono nella cartella: un elenco che si controlla con `ls` e' un elenco che
+  // qualcuno controlla davvero.
+  '/mod/auth.js',
+  '/mod/auto-svg.js',
+  '/mod/dialogo.js',
+  '/mod/gruppi.js',
+  '/mod/notifiche.js',
+  '/mod/nucleo.js',
+  '/mod/passaggi.js',
+  '/mod/persone.js',
+  '/mod/scheda.js',
+  '/mod/schede.js',
+  '/mod/storico.js',
+  '/mod/supabase.js',
+  '/mod/zona.js',
   '/rete.js',
   '/accesso.js',
   '/tema.js',

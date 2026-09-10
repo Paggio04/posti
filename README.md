@@ -9,7 +9,7 @@ i guidatori pubblicano la macchina del giorno, gli altri prenotano il posto tapp
 
 ## Stack
 
-- **Frontend:** HTML/CSS/JS vanilla (nessuna build, deploy statico). **Nessun dominio di terzi:** caratteri e libreria di Supabase stanno nel repo — `fonts/README.md` e `vendor/README.md` dicono perché e come si aggiornano
+- **Frontend:** HTML/CSS/JS vanilla (nessuna build, deploy statico). Da C17 l'app sta in **tredici moduli ES** dentro `mod/`, e `app.js` è l'avvio: 51 righe con dentro `render()`. **Nessun dominio di terzi:** caratteri e libreria di Supabase stanno nel repo — `fonts/README.md` e `vendor/README.md` dicono perché e come si aggiornano
 - **Backend:** [Supabase](https://supabase.com) — autenticazione email/password + database Postgres con Row Level Security
 - **Hosting:** [Netlify](https://netlify.com)
 
