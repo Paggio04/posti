@@ -2959,36 +2959,76 @@ form.signup .auth-accetto { display: block; }
    grandi, tre riquadri in fondo. Qui e' riprodotta com'e', con i tre colori
    della palette al posto dei suoi e con i dati che WeTransport ha davvero.
 
-   Tutto sotto `.app-lynk`, cosi' convive con il foglio che veste ancora il resto
-   dell'app: la fase 2 sposta le viste qui dentro una alla volta, e finche' non
-   lo fa niente di quello che c'e' gia' si rompe.
+   ── LA REGOLA CHE COMANDA TUTTO IL RESTO ─────────────────────────────────
+   **Niente scorrimento, in nessuna delle due direzioni.** Il Riepilogo sta in
+   una schermata e basta, ed e' una regola del progetto, non una rifinitura di
+   questa vista: e' la stessa cosa che C40 aveva chiesto («il riepilogo che sta
+   in una schermata») e che C41 aveva difeso togliendo il quaderno a scorrimento
+   laterale.
 
-   **Sotto i 768px questa composizione non esiste**: la colonna sparisce e
-   tornano la pillola in basso e la colonna unica. La foto e' disegnata per uno
-   schermo grande e fermo, la scena d'uso di questa app e' l'opposto.
+   Cambia il modo in cui si scrive il foglio, non solo i numeri:
+
+   1. L'altezza **si distribuisce, non si somma.** `.corpo` e' una griglia di
+      cinque righe: le tre in cima prendono quello che serve, le due in fondo si
+      spartiscono `1fr` di quel che resta. Nessuna riga puo' far crescere la
+      pagina, perche' la pagina e' alta `100dvh` e non un pixel di piu'.
+   2. Ogni contenitore della catena ha `min-height: 0`. Senza, un figlio in
+      griglia si rifiuta di rimpicciolirsi sotto il proprio contenuto ed e'
+      esattamente da li' che rispunta lo scorrimento — e' il difetto piu' comune
+      di una griglia a schermo pieno, e non si vede finche' il contenuto non
+      cresce.
+   3. **Gli elenchi non scorrono: si accorciano.** Quante righe ci stanno lo
+      decide `--righe-scheda`, e le altre diventano una riga di piede che dice
+      quante sono. Un elenco che scorre dentro una scheda e' uno scorrimento in
+      piu', cioe' la cosa che non deve esserci.
+
+   ── LA SCALA DELLE DISTANZE ──────────────────────────────────────────────
+   Un passo solo, di 4px, e cinque valori. Prima erano 11, 13, 14, 15, 16, 17,
+   18 e 22 — otto distanze scelte una alla volta dal componente che le chiedeva,
+   che e' il motivo per cui gli allineamenti non tornavano: due schede affiancate
+   con padding diverso non hanno il testo sulla stessa riga.
    ═══════════════════════════════════════════════════════════════════════════ */
 
 .app-lynk {
+  --sp-1: 4px;
+  --sp-2: 8px;
+  --sp-3: 12px;
+  --sp-4: 16px;
+  --sp-5: 24px;
+  /* Quante righe entrano in una scheda in fondo. Cambia con la fascia, ed e'
+     l'unico posto in cui si decide: le tre schede in fondo lo leggono tutte. */
+  --righe-scheda: 3;
+
   display: grid;
   grid-template-columns: 236px minmax(0, 1fr);
-  min-height: 100vh;
+  /* Due volte, e il ripiego viene prima: `dvh` tiene conto della barra del
+     browser sul telefono, ma un browser che non lo conosce scarta la riga — e
+     se e' l'unica, la pagina torna alta quanto il contenuto, cioe' torna a
+     scorrere. La seconda sovrascrive la prima dove funziona. */
+  height: 100vh;
+  height: 100dvh;
+  max-height: 100vh;
+  max-height: 100dvh;
+  overflow: hidden;
   background: var(--bg);
 }
 
 /* ── La colonna ─────────────────────────────────────────────────────────── */
 .app-lynk .lato {
-  display: flex; flex-direction: column; gap: 18px;
-  padding: 16px 14px;
+  display: grid;
+  grid-template-rows: auto auto 1fr auto;
+  gap: var(--sp-4);
+  padding: var(--sp-4) var(--sp-3);
   background: var(--surface);
   border-right: 1px solid var(--border);
-  position: sticky; top: 0; height: 100vh; overflow-y: auto;
+  min-height: 0;
 }
-.app-lynk .lato-testa { display: flex; align-items: center; gap: 8px; }
+.app-lynk .lato-testa { display: flex; align-items: center; gap: var(--sp-2); height: 44px; }
 .app-lynk .lato-testa .targa {
   display: inline-flex; align-items: center; gap: 7px;
   background: var(--targa); color: var(--su-targa);
-  padding: 7px 11px; border-radius: var(--r-btn);
-  font-weight: 700; font-size: 0.82rem; letter-spacing: 0.04em; text-transform: uppercase;
+  padding: 8px 11px; border-radius: var(--r-btn);
+  font-weight: 700; font-size: 0.8rem; letter-spacing: 0.04em; text-transform: uppercase;
 }
 .app-lynk .lato-testa .targa svg { width: 18px; height: 12px; }
 .app-lynk .lato-piega {
@@ -3000,77 +3040,89 @@ form.signup .auth-accetto { display: block; }
 
 .app-lynk .lato-voci { display: flex; flex-direction: column; gap: 2px; }
 .app-lynk .voce {
-  display: flex; align-items: center; gap: 11px;
-  padding: 10px 12px; border-radius: var(--r-btn);
-  color: var(--ink-soft); text-decoration: none; font-weight: 600; font-size: 0.9rem;
+  display: flex; align-items: center; gap: var(--sp-3);
+  padding: 10px var(--sp-3); border-radius: var(--r-btn);
+  color: var(--ink-soft); text-decoration: none; font-weight: 600; font-size: 0.88rem;
   transition: background var(--t-fast) var(--ease-out), color var(--t-fast) var(--ease-out);
 }
-.app-lynk .voce .ico { width: 20px; height: 20px; flex: none; display: grid; place-items: center; }
 /* Le icone sono disegnate, non emoji: un'emoji porta i suoi colori e non li
    cede, quindi in una palette di tre colori e' sempre la quarta tinta dello
    schermo. Queste prendono `currentColor` e seguono lo stato della voce. */
+.app-lynk .voce .ico { width: 20px; height: 20px; flex: none; display: grid; place-items: center; }
 .app-lynk .i { width: 20px; height: 20px; display: block; }
+/* Ogni disegno dentro questa vista e' un blocco, mai in linea: in linea si
+   appoggia alla linea di base e si porta dietro lo spazio del discendente —
+   tre pixel che dentro una pillola alta 32 la fanno diventare 35, e sono
+   quelli a far sembrare storta una fila di controlli allineata. */
+.app-lynk .cerca svg, .app-lynk .periodo svg { display: block; }
+.app-lynk .periodo select, .app-lynk .scelta select { display: block; }
+.app-lynk .riga-chi { display: block; }
+.app-lynk .facce i { display: grid; }
 .app-lynk .tondo .i { width: 19px; height: 19px; }
 .app-lynk .k-ico .i { width: 18px; height: 18px; }
 .app-lynk .io-freccia .i { width: 16px; height: 16px; }
 .app-lynk .voce:hover { background: var(--surface-2); color: var(--ink); }
-/* La voce attiva e' un riempimento tenue con l'inchiostro pieno sopra: e' la
-   cosa che nella schermata di riferimento dice «sei qui», e non serve altro. */
 .app-lynk .voce.attiva { background: var(--primary-soft); color: var(--primary-testo); }
 /* Un conteggio non e' «tuo»: l'arancio significa quello, e qui direbbe una cosa
    falsa. Prende il riempimento interattivo. */
 .app-lynk .voce .pallino {
   margin-left: auto; background: var(--primary); color: var(--su-primario);
-  font-size: 0.7rem; font-weight: 700; padding: 1px 7px; border-radius: var(--pill);
+  font-size: 0.68rem; font-weight: 700; padding: 1px 7px; border-radius: var(--pill);
 }
 
-/* Al posto di «Upgrade to Pro»: l'invito a installarla. Riempimento pieno e
-   scuro, come nella foto, ma con la targa della palette invece di un viola. */
+/* Al posto di «Upgrade to Pro»: l'invito a installarla, che esiste da C12 e non
+   ha mai avuto una casa. Sta in fondo alla riga `1fr`, cioe' si appoggia al
+   fondo senza spingere niente. */
 .app-lynk .lato-promo {
-  margin-top: auto; background: var(--targa); color: var(--su-targa);
-  border-radius: var(--r-card); padding: 16px 15px 15px;
+  align-self: end;
+  background: var(--targa); color: var(--su-targa);
+  border-radius: var(--r-card); padding: var(--sp-4) var(--sp-4) var(--sp-3);
 }
-.app-lynk .lato-promo h2 { font-size: 0.98rem; font-weight: 700; margin-bottom: 6px; }
-.app-lynk .lato-promo p { font-size: 0.78rem; line-height: 1.45; opacity: 0.82; margin-bottom: 13px; }
+.app-lynk .lato-promo h2 { font-size: 0.95rem; font-weight: 700; margin-bottom: var(--sp-1); }
+.app-lynk .lato-promo p { font-size: 0.76rem; line-height: 1.45; opacity: 0.82; margin-bottom: var(--sp-3); }
 .app-lynk .btn-promo {
-  width: 100%; font: inherit; font-weight: 700; font-size: 0.82rem; cursor: pointer;
+  width: 100%; font: inherit; font-weight: 700; font-size: 0.8rem; cursor: pointer;
   background: var(--tuo); color: var(--tuo-su); border: 0;
-  border-radius: var(--r-btn); padding: 9px 12px;
+  border-radius: var(--r-btn); padding: 9px var(--sp-3);
 }
 .app-lynk .btn-promo:hover { filter: brightness(1.06); }
 
 .app-lynk .lato-io {
-  display: flex; align-items: center; gap: 10px;
-  padding: 9px 8px; border-radius: var(--r-btn); border: 1px solid var(--border);
+  display: flex; align-items: center; gap: var(--sp-3);
+  padding: var(--sp-2); border-radius: var(--r-btn); border: 1px solid var(--border);
+  min-width: 0;
 }
 .app-lynk .io-chi { display: flex; flex-direction: column; line-height: 1.25; min-width: 0; }
-.app-lynk .io-chi b { font-size: 0.85rem; font-weight: 600; }
+.app-lynk .io-chi b { font-size: 0.84rem; font-weight: 600; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .app-lynk .io-chi small { font-size: 0.72rem; color: var(--ink-soft); }
-.app-lynk .io-freccia { margin-left: auto; color: var(--ink-soft); }
+.app-lynk .io-freccia { margin-left: auto; color: var(--ink-soft); flex: none; }
 
-/* ── Il corpo ───────────────────────────────────────────────────────────── */
-.app-lynk .corpo { padding: 16px 22px 34px; display: flex; flex-direction: column; gap: 16px; min-width: 0; }
+/* ── Il corpo: cinque righe, e solo le ultime due crescono ──────────────── */
+.app-lynk .corpo {
+  display: grid;
+  grid-template-rows: auto auto auto minmax(0, 1.05fr) minmax(0, 1fr);
+  gap: var(--sp-3);
+  padding: var(--sp-4) var(--sp-5) var(--sp-4);
+  min-height: 0; min-width: 0;
+}
 
-.app-lynk .cima { display: flex; align-items: center; gap: 10px; }
+.app-lynk .cima { display: flex; align-items: center; gap: var(--sp-2); height: 44px; }
 .app-lynk .cerca {
-  flex: 1 1 auto; max-width: 520px; display: flex; align-items: center; gap: 9px;
+  flex: 1 1 auto; max-width: 460px; display: flex; align-items: center; gap: var(--sp-2);
   background: var(--surface); border: 1px solid var(--border);
-  border-radius: var(--pill); padding: 0 14px; height: 44px;
+  border-radius: var(--pill); padding: 0 var(--sp-4); height: 44px;
 }
 .app-lynk .cerca svg { width: 17px; height: 17px; color: var(--ink-soft); flex: none; }
-.app-lynk .cerca input {
-  flex: 1; min-width: 0; border: 0; background: transparent; font: inherit;
-  color: var(--ink); outline: none; font-size: 0.88rem;
-}
+.app-lynk .cerca input { flex: 1; min-width: 0; }
 .app-lynk .cerca input::placeholder { color: var(--segnaposto); }
 .app-lynk .cerca kbd {
-  font-family: var(--font-mono); font-size: 0.7rem; color: var(--ink-soft);
-  background: var(--surface-2); border-radius: var(--r-chip); padding: 3px 6px;
+  font-family: var(--font-mono); font-size: 0.68rem; color: var(--ink-soft);
+  background: var(--surface-2); border-radius: var(--r-chip); padding: 3px 6px; flex: none;
 }
 .app-lynk .tondo {
   position: relative; flex: none; width: 44px; height: 44px; display: grid; place-items: center;
   background: var(--surface); border: 1px solid var(--border); border-radius: var(--pill);
-  color: var(--ink); font-size: 1rem; cursor: pointer;
+  color: var(--ink); cursor: pointer;
 }
 .app-lynk .tondo:hover { background: var(--surface-2); }
 .app-lynk .tondo .bollino {
@@ -3078,61 +3130,72 @@ form.signup .auth-accetto { display: block; }
   border-radius: var(--pill); background: var(--danger); border: 2px solid var(--surface);
 }
 .app-lynk .btn-cima {
-  flex: none; font: inherit; font-weight: 700; font-size: 0.88rem; cursor: pointer;
+  flex: none; font: inherit; font-weight: 700; font-size: 0.86rem; cursor: pointer;
   background: var(--primary); color: var(--su-primario); border: 0;
-  border-radius: var(--pill); padding: 0 20px; height: 44px; box-shadow: var(--luce);
+  border-radius: var(--pill); padding: 0 var(--sp-5); height: 44px; box-shadow: var(--luce);
 }
 .app-lynk .btn-cima:hover { background: var(--primary-hover); }
 
-.app-lynk .testa-vista { display: flex; align-items: flex-end; gap: 16px; flex-wrap: wrap; }
-.app-lynk .testa-vista h1 { font-size: 1.6rem; font-weight: 700; letter-spacing: -0.03em; line-height: 1.1; }
-.app-lynk .testa-vista p { color: var(--ink-soft); font-size: 0.86rem; margin-top: 3px; }
+.app-lynk .testa-vista { display: flex; align-items: center; gap: var(--sp-4); min-height: 44px; }
+.app-lynk .testa-vista h1 { font-size: 1.5rem; font-weight: 700; letter-spacing: -0.03em; line-height: 1.1; }
+.app-lynk .testa-vista p { color: var(--ink-soft); font-size: 0.84rem; margin-top: 2px; }
 .app-lynk .periodo {
-  margin-left: auto; display: flex; align-items: center; gap: 8px;
+  margin-left: auto; flex: none; display: flex; align-items: center; gap: var(--sp-2);
   background: var(--surface); border: 1px solid var(--border); border-radius: var(--r-btn);
-  padding: 0 12px; height: 40px;
+  padding: 0 var(--sp-3); height: 40px;
 }
 .app-lynk .periodo svg { width: 16px; height: 16px; color: var(--ink-soft); }
+/* **Un `select` e un `input` non stanno nella loro pillola senza che glielo si
+   dica.** Portano da soli un'altezza di riga e un riempimento del browser, e
+   dentro un contenitore alto 32 o 44 diventano 41 e 47: sporgono di qualche
+   pixel, e sono quei pixel a far sembrare storta una fila di controlli che
+   invece e' allineata. Si azzerano e si prendono l'altezza del contenitore. */
 .app-lynk .periodo select,
-.app-lynk .scelta select {
-  border: 0; background: transparent; font: inherit; font-size: 0.84rem; font-weight: 600;
+.app-lynk .scelta select,
+.app-lynk .cerca input {
+  height: 100%; padding: 0; line-height: 1; appearance: none;
+  border: 0; background: transparent; font: inherit; font-weight: 600;
   color: var(--ink); outline: none; cursor: pointer;
 }
+.app-lynk .periodo select, .app-lynk .scelta select { font-size: 0.82rem; padding-right: 2px; }
+.app-lynk .cerca input { font-weight: 400; font-size: 0.86rem; cursor: text; }
 .app-lynk .scelta {
   display: inline-flex; align-items: center; background: var(--surface-2);
-  border-radius: var(--r-btn); padding: 6px 10px;
+  border-radius: var(--r-btn); padding: 0 var(--sp-3); height: 32px; overflow: hidden;
 }
 
 /* ── I quattro numeri ───────────────────────────────────────────────────── */
-.app-lynk .numeri { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 14px; }
+.app-lynk .numeri { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: var(--sp-3); }
 .app-lynk .k {
-  position: relative; overflow: hidden;
+  position: relative; overflow: hidden; min-width: 0;
+  display: grid; grid-template-rows: auto auto auto 1fr;
   background: var(--surface); border: 1px solid var(--border); border-radius: var(--r-card);
-  padding: 15px 16px 0; box-shadow: var(--shadow-1);
+  padding: var(--sp-3) var(--sp-4) 0; box-shadow: var(--shadow-1);
 }
-.app-lynk .k-alto { display: flex; align-items: center; gap: 9px; }
+.app-lynk .k-alto { display: flex; align-items: center; gap: var(--sp-2); min-width: 0; }
 .app-lynk .k-ico {
-  width: 34px; height: 34px; flex: none; display: grid; place-items: center;
-  background: var(--primary-soft); color: var(--primary-testo);
-  border-radius: var(--r-btn); font-size: 0.95rem;
+  width: 32px; height: 32px; flex: none; display: grid; place-items: center;
+  background: var(--primary-soft); color: var(--primary-testo); border-radius: var(--r-btn);
 }
-.app-lynk .k-lab { font-size: 0.78rem; font-weight: 600; color: var(--ink-soft); }
-.app-lynk .k-val { font-size: 1.75rem; font-weight: 700; letter-spacing: -0.035em; margin-top: 11px; font-family: var(--font-mono); }
-.app-lynk .k-nota { font-size: 0.75rem; color: var(--ink-soft); margin-top: 2px; }
-.app-lynk .linea { display: block; width: 100%; height: 40px; margin-top: 9px; }
+.app-lynk .k-lab {
+  font-size: 0.76rem; font-weight: 600; color: var(--ink-soft);
+  overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+}
+.app-lynk .k-val { font-size: 1.6rem; font-weight: 700; letter-spacing: -0.035em; margin-top: var(--sp-2); font-family: var(--font-mono); line-height: 1.1; }
+.app-lynk .k-nota { font-size: 0.73rem; color: var(--ink-soft); margin-top: 1px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+/* La linea si appoggia al fondo della scheda e prende quel che avanza: e' cosi'
+   che quattro schede con etichette di lunghezza diversa restano alte uguali. */
+.app-lynk .linea { display: block; width: 100%; height: 100%; min-height: 28px; align-self: end; margin: var(--sp-2) calc(var(--sp-4) * -1) 0; width: calc(100% + var(--sp-4) * 2); }
 .app-lynk .linea-tratto { fill: none; stroke: var(--primary); stroke-width: 2; vector-effect: non-scaling-stroke; }
 .app-lynk .linea-velo { fill: var(--primary-soft); stroke: none; }
 
-/* «Il tuo saldo» e' l'unico riempimento caldo della vista: l'arancio si riempie,
-   non si scrive. La riga di servizio sopra e' `--tuo-su-tenue`, non quella del
-   blu — i due riempimenti hanno luminosita' opposte. */
 .app-lynk .k.mio { background: var(--tuo); border-color: var(--tuo); color: var(--tuo-su); }
 .app-lynk .k.mio .k-lab, .app-lynk .k.mio .k-nota { color: var(--tuo-su-tenue); }
 .app-lynk .k.mio .k-ico { background: oklch(1 0 0 / 0.35); color: var(--tuo-su); }
 .app-lynk .k.mio .linea-tratto { stroke: var(--tuo-su); }
 .app-lynk .k.mio .linea-velo { fill: oklch(1 0 0 / 0.22); }
 /* L'allerta non e' solo rossa: il numero cambia colore **e** l'icona e' un
-   triangolo. Un'auto scoperta non puo' dipendere dal fatto che si veda il rosso. */
+   triangolo. Un giorno scoperto non puo' dipendere dal fatto che si veda il rosso. */
 .app-lynk .k.allerta .k-val { color: var(--danger); }
 .app-lynk .k.allerta .k-ico { background: var(--danger-soft); color: var(--danger); }
 .app-lynk .k.allerta .linea-tratto { stroke: var(--danger); stroke-width: 1.6; }
@@ -3141,97 +3204,124 @@ form.signup .auth-accetto { display: block; }
 /* ── I riquadri ─────────────────────────────────────────────────────────── */
 .app-lynk .scheda {
   background: var(--surface); border: 1px solid var(--border); border-radius: var(--r-card);
-  padding: 16px 17px 15px; box-shadow: var(--shadow-1); min-width: 0;
-  display: flex; flex-direction: column;
+  padding: var(--sp-3) var(--sp-4) var(--sp-3); box-shadow: var(--shadow-1);
+  display: grid; grid-template-rows: auto minmax(0, 1fr) auto;
+  min-width: 0; min-height: 0; overflow: hidden;
 }
-.app-lynk .scheda-testa { display: flex; align-items: flex-start; gap: 12px; margin-bottom: 13px; }
-.app-lynk .scheda-testa h2 { font-size: 1rem; font-weight: 700; letter-spacing: -0.015em; }
-.app-lynk .scheda-testa p { font-size: 0.78rem; color: var(--ink-soft); margin-top: 2px; }
+.app-lynk .scheda-testa { display: flex; align-items: center; gap: var(--sp-3); min-height: 32px; margin-bottom: var(--sp-2); }
+.app-lynk .scheda-testa h2 { font-size: 0.98rem; font-weight: 700; letter-spacing: -0.015em; }
+.app-lynk .scheda-testa p { font-size: 0.76rem; color: var(--ink-soft); margin-top: 1px; }
 .app-lynk .scheda-testa .scelta, .app-lynk .scheda-testa .btn-tenue { margin-left: auto; flex: none; }
 .app-lynk .btn-tenue {
-  font: inherit; font-size: 0.78rem; font-weight: 600; cursor: pointer;
+  font: inherit; font-size: 0.76rem; font-weight: 600; cursor: pointer;
   background: var(--surface-2); color: var(--ink); border: 0;
-  border-radius: var(--r-btn); padding: 6px 12px;
+  border-radius: var(--r-btn); padding: 6px var(--sp-3); height: 32px;
 }
 .app-lynk .btn-tenue:hover { background: var(--primary-soft); color: var(--primary-testo); }
+.app-lynk .scheda-corpo { min-height: 0; overflow: hidden; }
 .app-lynk .scheda-piede {
-  margin-top: auto; padding-top: 11px; border-top: 1px solid var(--border);
-  font-size: 0.74rem; color: var(--ink-soft);
+  padding-top: var(--sp-2); margin-top: var(--sp-2); border-top: 1px solid var(--border);
+  font-size: 0.73rem; color: var(--ink-soft);
+  overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
 }
 
-.app-lynk .fila-due { display: grid; grid-template-columns: minmax(0, 1.7fr) minmax(0, 1fr); gap: 14px; }
-.app-lynk .fila-tre { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 14px; }
+.app-lynk .fila-due { display: grid; grid-template-columns: minmax(0, 1.65fr) minmax(0, 1fr); gap: var(--sp-3); min-height: 0; }
+.app-lynk .fila-tre { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: var(--sp-3); min-height: 0; }
 
-/* Il grafico ad area */
-.app-lynk .area { display: block; width: 100%; height: 190px; }
+/* Il grafico ad area: prende l'altezza che la riga gli lascia, non una sua. */
+.app-lynk .grafico { min-height: 0; }
+.app-lynk .area { display: block; width: 100%; height: 100%; }
 .app-lynk .griglia { stroke: var(--border); stroke-width: 1; }
 .app-lynk .asse { fill: var(--ink-soft); font-size: 11px; font-family: var(--font-sans); }
 /* Due aree: i posti **offerti** sono il velo largo, i posti **presi** quello
    pieno. La distanza fra le due e' il posto che nessuno ha preso, ed e' il dato
-   che questa scheda esiste per mostrare. */
+   per cui questa scheda esiste. */
 .app-lynk .area-offerti { fill: var(--surface-2); }
 .app-lynk .area-velo { fill: var(--primary-soft); }
-.app-lynk .area-tratto { fill: none; stroke: var(--primary); stroke-width: 2.5; stroke-linejoin: round; }
-.app-lynk .punto { fill: var(--surface); stroke: var(--primary); stroke-width: 2.5; }
+.app-lynk .area-tratto { fill: none; stroke: var(--primary); stroke-width: 2.5; stroke-linejoin: round; vector-effect: non-scaling-stroke; }
+.app-lynk .punto { fill: var(--surface); stroke: var(--primary); stroke-width: 2.5; vector-effect: non-scaling-stroke; }
 
 /* La ciambella */
-.app-lynk .ciambella-riga { display: flex; align-items: center; gap: 18px; flex-wrap: wrap; }
-.app-lynk .ciambella { flex: none; width: 150px; }
+.app-lynk .ciambella-riga { display: flex; align-items: center; gap: var(--sp-4); min-height: 0; }
+.app-lynk .ciambella { flex: none; width: clamp(96px, 34%, 140px); }
 .app-lynk .ciambella svg { display: block; width: 100%; }
 .app-lynk .ciambella-n { fill: var(--ink); font-size: 26px; font-weight: 700; font-family: var(--font-mono); }
 .app-lynk .ciambella-lab { fill: var(--ink-soft); font-size: 11px; font-family: var(--font-sans); }
-.app-lynk .legenda { flex: 1 1 130px; display: flex; flex-direction: column; gap: 9px; list-style: none; min-width: 0; }
-.app-lynk .legenda li { display: flex; align-items: center; gap: 9px; font-size: 0.83rem; }
+.app-lynk .legenda { flex: 1 1 0; display: flex; flex-direction: column; gap: var(--sp-2); list-style: none; min-width: 0; }
+.app-lynk .legenda li { display: flex; align-items: center; gap: var(--sp-2); font-size: 0.82rem; min-width: 0; }
 .app-lynk .legenda .pt { width: 10px; height: 10px; border-radius: var(--pill); flex: none; }
 .app-lynk .legenda .lg-n { font-weight: 600; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-.app-lynk .legenda .lg-v { margin-left: auto; font-family: var(--font-mono); font-weight: 500; white-space: nowrap; }
+.app-lynk .legenda .lg-v { margin-left: auto; font-family: var(--font-mono); font-weight: 500; white-space: nowrap; flex: none; }
 .app-lynk .legenda .lg-v small { color: var(--ink-soft); font-family: var(--font-sans); }
 
 /* ── Le righe delle tre schede in fondo ─────────────────────────────────── */
+/* Non scorrono: si accorciano. Le righe che ci stanno le decide
+   `--righe-scheda`, e quelle in piu' diventano una riga di piede che le conta. */
+.app-lynk .righe { display: grid; grid-auto-rows: minmax(0, 1fr); min-height: 0; overflow: hidden; }
 .app-lynk .riga {
-  display: flex; align-items: center; gap: 11px;
-  padding: 10px 0; border-bottom: 1px solid var(--border);
+  display: flex; align-items: center; gap: var(--sp-3);
+  border-bottom: 1px solid var(--border); min-width: 0; overflow: hidden;
 }
 .app-lynk .riga:last-child { border-bottom: 0; }
 .app-lynk .av {
-  width: 36px; height: 36px; flex: none; display: grid; place-items: center;
-  border-radius: var(--pill); color: oklch(1 0 0); font-weight: 700; font-size: 0.78rem;
+  width: 34px; height: 34px; flex: none; display: grid; place-items: center;
+  border-radius: var(--pill); color: oklch(1 0 0); font-weight: 700; font-size: 0.76rem;
 }
-.app-lynk .av-piccolo { width: 26px; height: 26px; font-size: 0.65rem; border: 2px solid var(--surface); margin-left: -8px; }
+.app-lynk .av-piccolo { width: 24px; height: 24px; font-size: 0.62rem; border: 2px solid var(--surface); margin-left: -8px; }
 .app-lynk .av-piu { background: var(--surface-2); color: var(--ink-soft); }
-.app-lynk .facce { margin-left: auto; display: flex; padding-left: 8px; }
-.app-lynk .riga-chi { min-width: 0; font-size: 0.85rem; line-height: 1.35; }
+.app-lynk .facce { margin-left: auto; display: flex; padding-left: var(--sp-2); flex: none; }
+.app-lynk .riga-chi { min-width: 0; font-size: 0.84rem; line-height: 1.3; overflow: hidden; }
 .app-lynk .riga-chi b { font-weight: 600; }
-.app-lynk .riga-chi small { display: block; font-size: 0.75rem; color: var(--ink-soft); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-.app-lynk .riga-imp { margin-left: auto; font-family: var(--font-mono); font-weight: 500; font-size: 0.92rem; white-space: nowrap; }
+/* Le due righe di una voce sono **due righe**, e nessuna delle due va a capo:
+   una che si spezza in tre fa saltare l'altezza della traccia, e con la
+   griglia a schermo pieno quella e' la differenza fra una scheda pulita e tre
+   voci accavallate. */
+.app-lynk .riga-chi .l1 { display: block; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.app-lynk .riga-chi small { display: block; font-size: 0.74rem; color: var(--ink-soft); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.app-lynk .riga-imp { margin-left: auto; font-family: var(--font-mono); font-weight: 500; font-size: 0.88rem; white-space: nowrap; flex: none; }
 .app-lynk .riga-imp.dare { color: var(--danger); }
 .app-lynk .riga-imp.avere { color: var(--ok); }
-.app-lynk .riga-quando { margin-left: auto; font-size: 0.75rem; color: var(--ink-soft); white-space: nowrap; }
+.app-lynk .riga-quando { margin-left: auto; font-size: 0.73rem; color: var(--ink-soft); white-space: nowrap; flex: none; }
 .app-lynk .btn-riga {
-  flex: none; font: inherit; font-size: 0.74rem; font-weight: 600; cursor: pointer;
+  flex: none; font: inherit; font-size: 0.72rem; font-weight: 600; cursor: pointer;
   background: transparent; color: var(--ink); border: 1px solid var(--border-strong);
-  border-radius: var(--r-btn); padding: 6px 10px;
+  border-radius: var(--r-btn); padding: 5px var(--sp-2);
 }
 .app-lynk .btn-riga:hover { background: var(--primary-soft); border-color: var(--primary-bordo); color: var(--primary-testo); }
 .app-lynk .data {
-  flex: none; width: 44px; text-align: center; background: var(--surface-2);
-  border-radius: var(--r-btn); padding: 6px 0; line-height: 1.1;
+  flex: none; width: 42px; text-align: center; background: var(--surface-2);
+  border-radius: var(--r-btn); padding: 5px 0; line-height: 1.1;
 }
-.app-lynk .data b { display: block; font-family: var(--font-mono); font-weight: 500; font-size: 1.05rem; }
-.app-lynk .data small { font-size: 0.62rem; font-weight: 600; letter-spacing: 0.1em; color: var(--ink-soft); }
+.app-lynk .data b { display: block; font-family: var(--font-mono); font-weight: 500; font-size: 1rem; }
+.app-lynk .data small { font-size: 0.6rem; font-weight: 600; letter-spacing: 0.1em; color: var(--ink-soft); }
 
 /* ── Le fasce ───────────────────────────────────────────────────────────── */
+/* Sotto i 1280 la composizione della schermata di riferimento non ci sta in una
+   schermata: e la regola e' che non si scorre, quindi non e' il contenuto a
+   traboccare — sono le colonne a ridursi e le righe delle schede a diminuire. */
 @media (max-width: 1279px) {
-  .app-lynk .numeri { grid-template-columns: repeat(2, minmax(0, 1fr)); }
-  .app-lynk .fila-due, .app-lynk .fila-tre { grid-template-columns: minmax(0, 1fr); }
+  .app-lynk { --righe-scheda: 2; grid-template-columns: 200px minmax(0, 1fr); }
+  .app-lynk .numeri { grid-template-columns: repeat(4, minmax(0, 1fr)); }
+  .app-lynk .k-val { font-size: 1.3rem; }
+  .app-lynk .corpo { padding: var(--sp-3) var(--sp-4); }
+  .app-lynk .cerca { max-width: none; }
 }
 @media (max-width: 767px) {
-  /* La colonna non esiste: qui torna la pillola in basso, e la composizione
-     della schermata di riferimento cede il passo alla scena d'uso vera. */
-  .app-lynk { grid-template-columns: minmax(0, 1fr); }
+  /* Qui la colonna non esiste e torna la pillola in basso. L'immagine di come
+     va fatta la porta il proprietario: fino ad allora questa e' una resa
+     provvisoria, dichiarata, e **anche qui non si scorre**. */
+  .app-lynk { --righe-scheda: 2; grid-template-columns: minmax(0, 1fr); }
   .app-lynk .lato { display: none; }
-  .app-lynk .corpo { padding: 12px 12px 90px; }
-  .app-lynk .numeri { grid-template-columns: minmax(0, 1fr); }
-  .app-lynk .cerca { max-width: none; }
-  .app-lynk .btn-cima { padding: 0 14px; }
+  .app-lynk .corpo { padding: var(--sp-2) var(--sp-3) var(--sp-3); gap: var(--sp-2); grid-template-rows: auto auto auto minmax(0, 1fr) minmax(0, 1fr); }
+  .app-lynk .numeri { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  .app-lynk .fila-due, .app-lynk .fila-tre { grid-template-columns: minmax(0, 1fr); }
+  .app-lynk .fila-due > :last-child, .app-lynk .fila-tre > :nth-child(n + 2) { display: none; }
+  .app-lynk .cerca { display: none; }
+  .app-lynk .btn-cima { padding: 0 var(--sp-3); }
+}
+
+.app-lynk .giorni {
+  display: grid; grid-template-columns: repeat(7, minmax(0, 1fr));
+  padding: var(--sp-1) 6px 0 26px; margin-top: var(--sp-1);
+  font-size: 0.72rem; color: var(--ink-soft); text-align: center;
 }
