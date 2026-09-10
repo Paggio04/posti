@@ -173,16 +173,16 @@
      3:1. --border-strong disegna il **campo** — dice dove si scrive — e per la
      1.4.11 vale la soglia degli elementi non testuali: 3:1 sul bianco. */
   --border: oklch(0.900 0.035 227.8);
-  --border-strong: oklch(0.590 0.048 227.8);
+  --border-strong: oklch(0.664 0.045 227.8);
 
   /* ---- l'inchiostro --------------------------------------------------- */
   --ink: oklch(0.282 0.075 247.6);         /* #002B4C esatto */
   /* Sceso finche' regge 4.5:1 **su tutti e due** i fondi su cui capita: la carta
      azzurra e la scheda bianca. Il piu' severo dei due decide. */
-  --ink-soft: oklch(0.500 0.060 227.8);
+  --ink-soft: oklch(0.506 0.060 227.8);
   /* Il segnaposto ha bisogno degli stessi 4.5:1 del testo: il grigio chiaro «che
      si vede che e' un suggerimento» e' testo illeggibile con una scusa. */
-  --segnaposto: oklch(0.500 0.060 227.8);
+  --segnaposto: oklch(0.506 0.060 227.8);
 
   /* ---- il blu, cioe' cio' che si tocca ---------------------------------- */
   /* Il blu e' scuro (L 0.28), quindi fa i due mestieri con lo stesso valore:
@@ -198,12 +198,6 @@
      indietro. E' l'unico token che non cambia fra i due temi, perche' il fondo
      su cui sta non cambia — e' sempre il blu. */
   --su-primario-tenue: oklch(0.860 0.045 227.8);
-  /* E la stessa riga **sopra l'arancio** non puo' essere questa: il blu e' scuro
-     e vuole una riga chiara, l'arancio e' chiaro e vuole una riga scura. Erano
-     un token solo perche' prima i due riempimenti erano lo stesso viola; adesso
-     sono due colori con due luminosita' opposte, e un valore solo ne serve bene
-     uno e tradisce l'altro. */
-  --tuo-su-tenue: oklch(0.380 0.075 247.6);
   --primary-soft: oklch(0.940 0.038 227.8);
   --primary-bordo: oklch(0.560 0.055 247.6);
 
@@ -216,10 +210,10 @@
      Per le due volte in cui serve davvero scritto — un importo, un'etichetta —
      c'e' `--tuo-testo`, che e' lo stesso arancio sceso fino a 4.5:1. */
   --tuo: oklch(0.777 0.120 47.7);          /* #F59E71 esatto */
-  --tuo-testo: oklch(0.515 0.120 47.7);
+  --tuo-testo: oklch(0.522 0.120 47.7);
   --tuo-su: oklch(0.282 0.075 247.6);
-  --tuo-velo: oklch(0.955 0.035 47.7);
-  --tuo-bordo: oklch(0.515 0.120 47.7);
+  --tuo-velo: oklch(0.945 0.040 47.7);
+  --tuo-bordo: oklch(0.522 0.120 47.7);
 
   /* ---- gli stati ------------------------------------------------------- */
   /* Rosso e verde non sono un quarto e un quinto colore del marchio: sono due
@@ -228,13 +222,13 @@
      solo in saturazione, o «annulla il passaggio» e «prenota» si confonderebbero
      a colpo d'occhio. PRODUCT.md chiede che non siano **soli** a dirlo, e infatti
      ogni posto in cui compaiono ha anche una parola o una forma. */
-  --danger: oklch(0.545 0.175 27.0);
+  --danger: oklch(0.586 0.170 27.0);
   --danger-pieno: oklch(0.520 0.180 27.0);
-  --danger-soft: oklch(0.965 0.022 27.0);
-  --ok: oklch(0.505 0.115 162.0);
+  --danger-soft: oklch(0.950 0.030 27.0);
+  --ok: oklch(0.554 0.110 162.0);
   --ok-deep: oklch(0.554 0.110 162.0);
   --ok-pieno: oklch(0.500 0.110 162.0);
-  --ok-soft: oklch(0.965 0.022 162.0);
+  --ok-soft: oklch(0.950 0.030 162.0);
 
   /* ---- la carrozzeria --------------------------------------------------- */
   /* **La scocca e' una superficie piena, non un contorno**: l'oggetto e' solido
@@ -242,20 +236,20 @@
      chiara la lamiera scende, cosi' la sagoma si vede contro la pagina, e i
      buchi diventano chiari. Il posto **tuo** resta l'arancio pieno, l'unico
      riempimento caldo del disegno. Le soglie le misura `npm run contrasto`. */
-  --piastra: oklch(0.920 0.030 227.8);
+  --piastra: oklch(0.240 0.070 247.6);
   /* L'inchiostro **dentro** l'auto non segue il tema, perche' non segue la
      pagina: segue la piastra, che e' scura in tutti e due. */
-  --posto-testo: oklch(0.240 0.070 247.6);
-  --posto-libero: oklch(0.400 0.060 247.6);
-  --scocca: oklch(0.480 0.058 247.6);
-  --scocca-luce: oklch(0.540 0.055 247.6);
-  --scocca-ombra: oklch(0.360 0.060 247.6);
-  --scocca-riga: oklch(0.280 0.065 247.6);
-  --vetro: oklch(0.300 0.065 247.6);
-  --gomma: oklch(0.060 0.020 247.6);
-  --posto: oklch(0.900 0.035 227.8);
+  --posto-testo: oklch(0.916 0.052 227.8);
+  --posto-libero: oklch(0.780 0.060 227.8);
+  --scocca: oklch(0.700 0.050 227.8);
+  --scocca-luce: oklch(0.800 0.040 227.8);
+  --scocca-ombra: oklch(0.600 0.055 227.8);
+  --scocca-riga: oklch(0.480 0.060 227.8);
+  --vetro: oklch(0.380 0.070 247.6);
+  --gomma: oklch(0.200 0.040 247.6);
+  --posto: oklch(0.230 0.065 247.6);
   --pavimento: oklch(0.330 0.060 247.6);
-  --posto-bordo: oklch(0.240 0.070 247.6);
+  --posto-bordo: oklch(0.900 0.035 227.8);
 
   /* ---- le forme -------------------------------------------------------- */
   /* Quattro raggi, uno per classe di oggetto — non un raggio solo su tutto, che
@@ -319,10 +313,10 @@
   --surface-2: oklch(0.410 0.055 247.6);
   --rilievo: oklch(0.410 0.055 247.6);
   --border: oklch(0.400 0.050 247.6);
-  --border-strong: oklch(0.620 0.050 227.8);
+  --border-strong: oklch(0.548 0.050 227.8);
   --ink: oklch(0.916 0.052 227.8);         /* #C0EBFF esatto */
-  --ink-soft: oklch(0.800 0.045 227.8);
-  --segnaposto: oklch(0.800 0.045 227.8);
+  --ink-soft: oklch(0.720 0.045 227.8);
+  --segnaposto: oklch(0.720 0.045 227.8);
   /* Al buio si ribalta: quello che si tocca e' l'azzurro pieno con il blu
      sopra, perche' un blu pieno su carta blu non si vedrebbe. */
   --primary: oklch(0.916 0.052 227.8);
@@ -330,7 +324,6 @@
   --primary-hover: oklch(0.830 0.055 227.8);
   --su-primario: oklch(0.282 0.075 247.6);
   --su-primario-tenue: oklch(0.500 0.060 247.6);
-  --tuo-su-tenue: oklch(0.380 0.075 247.6);
   --primary-soft: oklch(0.400 0.055 247.6);
   --primary-bordo: oklch(0.750 0.055 227.8);
   /* L'arancio non si muove, ed e' l'unica cosa che non si muove: al buio regge
@@ -339,16 +332,16 @@
   --tuo: oklch(0.777 0.120 47.7);
   --tuo-testo: oklch(0.777 0.120 47.7);
   --tuo-su: oklch(0.282 0.075 247.6);
-  --tuo-velo: oklch(0.330 0.070 47.7);
+  --tuo-velo: oklch(0.420 0.080 47.7);
   --tuo-bordo: oklch(0.777 0.120 47.7);
-  --danger: oklch(0.810 0.120 27.0);
+  --danger: oklch(0.670 0.150 27.0);
   --danger-pieno: oklch(0.560 0.180 27.0);
   --danger-soft: oklch(0.400 0.080 27.0);
-  --ok: oklch(0.775 0.105 162.0);
+  --ok: oklch(0.638 0.110 162.0);
   --ok-deep: oklch(0.638 0.110 162.0);
   --ok-pieno: oklch(0.530 0.110 162.0);
   --ok-soft: oklch(0.390 0.060 162.0);
-  --piastra: oklch(0.900 0.035 227.8);
+  --piastra: transparent;
   /* La targa si ribalta al contrario della pagina, ed e' voluto: una targa
      avvitata su una parete scura e' una targa chiara. */
   --targa: oklch(0.916 0.052 227.8);
@@ -495,7 +488,7 @@ a:hover { color: var(--primary-hover); }
   white-space: nowrap;
 }
 .targa svg { color: inherit; flex: none; }
-.targa b { font-weight: 600; }
+.targa b { font-weight: 500; }
 
 /* ================= AUTH =================
 
@@ -699,7 +692,7 @@ a:hover { color: var(--primary-hover); }
   margin: 18px 0;
   color: var(--ink-soft);
   font-size: 0.74rem;
-  font-weight: 600;
+  font-weight: 500;
   letter-spacing: 0.02em;
   text-transform: uppercase;
 }
@@ -716,7 +709,7 @@ a:hover { color: var(--primary-hover); }
 label {
   display: block;
   font-size: 0.74rem;
-  font-weight: 600;
+  font-weight: 500;
   letter-spacing: 0.01em;
   text-transform: uppercase;
   color: var(--ink-soft);
@@ -914,7 +907,7 @@ input[type="time"]::-webkit-calendar-picker-indicator { opacity: 0.6; cursor: po
   color: var(--primary-testo);
   font: inherit;
   font-size: 0.85rem;
-  font-weight: 600;
+  font-weight: 500;
   cursor: pointer;
   text-decoration: underline;
   text-underline-offset: 3px;
@@ -941,7 +934,7 @@ input[type="time"]::-webkit-calendar-picker-indicator { opacity: 0.6; cursor: po
 .auth-message {
   margin-top: 16px;
   font-size: 0.88rem;
-  font-weight: 600;
+  font-weight: 500;
   color: var(--danger);
   background: var(--danger-soft);
   border: 1px solid oklch(0.42 0.12 25);
@@ -1175,7 +1168,7 @@ input[type="time"]::-webkit-calendar-picker-indicator { opacity: 0.6; cursor: po
   margin-bottom: 20px;
 }
 
-.howto-step { display: flex; align-items: center; gap: 12px; font-weight: 600; font-size: 0.9rem; color: var(--ink); }
+.howto-step { display: flex; align-items: center; gap: 12px; font-weight: 500; font-size: 0.9rem; color: var(--ink); }
 .howto-icon {
   color: var(--primary-testo);
   background: var(--primary-soft);
@@ -1321,7 +1314,7 @@ input[type="time"]::-webkit-calendar-picker-indicator { opacity: 0.6; cursor: po
   border-radius: var(--r-chip);
   cursor: pointer;
 }
-.group-members-count { color: var(--ink-soft); font-weight: 600; }
+.group-members-count { color: var(--ink-soft); font-weight: 500; }
 
 /* Riepilogo giorno */
 .day-stats { display: flex; gap: 8px; flex-wrap: wrap; align-items: center; margin-bottom: 20px; }
@@ -1358,7 +1351,7 @@ input[type="time"]::-webkit-calendar-picker-indicator { opacity: 0.6; cursor: po
 .stat-chip svg { color: var(--ink-soft); align-self: center; }
 .stat-chip strong {
   color: var(--ink);
-  font-weight: 600;
+  font-weight: 500;
   font-size: 1.12rem;
   line-height: 1;
   letter-spacing: -0.02em;
@@ -1388,7 +1381,7 @@ input[type="time"]::-webkit-calendar-picker-indicator { opacity: 0.6; cursor: po
 
 .add-card h2 {
   font-size: 0.76rem;
-  font-weight: 600;
+  font-weight: 500;
   letter-spacing: 0.02em;
   text-transform: uppercase;
   color: var(--ink-soft);
@@ -1419,7 +1412,7 @@ input[type="time"]::-webkit-calendar-picker-indicator { opacity: 0.6; cursor: po
 
 .walkers-card h2 {
   font-size: 0.74rem;
-  font-weight: 600;
+  font-weight: 500;
   letter-spacing: 0.02em;
   text-transform: uppercase;
   color: var(--ink-soft);
@@ -1436,7 +1429,7 @@ input[type="time"]::-webkit-calendar-picker-indicator { opacity: 0.6; cursor: po
   border-radius: var(--r-chip);
   padding: 6px 12px;
   font-size: 0.83rem;
-  font-weight: 600;
+  font-weight: 500;
   color: var(--ink-soft);
 }
 .walker-chip.request { background: var(--primary-soft); border-color: var(--primary-bordo); color: var(--primary-testo); font-weight: 600; }
@@ -1842,7 +1835,7 @@ input[type="time"]::-webkit-calendar-picker-indicator { opacity: 0.6; cursor: po
    riga sotto che lega insieme i passaggi di quel giorno. */
 .history-day-title {
   font-size: 0.72rem;
-  font-weight: 600;
+  font-weight: 500;
   letter-spacing: 0.02em;
   text-transform: uppercase;
   color: var(--ink-soft);
@@ -1870,7 +1863,7 @@ input[type="time"]::-webkit-calendar-picker-indicator { opacity: 0.6; cursor: po
   border-radius: var(--r-chip);
   padding: 3px 10px;
   font-size: 0.79rem;
-  font-weight: 600;
+  font-weight: 500;
   color: var(--ink-soft);
 }
 .history-chip.driver { background: var(--tuo); border-color: var(--tuo); color: var(--tuo-su); font-weight: 700; }
@@ -1906,7 +1899,7 @@ input[type="time"]::-webkit-calendar-picker-indicator { opacity: 0.6; cursor: po
 
 .fermate-box { border-top: 1px solid var(--border); margin: 14px 0 0; padding: 12px 0 0; }
 .fermate-titolo {
-  font-size: 0.70rem; font-weight: 600; letter-spacing: 0.02em; text-transform: uppercase;
+  font-size: 0.70rem; font-weight: 500; letter-spacing: 0.02em; text-transform: uppercase;
   color: var(--ink-soft); margin-bottom: 8px;
 }
 .fermate-elenco { display: flex; gap: 6px; flex-wrap: wrap; margin-bottom: 8px; }
@@ -1947,7 +1940,7 @@ input[type="time"]::-webkit-calendar-picker-indicator { opacity: 0.6; cursor: po
   font-size: 0.72rem; color: var(--ink-soft);
   font-variant-numeric: tabular-nums;
 }
-.week-testa b { color: var(--ink); text-transform: uppercase; letter-spacing: 0.01em; font-size: 0.68rem; font-weight: 600; }
+.week-testa b { color: var(--ink); text-transform: uppercase; letter-spacing: 0.01em; font-size: 0.68rem; font-weight: 500; }
 .week-auto, .week-vuoto {
   display: flex; align-items: baseline; gap: 6px; flex-wrap: wrap;
   width: 100%;
@@ -2154,7 +2147,7 @@ input[type="time"]::-webkit-calendar-picker-indicator { opacity: 0.6; cursor: po
   position: sticky; top: 0; z-index: 60;
   padding: 8px 14px;
   background: var(--danger-pieno); color: oklch(1 0 0);
-  font-size: 0.84rem; font-weight: 600; text-align: center;
+  font-size: 0.84rem; font-weight: 500; text-align: center;
 }
 .offline-bar[hidden] { display: none; }
 
@@ -2217,7 +2210,7 @@ input[type="time"]::-webkit-calendar-picker-indicator { opacity: 0.6; cursor: po
   margin-top: 18px;
 }
 .card-title {
-  font-size: 0.74rem; font-weight: 600; letter-spacing: 0.02em; text-transform: uppercase;
+  font-size: 0.74rem; font-weight: 500; letter-spacing: 0.02em; text-transform: uppercase;
   color: var(--ink-soft); margin-bottom: 6px;
 }
 .card-sub { color: var(--ink-soft); font-size: 0.86rem; margin-bottom: 14px; max-width: 66ch; }
@@ -2423,7 +2416,7 @@ input[type="time"]::-webkit-calendar-picker-indicator { opacity: 0.6; cursor: po
 }
 .dash .k .lab {
   font-size: 0.65rem; color: var(--ink-soft); overflow-wrap: anywhere;
-  letter-spacing: 0.01em; text-transform: uppercase; font-weight: 600;
+  letter-spacing: 0.01em; text-transform: uppercase; font-weight: 500;
 }
 .dash .k .val {
   font-size: 1.25rem; font-weight: 700; margin-top: 3px; letter-spacing: -0.03em;
@@ -2433,7 +2426,7 @@ input[type="time"]::-webkit-calendar-picker-indicator { opacity: 0.6; cursor: po
 /* Cio' che e' tuo: pieno, con il quasi-bianco sopra. La misura e' la stessa delle altre —
    cambia il materiale, non la dimensione. */
 .dash .k.mio { background: var(--tuo); border-color: var(--tuo); color: var(--tuo-su); }
-.dash .k.mio .lab, .dash .k.mio .nota { color: var(--tuo-su-tenue); }
+.dash .k.mio .lab, .dash .k.mio .nota { color: var(--su-primario-tenue); }
 .dash .k.mio .val { color: var(--tuo-su); }
 .dash .k.allerta { border-color: var(--danger); background: var(--danger-soft); }
 .dash .k.allerta .val { color: var(--danger); }
@@ -2451,7 +2444,7 @@ input[type="time"]::-webkit-calendar-picker-indicator { opacity: 0.6; cursor: po
 }
 .dash .card > .piede { margin-top: auto; }
 .dash .card h3 {
-  margin: 0; font-size: 0.70rem; font-weight: 600; overflow-wrap: anywhere;
+  margin: 0; font-size: 0.70rem; font-weight: 500; overflow-wrap: anywhere;
   letter-spacing: 0.01em; text-transform: uppercase;
 }
 .dash .sub { color: var(--ink-soft); font-size: 0.68rem; overflow-wrap: anywhere; }

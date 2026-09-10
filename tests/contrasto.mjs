@@ -155,7 +155,9 @@ const COPPIE = [
 
   // «Questo e' tuo»: viola pieno con il quasi-bianco sopra, e il contorno intorno.
   ['quasi-bianco su cio\' che e\' tuo', '--tuo-su', '--tuo', 4.5],
-  ['riga tenue su cio\' che e\' tuo', '--su-primario-tenue', '--tuo', 4.5],
+  // Sopra l'arancio la riga di servizio non e' quella del blu: i due riempimenti
+  // hanno luminosita' opposte, quindi due token. Vale la soglia del testo.
+  ['riga tenue su cio\' che e\' tuo', '--tuo-su-tenue', '--tuo', 4.5],
   ['cio\' che e\' tuo, come testo su carta', '--tuo-testo', '--surface', 4.5],
   ['cio\' che e\' tuo, come testo sul suo velo', '--tuo-testo', '--tuo-velo', 4.5],
   ['contorno di cio\' che e\' tuo, sulla carta', '--tuo-bordo', '--surface', 3],
@@ -167,16 +169,24 @@ const COPPIE = [
   ['conferma sul suo velo', '--ok', '--ok-soft', 4.5],
   ['conferma su carta', '--ok', '--surface', 4.5],
 
-  // Le sei tinte degli avatar (COLORI_AV in app.js): un cerchio con due lettere
-  // dentro e' testo, e vale la soglia del testo. Sono sei perche' servono a
-  // distinguere sei persone, ma stanno tutte nella famiglia del viola e portano
-  // tutte il quasi-bianco sopra: cambiano di tinta prima che di luminosita'.
-  ['iniziali sull\'avatar 1', '--su-primario', 'oklch(0.50 0.200 300)', 4.5],
-  ['iniziali sull\'avatar 2', '--su-primario', 'oklch(0.46 0.165 285)', 4.5],
-  ['iniziali sull\'avatar 3', '--su-primario', 'oklch(0.54 0.215 312)', 4.5],
-  ['iniziali sull\'avatar 4', '--su-primario', 'oklch(0.44 0.140 272)', 4.5],
-  ['iniziali sull\'avatar 5', '--su-primario', 'oklch(0.52 0.155 328)', 4.5],
-  ['iniziali sull\'avatar 6', '--su-primario', 'oklch(0.48 0.105 262)', 4.5],
+  // Le sei tinte degli avatar (COLORI_AV in mod/storico.js): un cerchio con due
+  // lettere dentro e' testo, e vale la soglia del testo. Sono sei perche' servono
+  // a distinguere sei persone, e girano intorno al blu della palette cambiando
+  // **tinta** prima che luminosita'.
+  //
+  // Due cose le tengono separate dal resto del foglio, e sono decisioni, non
+  // taratura. L'arancio non e' fra loro: qui l'arancio vuol dire «tuo», e un
+  // avatar arancione direbbe che quella persona sei tu. E le lettere sopra sono
+  // **sempre bianche**, non `--su-primario`: quello al buio diventa il blu,
+  // perche' li' il riempimento interattivo e' chiaro — ma questi sei riempimenti
+  // sono di mezzo tono in tutti e due i temi, e il bianco e' l'unico inchiostro
+  // che ci regge sopra.
+  ['iniziali sull\'avatar 1', 'oklch(0.999 0 0)', 'oklch(0.470 0.090 247)', 4.5],
+  ['iniziali sull\'avatar 2', 'oklch(0.999 0 0)', 'oklch(0.440 0.070 210)', 4.5],
+  ['iniziali sull\'avatar 3', 'oklch(0.999 0 0)', 'oklch(0.455 0.075 285)', 4.5],
+  ['iniziali sull\'avatar 4', 'oklch(0.999 0 0)', 'oklch(0.425 0.065 180)', 4.5],
+  ['iniziali sull\'avatar 5', 'oklch(0.999 0 0)', 'oklch(0.480 0.085 265)', 4.5],
+  ['iniziali sull\'avatar 6', 'oklch(0.999 0 0)', 'oklch(0.410 0.060 200)', 4.5],
   ['iniziali sull\'avatar tuo', '--tuo-su', '--tuo', 4.5],
 
   // L'auto. La scocca e' un elemento non testuale che porta informazione — se non
@@ -184,13 +194,13 @@ const COPPIE = [
   // 3:1, su **tutti e due** i fondi su cui l'auto compare: il pannello
   // dell'accesso e la scheda di un passaggio. E' la coppia che avrebbe fermato le
   // prime due stesure: scocca riempita di `--surface` faceva 1,42:1.
-  // Alla luce l'auto sta sulla piastra, e la piastra e' l'unico fondo che ha.
-  ['scocca dell\'auto, sulla sua piastra', '--scocca', '--piastra', 3, 'chiaro'],
-  // Al buio la piastra e' trasparente, quindi sotto l'auto c'e' quello che c'era
-  // prima: la pagina, o la scheda del passaggio. Sono due fondi e vanno misurati
-  // tutti e due — e' la coppia che avrebbe fermato le prime due stesure di C40.
-  ['scocca dell\'auto, sul fondo pagina', '--scocca', '--bg', 3, 'scuro'],
-  ['scocca dell\'auto, sulla scheda del passaggio', '--scocca', '--surface', 3, 'scuro'],
+  // **L'auto ha una piastra in tutti e due i temi, e prima no.** Al buio era
+  // trasparente, quindi la lamiera doveva essere chiara per staccare dalla pagina
+  // — e una lamiera chiara nasconde il posto arancione, che per vedersi vuole un
+  // fondo sotto L 0.484. Con la palette nuova l'auto e' un oggetto stampato con la
+  // sua carta chiara: lamiera scura, posti chiari scavati dentro, il posto tuo
+  // arancione. Un fondo solo, misurato in tutti e due i temi.
+  ['scocca dell\'auto, sulla sua piastra', '--scocca', '--piastra', 3],
   ['il vuoto di un posto, sulla scocca', '--posto', '--scocca', 3],
   ['il posto tuo, sulla scocca', '--tuo', '--scocca', 3],
   ['contorno di un posto, sul suo vuoto', '--posto-bordo', '--posto', 3],

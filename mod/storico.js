@@ -751,8 +751,13 @@ const iconaSvg = (id, w = 15) =>
 // quasi-bianco: con il candy blue erano chiare e sopra ci andava l'onyx, ed e' il
 // verso che si e' ribaltato insieme all'accento. Un avatar e' un cerchio con due
 // lettere dentro: e' testo, e vale la soglia del testo (`npm run contrasto`).
-const COLORI_AV = ['oklch(0.50 0.200 300)', 'oklch(0.46 0.165 285)', 'oklch(0.54 0.215 312)',
-  'oklch(0.44 0.140 272)', 'oklch(0.52 0.155 328)', 'oklch(0.48 0.105 262)'];
+// Sei tinte intorno al blu della palette, che cambiano di tinta prima che di
+// luminosita': servono a distinguere sei persone, non a dire qualcosa. L'arancio
+// non e' fra loro di proposito — qui l'arancio vuol dire «tuo», e un avatar
+// arancione direbbe che quella persona sei tu. Le lettere sopra sono sempre
+// bianche, e le sei coppie le misura `tests/contrasto.mjs`.
+const COLORI_AV = ['oklch(0.470 0.090 247)', 'oklch(0.440 0.070 210)', 'oklch(0.455 0.075 285)',
+  'oklch(0.425 0.065 180)', 'oklch(0.480 0.085 265)', 'oklch(0.410 0.060 200)'];
 function coloreDi(id) {
   let h = 0;
   for (const c of String(id || '')) h = (h * 31 + c.charCodeAt(0)) >>> 0;
