@@ -50,11 +50,24 @@ jobs:
           key=$(sed -n "s/.*SUPABASE_ANON_KEY = '\([^']*\)'.*/\1/p" config.js)
           [ -n "$url" ] && [ -n "$key" ] || { echo "config.js non ha dato URL e chiave"; exit 1; }
 
-          # `/rest/v1/` fa costruire a PostgREST la descrizione dello schema, che si
-          # ricava interrogando il catalogo: se torna 200, Postgres ha risposto.
+          # **Si interroga una tabella, non la radice.** La prima stesura chiedeva
+          # `/rest/v1/`, che serve la descrizione OpenAPI dello schema: su questo
+          # progetto quella porta non e' aperta alla chiave anon e risponde **401
+          # sempre**, con Supabase acceso o spento. Il primo battito programmato, il
+          # 10/09/2026 alle 12:31, e' fallito per quello e ha aperto una segnalazione
+          # su un database che stava benissimo — cioe' il controllo non misurava il
+          # database, misurava una porta chiusa. E un allarme che suona sempre e' un
+          # allarme che si impara a ignorare, che e' peggio di non averlo.
+          #
+          # `groups` esiste dalla 003 e la sua policy di lettura e' per membri: da
+          # `anon` la risposta e' `200` con una lista vuota. Vuota va benissimo — qui
+          # non si guardano le righe, si guarda che qualcuno abbia risposto: per dire
+          # `[]` PostgREST deve interrogare Postgres, e con il progetto in pausa
+          # quella richiesta non torna `200`.
           codice=$(curl -sS -o /dev/null -w '%{http_code}' --max-time 20 \
-            -H "apikey: $key" -H "Authorization: Bearer $key" "$url/rest/v1/")
-          echo "rest/v1 -> HTTP $codice"
+            -H "apikey: $key" -H "Authorization: Bearer $key" \
+            "$url/rest/v1/groups?select=id&limit=1")
+          echo "rest/v1/groups -> HTTP $codice"
           [ "$codice" = "200" ] || exit 1
 
       # Un controllo che fallisce dentro un registro che nessuno apre non e' un

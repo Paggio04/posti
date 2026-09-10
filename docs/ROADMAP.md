@@ -1879,6 +1879,19 @@ PostgREST risponda, che è la parte che conta — una GET sulla home la serve la
 sarebbe verde anche con Supabase spento, che sul piano gratuito succede da solo per inattività.
 Fallendo apre una segnalazione, invece di finire in un registro che non apre nessuno.
 
+**E la prima corsa programmata l'ha smentito, il 10/09/2026 alle 12:31.** Il controllo sul
+database chiedeva `/rest/v1/`, cioè la radice di PostgREST, che serve la descrizione OpenAPI dello
+schema: su questo progetto quella porta non è aperta alla chiave anon e risponde **401 sempre**,
+con Supabase acceso o spento. Il battito ha aperto la segnalazione #37 su un database che stava
+benissimo — misurava una porta chiusa, non il database. Ora interroga `groups`, che da `anon`
+risponde `200` con una lista vuota: la lista vuota va bene, qui non si guardano le righe, si
+guarda che *qualcuno* abbia risposto, e per dire `[]` PostgREST deve interrogare Postgres.
+
+È la stessa forma delle altre tre volte in questo file, ed è la quarta: **un controllo che gira non
+è un controllo che misura.** Con una differenza che vale scriverla, perché è peggio — un controllo
+rosso a vuoto non è solo inutile, è dannoso: un allarme che suona sempre è un allarme che si impara
+a ignorare, e a quel punto il giorno che Supabase va davvero in pausa nessuno lo guarda.
+
 **Non fatto, e non si fa dal repo** — sta in `README.md`, «Cosa si imposta a mano», e le righe
 gialle in `SECURITY.md` sono quelle: il secondo progetto Supabase per le anteprime (oggi
 un'anteprima è l'app **con i dati veri dentro**, e `rete.js` ci mette un cartello che avvisa senza
