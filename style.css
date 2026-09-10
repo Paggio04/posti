@@ -3106,7 +3106,20 @@ form.signup .auth-accetto { display: block; }
   min-height: 0; min-width: 0;
 }
 
+/* **Un `label` qui dentro non porta i margini del resto del foglio.** L'app
+   veste i `label` dei moduli con `margin-bottom`, e la barra di ricerca, il
+   selettore del periodo e le due tendine delle schede sono `label`: con
+   l'allineamento al centro quel margine finiva nella scatola dell'elemento e lo
+   alzava di sette pixel rispetto ai bottoni accanto. Non era una spaziatura
+   sbagliata, era una regola scritta per un altro posto che arrivava fin qui. */
+.app-lynk label { margin: 0; }
+
 .app-lynk .cima { display: flex; align-items: center; gap: var(--sp-2); height: 44px; }
+/* I bottoni si appoggiano al bordo destro, dove finiscono tutte le altre righe
+   della vista. Senza, la fila si fermava dove finiva la ricerca e restavano
+   duecentottanta pixel di vuoto: la barra galleggiava mentre tutto il resto era
+   allineato, ed e' il genere di scarto che si sente prima di vederlo. */
+.app-lynk .cima .tondo:first-of-type { margin-left: auto; }
 .app-lynk .cerca {
   flex: 1 1 auto; max-width: 460px; display: flex; align-items: center; gap: var(--sp-2);
   background: var(--surface); border: 1px solid var(--border);
@@ -3144,7 +3157,9 @@ form.signup .auth-accetto { display: block; }
   background: var(--surface); border: 1px solid var(--border); border-radius: var(--r-btn);
   padding: 0 var(--sp-3); height: 40px;
 }
-.app-lynk .periodo svg { width: 16px; height: 16px; color: var(--ink-soft); }
+.app-lynk .periodo .giu, .app-lynk .scelta .giu {
+  width: 14px; height: 14px; color: var(--ink-soft); flex: none; display: block;
+}
 /* **Un `select` e un `input` non stanno nella loro pillola senza che glielo si
    dica.** Portano da soli un'altezza di riga e un riempimento del browser, e
    dentro un contenitore alto 32 o 44 diventano 41 e 47: sporgono di qualche

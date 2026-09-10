@@ -73,7 +73,6 @@
       <label class="cerca">
         <svg viewBox="0 0 20 20" aria-hidden="true"><circle cx="9" cy="9" r="6" fill="none" stroke="currentColor" stroke-width="1.8"/><path d="M13.5 13.5L18 18" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/></svg>
         <input type="search" placeholder="Cerca persone, destinazioni, fermate" />
-        <kbd>⌘K</kbd>
       </label>
       <button type="button" class="tondo" aria-label="Avvisi" id="btn-avvisi"><span class="bollino"></span></button>
       <button type="button" class="tondo" aria-label="Gira il tema" id="btn-tema"></button>
@@ -87,13 +86,13 @@
         <p>Riepilogo della Comitiva del mare · 5 persone</p>
       </div>
       <label class="periodo">
-        <svg viewBox="0 0 20 20" aria-hidden="true"><rect x="3" y="4" width="14" height="13" rx="2" fill="none" stroke="currentColor" stroke-width="1.6"/><path d="M3 8h14M7 2v4M13 2v4" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"/></svg>
         <select aria-label="Periodo">
           <option>Ultimi 30 giorni</option>
           <option>Ultimi 7 giorni</option>
           <option>Questo mese</option>
           <option>Ultimi 90 giorni</option>
         </select>
+        <svg class="giu" viewBox="0 0 20 20" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"><path d="M5.5 8 10 12.5 14.5 8"/></svg>
       </label>
     </div>
 
@@ -103,7 +102,7 @@
       <section class="scheda">
         <div class="scheda-testa">
           <div><h2>Occupazione settimanale</h2><p>Posti presi sui posti offerti, giorno per giorno</p></div>
-          <label class="scelta"><select aria-label="Settimana"><option>Questa settimana</option><option>La prossima</option></select></label>
+          <label class="scelta"><select aria-label="Settimana"><option>Questa settimana</option><option>La prossima</option></select><svg class="giu" viewBox="0 0 20 20" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"><path d="M5.5 8 10 12.5 14.5 8"/></svg></label>
         </div>
         <div class="scheda-corpo grafico" id="grafico"></div>
         <div class="giorni" id="giorni"></div>
@@ -112,7 +111,7 @@
       <section class="scheda">
         <div class="scheda-testa">
           <div><h2>Distribuzione turni</h2></div>
-          <label class="scelta"><select aria-label="Finestra"><option>30 giorni</option><option>90 giorni</option></select></label>
+          <label class="scelta"><select aria-label="Finestra"><option>30 giorni</option><option>90 giorni</option></select><svg class="giu" viewBox="0 0 20 20" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"><path d="M5.5 8 10 12.5 14.5 8"/></svg></label>
         </div>
         <div class="scheda-corpo ciambella-riga">
           <div class="ciambella" id="ciambella"></div>
