@@ -144,7 +144,15 @@ test('robots.txt e sitemap.xml ci sono e si parlano', async ({ request }) => {
 // ascolta e a chi rilegge: il tema sulla radice, lo stato in `aria-pressed`, la
 // faccia mostrata (che e' **dove andresti**, non dove sei) e la classe che fa
 // partire la voltata. La quinta e' che la scelta resti scelta dopo un ricaricamento.
+// **Il tema di partenza va dichiarato, non ereditato.** Da C53 l'app si apre come la
+// vuole il browser, quindi «nasce chiara» non e' piu' una proprieta' dell'app: e' una
+// proprieta' di chi la guarda. Playwright per sua scelta parte in chiaro, ma appoggiarsi
+// a quel valore predefinito vuol dire che il giorno in cui cambia — o in cui qualcuno
+// mette `colorScheme` nella configurazione — questo test fallirebbe parlando del
+// bottone, che non c'entra niente. Si chiede qui dentro, e non con un `test.use` in
+// testa al file che varrebbe per tutti i test compresi quelli a cui il tema non serve.
 test('l\'interruttore del tema gira la pagina, e la scelta resta', async ({ page }) => {
+  await page.emulateMedia({ colorScheme: 'light' });
   await page.goto('/');
   // Nessun accesso vero: si scopre il guscio, che e' dove sta la barra in alto.
   await page.evaluate(() => {
@@ -153,7 +161,8 @@ test('l\'interruttore del tema gira la pagina, e la scelta resta', async ({ page
   });
 
   const tasto = page.locator('#tema-tasto');
-  // L'app nasce chiara, quindi il bottone mostra la luna: dove andresti.
+  // Col browser in chiaro l'app si apre chiara, quindi il bottone mostra la luna:
+  // dove andresti, non dove sei.
   await expect(tasto).toHaveAttribute('aria-pressed', 'false');
   expect(await tasto.locator('use').getAttribute('href')).toBe('#i-luna');
   // Al primo disegno non deve girare niente: non c'e' stato nessun cambio da dire.
