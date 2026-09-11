@@ -7,6 +7,7 @@
 // Senza quelli i test si saltano invece di fallire: non tutti gli ambienti hanno
 // un database su cui e' lecito scrivere.
 const { test, expect } = require('@playwright/test');
+const { sbloccaAnteprima } = require('./anteprima');
 
 const A = process.env.WT_TEST_EMAIL_A;
 const B = process.env.WT_TEST_EMAIL_B;
@@ -47,7 +48,7 @@ async function vaiA(page, vista) {
   await expect(page.locator(`#view-${vista}`)).toBeVisible();
 }
 
-test('due utenti, una comitiva: pubblicare, entrare col codice, prenotare un sedile', async ({ browser }) => {
+test('due utenti, una comitiva: pubblicare, entrare col codice, prenotare un sedile', async ({ browser, baseURL }) => {
   test.skip(!A || !B || !PW, 'Servono WT_TEST_EMAIL_A, WT_TEST_EMAIL_B e WT_TEST_PASSWORD');
   // Un viaggio completo fra due utenti: molti passi, due schede, il realtime da aspettare.
   // I 30 secondi buoni per uno smoke test qui non bastano.
@@ -56,8 +57,12 @@ test('due utenti, una comitiva: pubblicare, entrare col codice, prenotare un sed
   const nomeGruppo = 'Collaudo ' + Date.now().toString().slice(-6);
   const destinazione = 'Mare ' + Date.now().toString().slice(-4);
 
-  const ctxA = await browser.newContext();
-  const ctxB = await browser.newContext();
+  // `browser.newContext()` non eredita le opzioni di `use`, quindi l'indirizzo di
+  // base va passato a mano: senza, `page.goto('/')` non saprebbe dove andare.
+  const ctxA = await browser.newContext({ baseURL });
+  const ctxB = await browser.newContext({ baseURL });
+  await sbloccaAnteprima(ctxA);
+  await sbloccaAnteprima(ctxB);
   const ada = await ctxA.newPage();
   const bruno = await ctxB.newPage();
 
@@ -74,7 +79,11 @@ test('due utenti, una comitiva: pubblicare, entrare col codice, prenotare un sed
   const cardGruppo = ada.locator('.group-card', { hasText: nomeGruppo });
   await expect(cardGruppo).toBeVisible({ timeout: 15000 });
   const codice = (await cardGruppo.locator('.group-code').textContent()).trim();
-  expect(codice).toHaveLength(6);
+  // Due formati, e vanno accettati tutti e due finche' la `034` non e' applicata
+  // ovunque: sei caratteri di esadecimale (il `default` della `003`) oppure otto
+  // sull'alfabeto senza `I`, `L`, `O`, `0`, `1` (C24). Un `toHaveLength(6)` qui
+  // diventerebbe rosso il giorno della migrazione, su un comportamento corretto.
+  expect(codice).toMatch(/^([A-F0-9]{6}|[ABCDEFGHJKMNPQRSTUVWXYZ23456789]{8})$/);
 
   // --- Ada pubblica la propria auto ---
   await vaiA(ada, 'home');
@@ -88,8 +97,17 @@ test('due utenti, una comitiva: pubblicare, entrare col codice, prenotare un sed
   await expect(bruno.locator('#app-shell')).toBeVisible({ timeout: 20000 });
   await expect(bruno.locator('.ride-card', { hasText: destinazione })).toHaveCount(0);
 
-  // --- Bruno entra col codice e a quel punto la vede ---
+  // --- Un codice sbagliato non dice niente di piu' di quel che deve (C24) ---
+  // Il rifiuto arriva come `null` e non come eccezione, e la frase e' **una** per i due
+  // modi di non entrare. E' il pezzo che nessun test SQL puo' guardare, perche' vive nel
+  // cablaggio fra la risposta vuota e il messaggio; e il tentativo sbagliato viene
+  // contato, ma dieci l'ora sono molti piu' di quelli che un giro di test consuma.
   await vaiA(bruno, 'groups');
+  await bruno.locator('#group-join').click();
+  await rispondiAlDialogo(bruno, 'ZZZZZZZZ');
+  await expect(bruno.locator('#toast')).toContainText('Codice non valido', { timeout: 15000 });
+
+  // --- Bruno entra col codice e a quel punto la vede ---
   await bruno.locator('#group-join').click();
   await rispondiAlDialogo(bruno, codice);
   await expect(bruno.locator('.group-card', { hasText: nomeGruppo })).toBeVisible({ timeout: 15000 });
@@ -132,7 +150,7 @@ test('due utenti, una comitiva: pubblicare, entrare col codice, prenotare un sed
 // Le policy corrispondenti sono gia' coperte da supabase/test/verifica-sicurezza.sql:
 // qui si prova il cablaggio che solo un browser esegue (il dialogo, i toast, la lista
 // dei bloccati, la vista che cambia da sola).
-test('segnalare e bloccare: il dialogo, la lista dei bloccati, e la vista che cambia', async ({ browser }) => {
+test('segnalare e bloccare: il dialogo, la lista dei bloccati, e la vista che cambia', async ({ browser, baseURL }) => {
   test.skip(!A || !B || !PW, 'Servono WT_TEST_EMAIL_A, WT_TEST_EMAIL_B e WT_TEST_PASSWORD');
   // Come il test sopra: due schede, molti passi, il realtime da aspettare.
   test.setTimeout(180_000);
@@ -140,8 +158,12 @@ test('segnalare e bloccare: il dialogo, la lista dei bloccati, e la vista che ca
   const nomeGruppo = 'Segnalazioni ' + Date.now().toString().slice(-6);
   const destinazione = 'Lago ' + Date.now().toString().slice(-4);
 
-  const ctxA = await browser.newContext();
-  const ctxB = await browser.newContext();
+  // `browser.newContext()` non eredita le opzioni di `use`, quindi l'indirizzo di
+  // base va passato a mano: senza, `page.goto('/')` non saprebbe dove andare.
+  const ctxA = await browser.newContext({ baseURL });
+  const ctxB = await browser.newContext({ baseURL });
+  await sbloccaAnteprima(ctxA);
+  await sbloccaAnteprima(ctxB);
   const ada = await ctxA.newPage();
   const bruno = await ctxB.newPage();
 

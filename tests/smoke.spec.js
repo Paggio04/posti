@@ -2,6 +2,13 @@
 // L'indirizzo arriva da playwright.config.js (BASE_URL): l'anteprima della PR in CI,
 // il sito vivo se non specificato.
 const { test, expect } = require('@playwright/test');
+const { sbloccaAnteprima } = require('./anteprima');
+
+// Su un'anteprima l'accesso e' chiuso (vedi `app.js`, `ambienteEstraneo`). Questi
+// controlli misurano il modulo d'accesso, quindi dichiarano di sapere dove sono: senza,
+// misurerebbero il blocco invece di cio' che sono scritti per misurare. Il blocco ha un
+// controllo suo, in fondo, e quello parte da un contesto pulito.
+test.beforeEach(async ({ page }) => { await sbloccaAnteprima(page); });
 
 test('la pagina di accesso si carica e funziona', async ({ page }) => {
   const errors = [];
@@ -81,6 +88,17 @@ test('l\'app si apre anche senza rete', async ({ page, context }) => {
   await expect(page.locator('#auth-view')).toBeAttached();
   // E lo deve dire, invece di mostrare una schermata ferma senza spiegazioni.
   await expect(page.locator('#offline-bar')).toBeVisible();
+
+  // **E i collegamenti in fondo a «sei senza rete» devono aprire quello che dicono.**
+  // Netlify toglie `.html` quando pubblica, quindi il link scritto `privacy.html`
+  // chiede `/privacy`, mentre in cache la pagina sta col suo nome di file. Senza la
+  // riga che riprova con l'estensione (`sw.js`, gestore `navigate`), quel link cadeva
+  // sul ripiego e apriva **il guscio dell'app** al posto dell'informativa: non un
+  // errore, una pagina sbagliata che sembra funzionare. Ed e' proprio la pagina che
+  // per definizione si guarda senza rete.
+  await page.goto('/privacy', { waitUntil: 'domcontentloaded' });
+  await expect(page.locator('h1')).toHaveText('Informativa privacy');
+
   await context.setOffline(false);
 });
 
@@ -99,8 +117,19 @@ test('robots.txt e sitemap.xml ci sono e si parlano', async ({ request }) => {
   const xml = await sitemap.text();
   // Ogni indirizzo elencato deve rispondere davvero: un sitemap con un 404 dentro e' peggio
   // che non averlo, perche' dice al motore di ricerca una cosa falsa.
-  for (const loc of [...xml.matchAll(/<loc>([^<]+)<\/loc>/g)].map((m) => m[1])) {
-    expect((await request.get(loc)).status(), loc).toBe(200);
+  //
+  // **Il dominio si controlla, il percorso si chiede qui.** Chiedere l'indirizzo
+  // assoluto misurerebbe sempre la produzione, anche girando sull'anteprima di una
+  // pull request: una pagina nuova nel sitemap farebbe fallire la propria anteprima
+  // perche' sul sito vivo non c'e' ancora — cioe' il controllo direbbe «rotto» a una
+  // modifica giusta, e non direbbe niente su quella sbagliata. Il dominio dichiarato
+  // resta comunque verificato, che e' l'altra meta' del lavoro di questo test.
+  const loc = [...xml.matchAll(/<loc>([^<]+)<\/loc>/g)].map((m) => m[1]);
+  expect(loc.length).toBeGreaterThan(0);
+  for (const indirizzo of loc) {
+    expect(new URL(indirizzo).origin, indirizzo).toBe('https://wetransport.netlify.app');
+    const percorso = new URL(indirizzo).pathname;
+    expect((await request.get(percorso)).status(), percorso).toBe(200);
   }
 });
 
@@ -115,7 +144,15 @@ test('robots.txt e sitemap.xml ci sono e si parlano', async ({ request }) => {
 // ascolta e a chi rilegge: il tema sulla radice, lo stato in `aria-pressed`, la
 // faccia mostrata (che e' **dove andresti**, non dove sei) e la classe che fa
 // partire la voltata. La quinta e' che la scelta resti scelta dopo un ricaricamento.
+// **Il tema di partenza va dichiarato, non ereditato.** Da C53 l'app si apre come la
+// vuole il browser, quindi «nasce chiara» non e' piu' una proprieta' dell'app: e' una
+// proprieta' di chi la guarda. Playwright per sua scelta parte in chiaro, ma appoggiarsi
+// a quel valore predefinito vuol dire che il giorno in cui cambia — o in cui qualcuno
+// mette `colorScheme` nella configurazione — questo test fallirebbe parlando del
+// bottone, che non c'entra niente. Si chiede qui dentro, e non con un `test.use` in
+// testa al file che varrebbe per tutti i test compresi quelli a cui il tema non serve.
 test('l\'interruttore del tema gira la pagina, e la scelta resta', async ({ page }) => {
+  await page.emulateMedia({ colorScheme: 'light' });
   await page.goto('/');
   // Nessun accesso vero: si scopre il guscio, che e' dove sta la barra in alto.
   await page.evaluate(() => {
@@ -124,7 +161,8 @@ test('l\'interruttore del tema gira la pagina, e la scelta resta', async ({ page
   });
 
   const tasto = page.locator('#tema-tasto');
-  // L'app nasce chiara, quindi il bottone mostra la luna: dove andresti.
+  // Col browser in chiaro l'app si apre chiara, quindi il bottone mostra la luna:
+  // dove andresti, non dove sei.
   await expect(tasto).toHaveAttribute('aria-pressed', 'false');
   expect(await tasto.locator('use').getAttribute('href')).toBe('#i-luna');
   // Al primo disegno non deve girare niente: non c'e' stato nessun cambio da dire.
@@ -186,5 +224,151 @@ test('la posizione non e\' spenta dagli header', async ({ browser }) => {
   }));
   // Il permesso e' concesso dal contesto: se fallisce non e' l'utente, e' la policy.
   expect(esito).toBe('ok');
+  await ctx.close();
+});
+
+// --- Le voci della checklist pre-lancio che solo un browser puo' misurare ---
+
+// **Dove porta un collegamento, non com'e' scritto.** Netlify toglie `.html` quando
+// pubblica: `href="privacy.html"` nel sorgente arriva al browser come `href="/privacy"`.
+// Un controllo sulla stringa misurerebbe quindi l'impostazione di un fornitore invece
+// del collegamento, e sarebbe rosso in anteprima e verde in locale sulla stessa
+// identica pagina. Questo normalizza le due grafie a una: `/privacy`, `/termini`.
+async function pagine(zona) {
+  const href = await zona.locator('a[href]:not([href^="mailto:"])').evaluateAll(
+    (nodi) => nodi.map((n) => n.getAttribute('href')),
+  );
+  return href.map((h) => new URL(h, 'https://wetransport.netlify.app/').pathname.replace(/\.html$/, ''));
+}
+
+// La schermata d'accesso e' l'unica pagina che un motore di ricerca e un lettore di
+// schermo vedono da fuori, e non aveva **nessun** titolo di primo livello: partiva da
+// h2, e l'unico h1 del progetto lo scriveva `app.js` dentro il riepilogo, cioe' dopo
+// l'accesso. `html-validate` non poteva vederlo: non e' un errore di sintassi.
+test('la pagina pubblica ha un titolo di primo livello, e uno solo', async ({ page }) => {
+  await page.goto('/');
+  const visibili = page.locator('h1:visible');
+  await expect(visibili).toHaveCount(1);
+  await expect(visibili).toHaveText('Chi guida oggi?');
+});
+
+// L'informativa era raggiungibile da un punto solo, dentro la scheda Profilo: chi
+// creava un account leggeva chi tratta i suoi dati soltanto una volta entrato. Le due
+// pagine e il titolare stanno dove i dati si raccolgono.
+test('titolare, informativa e termini si leggono prima di entrare', async ({ page, request }) => {
+  await page.goto('/');
+  const piede = page.locator('.auth-fondo');
+  await expect(piede).toBeVisible();
+  await expect(piede).toContainText('Elia Paggetti');
+  await expect(piede.locator('a[href^="mailto:"]')).toBeVisible();
+
+  for (const pagina of ['/privacy', '/termini']) {
+    expect(await pagine(piede), pagina).toContain(pagina);
+    expect((await request.get(pagina + '.html')).status()).toBe(200);
+  }
+});
+
+// In registrazione si accetta qualcosa, quindi in registrazione va detto; in accesso
+// non c'e' niente da accettare e la riga sparisce, tabulazione compresa.
+test('la riga di accettazione compare solo in registrazione', async ({ page }) => {
+  await page.goto('/');
+  await expect(page.locator('.auth-accetto')).toBeHidden();
+  await page.locator('#mode-signup').click();
+  const riga = page.locator('.auth-accetto');
+  await expect(riga).toBeVisible();
+  expect(await pagine(riga)).toEqual(expect.arrayContaining(['/termini', '/privacy']));
+});
+
+test('la pagina dei termini esiste e dice di cosa risponde chi guida', async ({ page }) => {
+  await page.goto('/termini.html');
+  await expect(page.locator('h1')).toHaveText('Termini e condizioni');
+  // Le due cose che questa pagina esiste per dire, e che nessun'altra pagina dice.
+  await expect(page.locator('body')).toContainText('Non è un servizio di trasporto');
+  await expect(page.locator('body')).toContainText('assicurativa');
+});
+
+// Il primo elemento tabulabile dentro l'app salta la barra in alto. Non e'
+// `display: none` — quella lo toglierebbe anche alla tabulazione, cioe' a chi serve.
+test('«vai al contenuto» e\' il primo elemento tabulabile dentro l\'app', async ({ page }) => {
+  await page.goto('/');
+  await page.evaluate(() => {
+    document.getElementById('auth-view').classList.add('hidden');
+    document.getElementById('app-shell').classList.remove('hidden');
+  });
+  await page.keyboard.press('Tab');
+  const primo = page.locator(':focus');
+  await expect(primo).toHaveClass(/salta-al-contenuto/);
+  // Col fuoco rientra sullo schermo: un salto che non si vede non lo usa nessuno.
+  const riquadro = await primo.boundingBox();
+  expect(riquadro.y).toBeGreaterThanOrEqual(0);
+  // E porta davvero da qualche parte.
+  await expect(page.locator('#contenuto')).toHaveCount(1);
+});
+
+// **Un controllo di forma, come quelli SQL sulle funzioni.** La registrazione diceva
+// «questa email e' gia' registrata» in due modi: il messaggio d'errore, e il controllo
+// su `identities.length === 0`, che e' il modo per aggirare l'offuscamento di Supabase.
+// Insieme facevano della registrazione un elenco: si prova un indirizzo per volta e si
+// scopre chi ha un account. Questo test non guarda un comportamento, guarda che quelle
+// due righe non tornino — perche' tornerebbero come una gentilezza verso chi si e'
+// dimenticato di essersi iscritto, che e' esattamente il modo in cui erano arrivate.
+test('la registrazione non dice se un indirizzo ha gia\' un account', async ({ request }) => {
+  const sorgente = await (await request.get('/app.js')).text();
+  expect(sorgente).not.toContain('Questa email è già registrata');
+  // Il campo che Supabase lascia vuoto per non far capire che l'account c'e' gia':
+  // guardarlo e' il modo di aggirare l'offuscamento, quindi non deve comparire.
+  expect(sorgente).not.toContain('identities');
+});
+
+// L'anteprima social era l'icona quadrata da 512: in chat arrivava ritagliata e
+// piccola, e l'app si condivide da dentro (C14).
+test('l\'anteprima social e\' 1200x630 e c\'e\' davvero', async ({ page, request }) => {
+  await page.goto('/');
+  const src = await page.locator('meta[property="og:image"]').getAttribute('content');
+  // Il tag dichiara l'indirizzo assoluto del sito vivo, perche' e' quello che serve a
+  // chi legge l'anteprima. Il file pero' si chiede **a questo** indirizzo: altrimenti
+  // il controllo sull'anteprima di una pull request misurerebbe la produzione, cioe'
+  // sarebbe verde anche per una modifica che l'immagine non ce l'ha.
+  const risposta = await request.get(new URL(src).pathname);
+  expect(risposta.status()).toBe(200);
+  expect(risposta.headers()['content-type']).toContain('image');
+  await expect(page.locator('meta[property="og:image:width"]')).toHaveAttribute('content', '1200');
+  await expect(page.locator('meta[property="og:image:height"]')).toHaveAttribute('content', '630');
+});
+
+// **Il blocco delle anteprime, e questo parte da un contesto pulito.**
+// Tutti i controlli qui sopra dichiarano di sapere dove sono (`test.beforeEach`), perche'
+// misurano il modulo d'accesso e non il blocco. Questo fa il contrario: nasce senza la
+// scappatoia, cosi' vede quello che vedrebbe una persona che apre il link di un'anteprima
+// da una discussione.
+//
+// La regola vale nei due sensi, quindi l'attesa dipende da dove sta girando: sul sito vivo
+// e in locale si deve poter entrare, ovunque altro no. Un controllo che si aspettasse
+// sempre il blocco sarebbe rosso in produzione — cioe' misurerebbe l'indirizzo invece
+// della regola.
+test('su un\'anteprima non si entra, sul sito vivo sì', async ({ browser, baseURL }) => {
+  const host = new URL(baseURL).hostname;
+  const deveBloccare = host !== 'wetransport.netlify.app'
+    && !['localhost', '127.0.0.1', '[::1]'].includes(host);
+
+  const ctx = await browser.newContext({ baseURL });
+  const page = await ctx.newPage();
+  await page.goto('/');
+
+  const avviso = page.locator('#anteprima-blocco');
+  if (deveBloccare) {
+    await expect(avviso).toBeVisible();
+    await expect(avviso).toContainText('wetransport.netlify.app');
+    // I due modi di entrare e il recupero della password: tutti e tre chiusi.
+    await expect(page.locator('#auth-submit')).toBeDisabled();
+    await expect(page.locator('#oauth-google')).toBeDisabled();
+    await expect(page.locator('#forgot-btn')).toBeDisabled();
+    // E cambiare modo non li riapre: `setAuthMode` li rimette giù.
+    await page.locator('#mode-signup').click();
+    await expect(page.locator('#auth-submit')).toBeDisabled();
+  } else {
+    await expect(avviso).toBeHidden();
+    await expect(page.locator('#auth-submit')).toBeEnabled();
+  }
   await ctx.close();
 });

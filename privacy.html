@@ -5,8 +5,13 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>Privacy — WeTransport</title>
   <meta name="description" content="Come WeTransport tratta i tuoi dati: quali raccoglie, perché, per quanto li conserva e come esportarli o cancellarli." />
-  <meta name="color-scheme" content="dark" />
-  <meta name="theme-color" content="#EEF1F3" />
+  <meta name="color-scheme" content="light dark" />
+  <!-- La barra del browser segue il tema del browser: due meta, e sceglie lui.
+       Qui non c'e' un interruttore da inseguire, quindi non serve il codice che
+       nell'app aggiorna questo valore a mano. -->
+  <meta name="theme-color" content="#F4FEFF" media="(prefers-color-scheme: light)" />
+  <meta name="theme-color" content="#04326D" media="(prefers-color-scheme: dark)" />
+  <script src="tema.js"></script>
   <link rel="stylesheet" href="style.css" />
   <link rel="icon" href="icon.svg" type="image/svg+xml" />
   <!-- Questa pagina risponde a due indirizzi (/privacy e /privacy.html): il canonico e'
@@ -16,26 +21,13 @@
   <meta property="og:title" content="Informativa privacy — WeTransport" />
   <meta property="og:description" content="Quali dati raccoglie WeTransport, perché, per quanto tempo, e come esportarli o cancellarli da soli." />
   <meta property="og:url" content="https://wetransport.netlify.app/privacy" />
-  <style>
-    .privacy { max-width: 68ch; margin: 0 auto; padding: 40px 20px 80px; }
-    .privacy h1 { margin-bottom: 8px; }
-    /* 1.05rem contro 0.95rem di corpo: due misure quasi uguali non fanno una
-       gerarchia, e su una pagina lunga di sole intestazioni e paragrafi la
-       gerarchia e' l'unica cosa che la rende scorribile. */
-    .privacy h2 { font-size: 1.25rem; font-weight: 700; margin: 32px 0 8px; }
-    .privacy p, .privacy li { color: var(--ink-soft); font-size: 0.95rem; }
-    .privacy ul { padding-left: 20px; }
-    .privacy table { width: 100%; border-collapse: collapse; margin: 12px 0; font-size: 0.9rem; }
-    .privacy th, .privacy td { text-align: left; padding: 8px 10px; border-bottom: 1px solid var(--border); color: var(--ink-soft); vertical-align: top; }
-    .privacy th { color: var(--ink); font-weight: 600; }
-  </style>
 </head>
 <body>
-  <main class="privacy">
+  <main class="testo-legale">
     <h1>Informativa privacy</h1>
     <p>WeTransport è un'app senza scopo di lucro per organizzare i passaggi in auto. Questa pagina
     dice quali dati raccoglie, perché, per quanto tempo, e cosa puoi farci tu.</p>
-    <p><em>Ultimo aggiornamento: 27 luglio 2026.</em></p>
+    <p><em>Ultimo aggiornamento: 10 settembre 2026.</em></p>
 
     <h2>Titolare del trattamento</h2>
     <p>Il titolare del trattamento è <strong>Elia Paggetti</strong>, che gestisce WeTransport a
@@ -117,11 +109,11 @@
     <p>Su <a href="https://supabase.com">Supabase</a> (database e autenticazione) e serviti da
     <a href="https://www.netlify.com">Netlify</a>. Entrambi li trattano per conto del titolare, come
     responsabili del trattamento. Le connessioni sono sempre cifrate (HTTPS/TLS).</p>
-    <p>Aprendo l'app il browser scarica una libreria da <a href="https://www.jsdelivr.com">jsDelivr</a>,
-    una rete di distribuzione di codice open source: come ogni file preso da un altro dominio, quella
-    richiesta fa arrivare lì il tuo indirizzo IP e il tipo di browser. Non trasmette nessun dato del
-    tuo account e non è un servizio di statistiche. Tutto il resto — pagine, stili, caratteri — arriva
-    da qui.</p>
+    <p><strong>Nient'altro.</strong> Aprendo l'app il tuo browser non contatta nessun altro dominio:
+    pagine, stili, caratteri e la libreria che parla con Supabase arrivano tutti da qui. Fino al 10
+    settembre 2026 la libreria arrivava da jsDelivr, e quella richiesta faceva arrivare lì il tuo
+    indirizzo IP e il tipo di browser; adesso è un file di questo sito e quel destinatario non
+    esiste più.</p>
     <p>Se accendi gli avvisi sul telefono, la notifica passa dal <strong>servizio push del produttore
     del tuo browser</strong> (Google, Apple o Mozilla a seconda di quale usi): è l'unico modo previsto
     dagli standard del web per far comparire un avviso ad app chiusa. Vede l'indirizzo del tuo
@@ -175,7 +167,11 @@
     <p>WeTransport non è pensato per chi ha meno di 14 anni, l'età sotto la quale in Italia serve il
     consenso di chi esercita la responsabilità genitoriale.</p>
 
-    <p><a href="index.html">← Torna a WeTransport</a></p>
+    <nav class="testo-legale-fondo" aria-label="Pagine di servizio">
+      <a href="index.html">← Torna a WeTransport</a>
+      <a href="termini.html">Termini e condizioni</a>
+      <a href="mailto:eli.paggioo@gmail.com">Scrivi al titolare</a>
+    </nav>
   </main>
 </body>
 </html>

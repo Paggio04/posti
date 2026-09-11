@@ -6,8 +6,13 @@
   <title>Pagina non trovata — WeTransport</title>
   <meta name="description" content="L'indirizzo non porta a niente: i passaggi non hanno una pagina propria, si aprono dall'app." />
   <meta name="robots" content="noindex" />
-  <meta name="color-scheme" content="dark" />
-  <meta name="theme-color" content="#EEF1F3" />
+  <meta name="color-scheme" content="light dark" />
+  <!-- La barra del browser segue il tema del browser: due meta, e sceglie lui.
+       Qui non c'e' un interruttore da inseguire, quindi non serve il codice che
+       nell'app aggiorna questo valore a mano. -->
+  <meta name="theme-color" content="#F4FEFF" media="(prefers-color-scheme: light)" />
+  <meta name="theme-color" content="#04326D" media="(prefers-color-scheme: dark)" />
+  <script src="tema.js"></script>
   <link rel="stylesheet" href="style.css" />
   <link rel="icon" href="icon.svg" type="image/svg+xml" />
   <style>
@@ -27,6 +32,10 @@
     <p>Può essere un indirizzo scritto a metà, o un link a un passaggio che nel frattempo è
     stato annullato. I passaggi non hanno un indirizzo proprio: si aprono dall'app.</p>
     <p><a href="/">Vai a WeTransport</a></p>
+    <nav class="testo-legale-fondo centrato" aria-label="Pagine di servizio">
+      <a href="privacy.html">Informativa privacy</a>
+      <a href="termini.html">Termini e condizioni</a>
+    </nav>
   </main>
 </body>
 </html>

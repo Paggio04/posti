@@ -34,7 +34,8 @@ Principi:
 | File | Cosa fa | Perché è separato |
 |---|---|---|
 | `index.html` | Guscio, sprite delle icone, dati strutturati | — |
-| `app.js` | Tutta l'app: auth, gruppi, passaggi, sedili, realtime | Un file solo finché non supera 2-3k righe (ADR 001) |
+| `app.js` | **Solo l'avvio**: `render()`, cioè chi disegna cosa e in che ordine | 51 righe. Era l'app intera fino a C17, e 4400 righe sono il doppio della soglia dell'ADR 001 |
+| `mod/*.js` | L'app, in tredici moduli ES: `auth`, `gruppi`, `passaggi`, `scheda`, `storico`, `persone`, `zona`, `schede`, `notifiche`, `nucleo`, `dialogo`, `auto-svg`, `supabase` | Nessuna build, import nativi. Lo stato condiviso sta in `nucleo.js` e si cambia coi suoi setter: a un `let` importato non si assegna. `tests/moduli.mjs` verifica che ogni nome chiesto sia davvero esportato — né `node --check` né ESLint guardano i fili fra i file |
 | `rete.js` | Avviso "sei senza rete" e registrazione del service worker | **Non importa niente**: deve funzionare quando `app.js` non parte |
 | `sw.js` | Cache del guscio, apertura offline | Gira in un altro mondo (`self`, nessun DOM) |
 | `config.js` | URL e publishable key di Supabase | Pubblici per design |
@@ -46,7 +47,7 @@ Principi:
 | Tabella | Scopo | Vincoli chiave |
 |---|---|---|
 | `profiles` | Nome visibile per utente | PK = `auth.users.id`, auto-creato da trigger alla registrazione. Da C22 `zona_lat`, `zona_lon`, `zona_nome` e `sospeso_motivo` **non sono leggibili da un client**: la propria riga si prende da `mio_profilo()` |
-| `groups` | Comitive | `code` invito unico (6 char), owner |
+| `groups` | Comitive | `code` invito unico, owner. Da C24 (`034`) il `default` genera **8 caratteri su 31 simboli** (Crockford meno la `U`: niente `I`, `L`, `O`, `0`, `1`), non più 6 di esadecimale; i codici già distribuiti restano validi, perché cambia il default e non le righe |
 | `group_members` | Appartenenza | PK (group_id, user_id) |
 | `rides` | Auto pubblicate per un giorno | `group_id` obbligatorio; unique (driver, giorno, gruppo, **è-un-ritorno**); trigger `check_ride`. Da C21 le quattro colonne delle coordinate **non sono leggibili da un client**: si passa da `coordinate_passaggi()`. Da C30 `ritardo_min`/`ritardo_alle`, da C31 `ritorno_di` (autoriferimento, `set null`), da C33 `auto_id` |
 | `seat_claims` | Prenotazioni sedile | unique (ride, seat) e (ride, passenger); trigger `check_claim`. Da C35 un sedile è **o** di un account **o** di un ospite (`ospite_nome` + `invitato_da`), mai tutti e due e mai nessuno |
@@ -62,6 +63,7 @@ Principi:
 | `ricorrenze` | «Ogni lunedì alle 7:40» — la regola, non il passaggio | materializzata da `crea_passaggi_ricorrenti()`, chiamata da `pg_cron` |
 | `fermate` | La rubrica dei posti di una comitiva (C32) | `chiave` è **generata dal database** e unica per gruppo: è ciò che rende «Piazza Dante» e «p.za dante» lo stesso posto. Le coordinate **non si raccolgono dalle pubblicazioni**, si mettono con un gesto esplicito |
 | `auto` | Il garage di una persona (C33) | leggibile da chi condivide una comitiva (stessa regola dei profili); **una predefinita per persona**, con un indice parziale |
+| `tentativi_invito` | Quanti codici sbagliati ha provato una persona nell'ultima ora (C24) | RLS accesa e **nessuna policy**, come `notifiche_coda`: ci scrive solo `join_group`, che è `security definer`. Dieci per ora, poi si aspetta |
 
 `profiles` porta anche `is_admin` e `sospeso`: nessuno dei due si cambia da soli, ci sono due
 trigger apposta. `groups` porta da C36 le tre regole della comitiva (`regola_quota`,
@@ -87,6 +89,7 @@ Trigger (fonte: `supabase/migrations/`):
 - `registra_evento_*`: scrivono in `eventi`. L'attore di un posto è `coalesce(passenger_id, invitato_da)`: un ospite non è una persona di questa applicazione.
 - `controlla_sospeso` (gruppi, membri): un sospeso non crea comitive né ci entra. Serve perché `create_group`/`join_group` sono `security definer` e non passano dalle policy.
 - `protect_admin_flag`, `protect_sospeso`: nessuno si promuove amministratore né si toglie la sospensione. Fanno eccezione solo le chiamate con `auth.uid()` nullo (SQL editor, `service_role`), che è l'unico modo per nominare il primo amministratore.
+- `ensure_rls` (**event trigger**, `035`): accende la RLS su ogni tabella nuova di `public`. Fino al 10/09/2026 esisteva **solo in produzione**, cioè un backend ricostruito da zero non ce l'aveva: non un buco — le migrazioni accendono comunque la RLS a mano — ma due sistemi che divergono proprio nel caso in cui quella riga venisse dimenticata.
 
 ## Contratto API (via supabase-js, tutte soggette a RLS)
 
@@ -94,7 +97,7 @@ Trigger (fonte: `supabase/migrations/`):
 |---|---|---|
 | Registrazione/login/reset | `auth.signUp/signInWithPassword/resetPasswordForEmail` | pubblica (rate-limited) |
 | Crea gruppo | `rpc('create_group', {p_name, p_scade})` → riga `groups` | utente autenticato; `p_scade` facoltativo (C38) |
-| Entra in gruppo | `rpc('join_group', {p_code})` → riga `groups` | utente autenticato, codice valido e comitiva non chiusa |
+| Entra in gruppo | `rpc('join_group', {p_code})` → riga `groups`, oppure **`null`** | utente autenticato, codice valido e comitiva non chiusa. Da C24 il rifiuto è un `null` e non un'eccezione — un `raise` annullerebbe la transazione, e con lei il contatore dei tentativi. I due modi di non entrare rispondono uguale, di proposito |
 | Leggi auto del giorno | `from('rides').select(...embed...)` — colonne nominate, mai `*` | membro del gruppo, più chi vede il passaggio perché è aperto alla zona o a chiunque |
 | Punto esatto del ritrovo | `rpc('coordinate_passaggi', {ids})` | solo membro della comitiva che ospita, o chi ha un posto su quell'auto |
 | Il proprio profilo, intero | `rpc('mio_profilo')` → una riga di `profiles` | chi chiama, e nessun altro: la funzione non prende parametri |

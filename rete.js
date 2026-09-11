@@ -11,6 +11,36 @@
 
 const barra = document.getElementById('offline-bar');
 
+// --- Questa non e' l'app vera ---
+//
+// **Le anteprime di Netlify parlano col database di produzione.** `config.js` e'
+// committato con l'indirizzo del progetto vero, quindi ogni
+// `deploy-preview-N--wetransport.netlify.app` e' WeTransport con i dati veri
+// dentro, servito da un indirizzo pubblico che non chiede niente a nessuno.
+//
+// Questa riga **non chiude** quel problema: la separazione degli ambienti si fa con
+// un secondo progetto Supabase, e finche' non c'e' resta scritta come non conforme
+// in SECURITY.md. Quello che fa e' impedire il modo realistico in cui il difetto
+// diventa un danno — qualcuno che si segna l'indirizzo di un'anteprima, ci entra
+// col proprio account e ci scrive passaggi veri credendo che sia il sito.
+//
+// Sta qui, e non in app.js, per la stessa ragione della barra: app.js importa un
+// modulo da un CDN e puo' non partire. Un avviso che compare solo quando tutto
+// funziona non e' un avviso.
+function marcaAmbiente() {
+  const host = location.hostname;
+  const vero = host === 'wetransport.netlify.app';
+  const locale = host === 'localhost' || host === '127.0.0.1' || host === '[::1]';
+  if (vero || locale) return;
+
+  const chip = document.createElement('p');
+  chip.className = 'ambiente-chip';
+  chip.setAttribute('role', 'status');
+  chip.textContent = 'Anteprima — dati veri, non è il sito';
+  document.body.append(chip);
+}
+marcaAmbiente();
+
 // `navigator.onLine` non basta, e non e' un dettaglio: dice "esiste una scheda di
 // rete", non "internet funziona". Resta `true` sul wifi dell'albergo che non porta da
 // nessuna parte, e resta `true` anche con la rete staccata dentro un browser

@@ -1,7 +1,10 @@
-﻿.claude/
+.claude/
 
 node_modules/
 test-results/
 playwright-report/
 graphify-out/
+# Lo scrive lo strumento che genera la mappa del codice, per tenere fuori dal grafo
+# cio' che non e' scritto qui: `vendor/` (generato) e le cartelle di lavoro.
+.graphifyignore
 .collaudo.sh

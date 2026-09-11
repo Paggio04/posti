@@ -148,3 +148,15 @@ La **018 e la 019** (cantiere C22) sono la stessa coppia, sull'altra tabella: la
 `mio_profilo()` e va prima del deploy; la 019 toglie il permesso di leggere `zona_lat`, `zona_lon`,
 `zona_nome` e `sospeso_motivo` dalla riga di chiunque, e va dopo — prima del deploy vorrebbe dire
 un'app che non parte, perche' `ensureProfile` quelle colonne le chiede al primo caricamento.
+
+La **034** (cantiere C24) sta dalla stessa parte della 016 e della 019 — **dopo il deploy** — ma
+per una ragione diversa dalle loro, che vale la pena tenere distinta: non toglie un permesso,
+**cambia cosa risponde una funzione**. Dalla 034 `join_group` restituisce `null` quando il codice
+non fa entrare, invece di sollevare un'eccezione, perche' un `raise` annullerebbe la transazione e
+con lei il conteggio dei tentativi. Il codice vecchio fa `data.id` su quel `null` e muore in
+silenzio; il codice nuovo regge tutti e due gli schemi — legge il `null` e legge ancora i messaggi
+vecchi — quindi la sequenza e' pubblica-poi-applica e non c'e' finestra scoperta.
+
+La **035** non ha un ordine, come la 020: dichiara `rls_auto_enable()` e l'event trigger
+`ensure_rls`, che sul progetto vero **esistono gia'** — li trova e non tocca niente. Serve a un
+backend ricostruito da zero, che senza di lei non li avrebbe.

@@ -1,0 +1,108 @@
+# Il battito: il sito vivo risponde, e il database dietro anche.
+#
+# **Perche' esiste.** La CI dice che il codice regge e che le migrazioni si applicano;
+# non dice niente su cosa sta succedendo adesso al sito. Fra un push e l'altro possono
+# passare settimane, e su un piano gratuito il progetto Supabase si mette in pausa da
+# solo dopo un periodo di inattivita': l'app resterebbe in piedi — il guscio e' statico
+# e sta su Netlify — mostrando una schermata d'accesso che non fa entrare nessuno.
+# Nessuno se ne accorgerebbe finche' qualcuno non prova a prenotare un posto.
+#
+# **Tocca il database, non la home.** Una GET su `index.html` la serve la CDN di Netlify
+# e risponderebbe 200 anche con Supabase spento: e' precisamente il controllo che si
+# sente al sicuro senza misurare niente. Il secondo passo interroga PostgREST, che per
+# rispondere deve chiedere il catalogo a Postgres.
+#
+# La chiave qui sotto la legge da `config.js` invece di ricopiarla: e' pubblica per
+# design — la sicurezza sta nelle policy RLS — ma due copie della stessa riga divergono,
+# e una che diverge in silenzio fa fallire questo controllo per il motivo sbagliato.
+name: Battito
+
+on:
+  schedule:
+    # Ogni mezz'ora. GitHub non garantisce il minuto — una corsa programmata puo'
+    # arrivare in ritardo o saltare quando i suoi corridori sono pieni — quindi questo
+    # e' un battito, non un monitoraggio con un tempo di risposta promesso. Per quello
+    # serve un servizio esterno, ed e' scritto in SECURITY.md.
+    - cron: '0,30 * * * *'
+  workflow_dispatch:
+
+# Serve per aprire (e richiudere) la segnalazione quando qualcosa non risponde.
+permissions:
+  contents: read
+  issues: write
+
+jobs:
+  battito:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Il sito risponde
+        run: |
+          codice=$(curl -sS -o /dev/null -w '%{http_code}' --max-time 20 https://wetransport.netlify.app/)
+          echo "index.html -> HTTP $codice"
+          [ "$codice" = "200" ] || exit 1
+
+      - name: Il database risponde
+        run: |
+          # Le due righe di config.js, senza ricopiarle a mano.
+          url=$(sed -n "s/.*SUPABASE_URL = '\([^']*\)'.*/\1/p" config.js)
+          key=$(sed -n "s/.*SUPABASE_ANON_KEY = '\([^']*\)'.*/\1/p" config.js)
+          [ -n "$url" ] && [ -n "$key" ] || { echo "config.js non ha dato URL e chiave"; exit 1; }
+
+          # **Si interroga una tabella, non la radice.** La prima stesura chiedeva
+          # `/rest/v1/`, che serve la descrizione OpenAPI dello schema: su questo
+          # progetto quella porta non e' aperta alla chiave anon e risponde **401
+          # sempre**, con Supabase acceso o spento. Il primo battito programmato, il
+          # 10/09/2026 alle 12:31, e' fallito per quello e ha aperto una segnalazione
+          # su un database che stava benissimo — cioe' il controllo non misurava il
+          # database, misurava una porta chiusa. E un allarme che suona sempre e' un
+          # allarme che si impara a ignorare, che e' peggio di non averlo.
+          #
+          # `groups` esiste dalla 003 e la sua policy di lettura e' per membri: da
+          # `anon` la risposta e' `200` con una lista vuota. Vuota va benissimo — qui
+          # non si guardano le righe, si guarda che qualcuno abbia risposto: per dire
+          # `[]` PostgREST deve interrogare Postgres, e con il progetto in pausa
+          # quella richiesta non torna `200`.
+          codice=$(curl -sS -o /dev/null -w '%{http_code}' --max-time 20 \
+            -H "apikey: $key" -H "Authorization: Bearer $key" \
+            "$url/rest/v1/groups?select=id&limit=1")
+          echo "rest/v1/groups -> HTTP $codice"
+          [ "$codice" = "200" ] || exit 1
+
+      # Un controllo che fallisce dentro un registro che nessuno apre non e' un
+      # controllo. Una segnalazione sola, riaperta se e' gia' chiusa, e nessun
+      # doppione finche' resta aperta.
+      - name: Aprire la segnalazione se qualcosa non risponde
+        if: failure()
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const titolo = 'Il battito non risponde';
+            const corpo = [
+              'Uno dei due controlli del battito e\' fallito.',
+              '',
+              `Corsa: ${context.serverUrl}/${context.repo.owner}/${context.repo.repo}/actions/runs/${context.runId}`,
+              '',
+              'Le due cause piu\' probabili, in ordine: il progetto Supabase si e\' messo in',
+              'pausa per inattivita\' (piano gratuito), oppure il deploy su Netlify e\' rotto.',
+              'La prima si risolve dalla dashboard di Supabase; la seconda dai registri di',
+              'Netlify. Chiudendo questa segnalazione, il prossimo battito verde non ne apre',
+              'un\'altra.',
+            ].join('\n');
+
+            const aperte = await github.rest.issues.listForRepo({
+              owner: context.repo.owner, repo: context.repo.repo,
+              state: 'open', labels: 'battito',
+            });
+            if (aperte.data.length) {
+              await github.rest.issues.createComment({
+                owner: context.repo.owner, repo: context.repo.repo,
+                issue_number: aperte.data[0].number, body: corpo,
+              });
+              return;
+            }
+            await github.rest.issues.create({
+              owner: context.repo.owner, repo: context.repo.repo,
+              title: titolo, body: corpo, labels: ['battito'],
+            });

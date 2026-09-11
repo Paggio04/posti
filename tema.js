@@ -12,13 +12,24 @@
 //
 // `app.js` legge e scrive la stessa chiave: qui c'e' solo la lettura, perche' e'
 // l'unica cosa che deve succedere prima del disegno.
+//
+// **E l'app non nasce chiara: nasce come la vuole il browser.** Chi ha il sistema
+// sul tema scuro apre una pagina scura, senza doverla girare ogni volta. La
+// preferenza salvata, se c'e', vince comunque: e' una decisione presa a mano su
+// questa app, e non si scavalca con un'impostazione generale.
+// La distinzione fra «non ha scelto» e «ha scelto chiaro» c'e' perche' la chiave
+// vale `'scuro'` **o** `'chiaro'`: senza il valore esplicito, chi gira l'app in
+// chiaro con il sistema scuro se la ritroverebbe scura alla visita dopo.
 (function () {
+  var scelto = null;
   try {
-    if (localStorage.getItem('wt_tema') === 'scuro') {
-      document.documentElement.setAttribute('data-tema', 'scuro');
-    }
+    scelto = localStorage.getItem('wt_tema');
   } catch {
-    // Navigazione privata con la memoria locale chiusa: si resta sul tema chiaro,
-    // che e' quello predefinito. Non e' un errore da raccontare a nessuno.
+    // Navigazione privata con la memoria locale chiusa: nessuna scelta salvata,
+    // quindi comanda il browser. Non e' un errore da raccontare a nessuno.
   }
+  var scuro = scelto
+    ? scelto === 'scuro'
+    : !!(window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches);
+  if (scuro) document.documentElement.setAttribute('data-tema', 'scuro');
 })();

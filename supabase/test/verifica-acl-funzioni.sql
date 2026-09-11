@@ -31,7 +31,8 @@
 --     `controlla_sospeso`, `handle_new_user`, `notifica_posto_prenotato`,
 --     `promote_waitlist`, `protect_admin_flag`, `protect_sospeso`): chiamate a mano
 --     rispondono `0A000 "trigger functions can only be called as triggers"` e non fanno
---     niente;
+--     niente. Vale anche per `rls_auto_enable` (035), che e' un **event** trigger e
+--     risponde allo stesso modo;
 --   * funzioni ancorate ad **`auth.uid()`** (`is_member`, `condivide_gruppo`,
 --     `si_bloccano`, `mi_ha_bloccato`, `sono_sospeso`, `ho_un_posto`, `passaggio_visibile`,
 --     `coordinate_visibili`, `is_admin`, `raggio_zona_km`, `distanza_km`,
@@ -83,6 +84,7 @@ begin
   ('notifica_ritardo',           '',                    'nessuno'),   -- 027, idem
   ('registra_fermate',           '',                    'nessuno'),   -- 029, idem
   ('check_ospite',               '',                    'nessuno'),   -- 031, idem
+  ('genera_codice_invito',       '',                    'nessuno'),   -- 034, la chiama il `default` di groups.code
   ('blinda_coordinate',          '',                    'nessuno'),
   ('blinda_funzioni',            '',                    'nessuno'),
   ('blinda_profilo',             '',                    'nessuno'),
@@ -118,6 +120,7 @@ begin
   ('protect_admin_flag',         '',                    'anon'),
   ('protect_sospeso',            '',                    'anon'),
   ('raggio_zona_km',             '',                    'anon'),
+  ('rls_auto_enable',            '',                    'anon'),   -- 035, e' un event trigger: chiamato a mano risponde 0A000
   ('si_bloccano',                'altro uuid',          'anon'),
   ('sono_sospeso',               '',                    'anon');
 

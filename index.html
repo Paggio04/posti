@@ -11,8 +11,15 @@
   <link rel="stylesheet" href="style.css" />
   <link rel="manifest" href="manifest.json" />
   <link rel="icon" href="icon.svg" type="image/svg+xml" />
-  <meta name="theme-color" content="#EEF1F3" />
-  <meta name="color-scheme" content="dark" />
+  <!-- Il valore di partenza e' quello del tema chiaro; `mostraTema` in
+       mod/schede.js lo gira insieme al tema. Un meta solo, non due con `media`:
+       con due, il codice ne aggiornerebbe uno e l'altro direbbe il contrario. -->
+  <meta name="theme-color" content="#F4FEFF" />
+  <!-- Tutti e due, e in questo ordine: il chiaro e' il tema di casa, ma la pagina
+       parte come la vuole il browser (vedi tema.js). Diceva `dark` e basta, che era
+       un residuo della palette viola: al browser faceva dipingere i controlli di
+       sistema sempre scuri, anche sulla pagina chiara. -->
+  <meta name="color-scheme" content="light dark" />
 
   <!-- Netlify serve l'informativa sia come /privacy sia come /privacy.html, entrambe con
        200: senza canonical un motore di ricerca vede due pagine identiche e sceglie lui. -->
@@ -26,8 +33,11 @@
   <meta property="og:title" content="WeTransport — chi guida oggi?" />
   <meta property="og:description" content="Chi guida pubblica la propria auto, gli altri prenotano il posto. I passaggi del tuo gruppo, senza caos." />
   <meta property="og:url" content="https://wetransport.netlify.app/" />
-  <meta property="og:image" content="https://wetransport.netlify.app/icona-512.png" />
-  <meta name="twitter:card" content="summary" />
+  <meta property="og:image" content="https://wetransport.netlify.app/anteprima.png" />
+  <meta property="og:image:width" content="1200" />
+  <meta property="og:image:height" content="630" />
+  <meta property="og:image:alt" content="WeTransport — chi guida oggi? Un'auto vista dall'alto con due posti presi e due liberi." />
+  <meta name="twitter:card" content="summary_large_image" />
 
   <!-- Dati strutturati. Nessun autore e nessun editore qui dentro: il titolare sta
        nell'informativa, dove serve, e non c'e' motivo di moltiplicare il nome di una
@@ -76,6 +86,10 @@
       <symbol id="i-sole" viewBox="0 0 24 24"><circle cx="12" cy="12" r="4.2" fill="none" stroke="currentColor" stroke-width="2"/><path d="M12 2.5v2.2M12 19.3v2.2M4.2 4.2l1.6 1.6M18.2 18.2l1.6 1.6M2.5 12h2.2M19.3 12h2.2M4.2 19.8l1.6-1.6M18.2 5.8l1.6-1.6" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></symbol>
       <symbol id="i-user" viewBox="0 0 24 24"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"/><circle cx="12" cy="7" r="4" fill="none" stroke="currentColor" stroke-width="2"/></symbol>
       <symbol id="i-pin" viewBox="0 0 24 24"><path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/><circle cx="12" cy="10" r="3" fill="none" stroke="currentColor" stroke-width="2"/></symbol>
+      <!-- L'euro del saldo. Il carburante (#i-fuel) faceva anche questo lavoro, e
+           da quando il carburante ha una tessera sua le due tessere di soldi
+           avevano la stessa icona: due cose diverse, un segno solo. -->
+      <symbol id="i-euro" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round"><path d="M14 5.6A5 5 0 0 0 6.2 8M6.2 12a5 5 0 0 0 7.8 2.4M3.6 8.6h6M3.6 11.4h6"/></symbol>
       <symbol id="i-fuel" viewBox="0 0 24 24"><path d="M3 22V6a2 2 0 0 1 2-2h6a2 2 0 0 1 2 2v16M3 22h10M13 10h2a2 2 0 0 1 2 2v5.5a1.5 1.5 0 0 0 3 0V9l-3-3M4 10h8" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></symbol>
       <symbol id="i-scarica" viewBox="0 0 24 24"><path d="M12 3v12m0 0l-4.5-4.5M12 15l4.5-4.5M4 19h16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></symbol>
       <symbol id="i-cestino" viewBox="0 0 24 24"><path d="M4 7h16M10 4h4a1 1 0 0 1 1 1v2H9V5a1 1 0 0 1 1-1zM6 7l1 12a2 2 0 0 0 2 2h6a2 2 0 0 0 2-2l1-12M10 11v6M14 11v6" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></symbol>
@@ -102,6 +116,13 @@
   <section id="auth-view" class="auth-view">
     <div class="auth-form-panel">
 
+      <!-- **Una colonna sola dentro il pannello.** I due riquadri (modulo e «controlla
+           la posta») e il piede legale stanno impilati qui: il pannello resta un flex
+           con **un** figlio, quindi tutte le sue misure — centratura, il salto a due
+           colonne da 1280px, i due `padding` delle fasce strette — continuano a valere
+           come prima. La larghezza massima e' passata dal riquadro alla colonna. -->
+      <div class="auth-colonna">
+
       <div class="auth-card" id="auth-card">
         <p class="auth-marchio"><span class="targa"><svg width="18" height="18"><use href="#i-car"/></svg> <b>WeTransport</b></span>
           <!-- I quattro posti. Sta qui e non sotto il titolo perche' a destra del
@@ -112,8 +133,14 @@
           <span class="auth-posti" id="auth-posti" role="img" aria-label="Restano due posti.">
             <i></i><i></i><i></i><i></i>
           </span></p>
-        <h2 id="auth-title">Chi guida oggi?</h2>
+        <h1 id="auth-title">Chi guida oggi?</h1>
         <p id="auth-subtitle" class="auth-subtitle">Accedi e vedi i posti liberi della comitiva.</p>
+
+        <!-- **Il blocco delle anteprime.** Lo scopre e lo mostra `app.js`: qui c'e'
+             solo il posto dove va, sopra i modi di entrare, perche' e' la cosa da
+             leggere prima di provarci. Nasce `hidden` cosi' il sito vivo non lo
+             vede mai nemmeno per un fotogramma. -->
+        <p class="anteprima-blocco" id="anteprima-blocco" role="alert" hidden></p>
 
         <div class="oauth-buttons">
           <button type="button" id="oauth-google" class="btn btn-oauth">
@@ -132,9 +159,11 @@
           </label>
           <label for="password" class="field-label">Password</label>
           <span class="pw-wrap">
-            <input type="password" id="password" required minlength="6" autocomplete="current-password" placeholder="Minimo 6 caratteri" />
+            <input type="password" id="password" required autocomplete="current-password" placeholder="La tua password" />
             <button type="button" id="pw-toggle" class="pw-toggle" aria-label="Mostra password"><svg width="18" height="18"><use href="#i-eye"/></svg></button>
           </span>
+          <p class="auth-accetto">Creando l&apos;account accetti i <a href="termini.html">termini e condizioni</a>
+            e hai letto l&apos;<a href="privacy.html">informativa privacy</a>.</p>
           <button type="submit" id="auth-submit" class="btn btn-primary btn-big btn-full">Accedi</button>
           <button type="button" id="forgot-btn" class="link-btn">Hai dimenticato la password?</button>
         </form>
@@ -155,10 +184,28 @@
 
       <div class="auth-card auth-success hidden" id="auth-success">
         <div class="auth-success-icon"><svg width="40" height="40"><use href="#i-mail"/></svg></div>
-        <h2>Controlla la posta</h2>
-        <p class="auth-subtitle">Abbiamo inviato un link di conferma a<br /><strong id="success-email"></strong></p>
-        <p class="auth-subtitle">Aprilo per attivare l'account, poi torna qui e accedi.</p>
+        <h1>Controlla la posta</h1>
+        <!-- **La frase regge in tutti e due i casi**, ed e' il motivo per cui e'
+             scritta cosi'. Questa schermata compare anche quando l'indirizzo ha
+             gia' un account: dirlo qui trasformerebbe la registrazione in un modo
+             per scoprire chi c'e' dentro. E non promette una posta che potrebbe
+             non arrivare — dice a cosa serve se arriva, e cosa fare se non arriva. -->
+        <p class="auth-subtitle">Se <strong id="success-email"></strong> non ha gi&agrave; un account,
+          il link per attivarlo &egrave; in arrivo l&igrave;.</p>
+        <p class="auth-subtitle">Aprilo, poi torna qui e accedi. Se invece un account con questa email
+          c'&egrave; gi&agrave;, entra direttamente da &laquo;Accedi&raquo;. Controlla anche lo spam.</p>
         <button type="button" id="success-back" class="btn btn-secondary btn-full">Torna all'accesso</button>
+      </div>
+
+      <!-- Il piede. Chi tratta i dati e le due pagine scritte stanno **prima**
+           dell'accesso, perche' e' qui che i dati si raccolgono: prima erano
+           raggiungibili da un punto solo, dentro la scheda Profilo, cioe' dopo. -->
+      <div class="auth-fondo">
+        <p class="auth-fondo-chi">WeTransport &egrave; gestito da Elia Paggetti, a titolo personale e senza scopo di lucro.
+          <a href="mailto:eli.paggioo@gmail.com">eli.paggioo@gmail.com</a></p>
+        <p><a href="privacy.html">Informativa privacy</a> &middot; <a href="termini.html">Termini e condizioni</a></p>
+      </div>
+
       </div>
 
     </div>
@@ -201,7 +248,7 @@
 
         <!-- Le finiture: le stesse che `finitureAuto()` disegna in app.js.
              Passaruota, battistrada, fari, cofano, baule, porte, pieghe. -->
-        <rect x="22" y="62" width="106" height="202" rx="16" class="car-abitacolo"/>
+        <rect x="20" y="62" width="110" height="202" rx="16" class="car-abitacolo"/>
         <path d="M 30 60 Q 75 54 120 60" class="car-cofano"/>
         <path d="M 32 242 Q 75 248 118 242" class="car-cofano"/>
         <rect x="40" y="12" width="70" height="22" rx="11" class="car-paraurti"/>
@@ -230,42 +277,49 @@
         <rect x="134" y="70" width="16" height="6" rx="3" class="car-wheel"/>
 
         <g class="seat seat-driver">
-          <rect x="26" y="94" width="36" height="13" rx="5" class="seat-back"/>
-          <rect x="24" y="107" width="40" height="42" rx="9" class="seat-base"/>
-          <path d="M 31 117 L 57 117" class="seat-piega"/>
-          <text x="44" y="134" class="seat-text">MA</text>
+          <rect x="25" y="94" width="40" height="13" rx="5" class="seat-back"/>
+          <rect x="23" y="107" width="44" height="50" rx="9" class="seat-base"/>
+          <path d="M 30 117 L 60 117" class="seat-piega"/>
+          <text x="45" y="138" class="seat-text">MA</text>
         </g>
-        <circle cx="44" cy="86" r="7" class="car-wheel-steer"/>
+        <circle cx="45" cy="86" r="7" class="car-wheel-steer"/>
 
         <!-- I quattro posti si occupano davanti-dietro, nell'ordine in cui si
              riempie un'auto vera. Lo stato iniziale scritto qui e' quello che si
              vede senza JavaScript e con `prefers-reduced-motion`: due presi, due
              liberi, cioe' la frase che c'e' scritta accanto.
-             Davanti i sedili sono larghi 40 e dietro 34: e' cosi' anche in
-             macchina, dietro e' una panchina divisa in tre. -->
+             Davanti i sedili sono larghi 44 e dietro 34: e' cosi' anche in
+             macchina, dietro e' una panchina divisa in tre. I 44 davanti sono la
+             misura del dito, non un gusto — qui la scala e' 1, quindi un'unita' e'
+             un pixel vero. Dietro non ci si arriva: fra i due fianchi ci sono 114
+             unita' e tre sedili da 44 ne vogliono 132.
+             **Queste coordinate sono la copia a mano di `SEAT_LAYOUTS` per l'auto
+             da 4 posti**, perche' questo cartello sta in pagina anche senza
+             JavaScript. Se lassu' cambia una misura, cambia anche qui: le due auto
+             si vedono nella stessa sessione, e una piu' larga dell'altra si nota. -->
         <g class="seat seat-taken" data-posto="1">
-          <rect x="88" y="94" width="36" height="13" rx="5" class="seat-back"/>
-          <rect x="86" y="107" width="40" height="42" rx="9" class="seat-base"/>
-          <path d="M 93 117 L 119 117" class="seat-piega"/>
-          <text x="106" y="134" class="seat-text">GI</text>
+          <rect x="85" y="94" width="40" height="13" rx="5" class="seat-back"/>
+          <rect x="83" y="107" width="44" height="50" rx="9" class="seat-base"/>
+          <path d="M 90 117 L 120 117" class="seat-piega"/>
+          <text x="105" y="138" class="seat-text">GI</text>
         </g>
         <g class="seat seat-taken" data-posto="2">
           <rect x="23" y="182" width="30" height="13" rx="5" class="seat-back"/>
-          <rect x="21" y="195" width="34" height="42" rx="9" class="seat-base"/>
+          <rect x="21" y="195" width="34" height="50" rx="9" class="seat-base"/>
           <path d="M 28 205 L 48 205" class="seat-piega"/>
-          <text x="38" y="222" class="seat-text">SA</text>
+          <text x="38" y="226" class="seat-text">SA</text>
         </g>
         <g class="seat seat-free" data-posto="3">
           <rect x="60" y="182" width="30" height="13" rx="5" class="seat-back"/>
-          <rect x="58" y="195" width="34" height="42" rx="9" class="seat-base"/>
+          <rect x="58" y="195" width="34" height="50" rx="9" class="seat-base"/>
           <path d="M 65 205 L 85 205" class="seat-piega"/>
-          <text x="75" y="222" class="seat-text">+</text>
+          <text x="75" y="226" class="seat-text">+</text>
         </g>
         <g class="seat seat-free" data-posto="4">
           <rect x="97" y="182" width="30" height="13" rx="5" class="seat-back"/>
-          <rect x="95" y="195" width="34" height="42" rx="9" class="seat-base"/>
+          <rect x="95" y="195" width="34" height="50" rx="9" class="seat-base"/>
           <path d="M 102 205 L 122 205" class="seat-piega"/>
-          <text x="112" y="222" class="seat-text">+</text>
+          <text x="112" y="226" class="seat-text">+</text>
         </g>
       </svg>
       </div>
@@ -282,9 +336,44 @@
   </section>
 
   <!-- APP -->
-  <div id="app-shell" class="app-shell hidden">
+  <div id="app-shell" class="app-shell app-lynk hidden">
 
-    <div class="shell-col">
+    <!-- Primo elemento tabulabile dentro l'app, e non c'e' nella schermata
+         d'accesso perche' li' non c'e' niente da saltare: la casella dell'email
+         e' gia' la prima cosa. -->
+    <a class="salta-al-contenuto" href="#contenuto">Vai al contenuto</a>
+
+    <!-- ══ LA COLONNA (da 768px in su) ═══════════════════════════════════
+         Da qui in su la navigazione e' una colonna, non una fascia: c'e' lo
+         spazio, e una colonna dice **dove sei** senza rubare l'altezza che la
+         composizione usa per stare in una schermata. Sotto i 768px sparisce e
+         comanda la fascia in basso, che e' dove sta il pollice.
+         Il marchio sta qui, quindi in alto non si ripete: `.topbar .brand` si
+         spegne alla stessa soglia. -->
+    <aside class="lato">
+      <div class="lato-testa">
+        <span class="targa"><svg width="18" height="18" aria-hidden="true"><use href="#i-car"/></svg> <b>WeTransport</b></span>
+      </div>
+
+      <nav class="lato-voci" aria-label="Viste">
+        <button type="button" class="voce attiva" data-view="home" aria-current="page"><span class="ico"><svg width="20" height="20" aria-hidden="true"><use href="#i-car"/></svg></span>Passaggi</button>
+        <button type="button" class="voce" data-view="stats"><span class="ico"><svg width="20" height="20" aria-hidden="true"><use href="#i-chart"/></svg></span>Riepilogo</button>
+        <button type="button" class="voce" data-view="groups"><span class="ico"><svg width="20" height="20" aria-hidden="true"><use href="#i-users"/></svg></span>Comitive</button>
+        <button type="button" class="voce" data-view="history"><span class="ico"><svg width="20" height="20" aria-hidden="true"><use href="#i-history"/></svg></span>Storico</button>
+        <button type="button" class="voce" data-view="profile"><span class="ico"><svg width="20" height="20" aria-hidden="true"><use href="#i-user"/></svg></span>Profilo</button>
+      </nav>
+
+      <!-- L'invito a installarla. C12 l'ha resa installabile e non l'ha mai
+           proposto a nessuno; la logica sta in `mod/installa.js`, e il riquadro
+           si nasconde da solo quando non c'e' niente da proporre. -->
+      <section class="lato-promo" id="promo">
+        <h2>Tienila sul telefono</h2>
+        <p>Installata si apre in un tocco, e mostra l'ultima giornata anche senza rete.</p>
+        <button type="button" class="btn-promo" id="btn-installa">Installa l'app</button>
+      </section>
+    </aside>
+
+    <div class="shell-col corpo">
 
     <!-- **Una navigazione sola, e sta in basso.** Fino a ieri ce n'erano due: una
          fascia con quattro voci in alto da 768px in su, e una fascia con cinque in
@@ -309,7 +398,7 @@
       </div>
     </header>
 
-    <main class="app-view">
+    <main class="app-view" id="contenuto" tabindex="-1">
 
       <!-- Account sospeso: si legge tutto, non si scrive piu' niente -->
       <div id="sospeso-banner" class="sospeso-banner hidden" role="alert">
@@ -321,6 +410,7 @@
 
       <!-- HOME -->
       <section id="view-home" class="view">
+        <h1 class="solo-lettori">Passaggi</h1>
 
         <div id="welcome" class="welcome hidden">
           <h2>Benvenuto su WeTransport</h2>
@@ -443,7 +533,7 @@
 
       <!-- STORICO -->
       <section id="view-history" class="view hidden">
-        <h2 class="view-title"><svg width="20" height="20"><use href="#i-history"/></svg> Storico</h2>
+        <h1 class="view-title"><svg width="20" height="20"><use href="#i-history"/></svg> Storico</h1>
         <p class="view-subtitle">Tutti i viaggi passati: chi ha guidato e chi era a bordo.</p>
         <div class="history-filtri" role="group" aria-label="Filtra lo storico">
           <button type="button" id="storico-miei" class="filtro" aria-pressed="false">Solo i miei passaggi</button>
@@ -459,7 +549,7 @@
 
       <!-- GRUPPI -->
       <section id="view-groups" class="view hidden">
-        <h2 class="view-title"><svg width="20" height="20"><use href="#i-users"/></svg> Le tue comitive</h2>
+        <h1 class="view-title"><svg width="20" height="20"><use href="#i-users"/></svg> Le tue comitive</h1>
         <p class="view-subtitle">Crea una comitiva, invita gli amici col codice, gestisci i membri.</p>
         <div class="group-actions-row">
           <button type="button" id="group-create" class="btn btn-primary"><svg width="15" height="15"><use href="#i-plus"/></svg> Crea gruppo</button>
@@ -481,7 +571,7 @@
 
       <!-- PROFILO -->
       <section id="view-profile" class="view hidden">
-        <h2 class="view-title"><svg width="20" height="20"><use href="#i-user"/></svg> Profilo</h2>
+        <h1 class="view-title"><svg width="20" height="20"><use href="#i-user"/></svg> Profilo</h1>
         <div class="profile-card">
           <div class="profile-avatar" id="profile-avatar"></div>
           <div class="profile-info">

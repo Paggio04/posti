@@ -740,36 +740,54 @@ codice pubblicato usi. Verificato in `supabase/test/verifica-permessi.sql`, in C
 controllo è quello che tiene onesti gli altri tre — chiudere è facile, chiudere senza rompere
 l'ingresso in comitiva no.
 
-### C24 — I codici invito si indovinano, da autenticato — *aperto il 31/07/2026, non ancora affrontato*
+### C24 — I codici invito si indovinano, da autenticato — *fatto il 10/09/2026 con la `034`*
 
 Nato scrivendo la riga «Codici invito / enumerazione» di `SECURITY.md`, che prima prometteva una
 cosa che non è vera. La `020` chiude la parte che riguarda chi **non** ha un account; resta quella
 che riguarda chi ce l'ha, ed è la più seria delle due — perché a quel punto un codice indovinato non
 si limita a rivelarsi.
 
-**Quando.** Dopo la Fase A, cioè dopo che `018`, `019` e `020` sono applicate e la PR #11 è fusa.
-Prima non ha senso: tocca lo stesso schema, e la Fase A è più urgente.
+**I tre rimedi, in ordine di rapporto valore/costo, e ci sono tutti e tre.**
 
-**Perché non adesso.** Cambia i codici che le persone si sono già scambiate a voce. È una decisione
-del proprietario, non un fix da fare di iniziativa.
+1. **Allungare il codice e allargarne l'alfabeto.** Il `default` della `003` era
+   `upper(substr(md5(random()::text), 1, 6))`: sei caratteri di **esadecimale**, cioè sedici
+   simboli e 16.777.216 codici, mentre sei caratteri ne lasciano immaginare due miliardi. La
+   distanza fra le due cifre *era* il difetto, e guardando la lunghezza non si vedeva. Adesso 31
+   simboli (Crockford meno la `U`: niente `I`, `L`, `O`, `0`, `1`, che sono le coppie che si
+   sbagliano leggendo a voce) e otto posizioni: **852.891.037.441**, cinquantamila volte tanto. Il
+   caso viene da `gen_random_uuid()`, che nel core di Postgres attinge a `pg_strong_random` — non
+   da `random()`, che è un generatore deterministico per sessione.
+2. **Uniformare l'errore** di `join_group`. Fatto, e **ribalta una scelta della `033`** invece di
+   ignorarla: quella voleva due messaggi distinti perché tacere costerebbe a chi ha in mano un
+   codice legittimo ma scaduto, mandandolo a ricontrollare le lettere di un codice giusto.
+   L'argomento non si butta, si soddisfa altrove — **una frase sola che nomina tutti e due i
+   casi**. È la stessa mossa di C46 sulla registrazione.
+3. **Un limite di tentativi** per utente: dieci sbagliati l'ora, in `tentativi_invito`, RLS accesa
+   e nessuna policy come la coda della `017`.
 
-**I tre rimedi, in ordine di rapporto valore/costo.**
+**La cosa che si è imparata scrivendolo, ed è invisibile a chi legge il codice:** un
+`raise exception` **annulla la transazione**, e con lei il contatore appena incrementato. Un
+limite di tentativi scritto nel modo naturale — incrementa, poi solleva l'errore — conta zero
+tentativi per sempre: resta verde a ogni prova a mano e non frena niente. Per questo il rifiuto di
+`join_group` non è più un'eccezione ma un **`null`**, e per questo la `034` è una di quelle che si
+applicano **dopo** aver pubblicato il codice (il verso opposto alle 012-014): il codice vecchio
+farebbe `data.id` su un `null`. Il codice nuovo regge tutti e due gli schemi, quindi l'ordine è
+pubblica-poi-applica e non c'è finestra scoperta.
 
-1. **Allungare il codice e allargarne l'alfabeto**, scartando i caratteri che si confondono
-   leggendoli a voce. I codici già distribuiti restano validi: cambia il `default` della colonna,
-   non le righe già scritte. Da sola rende le altre due un lusso.
-2. **Uniformare l'errore** di `join_group`, così che i casi che oggi si distinguono rispondano allo
-   stesso modo.
-3. **Un limite di tentativi** per utente. È l'unico dei tre che aggiunge stato da mantenere, ed è il
-   meno urgente se si fa la prima.
+**Quello che la roadmap dava per costo, e non lo era.** «Cambia i codici che le persone si sono
+già scambiate a voce» era la ragione per cui questo cantiere aspettava una decisione del
+proprietario: non vale, perché cambia il `default` della colonna e non le righe già scritte. Un
+codice esadecimale ricevuto due settimane fa continua a far entrare, e c'è un controllo apposta
+(controllo 2 di `verifica-codici-invito.sql`).
 
-*Fatto quando*: il `default` della colonna `code` produce codici del formato nuovo, `join_group`
-risponde uguale nei casi che oggi distingue, e la riga «Codici invito / enumerazione» di
-`SECURITY.md` passa da ⚠️ a ✅ con accanto il comando che lo prova.
+*Fatto:* il `default` produce il formato nuovo, `join_group` risponde uguale nei due casi che
+distingueva, e la riga di `SECURITY.md` è passata a ✅. Verificato in
+`supabase/test/verifica-codici-invito.sql`, in CI, provato al contrario su ciascuno dei tre
+rimedi, più il cablaggio lato browser in `tests/flussi.spec.js` — che è l'unico posto da cui si
+vede la frase che l'utente legge davvero.
 
-**La misura del buco, i numeri e il modo in cui si sfrutta non stanno qui**: sono nel vault, che è
-privato. Questo repo è pubblico, e finché C24 è aperto quel dettaglio descrive una cosa che
-funziona adesso.
+**Resta fuori una cosa sola, e va detta**: i rate limit di Supabase sull'API restano non misurati
+da nessuno. Non sono più l'unica difesa, che era il punto.
 
 ---
 
@@ -828,7 +846,7 @@ risponde di più a quella prova è l'auto, che nessun altro ha. **Il giudizio fi
 telefono in mano**: qui dentro il browser è girato per davvero, ma un'app che si usa di corsa in
 piedi si valuta in piedi.
 
-### C16 — Peso e velocità sul telefono — *misurato il 27/07/2026; il numero di arrivo manca ancora*
+### C16 — Peso e velocità sul telefono — *rimisurato il 10/09/2026: il numero di arrivo c'è, e metà è andata all'indietro*
 1287 righe di CSS e 1822 di JS senza build, più supabase-js da CDN. Misurare prima di ottimizzare, e
 la misura ha già cambiato l'idea di dove sia il problema.
 
@@ -853,18 +871,108 @@ guardato quel numero sarebbe stato lavoro sulla metà più piccola.
 (passaggi ‖ richieste ‖ coordinate ‖ i due della rotazione dei turni). Sono le quattro attese in
 fila, non il numero di query, a fare il tempo su rete lenta.
 
-*Fatto quando:* c'è un numero di partenza e uno di arrivo, non un'impressione. **Il numero di
-partenza c'è** (43,7 + 73,5 KB, 8 query, 4 attese). Il numero di arrivo arriverà quando si sceglierà
-cosa fare, e le tre strade sono già visibili: ospitare un bundle di supabase-js con dentro solo auth
-+ postgrest + realtime, accorpare profilo/bloccati/comitive in una sola chiamata, e misurare il
-tempo alla prima schermata con la rete strozzata invece che dalla fibra di casa.
+#### Il numero di arrivo (10/09/2026), e le due metà vanno in direzioni opposte
 
-### C17 — Spezzare `app.js`
-L'ADR 001 dice di rivedere la scelta "un file solo" oltre le 2-3k righe di JS: **al 27/07/2026 sono
-1822** — le Fasi 3 e 4 ne hanno aggiunte 500 — quindi la soglia bassa è vicina e quella alta no.
-Quando si supera: moduli ES separati (auth, gruppi, passaggi, render), sempre senza build. **Non
-prima**: dividere presto costa e non rende. Il conto si rifà qui, non a memoria:
-`node -e "console.log(require('fs').readFileSync('app.js','utf8').split('\n').length)"`.
+Rimisurato **sul filo del sito vivo**, non in locale: `curl` con `Accept-Encoding: br` su
+`wetransport.netlify.app`, che è quello che riceve un telefono. La compressione di Netlify non
+coincide con un `brotli -q 11` fatto qui — su `index.html` sono 12,5 KB contro 11,0 — e usare il
+numero locale avrebbe fatto sembrare l'app più leggera di quanto è.
+
+| Cosa | 27/07 | 10/09 | |
+|---|---|---|---|
+| `index.html` | 6,6 KB | **12,5 KB** | il piede legale, il JSON-LD, le due pagine nuove |
+| `style.css` | 10,7 KB | **33,9 KB** | 1287 righe → 2965: Fasi 8, 9 e 10 |
+| `app.js` | 24,0 KB | **63,8 KB** | 1822 righe → 4361: i quattordici cantieri di Fase 7 |
+| il resto del guscio proprio | 2,4 KB | **1,5 KB** | `rete.js`, `config.js`, `manifest.json`, `icon.svg` |
+| **guscio proprio, stesso elenco del 27/07** | **43,7 KB** | **111,7 KB** | |
+| `tema.js` + `accesso.js` | — | 2,6 KB | non esistevano |
+| carattere IBM Plex Sans 400 | — | 22,6 KB | nel repo da C15, già compresso: la compressione non lo tocca |
+| **supabase-js** | **73,5 KB in 9 richieste, altra origine** | **56,9 KB in 1, stessa origine** | C48 |
+| **prima schermata, tutto** | | **191,8 KB** | |
+
+**La libreria è andata come doveva e l'app no**, ed è il fatto che conta: C48 ha tolto 16,6 KB,
+otto richieste e una connessione TLS verso un'altra origine — e nel frattempo il guscio proprio è
+**più che raddoppiato**. Il numero che il 27/07 era il più grosso (la libreria pesa più di tutto
+il sito) oggi non lo è più: `app.js` e `style.css` insieme fanno 97,7 KB contro 56,9. Chi ottimizza
+oggi guarda dalla parte opposta di chi ottimizzava a luglio, ed è esattamente il motivo per cui
+questo cantiere pretende una misura invece di un'impressione.
+
+**Le attese sono peggiorate, e questa è la riga da leggere per prima.** Erano 8 query in **4**
+attese incatenate; oggi la prima schermata utile ne vuole 7 in **6**: `mio_profilo()` → persone
+bloccate → comitive → **garage** (`caricaAuto`, arrivata con C33) → (passaggi ‖ richieste) →
+**coordinate** (che da C21 non può più stare in parallelo: vuole gli id dei passaggi che sta
+aspettando). Più due in sottofondo per «tocca a te guidare», che non trattengono il disegno. Su
+rete lenta sono le attese in fila a fare il tempo, non il numero di query: due in più rispetto a
+luglio sono la regressione vera di questo cantiere.
+
+*Fatto:* c'è un numero di partenza e uno di arrivo, che era il criterio. **Cosa fare adesso non è
+più una scelta fra tre strade uguali**, perché la misura le ha ordinate: (1) accorpare
+profilo/bloccati/comitive/garage in **una** chiamata sola — toglie tre attese su sei ed è la sola
+che agisce sul numero peggiorato; (2) guardare `style.css` e `app.js`, che sono i due file più
+pesanti e nessuno ha mai potato; (3) il tempo alla prima schermata con la rete strozzata, che
+resta da fare e che nessun `curl` può dare. La prima delle tre è un cambio di schema e di client
+insieme: è un cantiere suo, non una riga da aggiungere qui.
+
+### C17 — Spezzare `app.js` — *fatto il 10/09/2026: tredici moduli e un avvio da 51 righe*
+L'ADR 001 diceva di rivedere la scelta "un file solo" oltre le 2-3k righe di JS. **Al 27/07/2026
+erano 1822** e la riga qui sotto diceva «non prima: dividere presto costa e non rende». Al
+10/09/2026 sono **4400**: la Fase 7 ne ha aggiunte quattordici cantieri, le Fasi 8-10 il resto. La
+soglia alta è stata superata di una volta e mezza.
+
+`app.js` è ora `mod/` più un `app.js` di **51 righe**, che contiene `render()` — l'unica funzione
+che conosce tutti gli altri — e nient'altro:
+
+| | righe | |
+|---|---|---|
+| `mod/storico.js` | 835 | storico, riepilogo, conti, formattatori |
+| `mod/scheda.js` | 814 | la scheda di un passaggio: sedili, ritrovo, calendario, commenti |
+| `mod/gruppi.js` | 631 | comitive, codice, fermate, regole, quota |
+| `mod/passaggi.js` | 613 | il giorno, l'offerta, il realtime, il caricamento |
+| `mod/persone.js` | 324 | segnalare, bloccare, sospendere, portarsi via i propri dati |
+| `mod/zona.js` | 292 | la zona, il garage |
+| `mod/auth.js` | 287 | entrare, registrarsi, il proprio profilo |
+| `mod/nucleo.js` | 205 | riferimenti al DOM, stato condiviso, aiutanti puri, avvisi |
+| `mod/auto-svg.js` | 180 | la macchina disegnata |
+| `mod/schede.js` | 172 | la navigazione fra le viste, la scheda Profilo |
+| `mod/notifiche.js` | 107 | gli avvisi sul telefono |
+| `mod/dialogo.js` | 98 | il dialogo al posto di `prompt()` e `confirm()` |
+| `mod/supabase.js` | 70 | il client, e dove sta girando l'app |
+
+**Come, ed è la parte che vale più della divisione.** Le righe non sono state riscritte: sono state
+**spostate**, sezione per sezione, seguendo i marcatori `// --- ... ---` che il file aveva già. Un
+conto riga per riga fra il prima e il dopo dice che le uniche differenze sono quelle volute — le
+intestazioni dei tredici file, le liste di `import` e `export`, e diciannove assegnazioni diventate
+chiamate a un setter. Su un file di 4400 righe la domanda «mi sono perso qualcosa?» non si risponde
+rileggendo: si risponde contando.
+
+**I due ostacoli veri, che non si vedono progettando la divisione:**
+
+1. **A un `let` importato non si assegna.** Un modulo ES può *leggere* un `let` esportato da un
+   altro e vederlo cambiare — i legami sono vivi — ma assegnarlo è un errore, e il browser lo dice
+   in un modo che non somiglia alla causa. Sedici valori attraversavano un confine in scrittura
+   (`currentUser` lo mette l'accesso, `currentGroupId` le comitive, `currentDate` il giorno):
+   passano dai setter di `mod/nucleo.js` e dei tre moduli che ne hanno uno proprio. Il conto delle
+   **assegnazioni** era piccolo — due o tre per valore — mentre quello delle **letture** era di
+   centinaia: è per questo che i setter costano poco e riscrivere ogni lettura in `stato.x` sarebbe
+   costato tutto.
+2. **Gli import formano cicli, e reggono solo su una `function` dichiarata.** `mod/auth.js` chiama
+   `render()` che sta in `app.js`, che importa `mod/auth.js`. Una funzione dichiarata nasce già
+   pronta quando il ciclo si chiude; a un `const` si arriverebbe prima che esista, e l'errore
+   sarebbe a pagina aperta.
+
+**Il controllo che è nato con la divisione.** `node --check` guarda un file per volta ed ESLint
+tratta un `import` come una dichiarazione e basta: per tutti e due `import { pippo } from
+'./nucleo.js'` è corretto anche se `nucleo.js` non ha mai sentito nominare `pippo`. Con tredici
+moduli e sessantotto fili è esattamente ciò che non si tiene a mente, quindi `tests/moduli.mjs`
+confronta gli uni con gli altri — **e nei due versi**: anche un `export` che non chiede più nessuno
+è rosso, perché su un file appena spezzato è quasi sempre un resto. Ne ha trovati quattro subito.
+
+*Fatto quando:* nessun modulo sopra le ~800 righe (la soglia nuova dell'ADR 001), `npm run check`
+verde, e la pagina che si apre senza un errore in console. **Cosa non prova**: i diciotto controlli
+end-to-end che passano in locale guardano la schermata d'accesso e il guscio. Tutto quello che sta
+**dopo il login** è codice spostato e non ancora eseguito da nessuno — ed è la stessa riga che il
+vault scrive da luglio (W6, il collaudo a video). Questa è la modifica che la rende più urgente:
+non aggiunge comportamenti, ma li sposta tutti.
 
 ---
 
@@ -909,9 +1017,21 @@ nuova su **come si legge lo stato vero** (repo, sito servito, schema applicato) 
 ricordarlo, e `audit-vault.py` è pulito. La lezione che resta: *le note invecchiano in silenzio, il
 sistema vivo no* — quindi si guarda quello per primo.
 
-### C20 — Un nome solo
-Oggi sono tre: repo `posti`, cartella `C:\Progetti\posti`, dominio `wetransport.netlify.app`.
+### C20 — Un nome solo — *metà: nel repo il nome è uno, il repo no*
+Erano tre: repo `posti`, cartella `C:\Progetti\posti`, dominio `wetransport.netlify.app`.
 Cercare "wetransport" su GitHub non trova niente.
+
+**Fatto il 10/09/2026, ed è durato una riga.** Cercando il nome vecchio dentro il repo salta fuori
+in **un posto solo**: il titolo di `README.md`, «📍 Posti». Tutto il resto — `index.html`,
+`manifest.json`, `sitemap.xml`, `package.json`, il service worker, i test — diceva già
+WeTransport. Non è una buona notizia a metà: il titolo del README è la prima riga che legge
+chiunque apra il progetto, quindi era esattamente il posto peggiore in cui lasciarlo. Ora c'è anche
+una riga che dice che il repository si chiama ancora `posti` e che quella è l'ultima metà aperta:
+una voce dichiarata aperta è diversa da una voce dimenticata.
+
+**Resta la metà che non si fa da qui**, e sono quattro gesti in un momento in cui non c'è altro a
+metà: rinominare il repository nelle impostazioni di GitHub, ricollegare Netlify, cambiare il
+remoto dei cloni, e aggiornare i percorsi negli script di `Strumenti/` e nella nota del vault.
 
 **Deciso:**
 - **Repo rinominato in `wetransport`.** GitHub tiene attivi i vecchi indirizzi, ma vanno comunque
@@ -1618,7 +1738,8 @@ seconda volta che ripaga: il difetto peggiore era **fuori** dal file che stavo g
 
 **Idee raccolte, da valutare (nessuna decisa)**
 
-1. **Ospitare `supabase-js` invece di prenderlo da jsDelivr.** Chiude tre cose in un colpo: il
+1. ~~**Ospitare `supabase-js` invece di prenderlo da jsDelivr.**~~ — **fatta il 10/09/2026**, vedi
+   C48. Chiudeva tre cose in un colpo: il
    numero di arrivo di C16 (73,5 KB e 9 richieste da un'altra origine, più della metà del peso
    totale), l'ultima riga di terze parti nella CSP, e l'ultimo destinatario nell'informativa. È il
    seguito naturale di quello che si è fatto con i caratteri.
@@ -1634,6 +1755,556 @@ seconda volta che ripaga: il difetto peggiore era **fuori** dal file che stavo g
    annotati in C7, che oggi costerebbero poco.
 7. **`dest_lat`/`dest_lon`**: restano colonne morte finché non si riapre D6 (geocoder o selettore
    su mappa). Non è un bug da chiudere, è una decisione da riprendere.
+
+---
+
+## Fase 10 — La checklist pre-lancio (10/09/2026)
+
+Una passata su una checklist scritta a parte, applicata a questo repo. Interessa meno il
+risultato dei singoli cantieri e più **dove i controlli non arrivavano**: tre difetti su
+quattro erano invisibili a lint, `html-validate` e ai test SQL, che è la stessa forma della
+lezione di `Permissions-Policy`.
+
+### C44 — Le due pagine scritte, e dove si raggiungono — *fatto*
+
+Mancavano i **termini e condizioni**, ed è la voce più pesante per un'app che mette persone in
+macchina con altre persone: `termini.html` dice che WeTransport è una bacheca e non un servizio
+di trasporto, che non verifica patenti né coperture, che la quota della benzina è ripartizione
+di spese e non una tariffa — con scritto dov'è il confine oltre il quale non è più car pooling —
+le regole di condotta, la sospensione, cosa non è garantito, i limiti di responsabilità con dolo
+e colpa grave lasciati fuori perché escluderli sarebbe nullo, e il foro del consumatore, che è
+inderogabile.
+
+L'altra metà conta quanto la pagina: **l'informativa era raggiungibile da un punto solo, dentro
+la scheda Profilo, cioè dopo l'accesso.** La registrazione raccoglie email, nome e la foto di
+Google, e chi la compilava leggeva chi tratta i suoi dati soltanto una volta entrato. Ora il
+titolare, il contatto e le due pagine stanno nel piede della schermata d'accesso, e in
+registrazione c'è la riga che dice cosa si sta accettando.
+
+**E la CI ha trovato quello che i controlli locali non potevano vedere, per la terza volta.**
+Netlify **toglie `.html` dai collegamenti quando pubblica**: `href="privacy.html"` scritto nel
+sorgente arriva al browser come `href="/privacy"`. Due conseguenze, e la seconda è quella vera:
+
+1. I controlli che guardavano la stringa dell'indirizzo misuravano l'impostazione di un
+   fornitore invece del collegamento — verdi in locale, rossi in anteprima, sulla stessa
+   identica pagina. Ora guardano **dove porta** il link, normalizzando le due grafie.
+2. **Offline quel link apriva la pagina sbagliata.** In cache la pagina sta col suo nome di
+   file, il link chiede l'altro, `cache.match` non trovava niente e il gestore `navigate`
+   cadeva sul ripiego: il guscio dell'app al posto dell'informativa. Non un errore — una
+   pagina sbagliata che sembra funzionare, sulla pagina che *per definizione* si guarda senza
+   rete, visto che «sei senza rete» adesso ha quei due collegamenti in fondo. `sw.js` riprova
+   con l'estensione prima di ripiegare, e il controllo sta dentro il test dell'offline.
+
+Il piede è dentro una colonna nuova (`.auth-colonna`) invece che accanto al riquadro: il pannello
+resta un flex con **un** figlio, quindi la centratura, il salto a due colonne da 1280px e i due
+`padding` delle fasce strette continuano a valere senza toccarli. Misurato a 360×780, che è il
+difetto da cui era partita tutta la schermata: il bottone «Accedi» chiude a 518 su 780 e il piede
+a 744, cioè si entra ancora senza scorrere.
+
+### C45 — `index.html` non aveva nessun `<h1>` — *fatto*
+
+La schermata d'accesso partiva da `h2`, e l'unico titolo di primo livello del progetto lo
+scriveva `app.js` dentro il riepilogo — cioè **dopo** l'accesso. È l'unica pagina che un motore
+di ricerca e un lettore di schermo vedono da fuori, e non aveva un titolo.
+
+`html-validate` non poteva vederlo: non è un errore di sintassi. È il terzo difetto di questa
+famiglia dopo l'header della geolocalizzazione, e la regola che ne esce è la stessa: **un
+controllo che compila non è un controllo che misura.** Ora ogni vista ha un titolo di primo
+livello e uno solo — quelle nascoste sono `display: none`, quindi fuori dall'albero — e la vista
+dei passaggi ce l'ha per chi ascolta, perché a video il suo nome lo porta la scheda attiva in
+basso. Con lui è arrivato «Vai al contenuto», primo elemento tabulabile dentro l'app.
+
+### C46 — La registrazione era un elenco di chi ha un account — *fatto*
+
+L'accesso rispondeva già con una frase sola per email sbagliata e password sbagliata. La
+registrazione no: diceva «questa email è già registrata», e lo diceva **in due modi** — il
+messaggio d'errore, e un secondo controllo sul campo che Supabase lascia vuoto *proprio* per non
+farlo capire. Cioè il codice aggirava di proposito l'offuscamento del fornitore.
+
+Con un elenco di indirizzi si sapeva chi ha un account su WeTransport. Ora la schermata di
+conferma è una sola e la frase regge in tutti e due i casi, senza promettere una posta che
+potrebbe non arrivare; lo stesso vale per il reset della password, che prima mostrava
+`error.message` grezzo. **Il compromesso è vero e va detto**: chi si è dimenticato di essersi
+iscritto non lo scopre più da qui, lo scopre provando ad accedere. È esattamente la gentilezza da
+cui quelle due righe erano arrivate, ed è il motivo per cui il controllo che non le fa tornare è
+un controllo di **forma** — cerca quelle stringhe nel file servito, come
+`verifica-acl-funzioni.sql` fa con le funzioni.
+
+### C48 — La libreria di Supabase entra nel repo — *fatto*
+
+Era l'*idea 1* della revisione del 27/07, ed è la stessa mossa dei caratteri di C15.
+`vendor/supabase-js.esm.js` è `@supabase/supabase-js` 2.116.0 impacchettata in un file solo
+da `npm run vendor`; provenienza e aggiornamento in `vendor/README.md`.
+
+Le tre cose che chiude erano già scritte: l'ultimo terzo esce dalla CSP (`script-src 'self'`,
+**senza eccezioni**), esce dall'informativa (i responsabili tornano due, Supabase e Netlify), e
+i 73,5 KB in nove richieste verso un'altra origine diventano un file dalla stessa origine,
+dentro il `GUSCIO`.
+
+**La quarta l'ha portata chi la usa, ed è più concreta delle tre.** Fuori da GitHub Actions —
+una sandbox dietro un proxy, una rete con una lista bianca — `cdn.jsdelivr.net` non si
+raggiunge, quindi `app.js` non partiva affatto e **sei controlli end-to-end su diciotto
+fallivano per una ragione che non c'entrava niente col codice in prova**. Un test che non si
+può eseguire dove si scrive non protegge chi scrive: proteggeva solo il ramo. Adesso in una
+sandbox senza rete verso l'esterno ne passano diciassette su diciotto, e in venti secondi
+invece di quattro minuti. Il diciottesimo chiede a Supabase se una password è giusta: quello
+ha bisogno del backend, e nessun impacchettamento lo toglie.
+
+Il prezzo, e va detto perché è l'altra faccia: **gli aggiornamenti non arrivano più da soli.**
+La `@2` di jsDelivr portava le patch senza chiedere niente; una versione fissata no. Il che
+rende `npm audit` e Dependabot su questo repo una cosa che serve davvero, invece di una
+formalità su un repo che a runtime non dipendeva da niente.
+
+### C49 — Su un'anteprima non si entra — *fatto, ed è una toppa dichiarata*
+
+C47 lascia aperta la separazione degli ambienti: le anteprime parlano col database di
+produzione, e il secondo progetto Supabase non si fa dal repo. Questo non la chiude — la
+rende innocua nel caso che conta. Su qualunque host che non sia il sito vivo o `localhost`,
+`app.js` chiude i tre modi di entrare (password, Google, recupero) e lo scrive nel riquadro.
+
+**Quello che protegge e quello che no.** Protegge dalle distrazioni: qualcuno apre il link di
+un'anteprima da una discussione, entra col proprio account e pubblica un'auto vera in una
+comitiva vera. Non protegge da nessun attacco, e crederlo sarebbe peggio che non averlo: la
+chiave anon è pubblica per progetto, chi vuole parla col database senza passare da questa
+pagina. Cio' che protegge i dati restano le policy RLS.
+
+`localhost` resta fuori perché lì chi apre l'app è chi la scrive. Il divieto vero sta
+all'inizio dei gestori, non nei bottoni spenti — un bottone spento si riaccende dagli
+strumenti del browser in due secondi, e c'è un controllo che prova proprio quello.
+
+### C47 — Il battito, e le tre voci che il repo non può chiudere — *metà*
+
+**Fatto:** `.github/workflows/battito.yml` controlla ogni mezz'ora che la home risponda **e** che
+PostgREST risponda, che è la parte che conta — una GET sulla home la serve la CDN di Netlify e
+sarebbe verde anche con Supabase spento, che sul piano gratuito succede da solo per inattività.
+Fallendo apre una segnalazione, invece di finire in un registro che non apre nessuno.
+
+**E la prima corsa programmata l'ha smentito, il 10/09/2026 alle 12:31.** Il controllo sul
+database chiedeva `/rest/v1/`, cioè la radice di PostgREST, che serve la descrizione OpenAPI dello
+schema: su questo progetto quella porta non è aperta alla chiave anon e risponde **401 sempre**,
+con Supabase acceso o spento. Il battito ha aperto la segnalazione #37 su un database che stava
+benissimo — misurava una porta chiusa, non il database. Ora interroga `groups`, che da `anon`
+risponde `200` con una lista vuota: la lista vuota va bene, qui non si guardano le righe, si
+guarda che *qualcuno* abbia risposto, e per dire `[]` PostgREST deve interrogare Postgres.
+
+È la stessa forma delle altre tre volte in questo file, ed è la quarta: **un controllo che gira non
+è un controllo che misura.** Con una differenza che vale scriverla, perché è peggio — un controllo
+rosso a vuoto non è solo inutile, è dannoso: un allarme che suona sempre è un allarme che si impara
+a ignorare, e a quel punto il giorno che Supabase va davvero in pausa nessuno lo guarda.
+
+**Non fatto, e non si fa dal repo** — sta in `README.md`, «Cosa si imposta a mano», e le righe
+gialle in `SECURITY.md` sono quelle: il secondo progetto Supabase per le anteprime (oggi
+un'anteprima è l'app **con i dati veri dentro**, e `rete.js` ci mette un cartello che avvisa senza
+separare niente), il ripristino di un backup provato almeno una volta, il minimo password e il
+confronto con le password rubate nella dashboard, l'error tracking, e le email transazionali da un
+dominio proprio. Nessuna di queste è chiusa: sono elencate perché **una voce dichiarata aperta è
+diversa da una voce dimenticata**.
+
+---
+
+## Fase 11 — Quello che restava (10/09/2026)
+
+Non un tema nuovo: la coda dei cantieri lasciati aperti dalle fasi precedenti, presi tutti nello
+stesso giro. C24 chiude l'ultima riga gialla vera di `SECURITY.md`, C16 ha finalmente il suo numero
+di arrivo, C20 il suo pezzo di repo, e C50 sana l'unico pezzo di schema che viveva solo in
+produzione. Restano fuori, e restano scritte, solo le voci che vogliono una dashboard, un telefono
+o due persone — `README.md`, «Cosa si imposta a mano».
+
+### C50 — Lo scarto in produzione — *fatto: `035`*
+
+Non un difetto di sicurezza: un difetto di **ricostruibilità**, che è la promessa su cui poggia
+tutto il resto. Il confronto del 26/07/2026 fra il database vivo e `supabase/migrations/` tornava
+su tutto — 16 tabelle, 9 trigger, 4 tabelle in realtime — con una sola eccezione: in produzione
+esistono `rls_auto_enable()` e l'event trigger `ensure_rls`, che accendono la Row Level Security
+su ogni tabella nuova di `public`, e **nessuna migrazione li creava**.
+
+Non si notava, perché le migrazioni accendono comunque la RLS a mano riga per riga: il database
+della CI e quello vero si comportano uguale finché nessuno dimentica quella riga. Il giorno che la
+dimentica, la produzione perdona e la copia ricostruita no — due sistemi che divergono proprio nel
+caso in cui la differenza conta.
+
+Due cose scritte facendolo, e la seconda è la solita:
+
+- **Il filtro guarda lo schema, non il nome.** Il trigger scatta su ogni `create table` della
+  sessione, e metà dei file di `supabase/test/` ne crea di temporanee: accendere la RLS su
+  `atteso_acl` farebbe fallire un controllo per un motivo che non c'entra niente.
+- **Dopo la `035` nessuna migrazione crea più tabelle**, quindi in CI quell'event trigger non
+  scatterebbe mai: dichiarato e mai eseguito, cioè verde qualunque cosa ci sia scritta dentro.
+  `verifica-rls-di-serie.sql` crea una tabella apposta e ne guarda `relrowsecurity`. È C45 nella
+  sua forma più secca — un controllo che compila non è un controllo che misura — ed è ormai la
+  quarta volta che questa frase serve.
+
+*Fatto quando:* una migrazione li dichiara e un controllo li esegue. Tutti e due sì.
+
+---
+
+## Fase 12 — Il restyling (10/09/2026)
+
+### C51 — Il mondo visivo nuovo, in tre fasi su un ramo solo — *in corso*
+
+Deciso in un'intervista di nove domande, ed è scritto qui perché **una sessione nuova
+non ha la conversazione**: senza queste righe, chi riprende ricomincia a chiedere.
+
+**Il punto di partenza è una scelta del proprietario, non una direzione derivata.** Il
+dado di `impeccable` aveva assegnato prima il tabellone Solari (rifiutato: è il mondo già
+in casa, e questo è un *redesign*), poi il libretto di bordo — costruito come campione e
+bocciato, «sembra la locandina di un ristorante», che era vero: le fasce piene in testa
+ai riquadri sono la lavagna di un menù. Il secondo campione (biglietto/abbonamento, con
+guilloche e perforazione) non è stato giudicato. A quel punto il proprietario ha preso
+**l'uscita di sicurezza** — lo standard di categoria — e ha consegnato **un'immagine di
+riferimento**: una dashboard SaaS chiara con colonna a sinistra, quattro numeri con
+sparkline, un grafico ad area, una ciambella e tre schede in fondo.
+
+> **L'immagine di riferimento non è nel repo**, ed è la cosa che una sessione nuova non
+> può ricostruire. Va richiesta al proprietario prima di continuare.
+
+#### Le nove decisioni
+
+| | Domanda | Scelta |
+|---|---|---|
+| 1 | Perimetro | **Tutto**, pagine legali comprese, più `manifest.json`, le quattro icone, `icon.svg` e `anteprima.png` — a fasi dichiarate |
+| 2 | Temi | **Due**, e si rovesciano. Chiaro: carta `#C0EBFF`, inchiostro `#002B4C`. Scuro: l'inverso. L'arancio `#F59E71` resta dov'è. Due rapporti identici, 11,43:1 — ~~vale~~ **superata da C52**: due palette diverse, e non si rovesciano |
+| 3 | Oltre i tre colori | Neutri **ricavati dal blu**, non grigi neutri. Rosso e verde restano per pericolo e conferma, col rosso spinto lontano dall'arancio in tinta (27 contro 47) |
+| 4 | Profondità | Pelle ovunque **+ ricomposizione di Home e Riepilogo**. Le altre tre viste prendono solo la pelle. Le tre fasce e le due soglie restano |
+| 5 | Tipografia | IBM Plex resta per testo e numeri; **un carattere da titolo** in pochi posti — *non ancora scelto, serve il permesso di scaricarlo, licenza OFL o simile* |
+| 6-7 | L'auto | **Ridisegnata da capo, geometria compresa**, con `tests/auto.mjs` che nasce insieme: nessuna sovrapposizione, tutto dentro la scocca, il posto del guidatore mai prenotabile, bersaglio ≥44px a 360 di larghezza |
+| 8 | Come si guarda | `banco.html`: i moduli veri con dati inventati. Serve perché quattro viste su cinque stanno dietro il login e W5 non è fatto |
+| 9 | Consegna | **Un ramo solo, `claude/restyling`**, tre fasi come commit, anteprima Netlify a ogni fase, **fusione una volta sola** |
+
+#### Le regole che ne sono uscite, e che valgono da qui in avanti
+
+1. **Niente scorrimento, in nessuna delle due direzioni.** Il Riepilogo sta in una
+   schermata. È la stessa cosa che C40 aveva chiesto e C41 difeso. Il come sta scritto in
+   testa al blocco `.app-lynk` di `style.css`: l'altezza si distribuisce invece di
+   sommarsi, ogni contenitore ha `min-height: 0`, e gli elenchi **si accorciano invece di
+   scorrere** (`--righe-scheda`).
+2. **L'arancio si riempie, non si scrive e non si contorna.** 2,09:1 sul bianco, 1,65:1
+   sulla carta azzurra. Come blocco pieno col blu sopra fa 6,91:1. Per le due volte in cui
+   serve scritto c'è `--tuo-testo`.
+3. **Le icone sono disegnate, mai emoji.** Un'emoji porta i suoi colori e non li cede: in
+   una palette di tre colori è sempre la quarta tinta dello schermo.
+4. **Un `label` dentro `.app-lynk` non porta i margini del resto del foglio.** Il
+   `margin-bottom` dei moduli dell'accesso arrivava fin dentro la barra della dashboard e
+   la alzava di sette pixel.
+5. **Una scala di distanze sola**: passo 4px, cinque valori. Prima erano otto, scelte una
+   alla volta dal componente che le chiedeva.
+
+#### I tre riquadri della foto che nell'app non esistono
+
+Il proprietario li vuole **tutti e tre, veri**: la **ricerca** cerca fra persone,
+destinazioni e fermate già caricate; il **selettore di periodo** filtra davvero (il
+Riepilogo scarica già tutti i passaggi, quindi ricalcola senza chiedere niente al
+database); e **«Upgrade to Pro»** diventa l'invito a **installare l'app**, che esiste da
+C12 e non aveva una casa. Oggi nel banco sono disegnati ma inerti: la logica è da
+scrivere.
+
+#### Dov'è arrivato, commit per commit
+
+1. `098c253` — la palette: i tre colori esatti in oklch, i 94 token rivalutati tenendo il
+   nome, le 50 coppie di contrasto verdi nei due temi, e i **19 pesi finti** (`font-weight: 500`
+   su una famiglia che il 500 non ce l'ha) portati a 600.
+2. `b29102c` — il Riepilogo riprodotto dalla foto, e `banco.html`.
+3. `eba046a` — la regola del «niente scorrimento», con il difetto che l'aveva nascosta:
+   `height: 100dvh` **senza ripiego**, che un browser che non conosce `dvh` scarta — e la
+   pagina torna alta quanto il contenuto.
+4. `b299219` — i sette pixel del `label` e la barra in cima che non arrivava al bordo.
+
+#### Cosa resta, in ordine
+
+1. **La fedeltà alla foto**, tre cose viste sull'immagine grande e non ancora fatte: le
+   **quattro tinte diverse** sulle icone delle tessere, il **riquadro del suggerimento**
+   sul grafico («Thursday · 75%»), e le **barre di avanzamento** nelle righe della prima
+   scheda in fondo.
+2. **La barra in basso sotto i 768px.** Il proprietario consegna un'immagine anche per
+   quella; fino ad allora c'è una resa provvisoria dichiarata, e **anche lì non si scorre**.
+3. **Il carattere da titolo** (domanda 5): due o tre candidati con licenza verificata, e
+   il permesso di scaricarlo.
+4. **Le altre quattro viste** — Passaggi, Comitive, Storico, Profilo — che oggi hanno la
+   palette nuova ma la composizione vecchia.
+5. **L'auto ridisegnata** con `tests/auto.mjs` (fase 3).
+6. **`PRODUCT.md` va rivisto**: elenca fra le anti-referenze cose che adesso pubblichiamo
+   — angoli tutti arrotondati, gradienti morbidi, palette morbida. O si aggiorna quel
+   file, o resta a dire il contrario del sito.
+
+### C52 — La dashboard finita, e due bug che la barra ha scoperto — *fatto*
+
+Le tre cose che C51 lasciava in sospeso sulla fedeltà alla foto, fatte sul banco:
+le **quattro tinte** sulle pastiglie delle tessere (tre le avevano già — blu, «tuo»,
+rosso di un giorno scoperto; solo la seconda era una copia della prima), il
+**riquadro del suggerimento** sul grafico e le **barre di avanzamento** nelle righe
+dei conti.
+
+Il suggerimento non è un ascolto del mouse: sono **sette bottoni veri**, centrati
+sui punti della curva e non sulle etichette sotto, con la percentuale anche nel nome
+accessibile. Così si raggiunge col tasto di tabulazione, e il dato esiste anche per
+chi il grafico non lo vede.
+
+Due difetti che la barra ha portato a galla, ed erano lì da prima:
+
+1. Nelle righe dei conti e dei prossimi passaggi il **nome andava a capo** —
+   «Piazza Dante → Stazione» diventava due righe, la voce tre, e si accavallava con
+   quella sotto. Il foglio lo vietava già in un commento, ma la protezione era su
+   `.l1` e copriva una scheda su tre. Ora è su `.riga-chi > b`.
+2. **Sotto i 768px la banda di una riga è alta 25px e il contenuto 34**: si
+   accavallava anche senza la barra. Passata a `--righe-scheda: 1`, che è il rimedio
+   che questa vista ha già.
+
+E la ragione per cui `style.css.tmp` stava nel repo: **`npx serve` tiene un handle
+aperto sul foglio**, quindi `os.replace(tmp, style.css)` falliva con WinError 5 e il
+temporaneo restava. Rimosso, e da qui in avanti si scrive in posto quando il server
+gira.
+
+### C53 — Due palette date, e il browser che decide quale si apre — *fatto*
+
+Due richieste del proprietario, e la seconda ha spostato l'intera identità.
+
+**Il tema segue il browser.** `tema.js` legge `prefers-color-scheme` prima che la
+pagina venga dipinta; una scelta salvata vince comunque, e la distinzione fra «non
+ha scelto» e «ha scelto chiaro» funziona perché la chiave vale `'scuro'` **o**
+`'chiaro'`. Il blocco scuro del CSS **non è duplicato** dentro una media query:
+sarebbero due stesure da tenere allineate, e `tests/contrasto.mjs` ne leggerebbe una.
+I quattro documenti statici — informativa, termini, 404, offline — non caricavano
+`tema.js` e restavano chiari per sempre: adesso lo caricano.
+
+**Le due palette nuove, una per tema**, che sostituiscono la terzina unica:
+
+| | chiaro | scuro |
+|---|---|---|
+| la carta | `#F4FEFF` | `#04326D` |
+| ciò che è tuo | `#A9C0E0` | `#F58F20` |
+| l'inchiostro e il tocco | `#0E2F76` | `#B2BED6` |
+
+I ruoli non sono stati scelti a occhio: le due terzine **combaciano per luminosità**
+con i tre mestieri di prima (carta 0,99 ↔ 0,92; «tuo» 0,80 ↔ 0,78; inchiostro
+0,33 ↔ 0,28), quindi la mappa era determinata. Tutti gli altri 94 token sono
+**ricavati** dai tre, con la luminosità risolta per soglia dove una soglia esiste, e
+le 55 coppie di `tests/contrasto.mjs` sono verdi nei due temi.
+
+Quattro conseguenze da conoscere, perché nessuna era prevedibile leggendo i sei
+esadecimali:
+
+1. **I due temi non si rovesciano più.** 12,16:1 alla luce contro 6,67:1 al buio: la
+   decisione 2 di C51 decade.
+2. **Al buio la scala è strozzata.** Con 6,67:1 di margine, una scheda può schiarirsi
+   di 0,055 di luminosità e non oltre — è il massimo che lascia l'arancio quando ci
+   sta sopra come testo. Perciò al buio gli **incassi scendono** sotto la carta
+   invece di salire; alla luce vale il contrario.
+3. **Alla luce una scheda non si distingue per il riempimento.** La carta è quasi
+   bianca (L 0,990 contro 0,999): la staccano il filo del bordo e l'ombra. È il
+   rovescio esatto della regola 3 del foglio, che era scritta per un fondo quasi nero.
+4. **L'auto non ha una lamiera che vada bene a tutti.** L'arancio `#F58F20` ha
+   luminanza 0,402, quindi per staccare 3:1 vuole una lamiera sotto 0,098; un
+   dettaglio scuro su una lamiera blu non può superare (luminanza + 0,05) / 0,05,
+   quindi la gomma la pretende sopra 0,1025. **Non si incontrano, per il 4%.** Si è
+   scelta la lamiera che serve alla gomma, e al buio il posto arancione lo delimita il
+   suo contorno — che nel disegno c'era già, 2,5px su `.seat-mine`, ora nel token
+   `--posto-tuo-filo`. Ogni tema ha quindi il suo meccanismo verificato: riempimento
+   alla luce (3,25:1), contorno al buio (4,47:1). **Da rivedere nella fase 3**, quando
+   l'auto si ridisegna con `tests/auto.mjs`.
+
+E due residui che il restyling aveva saltato, trovati adesso:
+
+- **L'intestazione del foglio descriveva ancora la palette viola** — cinque colori,
+  `#8A22E7`, «il buio è il materiale, non un tema», «le ombre sono sporco». Era la
+  carta costituzionale di `style.css` e diceva il contrario di quello che il foglio fa.
+  Riscritta.
+- **L'identità fuori dal CSS era tutta viola**: `theme-color` `#EEF1F3`/`#110C17` in
+  cinque pagine, `manifest.json`, il fondo di `icon.svg`. Allineata. Le quattro icone
+  PNG **no**: sono raster e vanno ridisegnate, non ricolorate da qui.
+
+Le sei tinte degli avatar si sono spostate coi 15,7 gradi dell'inchiostro, per non
+restare in una famiglia che la palette ha lasciato.
+
+*Fatto quando:* le cinque viste e la schermata d'accesso stanno nel mondo nuovo,
+`npm run check` è verde, l'identità fuori dal CSS è allineata, e il ramo è fuso una volta
+sola.
+
+### C54 — Dov'è davvero il restyling, misurato — *in corso*
+
+Prima di continuare sulle «altre quattro viste» ho misurato quante di quelle nuove
+arrivano all'app. La risposta cambia l'ordine di quello che resta.
+
+**Il mondo nuovo è un mondo parallelo, e vive solo nel banco.** Tutto il blocco sta
+sotto `.app-lynk` in `style.css` — 414 righe, il 12% del foglio — e `.app-lynk` compare
+in `banco.html` e in nessun altro file. In `index.html` non c'è né `.app-lynk`, né `.lato`,
+né `.cima`, né `.testa-vista`: **82 delle 92 classi del banco non compaiono mai
+nell'app**, che usa ancora `.bottom-nav` e le sue viste di prima.
+
+Quindi la riga di C51 «le altre quattro viste hanno la palette nuova ma la composizione
+vecchia» vale per **cinque viste su cinque**, Riepilogo compreso: il Riepilogo dell'app lo
+scrive `disegnaRiepilogo()` in `mod/storico.js` con un suo impianto (`.dash-top`,
+`#dash-conti`), che non è quello del banco. Sono due stesure della stessa vista.
+
+Il lato buono è che il namespace ha tenuto: **finora il restyling non ha potuto rompere
+niente**, perché nell'app non entra. Il lato caro è che non ha ancora consegnato niente.
+
+**E il trasloco è bloccato in basso, non in alto.** Sotto i 767px la resa provvisoria del
+banco non si limita a impaginare stretto: nasconde `.cerca` e, dentro `.fila-due` e
+`.fila-tre`, tutti i riquadri dopo il primo. Portare il guscio nell'app oggi vorrebbe dire
+pubblicare un telefono a cui manca del contenuto — e il telefono è il posto da cui questa
+app si usa. **L'immagine della barra in basso non è una rifinitura: è la condizione del
+trasloco.**
+
+#### `tests/auto.mjs`, e le quattro regole della fase 3
+
+Le regole delle decisioni 6-7 erano scritte qui e in nessun posto che le controllasse.
+Adesso c'è `npm run auto`, che legge la geometria **dal modulo vero** (`mod/auto-svg.js`,
+che in Node si importa perché non tocca il DOM al caricamento). Le prime tre reggono già:
+
+- **nessuna sovrapposizione**: la luce minima fra due bersagli è 22px sulle auto da 1 e 2,
+  6px su quella da 3, **3px** su quelle da 4, 5 e 6;
+- **tutto dentro la scocca**: 6px di margine dal fianco, 3px sulle auto da 4 in su;
+- **il posto di chi guida non si prenota**: nessun posto prenotabile ci cade sopra, e la
+  chiamata che lo disegna non passa `clickable`. Due prove, perché una sola si aggira.
+
+#### La fase 3, fatta dove lo spazio c'era — e il muro dove non c'era
+
+La scelta del proprietario fra le due strade è stata **allargare i sedili prendendo il
+pavimento**, non alzare il tetto di `.car-svg`. Fatto, e con un risultato diviso in due.
+
+**Dove c'era spazio: 44 veri.** `W_AVANTI` passa da 40 a 44, e le poltrone si spostano di
+un'unità per restare simmetriche — 30 dalla mezzeria, cioè 5 di margine dal fianco e 16 di
+luce fra le due. La coppia di dietro delle auto da 3 (e la terza fila di quelle da 6) sta
+più raccolta, 27 dalla mezzeria: è una panchina divisa in due, non due poltrone. **Le auto
+da 1, 2 e 3 sono verdi.**
+
+**Il pavimento che si è preso è quello verticale**, perché in larghezza non ce n'era: la
+seduta passa da 42 a 50, e fra due file restano 25 unità invece di 33. Non è un dettaglio
+di misura — serviva a non riaprire il difetto che `auto-svg.js` documenta da sempre: 44 per
+40 erano quadrati, e «tre quadrati in fila si leggono come una griglia invece che come una
+panchina». Allargare senza alzare rendeva quella frase vera di nuovo. Le due altezze sono
+ora costanti esportate (`H_SEDUTA`, `H_SPALLIERA`, `Y_SEDUTA`), e da lì si ricavano anche la
+piega del cuscino, il tondo della foto e le iniziali: il giorno in cui la seduta cambia,
+niente resta indietro.
+
+**Dove non c'era, non c'è andata, e non è una svista.** La panchina da tre delle auto da 4,
+5 e 6 resta a 34:
+
+> Fra i due fianchi ci sono **114 unità**. Tre sedili da 44 ne vogliono **132**: mancano 18
+> unità che non esistono, anche appiccicandoli, anche togliendo ogni margine. Il massimo
+> fisico di quella fila è 38 con zero luce, **36** con la luce che serve a non sbagliare
+> tocco — due pixel guadagnati spendendo tutto il margine dal fianco, che non li vale.
+
+Quella fila sale a 44 solo se l'auto cresce, e allora cresce anche `.car-svg`: è la strada
+che il proprietario ha scartato, e resta scartata finché non decide diversamente. Per la
+soglia AA i 34 bastano (il minimo è 24×24); i 44 sono la soglia buona, e su quella fila
+restano un debito **dichiarato**. Per questo `npm run auto` non entra ancora in
+`npm run check`: un `check` rosso per una decisione che aspetta smette di voler dire
+qualcosa.
+
+Il test adesso misura **fila per fila** invece di stampare un minimo solo: con il minimo
+unico l'auto sembrava rotta tutta, mentre la fila che non ci arriva è una.
+
+**E una copia che stava per divergere.** L'auto del cartello dell'accesso è scritta a mano
+in `index.html` — quel riquadro sta in pagina anche senza JavaScript — ed è una copia di
+`SEAT_LAYOUTS[4]`. Allargando il modulo sarebbe rimasta a 40, e le due auto si vedono nella
+stessa sessione. Allineata, e adesso c'è una quinta regola nel test che confronta le cinque
+sedute del cartello con quelle del modulo, una per una.
+
+Una misura in più che il test stampa e non giudica: sulle auto da 4, 5 e 6 i sedili esterni
+**sforano di 1px il contorno dell'abitacolo** (restano dentro la scocca, 3px dal fianco).
+Da decidere se è l'abitacolo a dover allargarsi, non prima.
+
+#### Cosa resta, riordinato
+
+1. **L'immagine della barra sotto i 768px** — non è più il punto 2 di una lista, è ciò che
+   sblocca il trasloco del guscio nell'app.
+2. **Il trasloco**: `index.html` prende il guscio del banco, e `mod/storico.js` smette di
+   avere una seconda stesura del Riepilogo.
+3. **La panchina da tre**: o l'auto cresce (e con lei `.car-svg`), o quella fila resta a
+   34 e i 44 valgono per le poltrone. Tutto il resto della fase 3 è fatto.
+4. ~~Il carattere da titolo, le quattro icone PNG, e i tre riquadri del banco da
+   accendere.~~ Restano solo **il carattere da titolo** (serve il permesso di scaricarlo):
+   le icone e i tre riquadri li ha chiusi C55.
+
+### C55 — I tre riquadri accesi, l'invito che non c'era, e le immagini rifatte — *fatto*
+
+#### I tre riquadri della foto non sono piu' inerti
+
+Erano disegnati e fermi, e **il selettore di periodo lo era per forza**: un periodo non
+puo' filtrare dei numeri scritti a mano. Finche' i numeri del banco erano quattro elenchi
+battuti a tastiera, quel controllo era un ornamento, e accenderlo voleva dire prima
+dargli qualcosa da filtrare.
+
+Adesso il banco parte da un elenco di **passaggi con una data** — la stessa forma che
+hanno nell'app, dove `mod/storico.js` scarica tutti i passaggi del gruppo e poi conta.
+Novantasette giorni generati con un seme fisso, perche' un banco che mostra numeri diversi
+a ogni ricarica non si puo' approvare e due schermate a confronto non direbbero niente.
+Da li' si **ricavano** le quattro tessere, il grafico della settimana, la ciambella dei
+turni, i conti in sospeso e i prossimi passaggi: cambiare periodo e' ricontare, che e' il
+punto — nell'app non costera' una richiesta in piu'.
+
+- **La ricerca** filtra le tre schede in fondo su persone, tratte e fermate gia' caricate.
+  Senza accenti e senza maiuscole, mentre si scrive, senza un bottone: non e' una domanda
+  al server, e' un filtro su quello che si sta guardando. Il piede di ogni scheda dice due
+  cose diverse — quante righe non ci stanno e quante ne ha tolte la ricerca — perche' un
+  elenco corto mentre si cerca non e' un elenco corto, e' una ricerca.
+- **Il periodo** ricalcola davvero: 5 passaggi in 7 giorni, 27 in 30, 79 in 90. Il saldo
+  cambia perfino di segno fra un mese e tre. «Questo mese» non e' «ultimi 30 giorni» e non
+  gli e' stato fatto dire la stessa cosa: il 10 del mese sono dieci giorni.
+- Ne sono stati accesi anche i due di scheda: la **settimana** del grafico e la
+  **finestra** della ciambella. Quest'ultima resta separata dal periodo in cima di
+  proposito — «chi guida di solito» e' un'altra domanda da «com'e' andato questo mese», e
+  stringerle insieme farebbe sparire chi guida poco.
+
+Ogni controllo scrive in un solo stato e chiama un solo `disegna()`: cosi' non esiste il
+caso in cui una tessera e' del periodo nuovo e la ciambella di quello vecchio. E quando un
+filtro non trova niente la scheda lo **dice**, invece di restare vuota: vuoto e rotto si
+somigliano troppo.
+
+#### L'invito a installare, che in tre anni non e' mai stato fatto a nessuno
+
+C12 ha reso l'app installabile e poi non l'ha proposto: in tutta l'interfaccia non c'era
+una riga che dicesse che si puo' fare. `mod/installa.js` e' la logica vera, e sono **tre
+strade**, non una:
+
+1. Chrome manda `beforeinstallprompt`, e allora c'e' un dialogo da aprire. Va catturato
+   appena parte — arriva una volta sola e non aspetta che qualcuno sia pronto — e va
+   speso una volta sola: se si tenesse e si riprovasse, il secondo `prompt()` solleverebbe
+   e il bottone sembrerebbe rotto.
+2. **Safari non lo manda mai.** Non e' un errore da nascondere: li' si installa a mano, e
+   l'unica cosa utile e' dire quali due tocchi servono. Una PWA che su iPhone non dice
+   niente e' una PWA che su iPhone non si installa.
+3. Chi ce l'ha gia' non vede niente — e la prova non e' una bandierina salvata da noi, che
+   si cancella e mentirebbe, ma come la pagina e' aperta adesso (`display-mode:
+   standalone`).
+
+Oggi lo usa solo il banco, perche' il riquadro sta nel guscio nuovo che nell'app non e'
+ancora entrato (C54). Ed e' la ragione per cui `tests/moduli.mjs` adesso **confronta il
+guscio di `sw.js` con i moduli raggiungibili da `app.js`**: un modulo che l'app importa e
+il service worker non ha non da' errore in linea, da' un'app installata che offline non
+apre. `mod/installa.js` non e' nel guscio perche' l'app non lo importa; il giorno in cui lo
+importera', quella riga diventa rossa finche' non si aggiunge anche li'.
+
+#### Le cinque immagini, rifatte da quello che c'e' nel repo
+
+`icon.svg` era stato allineato in C53, i raster no: chi installava l'app si ritrovava sulla
+schermata home la tessera quasi nera con l'auto lavanda, e chi mandava il link in chat
+mandava un'anteprima di due palette fa. **Erano anche disegni diversi** — nei PNG l'auto
+era piena, nell'SVG e' di contorno, e nell'anteprima era la capsula vecchia: tre marchi,
+non uno.
+
+`npm run immagini` li rifa tutti e cinque da `icon.svg` e dall'auto del cartello in
+`index.html`, rasterizzando col Chromium che Playwright ha gia' in casa — nessuna
+dipendenza nuova. Le **maskable** non sono le altre con un altro nome: Android ritaglia
+nella forma che decide il telefono e garantisce solo il cerchio dentro l'80% del lato,
+quindi niente angoli arrotondati (li mette il sistema, e i nostri finirebbero tagliati
+storti), fondo a filo e disegno al 62%.
+
+Cosi' la domanda «quale dei due marchi e' quello buono» non si pone piu', e il giorno in
+cui cambia si cambia un file e si rilancia un comando.
+
+#### E i residui della palette vecchia nei commenti
+
+Tre commenti al presente dicevano ancora il falso: i fari dell'auto «sono viola», il viola
+«in questo foglio vuol dire si tocca», i sei colori degli avatar «tutti nella famiglia del
+viola» — quest'ultimo seguito, due righe sotto, dal paragrafo che C53 aveva aggiunto e che
+diceva il contrario. Riscritti. I commenti che raccontano **cosa c'era prima** restano:
+quelli non sono sbagliati, sono la memoria.
+
+E l'abitacolo passa da 22 a 20, cosi' i sedili esterni della panchina da tre ci stanno
+dentro invece di appoggiarsi sul suo contorno: la misura che `tests/auto.mjs` stampava e'
+diventata una regola.
 
 ---
 

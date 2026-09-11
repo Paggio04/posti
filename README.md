@@ -1,11 +1,15 @@
-# 📍 Posti
+# 📍 WeTransport
 
 Chi guida oggi? Chi sale? App per organizzare i passaggi in macchina della comitiva:
 i guidatori pubblicano la macchina del giorno, gli altri prenotano il posto tappando sul sedile.
 
+> **Il repository si chiama ancora `posti`** — è l'unico pezzo del nome vecchio rimasto, e non
+> si rinomina da qui: si fa dalle impostazioni di GitHub, insieme al collegamento Netlify e al
+> remoto dei cloni. È l'ultima riga aperta di C20 in [docs/ROADMAP.md](docs/ROADMAP.md).
+
 ## Stack
 
-- **Frontend:** HTML/CSS/JS vanilla (nessuna build, deploy statico)
+- **Frontend:** HTML/CSS/JS vanilla (nessuna build, deploy statico). Da C17 l'app sta in **tredici moduli ES** dentro `mod/`, e `app.js` è l'avvio: 51 righe con dentro `render()`. **Nessun dominio di terzi:** caratteri e libreria di Supabase stanno nel repo — `fonts/README.md` e `vendor/README.md` dicono perché e come si aggiornano
 - **Backend:** [Supabase](https://supabase.com) — autenticazione email/password + database Postgres con Row Level Security
 - **Hosting:** [Netlify](https://netlify.com)
 
@@ -33,12 +37,37 @@ npm ci
 npx serve .        # oppure: python3 -m http.server 8000
 ```
 
+I controlli end-to-end girano anche qui, non solo in CI: `BASE_URL=http://localhost:3000 npm run
+test:e2e`. Uno solo ha bisogno che il browser raggiunga davvero Supabase — quello che verifica il
+messaggio di password sbagliata — e su una rete che non ci arriva fallisce da solo, senza portarsi
+dietro gli altri. Fino al 10/09/2026 ne fallivano sei, perché `app.js` prendeva la libreria da un
+CDN: adesso sta in `vendor/`.
+
 Da `localhost` funziona l'accesso con email e password; **non** "Continua con Google", perché
 `localhost` non è fra gli indirizzi di reindirizzo autorizzati sul progetto Supabase.
+
+## Cosa si imposta a mano
+
+Il repo non può farle da solo, e ognuna è una voce della checklist pre-lancio che **resta
+aperta finché qualcuno non la fa**. In ordine di quanto costa lasciarla com'è.
+
+| Cosa | Dove | Perché |
+|---|---|---|
+| Un **secondo progetto Supabase** per le anteprime, e la password sulle anteprime Netlify | Supabase → New project; Netlify → Site settings → Access control | Oggi ogni `deploy-preview-N--wetransport.netlify.app` è l'app **con i dati veri dentro**, a un indirizzo pubblico. Il cartello che `rete.js` mette in pagina avvisa, non separa. Peggiora nel momento in cui esistono i segreti `WT_TEST_*`, perché i test dei flussi scriverebbero comitive vere |
+| **Ripristinare un backup**, una volta, per prova | Supabase → Database → Backups, su un progetto usa-e-getta | Un backup mai ripristinato non è un backup. Mezz'ora, una volta sola, e la riga di `SECURITY.md` smette di essere una speranza |
+| **Minimo password e password rubate** | Supabase → Authentication → Policies | `PASSWORD_MINIMO` in `app.js` è il controllo del browser, e un browser si salta. Il minimo che vale è quello della dashboard: portalo a 10 e accendi il confronto con gli elenchi di password compromesse (è gratis e di default è spento) |
+| **Error tracking** (Sentry o equivalente) | account presso il fornitore, poi il DSN nel codice | I log di Supabase coprono database e autenticazione. Un errore JavaScript nel browser di chi usa l'app oggi non lo vede nessuno |
+| **Dominio proprio, e le email da lì** | registrar + Netlify + un servizio transazionale (Resend, Postmark) | Conferma dell'account e reset password passano dal mittente predefinito di Supabase: dominio condiviso, poche email l'ora, nessun SPF/DKIM/DMARC di questo progetto. Sono le due email da cui dipende l'accesso. Si fa insieme al dominio (C20), non prima |
+| **Nominare il primo amministratore** | SQL Editor | Vedi il punto 3 del setup qui sopra |
+
+Il battito (`.github/workflows/battito.yml`) controlla ogni mezz'ora che il sito **e il
+database** rispondano, e apre una segnalazione quando non è così. Non sostituisce un
+monitoraggio esterno: GitHub non garantisce il minuto di una corsa programmata.
 
 ## Documentazione
 
 - [SECURITY.md](SECURITY.md) — stato di sicurezza, affidabilità, testing per ogni area
+- [privacy.html](privacy.html) e [termini.html](termini.html) — le due pagine scritte, servite dal sito
 - [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md) — diagramma, schema dati, contratto API
 - [docs/ROADMAP.md](docs/ROADMAP.md) — cosa manca, in che ordine, e quando un pezzo è finito
 - [docs/adr/](docs/adr/) — decisioni architetturali
