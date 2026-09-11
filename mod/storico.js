@@ -579,7 +579,7 @@ async function disegnaRiepilogo(box) {
           <button type="button" class="riga-chi chi" data-dettaglio="${p.id}"
                   title="Da cosa nasce questo conto">
             <b>${escapeHtml(nomePer.get(p.id) || 'Qualcuno')}</b>
-            <small>${escapeHtml(plurale(n, 'passaggio', 'passaggi'))}${da ? ` · dal ${escapeHtml(dataBreve(da))}` : ''}</small>
+            <small title="${escapeHtml(plurale(n, 'passaggio', 'passaggi'))}${da ? ` · dal ${escapeHtml(dataSenzaGiorno(da))}` : ''}">${escapeHtml(plurale(n, 'passaggio', 'passaggi'))}${da ? ` · dal ${escapeHtml(dataSenzaGiorno(da))}` : ''}</small>
             <span class="barra ${versoDi(p.v)}"><i style="width:${(Math.abs(p.v) / grosso * 100).toFixed(1)}%"></i></span>
           </button>
           <span class="riga-imp ${versoDi(p.v)}">${escapeHtml(firma(p.v))}</span>
@@ -634,11 +634,14 @@ async function disegnaRiepilogo(box) {
         const liberi = Math.max(0, (r.seats || 0) - r.seat_claims.length);
         const facce = r.seat_claims.slice(0, 3);
         const piu = r.seat_claims.length - facce.length;
+        const qualifica = `${(r.depart_time || '').slice(0, 5)} · `
+          + (mio(r.driver_id) ? 'guidi tu' : `guida ${nomeCorto(r.driver_id)}`)
+          + ` · ${plurale(liberi, 'posto libero', 'posti liberi')}`;
         return `<div class="riga">
           <span class="data"><b>${Number(r.ride_date.slice(8, 10))}</b><small>${escapeHtml(meseCorto(r.ride_date))}</small></span>
           <span class="riga-chi">
             <b>${escapeHtml(r.origin || '—')} → ${escapeHtml(r.destination || '')}</b>
-            <small>${escapeHtml((r.depart_time || '').slice(0, 5))} · ${mio(r.driver_id) ? 'guidi tu' : `guida ${escapeHtml(nomeCorto(r.driver_id))}`} · ${escapeHtml(plurale(liberi, 'posto libero', 'posti liberi'))}</small>
+            <small title="${escapeHtml(qualifica)}">${escapeHtml(qualifica)}</small>
           </span>
           <span class="facce">${facce.map(c => {
     const id = c.passenger_id;
@@ -1100,6 +1103,17 @@ function oggiInLettere() {
 // Il mese in tre lettere, per il quadratino della data dei prossimi passaggi.
 const MESI_CORTI = ['GEN', 'FEB', 'MAR', 'APR', 'MAG', 'GIU', 'LUG', 'AGO', 'SET', 'OTT', 'NOV', 'DIC'];
 const meseCorto = (iso) => MESI_CORTI[Number(iso.slice(5, 7)) - 1] || '';
+
+// Data senza il giorno della settimana: «7 ago». Serve a «dal …» nei conti, e
+// la differenza non e' di gusto: «dal dom 23 ago» non entra nella riga nemmeno a
+// 1600px di finestra, e il giorno della settimana di quando e' nato un conto non
+// lo usa nessuno — «da quando» e' un mese e un numero. Dove il giorno serve
+// davvero, come «il primo: lun 14 set» dei giorni scoperti, resta `dataBreve`.
+function dataSenzaGiorno(iso) {
+  if (!iso) return '—';
+  return new Date(String(iso).slice(0, 10) + 'T00:00:00')
+    .toLocaleDateString('it-IT', { day: 'numeric', month: 'short' });
+}
 
 // Data breve, per i riquadri: «gio 7 ago».
 // Il taglio a dieci caratteri non e' una precauzione: `pagamenti.quando` e' un
