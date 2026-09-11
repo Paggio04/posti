@@ -1,0 +1,606 @@
+<!DOCTYPE html>
+<html lang="it">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<meta name="robots" content="noindex, nofollow" />
+<!-- Il banco non si fa indicizzare, ma una descrizione serve lo stesso: chi si
+     passa il link in chat vede quella, e «Banco di prova» da solo non dice di
+     che cosa. -->
+<meta name="description" content="Il banco di prova di WeTransport: i moduli veri dell'app con dati inventati, per guardare il Riepilogo senza entrare." />
+<title>Banco di prova — WeTransport</title>
+<!--
+  IL BANCO DI PROVA. Non e' l'app: e' l'app con dei dati inventati, per poterla
+  guardare senza entrare. Serve perche' quattro viste su cinque stanno dietro il
+  login e gli account di prova non esistono ancora (W5), quindi senza questa
+  pagina il restyling si disegnerebbe alla cieca.
+
+  Collega `style.css` **vero**: quello che si approva qui e' quello che si
+  pubblica. Fuori dal sitemap, fuori dal guscio del service worker, `noindex`.
+-->
+<link rel="stylesheet" href="style.css" />
+<style>
+  /* Il telaio del banco, che nell'app non esiste. **Galleggia**, non occupa una
+     riga: se rubasse altezza alla pagina, la pagina non starebbe piu' in una
+     schermata e il banco misurerebbe qualcosa di diverso da cio' che pubblica. */
+  html, body { height: 100%; overflow: hidden; }
+  .banco-barra {
+    position: fixed; z-index: 60; left: 10px; bottom: 8px;
+    display: flex; gap: 6px; align-items: center;
+    padding: 3px 9px; border-radius: var(--pill);
+    background: var(--targa); color: var(--su-targa);
+    font-size: 0.66rem; letter-spacing: 0.06em; text-transform: uppercase; font-weight: 700;
+    opacity: 0.5; transition: opacity 140ms;
+  }
+  .banco-barra:hover { opacity: 1; }
+</style>
+</head>
+<body>
+
+<div class="banco-barra" title="Il tema si gira con la lunetta nella barra dell'app">Banco · dati inventati</div>
+
+<div class="app-lynk">
+
+  <!-- ══ LA COLONNA ══════════════════════════════════════════════════════ -->
+  <aside class="lato">
+    <div class="lato-testa">
+      <span class="targa">
+        <svg viewBox="0 0 24 16" aria-hidden="true"><path d="M2 11h20v3H2z" fill="currentColor"/><path d="M4 11l2-5h12l2 5" fill="none" stroke="currentColor" stroke-width="1.6"/></svg>
+        WeTransport
+      </span>
+      <button type="button" class="lato-piega" aria-label="Riduci la colonna">
+        <svg viewBox="0 0 20 20" aria-hidden="true"><path d="M3 5h14M3 10h9M3 15h14" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" fill="none"/></svg>
+      </button>
+    </div>
+
+    <nav class="lato-voci" aria-label="Viste" id="voci"></nav>
+
+    <!-- Al posto di «Upgrade to Pro»: l'invito a installarla, che esiste da C12
+         e non ha mai avuto una casa. -->
+    <section class="lato-promo" id="promo">
+      <h2>Tienila sul telefono</h2>
+      <p>Installata si apre in un tocco, e mostra l'ultima giornata anche senza rete.</p>
+      <button type="button" class="btn-promo" id="btn-installa">Installa l'app</button>
+    </section>
+
+    <div class="lato-io">
+      <span class="av" style="background: oklch(0.470 0.090 263)">EP</span>
+      <span class="io-chi"><b>Elia Paggetti</b><small>Amministratore</small></span>
+      <span class="io-freccia" id="freccia"></span>
+    </div>
+  </aside>
+
+  <!-- ══ IL CORPO ════════════════════════════════════════════════════════ -->
+  <div class="corpo">
+
+    <header class="cima">
+      <label class="cerca">
+        <svg viewBox="0 0 20 20" aria-hidden="true"><circle cx="9" cy="9" r="6" fill="none" stroke="currentColor" stroke-width="1.8"/><path d="M13.5 13.5L18 18" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/></svg>
+        <input type="search" id="cerca" placeholder="Cerca persone, destinazioni, fermate" />
+      </label>
+      <button type="button" class="tondo" aria-label="Avvisi" id="btn-avvisi"><span class="bollino"></span></button>
+      <button type="button" class="tondo" aria-label="Gira il tema" id="btn-tema"></button>
+      <button type="button" class="btn-cima">+ Offri un passaggio</button>
+      <button type="button" class="tondo" aria-label="Altro" id="btn-altro"></button>
+    </header>
+
+    <div class="testa-vista">
+      <div>
+        <h1>Mercoledì 10 settembre</h1>
+        <p>Riepilogo della Comitiva del mare · 5 persone</p>
+      </div>
+      <label class="periodo">
+        <select id="periodo" aria-label="Periodo">
+          <option value="30">Ultimi 30 giorni</option>
+          <option value="7">Ultimi 7 giorni</option>
+          <option value="mese">Questo mese</option>
+          <option value="90">Ultimi 90 giorni</option>
+        </select>
+        <svg class="giu" viewBox="0 0 20 20" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"><path d="M5.5 8 10 12.5 14.5 8"/></svg>
+      </label>
+    </div>
+
+    <div class="numeri" id="numeri"></div>
+
+    <div class="fila-due">
+      <section class="scheda">
+        <div class="scheda-testa">
+          <div><h2>Occupazione settimanale</h2><p>Posti presi sui posti offerti, giorno per giorno</p></div>
+          <label class="scelta"><select id="settimana" aria-label="Settimana"><option value="0">Questa settimana</option><option value="1">La prossima</option></select><svg class="giu" viewBox="0 0 20 20" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"><path d="M5.5 8 10 12.5 14.5 8"/></svg></label>
+        </div>
+        <div class="scheda-corpo grafico" id="grafico"></div>
+        <div class="giorni" id="giorni"></div>
+      </section>
+
+      <section class="scheda">
+        <div class="scheda-testa">
+          <div><h2>Distribuzione turni</h2></div>
+          <label class="scelta"><select id="finestra" aria-label="Finestra"><option value="30">30 giorni</option><option value="90">90 giorni</option></select><svg class="giu" viewBox="0 0 20 20" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"><path d="M5.5 8 10 12.5 14.5 8"/></svg></label>
+        </div>
+        <div class="scheda-corpo ciambella-riga">
+          <div class="ciambella" id="ciambella"></div>
+          <ul class="legenda" id="legenda"></ul>
+        </div>
+      </section>
+    </div>
+
+    <div class="fila-tre">
+      <section class="scheda">
+        <div class="scheda-testa"><h2>Conti in sospeso</h2><button type="button" class="btn-tenue">Salda tutto</button></div>
+        <div class="scheda-corpo righe" id="conti"></div>
+        <div class="scheda-piede" id="piede-conti"></div>
+      </section>
+
+      <section class="scheda">
+        <div class="scheda-testa"><h2>Attività recente</h2><button type="button" class="btn-tenue">Storico</button></div>
+        <div class="scheda-corpo righe" id="attivita"></div>
+        <div class="scheda-piede" id="piede-attivita"></div>
+      </section>
+
+      <section class="scheda">
+        <div class="scheda-testa"><h2>Prossimi passaggi</h2><button type="button" class="btn-tenue">Calendario</button></div>
+        <div class="scheda-corpo righe" id="prossimi"></div>
+        <div class="scheda-piede" id="piede-prossimi"></div>
+      </section>
+    </div>
+
+  </div>
+</div>
+
+<script type="module">
+import { collegaPromo } from './mod/installa.js';
+// I dati sono inventati, le voci no: sono esattamente quelle che il Riepilogo
+// calcola oggi in mod/storico.js.
+const S = (d) => `<svg class="i" viewBox="0 0 20 20" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round">${d}</svg>`;
+const ICO = {
+  auto: S('<path d="M3 12.5h14M4.5 12.5V16h2v-1.5M13.5 14.5V16h2v-3.5"/><path d="M4.6 12.5l1.7-4.4A1.5 1.5 0 0 1 7.7 7h4.6a1.5 1.5 0 0 1 1.4 1.1l1.7 4.4"/>'),
+  griglia: S('<rect x="3" y="3" width="6" height="6" rx="1"/><rect x="11" y="3" width="6" height="6" rx="1"/><rect x="3" y="11" width="6" height="6" rx="1"/><rect x="11" y="11" width="6" height="6" rx="1"/>'),
+  gente: S('<circle cx="7.5" cy="7" r="2.6"/><path d="M3 16.5c0-2.3 2-3.8 4.5-3.8s4.5 1.5 4.5 3.8"/><path d="M13.2 5.2a2.6 2.6 0 0 1 0 5M14.5 12.9c1.6.4 2.5 1.7 2.5 3.6"/>'),
+  lista: S('<path d="M7 5.5h10M7 10h10M7 14.5h10"/><circle cx="3.6" cy="5.5" r=".9" fill="currentColor" stroke="none"/><circle cx="3.6" cy="10" r=".9" fill="currentColor" stroke="none"/><circle cx="3.6" cy="14.5" r=".9" fill="currentColor" stroke="none"/>'),
+  persona: S('<circle cx="10" cy="7" r="3"/><path d="M4 17c0-3 2.7-4.6 6-4.6S16 14 16 17"/>'),
+  euro: S('<path d="M14 5.6A5 5 0 0 0 6.2 8M6.2 12a5 5 0 0 0 7.8 2.4M3.6 8.6h6M3.6 11.4h6"/>'),
+  allerta: S('<path d="M10 3.4 17.2 16H2.8Z"/><path d="M10 8v3.4"/>'),
+  campana: S('<path d="M5.4 13.4V9a4.6 4.6 0 1 1 9.2 0v4.4l1.2 1.8H4.2Z"/><path d="M8.2 17.2a2 2 0 0 0 3.6 0"/>'),
+  luna: S('<path d="M15.6 11.9A6 6 0 1 1 8.1 4.4a5 5 0 0 0 7.5 7.5Z"/>'),
+  punti: S('<circle cx="5" cy="10" r="1.1" fill="currentColor" stroke="none"/><circle cx="10" cy="10" r="1.1" fill="currentColor" stroke="none"/><circle cx="15" cy="10" r="1.1" fill="currentColor" stroke="none"/>'),
+  freccia: S('<path d="M6 8.5 10 12.5 14 8.5"/>'),
+};
+const AV = ['oklch(0.470 0.090 263)', 'oklch(0.440 0.070 226)', 'oklch(0.455 0.075 301)',
+  'oklch(0.425 0.065 196)', 'oklch(0.480 0.085 281)', 'oklch(0.410 0.060 216)'];
+const iniz = (n) => n.split(' ').map((p) => p[0]).join('').slice(0, 2).toUpperCase();
+const met = (id, html) => { document.getElementById(id).innerHTML = html; };
+
+met('voci', [
+  ['auto', 'Passaggi', false, ''],
+  ['griglia', 'Riepilogo', true, ''],
+  ['gente', 'Comitive', false, ''],
+  ['lista', 'Storico', false, '3'],
+  ['persona', 'Profilo', false, ''],
+].map(([i, n, att, p]) => `<a class="voce${att ? ' attiva' : ''}" href="#"${att ? ' aria-current="page"' : ''}>
+  <span class="ico">${ICO[i]}</span>${n}${p ? `<span class="pallino">${p}</span>` : ''}</a>`).join(''));
+met('freccia', ICO.freccia);
+document.getElementById('btn-avvisi').insertAdjacentHTML('beforeend', ICO.campana);
+met('btn-tema', ICO.luna);
+met('btn-altro', ICO.punti);
+
+// ══ I DATI: INVENTATI, MA FERMI E DERIVATI ═══════════════════════════════
+// Prima qui c'erano quattro elenchi scritti a mano, e i tre riquadri della
+// schermata di riferimento — la ricerca, il selettore di periodo, l'invito a
+// installare — erano disegnati e inerti. Il selettore era inerte **per forza**:
+// un periodo non puo' filtrare dei numeri scritti a mano, e finche' i numeri non
+// vengono da qualche parte quel controllo e' un ornamento.
+//
+// Adesso vengono da un elenco di passaggi con una data, che e' la stessa forma
+// che hanno nell'app: `mod/storico.js` scarica tutti i passaggi del gruppo e poi
+// conta. Cambiare periodo e' **ricontare**, non richiedere — ed e' la ragione per
+// cui questo controllo si puo' accendere senza toccare il database.
+//
+// Il seme e' fisso di proposito: un banco che mostra numeri diversi a ogni
+// ricarica non si puo' approvare, e due schermate a confronto non dicono niente.
+const OGGI = new Date(2026, 8, 10);            // mercoledi' 10 settembre, la data del banco
+const GENTE = ['Ada Ferrari', 'Bruno Sala', 'Carla Moretti', 'Dario Neri', 'Elia Paggetti'];
+const IO = 4;                                  // Elia, cioe' chi sta guardando
+const QUOTA = 1.5;                             // quello che costa un posto
+const FERMATE = ['Piazza Dante', 'Stazione', 'Mare', 'Centro', 'Ospedale'];
+const TRATTE = [[0, 1], [1, 0], [0, 2], [2, 0], [0, 3], [4, 0]];
+
+let seme = 20260910;
+const caso = () => ((seme = (seme * 1103515245 + 12345) & 0x7fffffff) / 0x7fffffff);
+
+const PASSAGGI = [];
+for (let d = -89; d <= 7; d++) {
+  const g = new Date(OGGI);
+  g.setDate(OGGI.getDate() + d);
+  if (g.getDay() === 0) continue;              // la domenica la comitiva non si muove
+  const quanti = caso() < 0.22 ? 0 : caso() < 0.72 ? 1 : 2;
+  for (let k = 0; k < quanti; k++) {
+    const guida = Math.floor(caso() * GENTE.length);
+    const offerti = 2 + Math.floor(caso() * 3);
+    const bordo = GENTE.map((_, i) => i).filter((i) => i !== guida && caso() < 0.45).slice(0, offerti);
+    const [da, a] = TRATTE[Math.floor(caso() * TRATTE.length)];
+    PASSAGGI.push({ d, g, guida, offerti, bordo, da, a, ora: k === 0 ? '07:40' : '18:15' });
+  }
+}
+
+const tratta = (p) => FERMATE[p.da] + ' → ' + FERMATE[p.a];
+const MESI = ['GEN', 'FEB', 'MAR', 'APR', 'MAG', 'GIU', 'LUG', 'AGO', 'SET', 'OTT', 'NOV', 'DIC'];
+const ABBR = ['dom', 'lun', 'mar', 'mer', 'gio', 'ven', 'sab'];
+const NOMI = ['domenica', 'lunedì', 'martedì', 'mercoledì', 'giovedì', 'venerdì', 'sabato'];
+const eur = (n) => (n < 0 ? '− ' : '+ ') + Math.abs(n).toLocaleString('it-IT', { minimumFractionDigits: 2 }) + ' €';
+
+// Il periodo scelto, come filtro sui giorni passati. «Questo mese» non e' «ultimi
+// 30 giorni» e non va confuso con lui: il 10 del mese sono dieci giorni, non trenta.
+function filtroPeriodo(scelta) {
+  if (scelta === 'mese') {
+    return (p) => p.d <= 0 && p.g.getMonth() === OGGI.getMonth() && p.g.getFullYear() === OGGI.getFullYear();
+  }
+  const giorni = Number(scelta);
+  return (p) => p.d <= 0 && p.d > -giorni;
+}
+const giorniDi = (scelta) => (scelta === 'mese' ? OGGI.getDate() : Number(scelta));
+
+// ── Lo stato: quattro controlli, un disegno solo ─────────────────────────
+// Ogni controllo scrive qui e chiama `disegna()`. Non ci sono tre funzioni che
+// ridisegnano tre pezzi, cosi' non esiste il caso in cui una tessera e' del
+// periodo nuovo e la ciambella di quello vecchio.
+const stato = { periodo: '30', finestra: '30', settimana: 0, cerca: '' };
+
+// ── I conti con ognuno ───────────────────────────────────────────────────
+// Chi sale deve una quota a chi guida. Il conto con una persona e' la somma
+// delle due direzioni, che e' l'unico numero che significa qualcosa: sapere che
+// mi deve 9 e che io le devo 6 non risponde a «chi paga chi».
+function conti(per) {
+  const dentro = PASSAGGI.filter(per);
+  return GENTE.map((nome, i) => {
+    if (i === IO) return null;
+    const suoi = dentro.filter((p) => (p.guida === IO && p.bordo.includes(i)) || (p.guida === i && p.bordo.includes(IO)));
+    const miDeve = suoi.filter((p) => p.guida === IO).length * QUOTA;
+    const gliDevo = suoi.filter((p) => p.guida === i).length * QUOTA;
+    return { nome, i, val: miDeve - gliDevo, quanti: suoi.length, primo: suoi[0] };
+  }).filter((c) => c && c.quanti > 0).sort((a, b) => Math.abs(b.val) - Math.abs(a.val));
+}
+
+// ── Le quattro tessere, ognuna con la sua linea ─────────────────────────
+function linea(vals, w = 210, h = 40) {
+  const max = Math.max(...vals, 1), min = Math.min(...vals, 0);
+  const x = (i) => (i / (vals.length - 1)) * w;
+  const y = (v) => h - ((v - min) / (max - min || 1)) * (h - 4) - 2;
+  let d = 'M ' + x(0) + ' ' + y(vals[0]);
+  for (let i = 1; i < vals.length; i++) {
+    const xm = (x(i - 1) + x(i)) / 2;
+    d += ` C ${xm} ${y(vals[i - 1])} ${xm} ${y(vals[i])} ${x(i)} ${y(vals[i])}`;
+  }
+  return `<svg class="linea" viewBox="0 0 ${w} ${h}" preserveAspectRatio="none" aria-hidden="true">
+    <path d="${d} L ${w} ${h} L 0 ${h} Z" class="linea-velo"/><path d="${d}" class="linea-tratto"/></svg>`;
+}
+
+// Dodici secchi sul periodo: la linea dice l'andamento, non i singoli giorni, e
+// dodici punti bastano a farlo su sette come su novanta.
+function secchi(scelta, quanti = 12) {
+  const giorni = giorniDi(scelta);
+  const largo = giorni / quanti;
+  return Array.from({ length: quanti }, (_, k) => {
+    const da = -giorni + k * largo;
+    return PASSAGGI.filter((p) => p.d <= 0 && p.d > da && p.d <= da + largo);
+  });
+}
+
+// I giorni scoperti sono quelli in cui **nessuno** ha offerto un passaggio. La
+// domenica non e' scoperta: e' un giorno in cui non si va da nessuna parte.
+function scoperti() {
+  const fuori = [];
+  for (let d = 1; d <= 7; d++) {
+    const g = new Date(OGGI);
+    g.setDate(OGGI.getDate() + d);
+    if (g.getDay() !== 0 && !PASSAGGI.some((p) => p.d === d)) fuori.push({ d, g });
+  }
+  return fuori;
+}
+
+function tessere() {
+  const per = filtroPeriodo(stato.periodo);
+  const passati = PASSAGGI.filter(per);
+  const futuri = PASSAGGI.filter((p) => p.d > 0).sort((a, b) => a.d - b.d);
+  const miei = passati.filter((p) => p.guida === IO).length;
+  const scopri = scoperti();
+  const c = conti(per);
+  const saldo = c.reduce((s, x) => s + x.val, 0);
+  const debiti = c.filter((x) => x.val < 0).length;
+  const crediti = c.filter((x) => x.val > 0).length;
+
+  // La linea del saldo e' **cumulativa**, perche' un saldo lo e': il valore di
+  // meta' periodo e' quello che era dovuto allora, non quanto si e' mosso quel
+  // giorno. Le altre tre contano, questa somma.
+  let corsa = 0;
+  const serieSaldo = secchi(stato.periodo).map((gruppo) => {
+    for (const p of gruppo) {
+      if (p.guida === IO) corsa += p.bordo.length * QUOTA;
+      if (p.bordo.includes(IO)) corsa -= QUOTA;
+    }
+    return corsa;
+  });
+
+  const quando = (g) => NOMI[g.getDay()] + ' ' + g.getDate();
+  return [
+    {
+      lab: 'Passaggi in programma', val: String(futuri.length), ico: ICO.auto,
+      nota: futuri.length ? `il primo ${quando(futuri[0].g)}, ${futuri[0].ora}` : 'nessuno nei prossimi sette giorni',
+      serie: Array.from({ length: 7 }, (_, k) => PASSAGGI.filter((p) => p.d === k + 1).length),
+    },
+    {
+      lab: stato.periodo === 'mese' ? 'Passaggi questo mese' : `Passaggi in ${giorniDi(stato.periodo)} giorni`,
+      val: String(passati.length), ico: ICO.griglia, tinta: 2,
+      nota: miei ? `di cui ${miei} guidati da te` : 'nessuno guidato da te',
+      serie: secchi(stato.periodo).map((g) => g.length),
+    },
+    {
+      lab: 'Il tuo saldo', val: eur(saldo), ico: ICO.euro, mio: true,
+      nota: saldo === 0 ? 'in pari con tutti'
+        : saldo < 0 ? `verso ${debiti === 1 ? 'una persona' : debiti + ' persone'}`
+          : `da ${crediti === 1 ? 'una persona' : crediti + ' persone'}`,
+      serie: serieSaldo,
+    },
+    {
+      lab: 'Giorni scoperti', val: String(scopri.length), ico: ICO.allerta, allerta: scopri.length > 0,
+      nota: scopri.length ? `il primo: ${quando(scopri[0].g)}` : 'la settimana è coperta',
+      serie: Array.from({ length: 7 }, (_, k) => (scopri.some((s) => s.d === k + 1) ? 1 : 0)),
+    },
+  ];
+}
+
+// ── L'occupazione settimanale ────────────────────────────────────────────
+// Il lunedi' della settimana chiesta, e i sette giorni da li'. `getDay()` mette
+// la domenica a 0, quindi il lunedi' si trova togliendo `(getDay() + 6) % 7`.
+function settimanaDi(quale) {
+  const lun = new Date(OGGI);
+  lun.setDate(OGGI.getDate() - ((OGGI.getDay() + 6) % 7) + quale * 7);
+  return Array.from({ length: 7 }, (_, k) => {
+    const g = new Date(lun);
+    g.setDate(lun.getDate() + k);
+    const dentro = PASSAGGI.filter((p) => p.g.toDateString() === g.toDateString());
+    return [ABBR[g.getDay()], dentro.reduce((s, p) => s + p.bordo.length, 0), dentro.reduce((s, p) => s + p.offerti, 0)];
+  });
+}
+
+function disegnaGrafico() {
+  const sett = settimanaDi(stato.settimana);
+  const W = 640, H = 200, P = { l: 26, r: 6, t: 8, b: 22 };
+  const max = Math.max(...sett.map((r) => r[2]), 1);
+  const x = (i) => P.l + (i / (sett.length - 1)) * (W - P.l - P.r);
+  const y = (v) => H - P.b - (v / max) * (H - P.t - P.b);
+  const cur = (get) => {
+    let d = 'M ' + x(0) + ' ' + y(get(sett[0]));
+    for (let i = 1; i < sett.length; i++) {
+      const xm = (x(i - 1) + x(i)) / 2;
+      d += ` C ${xm} ${y(get(sett[i - 1]))} ${xm} ${y(get(sett[i]))} ${x(i)} ${y(get(sett[i]))}`;
+    }
+    return d;
+  };
+  const presi = cur((r) => r[1]);
+  met('grafico', `<svg viewBox="0 0 ${W} ${H}" preserveAspectRatio="none" class="area" role="img" aria-label="Posti presi sui posti offerti, per giorno della settimana">
+    ${[0, 1, 2, 3, 4].map((n) => `<line x1="${P.l}" x2="${W - P.r}" y1="${y(n * max / 4)}" y2="${y(n * max / 4)}" class="griglia"/>`).join('')}
+    <path d="${cur((r) => r[2])} L ${x(sett.length - 1)} ${y(0)} L ${x(0)} ${y(0)} Z" class="area-offerti"/>
+    <path d="${presi} L ${x(sett.length - 1)} ${y(0)} L ${x(0)} ${y(0)} Z" class="area-velo"/>
+    <path d="${presi}" class="area-tratto"/>
+    ${sett.map((r, i) => `<circle cx="${x(i)}" cy="${y(r[1])}" r="4" class="punto"/>`).join('')}
+  </svg>`);
+  met('giorni', sett.map((r) => `<span>${r[0]}</span>`).join(''));
+
+  // ── Le sonde e il suggerimento ────────────────────────────────────────
+  // Sette bottoni veri, uno per giorno, larghi quanto la colonna e centrati sul
+  // punto della curva — non sull'etichetta sotto, che sta al centro del suo
+  // settimo e quindi non ci cade sopra. La percentuale sta nel nome accessibile
+  // oltre che nel riquadro: il suggerimento e' una comodita' per chi vede il
+  // grafico, non l'unico posto in cui il dato esista.
+  const fx = (i) => (P.l + (i / (sett.length - 1)) * (W - P.l - P.r)) / W;
+  const mezza = (W - P.l - P.r) / (sett.length - 1) / 2 / W;
+  const pct = (pr, of) => (of ? Math.round((pr / of) * 100) : null);
+  const INTERO = { lun: 'lunedì', mar: 'martedì', mer: 'mercoledì', gio: 'giovedì', ven: 'venerdì', sab: 'sabato', dom: 'domenica' };
+  const dice = (r) => {
+    const q = pct(r[1], r[2]);
+    return q === null
+      ? `${INTERO[r[0]]}: nessun passaggio`
+      : `${INTERO[r[0]]}: ${r[1]} ${r[1] === 1 ? 'posto preso' : 'posti presi'} su ${r[2]} offerti, ${q}%`;
+  };
+  const grafico = document.getElementById('grafico');
+  grafico.insertAdjacentHTML('beforeend',
+    `<div class="bolla" hidden></div><div class="sonde">${sett.map((r, i) => {
+      const da = Math.max(0, fx(i) - mezza), a = Math.min(1, fx(i) + mezza);
+      return `<button type="button" class="sonda" data-g="${i}"
+        style="left:${(da * 100).toFixed(3)}%;width:${((a - da) * 100).toFixed(3)}%"
+        aria-label="${dice(r)}"></button>`;
+    }).join('')}</div>`);
+
+  const bolla = grafico.querySelector('.bolla');
+  const punti = grafico.querySelectorAll('.punto');
+  const mostra = (i) => {
+    const r = sett[i];
+    const q = pct(r[1], r[2]);
+    bolla.innerHTML = `${INTERO[r[0]]} · <b>${q === null ? '—' : q + '%'}</b><br>`
+      + (q === null ? 'nessun passaggio' : `${r[1]} su ${r[2]} posti`);
+    bolla.style.left = (fx(i) * 100).toFixed(3) + '%';
+    bolla.style.top = ((y(r[1]) / H) * 100).toFixed(3) + '%';
+    // Ai due estremi il riquadro non si centra: la scheda ha `overflow: hidden`
+    // e la meta' che sborda verrebbe tagliata, non mostrata piu' in la'.
+    bolla.classList.toggle('al-margine-sx', i === 0);
+    bolla.classList.toggle('al-margine-dx', i === sett.length - 1);
+    bolla.hidden = false;
+    punti.forEach((c, n) => c.classList.toggle('acceso', n === i));
+  };
+  const nascondi = () => {
+    bolla.hidden = true;
+    punti.forEach((c) => c.classList.remove('acceso'));
+  };
+  for (const s of grafico.querySelectorAll('.sonda')) {
+    const i = Number(s.dataset.g);
+    s.addEventListener('pointerenter', () => mostra(i));
+    s.addEventListener('focus', () => mostra(i));
+    s.addEventListener('blur', nascondi);
+  }
+  grafico.querySelector('.sonde').addEventListener('pointerleave', nascondi);
+}
+
+// ── La ciambella dei turni ───────────────────────────────────────────────
+// Ha una finestra sua, piu' larga di quella in cima: «chi guida di solito» e' una
+// domanda diversa da «com'e' andato questo mese», e restringerle insieme farebbe
+// sparire chi guida poco.
+function disegnaCiambella() {
+  const dentro = PASSAGGI.filter(filtroPeriodo(stato.finestra));
+  const turni = GENTE.map((n, i) => [n, i, dentro.filter((p) => p.guida === i).length])
+    .filter((t) => t[2] > 0).sort((a, b) => b[2] - a[2]);
+  const tot = turni.reduce((s, t) => s + t[2], 0);
+  const R = 54, C = 2 * Math.PI * R;
+  let off = 0;
+  const archi = turni.map((t) => {
+    const len = (t[2] / tot) * C;
+    const s = `<circle cx="70" cy="70" r="${R}" fill="none" stroke="${AV[t[1]]}" stroke-width="22"
+      stroke-dasharray="${len - 3} ${C - len + 3}" stroke-dashoffset="${-off}" transform="rotate(-90 70 70)"/>`;
+    off += len;
+    return s;
+  }).join('');
+  met('ciambella', `<svg viewBox="0 0 140 140" role="img" aria-label="Turni di guida per persona">
+      <circle cx="70" cy="70" r="${R}" fill="none" stroke="var(--surface-2)" stroke-width="22"/>
+      ${archi}
+      <text x="70" y="68" class="ciambella-n" text-anchor="middle">${tot}</text>
+      <text x="70" y="84" class="ciambella-lab" text-anchor="middle">passaggi</text>
+    </svg>`);
+  met('legenda', turni.map((t) => `<li><span class="pt" style="background:${AV[t[1]]}"></span>
+      <span class="lg-n">${t[0]}</span>
+      <span class="lg-v">${t[2]} <small>(${Math.round(t[2] / tot * 100)}%)</small></span></li>`).join(''));
+}
+
+// L'attivita' e' un diario, non un calcolo: queste righe restano scritte a mano
+// perche' sono frasi, non numeri. La ricerca le filtra come le altre.
+const att = [
+  ['Bruno Sala', 'ha preso un posto', "sull'auto di Ada, domani", '2 min'],
+  ['Ada Ferrari', 'ha pubblicato un passaggio', 'Piazza Dante → Stazione', '1 ora'],
+  ['Carla Moretti', 'ha annunciato un ritardo', 'di 10 minuti, oggi 08:10', '3 ore'],
+  ['Dario Neri', 'è entrato nella comitiva', 'col codice invito', '5 ore'],
+];
+
+// ── La ricerca ───────────────────────────────────────────────────────────
+// Cerca fra le persone, le destinazioni e le fermate **gia' caricate**: non e'
+// una domanda al server, e' un filtro su quello che si sta guardando. Per questo
+// funziona anche senza rete, e per questo non ha un bottone «cerca» — filtra
+// mentre si scrive, perche' non costa niente.
+//
+// Senza accenti e senza maiuscole: chi cerca «citta» deve trovare «città», e chi
+// scrive «dante» deve trovare «Piazza Dante».
+const piano = (s) => String(s).normalize('NFD').replace(/[̀-ͯ]/g, '').toLowerCase().trim();
+const combacia = (...pezzi) => {
+  const q = piano(stato.cerca);
+  return q === '' || pezzi.some((p) => piano(p).includes(q));
+};
+
+// ── Le tre schede in fondo: NON scorrono, si accorciano ──────────────────
+// Quante righe ci stanno lo dice `--righe-scheda`, che cambia con la fascia. Le
+// altre diventano una riga di piede che le conta. Un elenco che scorre dentro
+// una scheda sarebbe uno scorrimento in piu', cioe' la cosa che non deve esserci.
+function disegna() {
+  const quante = Number(getComputedStyle(document.querySelector('.app-lynk'))
+    .getPropertyValue('--righe-scheda')) || 3;
+  const per = filtroPeriodo(stato.periodo);
+
+  // Il piede dice due cose diverse: quante righe non ci stanno, e — quando si sta
+  // cercando — quante ne ha tolte il filtro. La seconda conta piu' della prima:
+  // un elenco corto mentre si cerca non e' un elenco corto, e' una ricerca.
+  const piede = (id, tutte, viste, testo) => {
+    const resto = viste.length - quante;
+    const fuori = tutte.length - viste.length;
+    const pezzi = [];
+    if (resto > 0) pezzi.push(resto === 1 ? 'e un\'altra' : 'e altre ' + resto);
+    if (stato.cerca && fuori > 0) pezzi.push(fuori + ' fuori dalla ricerca');
+    pezzi.push(testo);
+    document.getElementById(id).textContent = pezzi.join(' · ');
+  };
+  const vuoto = (testo) => `<p class="riga-vuota">${testo}</p>`;
+
+  met('numeri', tessere().map((t) => `<article class="k${t.tinta ? ' tinta-' + t.tinta : ''}${t.mio ? ' mio' : ''}${t.allerta ? ' allerta' : ''}">
+    <div class="k-alto"><span class="k-ico">${t.ico}</span><span class="k-lab">${t.lab}</span></div>
+    <div class="k-val">${t.val}</div>
+    <div class="k-nota">${t.nota}</div>
+    ${linea(t.serie)}
+  </article>`).join(''));
+
+  disegnaGrafico();
+  disegnaCiambella();
+
+  // La barra e' relativa al conto piu' grosso in elenco, non a un massimo
+  // inventato: e' un confronto fra queste righe, e serve a dire quale pesa.
+  const tutti = conti(per);
+  const visti = tutti.filter((c) => combacia(c.nome));
+  const grosso = Math.max(...visti.map((c) => Math.abs(c.val)), 1);
+  met('conti', visti.length === 0
+    ? vuoto(stato.cerca ? 'Nessuno con questo nome.' : 'In pari con tutti.')
+    : visti.slice(0, quante).map((c) => `<div class="riga">
+      <span class="av" style="background:${AV[c.i % AV.length]}">${iniz(c.nome)}</span>
+      <span class="riga-chi"><b>${c.nome}</b><small>${c.quanti} ${c.quanti === 1 ? 'passaggio' : 'passaggi'} · dal ${c.primo.g.getDate()} ${MESI[c.primo.g.getMonth()].toLowerCase()}</small>
+        <span class="barra ${c.val < 0 ? 'dare' : 'avere'}"><i style="width:${(Math.abs(c.val) / grosso * 100).toFixed(1)}%"></i></span></span>
+      <span class="riga-imp ${c.val < 0 ? 'dare' : 'avere'}">${eur(c.val)}</span>
+      <button type="button" class="btn-riga">${c.val < 0 ? 'Pagato' : 'Ricevuto'}</button>
+    </div>`).join(''));
+  piede('piede-conti', tutti, visti, 'Solo fra le due parti');
+
+  const attViste = att.filter((r) => combacia(r[0], r[1], r[2]));
+  met('attivita', attViste.length === 0
+    ? vuoto('Niente che corrisponda.')
+    : attViste.slice(0, quante).map((r) => `<div class="riga">
+      <span class="av" style="background:${AV[GENTE.indexOf(r[0]) % AV.length]}">${iniz(r[0])}</span>
+      <span class="riga-chi"><span class="l1"><b>${r[0]}</b> ${r[1]}</span><small>${r[2]}</small></span>
+      <span class="riga-quando">${r[3]} fa</span>
+    </div>`).join(''));
+  piede('piede-attivita', att, attViste, 'Dal giorno in cui è stato acceso');
+
+  const futuri = PASSAGGI.filter((p) => p.d > 0).sort((a, b) => a.d - b.d);
+  const prossViste = futuri.filter((p) => combacia(tratta(p), GENTE[p.guida], FERMATE[p.da], FERMATE[p.a]));
+  met('prossimi', prossViste.length === 0
+    ? vuoto(stato.cerca ? 'Nessun passaggio che corrisponda.' : 'Nessun passaggio nei prossimi sette giorni.')
+    : prossViste.slice(0, quante).map((p) => {
+      const facce = p.bordo.slice(0, 3), piu = p.bordo.length - facce.length;
+      return `<div class="riga">
+      <span class="data"><b>${p.g.getDate()}</b><small>${MESI[p.g.getMonth()]}</small></span>
+      <span class="riga-chi"><b>${tratta(p)}</b><small>${p.ora} · ${p.guida === IO ? 'guidi tu' : 'guida ' + GENTE[p.guida].split(' ')[0]}</small></span>
+      <span class="facce">${facce.map((f) => `<i class="av av-piccolo" style="background:${AV[f % AV.length]}">${iniz(GENTE[f])}</i>`).join('')}${piu ? `<i class="av av-piccolo av-piu">+${piu}</i>` : ''}</span>
+    </div>`;
+    }).join(''));
+  piede('piede-prossimi', futuri, prossViste, 'Nei prossimi sette giorni');
+}
+
+// ── I controlli ──────────────────────────────────────────────────────────
+for (const id of ['periodo', 'finestra', 'settimana']) {
+  const el = document.getElementById(id);
+  el.addEventListener('change', () => {
+    stato[id] = id === 'settimana' ? Number(el.value) : el.value;
+    disegna();
+  });
+}
+document.getElementById('cerca').addEventListener('input', (e) => {
+  stato.cerca = e.target.value;
+  disegna();
+});
+
+disegna();
+addEventListener('resize', disegna);
+
+// ── L'invito a installare ────────────────────────────────────────────────
+// La logica e' quella vera, in `mod/installa.js`: il banco non ha un manifest —
+// non e' l'app, e installare una pagina di prova non vorrebbe dire niente —
+// quindi qui `beforeinstallprompt` non arriva e si vede la strada a mano. E' la
+// stessa cosa che vede chi apre l'app da Safari, dove quell'evento non esiste.
+collegaPromo(document.getElementById('promo'), document.getElementById('btn-installa'));
+
+// ── L'interruttore del tema, che nell'app e' la lunetta in alto ──────────
+// Il banco parte come l'app: **come lo vuole il browser**. Qui non c'e' nulla di
+// salvato — e' una pagina di prova, non un'app con una preferenza — quindi la
+// preferenza di sistema e' l'unica cosa che decide il primo disegno.
+if (matchMedia('(prefers-color-scheme: dark)').matches) {
+  document.documentElement.setAttribute('data-tema', 'scuro');
+}
+const gira = () => {
+  const scuro = document.documentElement.getAttribute('data-tema') === 'scuro';
+  document.documentElement.setAttribute('data-tema', scuro ? 'chiaro' : 'scuro');
+};
+document.getElementById('btn-tema').addEventListener('click', gira);
+</script>
+</body>
+</html>

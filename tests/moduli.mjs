@@ -22,11 +22,20 @@ import path from 'node:path';
 
 const RADICE = path.join(import.meta.dirname, '..');
 const files = ['app.js', ...fs.readdirSync(path.join(RADICE, 'mod')).sort().map((f) => 'mod/' + f)];
+// **Anche i test e il banco consumano i moduli**, e un `export` che serve solo a
+// loro non e' un export orfano. `tests/auto.mjs` legge la geometria dell'auto dal
+// modulo vero invece di ricopiarsela, e `banco.html` usa `collegaPromo` perche'
+// l'invito a installare l'app e' logica vera anche quando i dati intorno sono
+// finti: senza questa riga quei fili sembrerebbero recisi, e il rimedio sbagliato
+// sarebbe duplicare il codice. Di questi file si guardano gli import e basta:
+// quello che esportano non riguarda l'app.
+const lettori = ['banco.html', ...fs.readdirSync(path.join(RADICE, 'tests')).sort()
+  .filter((f) => f.endsWith('.mjs')).map((f) => 'tests/' + f)];
 
 const esportati = new Map();
 const importati = [];
 
-for (const f of files) {
+for (const f of [...files, ...lettori]) {
   const t = fs.readFileSync(path.join(RADICE, f), 'utf8');
   const set = new Set();
   for (const m of t.matchAll(/^export\s*\{([^}]*)\}/gm)) {
@@ -34,7 +43,7 @@ for (const f of files) {
   }
   for (const m of t.matchAll(/^export\s+(?:async\s+)?function\s+([A-Za-z_$][\w$]*)/gm)) set.add(m[1]);
   for (const m of t.matchAll(/^export\s+(?:const|let|var|class)\s+([A-Za-z_$][\w$]*)/gm)) set.add(m[1]);
-  esportati.set(f, set);
+  if (files.includes(f)) esportati.set(f, set);
 
   for (const m of t.matchAll(/^import\s*\{([^}]*)\}\s*from\s*'([^']+)'/gm)) {
     const nomi = m[1].split(',').map((p) => p.trim().split(/\s+as\s+/)[0]).filter(Boolean);
@@ -61,6 +70,35 @@ for (const [f, set] of esportati) {
       scarti.push(`${f} esporta \`${n}\` e non lo chiede nessuno`);
     }
   }
+}
+
+// --- Il guscio del service worker elenca esattamente i moduli dell'app --------
+//
+// `sw.js` nomina i file del guscio uno per uno, ed e' giusto che sia cosi': un
+// guscio che si riempie da solo mette in cache quello che capita. Ma un elenco
+// scritto a mano si dimentica, e un modulo che l'app importa e il guscio non ha
+// **non da' errore in linea** — da' un'app installata che offline non apre, cioe'
+// il momento peggiore in cui accorgersene.
+//
+// Il confronto e' con i moduli **raggiungibili da `app.js`**, non con il contenuto
+// della cartella: `mod/installa.js` oggi lo usa solo il banco, e nel guscio non ci
+// deve stare. Il giorno in cui l'app lo importa, questa riga diventa rossa finche'
+// non si aggiunge anche a `sw.js`, che e' esattamente quando serve saperlo.
+const raggiungibili = new Set();
+(function segui(da) {
+  for (const imp of importati.filter((i) => i.da === da && i.dest.startsWith('mod/'))) {
+    if (raggiungibili.has(imp.dest)) continue;
+    raggiungibili.add(imp.dest);
+    segui(imp.dest);
+  }
+})('app.js');
+const nelGuscio = new Set([...fs.readFileSync(path.join(RADICE, 'sw.js'), 'utf8')
+  .matchAll(/'\/(mod\/[\w.-]+\.js)'/g)].map((m) => m[1]));
+for (const f of [...raggiungibili].sort()) {
+  if (!nelGuscio.has(f)) scarti.push(`${f} lo importa l'app e il guscio di sw.js non ce l'ha`);
+}
+for (const f of [...nelGuscio].sort()) {
+  if (!raggiungibili.has(f)) scarti.push(`sw.js mette ${f} nel guscio e l'app non lo importa`);
 }
 
 if (scarti.length) {

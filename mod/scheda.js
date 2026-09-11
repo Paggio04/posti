@@ -2,7 +2,7 @@
 // Cantiere C17: queste righe stavano in `app.js`, che ne aveva 4400. Sono le stesse,
 // spostate; quello che si aggiunge sono le due liste, in testa e in fondo.
 
-import { CAR_MID, CAR_W, DRIVER_POS, PASSO_FILA, SEAT_LAYOUTS, W_AVANTI, finitureAuto, initials, sagomaAuto, svgEl } from './auto-svg.js';
+import { CAR_MID, CAR_W, DRIVER_POS, H_SEDUTA, H_SPALLIERA, PASSO_FILA, SEAT_LAYOUTS, W_AVANTI, Y_SEDUTA, finitureAuto, initials, sagomaAuto, svgEl } from './auto-svg.js';
 import { ask, condividi, conferma } from './dialogo.js';
 import { notifichePossibili } from './notifiche.js';
 import { addDaysISO, currentDate, currentGroupId, currentUser, emptyMessage, friendlyError, hasDeparted, isAdmin, isPastDay, mioPosto, nomeDi, nomeOccupante, oraPiu, ridesList, sospeso, toast, todayISO } from './nucleo.js';
@@ -223,28 +223,36 @@ function buildCar(ride) {
 
 let avatarClipId = 0;
 let carGradId = 0;
-// Un sedile e' piu' alto che largo, come i sedili: 42 di seduta contro 34-40 di
-// larghezza. Prima erano 44 per 40, cioe' quadrati, e tre quadrati in fila si
-// leggevano come una griglia invece che come una panchina.
+// Un sedile e' piu' alto che largo, come i sedili: 50 di seduta contro 34-44 di
+// larghezza. E' una proporzione da difendere, non un caso: quando erano 44 per 40
+// erano quadrati, e tre quadrati in fila si leggevano come una griglia invece che
+// come una panchina. Per questo allargando le poltrone a 44 la seduta e' salita a
+// 50 — le misure stanno in `auto-svg.js`, dove le legge anche il test, e qui non
+// si scrive nessun numero che si possa dimenticare di cambiare.
 function drawSeat(svg, pos, { kind, label, name, avatar = null, clickable = false }) {
   const w = pos.w ?? W_AVANTI;
   const g = svgEl('g', { class: `seat seat-${kind}${clickable ? ' seat-click' : ''}`, tabindex: clickable ? 0 : -1 });
   const title = svgEl('title', {});
   title.textContent = name;
   g.appendChild(title);
-  g.appendChild(svgEl('rect', { x: pos.x - (w - 4) / 2, y: pos.y - 28, width: w - 4, height: 13, rx: 5, class: 'seat-back' }));
-  g.appendChild(svgEl('rect', { x: pos.x - w / 2, y: pos.y - 15, width: w, height: 42, rx: 9, class: 'seat-base' }));
+  // Tutto si ricava dalla seduta: dove comincia, quanto e' alta. Il centro del
+  // cuscino porta la foto e le iniziali, cosi' restano al centro anche il giorno in
+  // cui la seduta cambia altezza.
+  const sedutaY = pos.y + Y_SEDUTA;
+  const centroY = sedutaY + H_SEDUTA / 2;
+  g.appendChild(svgEl('rect', { x: pos.x - (w - 4) / 2, y: sedutaY - H_SPALLIERA, width: w - 4, height: H_SPALLIERA, rx: 5, class: 'seat-back' }));
+  g.appendChild(svgEl('rect', { x: pos.x - w / 2, y: sedutaY, width: w, height: H_SEDUTA, rx: 9, class: 'seat-base' }));
   // La piega del cuscino: e' quella che fa leggere il sedile come imbottitura.
-  g.appendChild(svgEl('path', { d: `M ${pos.x - (w / 2 - 7)} ${pos.y - 5} L ${pos.x + (w / 2 - 7)} ${pos.y - 5}`, class: 'seat-piega' }));
+  g.appendChild(svgEl('path', { d: `M ${pos.x - (w / 2 - 7)} ${sedutaY + 10} L ${pos.x + (w / 2 - 7)} ${sedutaY + 10}`, class: 'seat-piega' }));
   if (avatar) {
     // Il tondo della foto non puo' sfondare il sedile piu' stretto.
     const r = Math.min(15, w / 2 - 3);
     const clipId = 'seat-av-' + (++avatarClipId);
     const clip = svgEl('clipPath', { id: clipId });
-    clip.appendChild(svgEl('circle', { cx: pos.x, cy: pos.y + 6, r }));
+    clip.appendChild(svgEl('circle', { cx: pos.x, cy: centroY, r }));
     svg.appendChild(clip);
     const img = svgEl('image', {
-      x: pos.x - r, y: pos.y + 6 - r, width: r * 2, height: r * 2,
+      x: pos.x - r, y: centroY - r, width: r * 2, height: r * 2,
       'clip-path': `url(#${clipId})`, preserveAspectRatio: 'xMidYMid slice',
     });
     img.setAttribute('href', avatar);
@@ -252,7 +260,7 @@ function drawSeat(svg, pos, { kind, label, name, avatar = null, clickable = fals
     img.addEventListener('error', () => { img.remove(); g.querySelector('text')?.removeAttribute('opacity'); });
     g.appendChild(img);
   }
-  const t = svgEl('text', { x: pos.x, y: pos.y + 12, class: 'seat-text' });
+  const t = svgEl('text', { x: pos.x, y: centroY + 6, class: 'seat-text' });
   t.textContent = label;
   if (avatar) t.setAttribute('opacity', '0'); // iniziali sotto la foto, visibili solo se la foto fallisce
   g.appendChild(t);
@@ -436,9 +444,11 @@ function renderRides(rides) {
     // colonna sua, staccata dal resto da una riga: la matrice di un tabellone
     // delle partenze, che e' il riferimento fisico dichiarato in PRODUCT.md.
     //
-    // Nera e non viola, e non e' un dettaglio: il viola in questo foglio vuol dire
-    // «si tocca» o «e' tuo», e un orario non e' nessuna delle due cose. La regola
-    // stava scritta e questo era uno dei punti in cui il foglio non la rispettava.
+    // Del colore del testo e non di quello del tocco, e non e' un dettaglio: in
+    // questo foglio il colore pieno vuol dire «si tocca» o «e' tuo», e un orario non
+    // e' nessuna delle due cose. La regola stava scritta e questo era uno dei punti
+    // in cui il foglio non la rispettava. Valeva col viola di allora e vale con il
+    // blu di adesso: e' la regola che conta, non la tinta.
     //
     // Senza orario la colonna non c'e' affatto, invece di un trattino: una casella
     // vuota su un tabellone dice «orario soppresso», e qui vorrebbe dire soltanto

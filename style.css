@@ -60,38 +60,61 @@
 /* ═══════════════════════════════════════════════════════════════════════════
    IL TABELLONE
 
-   Cinque colori, e sono quelli della palette del proprietario: **quasi-bianco**
-   #EEF1F3, **viola** #8A22E7, **viola cupo**, **grigio-blu**, **viola-nero**
-   #110C17. Il riferimento fisico non e' un cruscotto ne' un terminale: e' una
-   targa smaltata scura con le lettere chiare sopra — un tabellone degli orari,
-   il cartello di una fermata. Da li' vengono le tre regole che tengono insieme
-   tutto il foglio.
+   **Sei colori: tre per tema.** Sono la palette del proprietario, e ogni terzina
+   ha gli stessi tre mestieri — la carta, cio' che e' tuo, l'inchiostro (che e'
+   anche cio' che si tocca):
 
-   1. **Il buio e' il materiale, non un tema.** Non c'e' un tema chiaro e uno
-      scuro: c'e' il viola-nero. Il contesto d'uso di PRODUCT.md e' in piedi al
-      buio davanti a un portone, e uno schermo che spara bianco addosso li' e'
-      una scelta contro chi lo usa. `color-scheme: dark` lo dice anche al
-      browser, cosi' i controlli nativi — la data, l'ora, le tendine — nascono
-      scuri invece di essere l'unica cosa bianca della pagina.
+     CHIARO                              SCURO
+     #F4FEFF  la carta                    #04326D  la carta
+     #A9C0E0  cio' che e' tuo             #F58F20  cio' che e' tuo
+     #0E2F76  l'inchiostro e il tocco     #B2BED6  l'inchiostro e il tocco
 
-   2. **Il viola vuol dire due cose sole**: «questo si tocca» e «questo e' tuo».
-      Le due non si confondono perche' si distinguono per **forma**, non per
-      tinta: cio' che si tocca e' il colore *scritto* o un contorno, cio' che e'
-      tuo e' un blocco *pieno* con il quasi-bianco sopra. Niente di decorativo
-      e' viola. Il resto della pagina e' viola-nero, grigio-blu e una riga di
-      bordo.
+   Il riferimento fisico non e' un cruscotto ne' un terminale: e' una targa
+   smaltata con le lettere sopra — un tabellone degli orari, il cartello di una
+   fermata. Da li' vengono le regole che tengono insieme tutto il foglio.
 
-      **Scritto e pieno non sono lo stesso viola**, ed e' l'unico posto dove il
-      foglio ha due token per un colore: quello della palette e' scuro, quindi
-      riempie bene e come testo sul fondo sarebbe illeggibile. Si schiarisce
-      quando e' scritto — `--primary-testo` — e la misura sta in
-      `tests/contrasto.mjs`.
+   1. **Due temi, e lo apre il browser.** Il tema di casa e' quello chiaro, ma
+      non e' quello che si vede per primo: `tema.js` legge
+      `prefers-color-scheme` prima che la pagina venga dipinta, e chi ha il
+      sistema al buio apre una pagina al buio. L'interruttore in alto resta, e
+      quello che sceglie **vince** sul browser e resta scelto — una preferenza di
+      sistema non scavalca una decisione presa qui.
+      Il contesto d'uso di PRODUCT.md e' in piedi al buio davanti a un portone, e
+      per quel caso il tema scuro c'e'; ma imporlo a chi guarda l'app di giorno
+      era la stessa prepotenza al contrario. `color-scheme` dice al browser che
+      la pagina sa fare tutti e due, cosi' i controlli nativi — la data, l'ora,
+      le tendine — nascono del tema giusto invece di essere l'unica cosa
+      dell'altro colore.
 
-   3. **La profondita' la fanno le righe, non le ombre.** Su un fondo quasi nero
-      un'ombra e' invisibile o e' sporco: due schede si separano con un bordo da
-      un pixel e mezzo tono di fondo, come due pannelli avvitati sulla stessa
-      lamiera. Le ombre restano solo dove una cosa **galleggia davvero** sopra
-      un'altra: la finestra di dialogo e il messaggio che compare.
+   2. **Il colore vuol dire due cose sole**: «questo si tocca» e «questo e' tuo»,
+      e sono **due colori diversi**, non due usi dello stesso. Le due non si
+      confondono nemmeno per forma: cio' che si tocca e' l'inchiostro *scritto* o
+      un contorno, cio' che e' tuo e' un blocco *pieno*. Niente di decorativo
+      prende uno dei due.
+
+      Il caldo esiste **solo al buio**: alla luce «tuo» e' il blu-grigio della
+      terzina chiara. E' una scelta del proprietario, e la conseguenza da
+      conoscere e' che alla luce «tuo» non e' piu' il colore piu' caldo dello
+      schermo — quindi dove «tuo» deve saltare all'occhio non basta la tinta,
+      serve anche la parola o la forma. Che e' la regola di PRODUCT.md, ma qui
+      diventa obbligo invece di buona educazione.
+
+      Restano due token per il tocco — `--primary` e `--primary-testo` — e oggi
+      **portano lo stesso valore in tutti e due i temi**, perche' l'inchiostro
+      della palette regge sia riempito sia scritto. Non sono un doppione da
+      unire: erano due quando il colore del tocco era scuro alla luce, e
+      tornerebbero due il giorno che «cio' che si tocca» smettesse di essere
+      l'inchiostro. La misura sta in `tests/contrasto.mjs`, non in questo
+      commento.
+
+   3. **La profondita' la fanno le righe al buio e le ombre alla luce.** Su carta
+      quasi nera un'ombra e' invisibile o e' sporco: al buio due schede si
+      separano con un bordo da un pixel e mezzo tono di fondo, come due pannelli
+      avvitati sulla stessa lamiera. Alla luce e' il contrario, e **per forza**:
+      la carta e' #F4FEFF, cioe' quasi bianca, e una scheda bianca sopra non si
+      distingue per il riempimento — la staccano il filo del bordo e l'ombra.
+      Le ombre restano comunque riservate a chi **galleggia davvero**: la
+      finestra di dialogo, il messaggio che compare, e la scheda alla luce.
 
    I raggi sono quattro e diversi fra loro, di proposito: «tutto arrotondato
    allo stesso raggio» sta fra gli anti-riferimenti di PRODUCT.md, ed era vero —
@@ -143,170 +166,194 @@
   --font-mono: 'IBM Plex Mono', ui-monospace, monospace;
 
   /* ---- i fondi -------------------------------------------------------- */
-  /* **Il tema di casa e' quello chiaro**, ed e' la carta della palette: il
-     quasi-bianco #EEF1F3 come fondo, il bianco quasi pieno come scheda. Sono
-     nell'ordine giusto — la carta sta *sopra* il fondo, quindi e' piu' chiara,
-     che e' l'inverso di come funziona al buio.
+  /* **Due terzine, una per tema**, e ognuna ha gli stessi tre mestieri:
 
-     Cinque colori, cinque mestieri, e valgono per tutti e due i temi:
+       CHIARO                              SCURO
+       #F4FEFF  la carta                    #04326D  la carta
+       #A9C0E0  cio' che e' tuo             #F58F20  cio' che e' tuo
+       #0E2F76  l'inchiostro e il tocco     #B2BED6  l'inchiostro e il tocco
 
-       quasi-bianco  la carta e il fondo   (al buio: l'inchiostro pieno)
-       viola         cio' che si tocca e cio' che e' tuo, **da riempire**
-       viola cupo    lo stesso, premuto
-       grigio-blu    l'inchiostro tenue, e la lamiera dell'auto
-       viola-nero    l'inchiostro pieno    (al buio: la carta e il fondo)
+     **E qui i due temi non sono piu' lo stesso documento stampato al
+     contrario.** Prima lo erano — due colori che si scambiavano il posto, lo
+     stesso rapporto in tutti e due i versi — e c'era una terzina sola. Adesso
+     sono due palette diverse, e i rapporti principali non combaciano: 12,16:1
+     alla luce contro 6,67:1 al buio. Regge tutto, ma il margine al buio e'
+     meno di meta', ed e' la ragione per cui la scala delle superfici scure qui
+     sotto e' strozzata.
 
-     I due estremi si scambiano il posto, il viola resta dov'e'. */
-  --bg: oklch(0.956 0.004 236);
-  --surface: oklch(0.995 0.001 236);
-  --surface-2: oklch(0.925 0.006 239);
-  /* Il riquadro che riassume: un velo di viola invece di un grigio piu' scuro,
-     perche' su carta chiara «un gradino piu' in la'» si legge come tinta. */
-  --rilievo: oklch(0.945 0.030 301);
+     Il colore caldo esiste **solo al buio**: alla luce «tuo» e' il blu-grigio
+     della terzina chiara. E' una scelta del proprietario, non una conseguenza —
+     la terzina chiara non contiene un arancio, e con tre colori il terzo e' il
+     solo che possa fare quel mestiere.
 
-  /* ---- la targa smaltata ------------------------------------------------ */
-  /* Il riferimento fisico del foglio e' scritto in cima da sempre — «una targa
-     smaltata scura con le lettere chiare sopra» — ed era l'unica cosa del
-     riferimento che in pagina **non c'era**: il nome dell'app stava scritto in
-     grigio accanto a un'icona, come il nome di qualsiasi cosa.
-     Adesso il marchio e' quella targa, e sono due token perche' e' l'unico
-     oggetto della pagina che si **ribalta** con il tema invece di seguirlo: alla
-     luce e' inchiostro con le lettere chiare, al buio e' il quasi-bianco con le
-     lettere scure. In tutti e due i casi e' la cosa piu' contrastata dello
-     schermo, che e' quello che fa una targa avvitata a un muro. */
-  --targa: oklch(0.215 0.030 304);
-  --su-targa: oklch(0.956 0.004 236);
+     Le schede restano bianche e la carta e' tinta, come nella schermata di
+     riferimento — ma alla luce la carta e' quasi bianca (L 0,990 contro 0,999),
+     quindi **una scheda non si distingue per il riempimento**: la staccano il
+     filo del bordo e l'ombra. Al buio invece si distingue eccome, ed e' l'unico
+     posto in cui la scheda schiarisce. */
+  --bg: oklch(0.990 0.011 204.1);          /* #F4FEFF esatto */
+  --surface: oklch(0.999 0 0);             /* la scheda: bianca, come nella foto */
+  --surface-2: oklch(0.948 0.028 215.9);
+  --rilievo: oklch(0.948 0.028 215.9);
 
+  /* ---- la targa --------------------------------------------------------- */
+  /* Il marchio in alto a sinistra: l'unico oggetto che si **ribalta** con il
+     tema invece di seguirlo. Alla luce e' inchiostro con le lettere chiare, al
+     buio e' chiaro con le lettere scure — in tutti e due i casi la cosa piu'
+     contrastata dello schermo. */
+  --targa: oklch(0.331 0.128 262.7);       /* #0E2F76 esatto */
+  --su-targa: oklch(0.990 0.011 204.1);
 
   /* ---- le righe ------------------------------------------------------- */
   /* --border separa e basta: non porta informazione, quindi non deve reggere
-     3:1. --border-strong invece disegna il **campo** — dice dove si scrive, e
-     per la 1.4.11 vale la soglia degli elementi non testuali. */
-  --border: oklch(0.880 0.008 239);
-  --border-strong: oklch(0.620 0.024 239);
+     3:1. --border-strong disegna il **campo** — dice dove si scrive — e per la
+     1.4.11 vale la soglia degli elementi non testuali: 3:1 sul bianco. */
+  --border: oklch(0.888 0.034 221.7);
+  --border-strong: oklch(0.656 0.050 239.3);
 
   /* ---- l'inchiostro --------------------------------------------------- */
-  /* Il viola-nero della palette, sceso quel tanto che serve a un testo lungo. */
-  --ink: oklch(0.235 0.030 304);
-  /* Il grigio-blu della palette e' `oklch(0.696 0.026 239)`: su carta chiara e'
-     troppo alto per reggere 4.5:1, quindi qui e' **sceso** invece di salire come
-     fa al buio. La tinta e' la sua, la luminosita' e' quella che serve. */
-  --ink-soft: oklch(0.510 0.030 239);
+  --ink: oklch(0.331 0.128 262.7);         /* #0E2F76 esatto */
+  /* Sceso finche' regge 4.5:1 **su tutti e due** i fondi su cui capita: la carta
+     azzurra e la scheda bianca. Il piu' severo dei due decide. */
+  --ink-soft: oklch(0.527 0.062 251.0);
   /* Il segnaposto ha bisogno degli stessi 4.5:1 del testo: il grigio chiaro «che
      si vede che e' un suggerimento» e' testo illeggibile con una scusa. */
-  --segnaposto: oklch(0.525 0.028 239);
+  --segnaposto: oklch(0.527 0.062 251.0);
 
-  /* ---- il viola -------------------------------------------------------- */
-  /* Due token e non due nomi per uno, e qui il motivo si vede meglio che al
-     buio: il viola della palette (L 0.53) riempie benissimo con il quasi-bianco
-     sopra — e' l'uso che ne fa l'esempio, i tondi pieni con l'icona chiara — ma
-     **scritto su carta bianca** fa 4.1:1, cioe' sotto soglia per un pelo. Quindi
-     quando e' scritto scende, quando riempie resta dov'e'. */
-  --primary: oklch(0.532 0.261 301);
-  --primary-testo: oklch(0.470 0.245 300);
-  /* Premuto si va sul viola cupo della palette: su carta chiara un riempimento
-     che si scurisce sembra spinto, e il bianco sopra ci guadagna. */
-  --primary-hover: oklch(0.462 0.233 296);
-  --su-primario: oklch(0.985 0.002 236);
-  /* Sopra il viola pieno, la riga di servizio: lo stesso chiaro tenuto indietro.
-     E' l'unico token che non cambia fra i due temi, perche' il fondo su cui sta
-     non cambia — e' sempre il viola. */
-  --su-primario-tenue: oklch(0.905 0.026 301);
-  /* Il velo: viola steso finche' regge come fondo di un testo scuro. */
-  --primary-soft: oklch(0.930 0.045 301);
-  /* Il contorno del viola: un sedile libero si riconosce dal suo tratteggio,
-     cioe' quel contorno **porta informazione**. Vale la 1.4.11, soglia 3:1. */
-  --primary-bordo: oklch(0.560 0.230 301);
+  /* ---- il blu, cioe' cio' che si tocca ---------------------------------- */
+  /* L'inchiostro e' scuro (L 0.331), quindi fa i due mestieri con lo stesso
+     valore: riempie con il bianco sopra (12,43:1) e si scrive sulla carta
+     (12,16:1). E' l'opposto del viola di prima, che sopra i 4.5:1 come testo non
+     ci arrivava e per questo aveva due token: qui restano due nomi con lo stesso
+     valore, perche' il giorno in cui la carta si scurisce si cambia una riga
+     sola. */
+  --primary: oklch(0.331 0.128 262.7);
+  --primary-testo: oklch(0.331 0.128 262.7);
+  --primary-hover: oklch(0.406 0.116 262.7);
+  --su-primario: oklch(0.999 0 0);
+  /* Sopra il pieno di cio' che si tocca, la riga di servizio: la carta della
+     palette tenuta indietro. Cambia fra i due temi, e prima no: allora il
+     riempimento era il blu in tutti e due i casi, adesso alla luce e' il blu
+     scuro e al buio l'azzurro chiaro, cioe' due fondi opposti. */
+  --su-primario-tenue: oklch(0.855 0.045 204.1);
+  /* E la stessa riga **sopra cio' che e' tuo** non puo' essere questa: il pieno
+     che si tocca e' scuro alla luce e vuole una riga chiara, mentre «tuo» e'
+     chiaro nei due temi — il blu-grigio alla luce, l'arancio al buio — e vuole
+     una riga scura. Due riempimenti con due luminosita' opposte non stanno in un
+     token solo: uno lo serve bene e l'altro lo tradisce. */
+  --tuo-su-tenue: oklch(0.419 0.080 262.7);
+  --primary-soft: oklch(0.940 0.032 236.4);
+  --primary-bordo: oklch(0.659 0.075 262.7);
 
-  /* ---- «questo e' tuo» -------------------------------------------------- */
-  /* Stesso colore dell'interattivo, trattamento opposto: pieno con il chiaro
-     sopra. Sono token separati e non un alias scritto a mano nei componenti,
-     cosi' il giorno in cui «tuo» e «toccabile» dovessero separarsi si cambia
-     una riga invece di quaranta. */
-  --tuo: oklch(0.532 0.261 301);
-  --tuo-testo: oklch(0.470 0.245 300);
-  --tuo-su: oklch(0.985 0.002 236);
-  --tuo-velo: oklch(0.930 0.045 301);
-  --tuo-bordo: oklch(0.560 0.230 301);
+  /* ---- la tinta della seconda tessera ----------------------------------- */
+  /* Le quattro tessere in cima al Riepilogo hanno **quattro tinte diverse**, come
+     nella schermata di riferimento. Tre le avevano gia': la prima e' il blu della
+     palette, la terza il colore di «questo e' tuo», la quarta il rosso di un
+     giorno scoperto. Solo la seconda era una copia esatta della prima, e due
+     pastiglie identiche in fila fanno sembrare che dicano la stessa cosa.
+     La tinta nuova **non e' un colore nuovo**: e' lo stesso giro intorno al blu
+     da cui escono le sei tinte degli avatar, fermato quaranta gradi oltre
+     l'inchiostro. Sta lontano dal 162 della conferma, dal 27 del rosso e dal 60
+     dell'arancio, che qui significano altro: una pastiglia verde direbbe
+     «andato a buon fine», una arancione «tuo». */
+  --tessera-2-velo: oklch(0.940 0.036 302.7);
+  --tessera-2-ico: oklch(0.571 0.095 302.7);
+
+  /* ---- «questo e' tuo» — l'arancio -------------------------------------- */
+  /* **«Tuo» si riempie, non si scrive e non si contorna** — e questo vale alla
+     luce, dove «tuo» e' il blu-grigio #A9C0E0: fa 2,32:1 sul bianco, quindi come
+     linea sottile o come testo e' sotto qualunque soglia. Come **blocco pieno con
+     l'inchiostro sopra** fa 6,71:1. Chi aggiunge un `1px solid var(--tuo)` su
+     fondo chiaro sta disegnando niente.
+     **Al buio la regola cade**, e non per distrazione: li' «tuo» e' l'arancio
+     #F58F20, che sulla carta blu fa 5,24:1 e puo' quindi fare anche il testo e il
+     filo. Percio' `--tuo-testo` e `--tuo-bordo` al buio **sono** l'arancio, e
+     alla luce sono il blu-grigio sceso fino a soglia.
+     Un avvertimento che vale sempre: l'arancio non ce l'ha piu' l'inchiostro
+     sopra ma la **carta scura**, perche' l'inchiostro chiaro sull'arancio fa
+     1,27:1. */
+  --tuo: oklch(0.801 0.052 256.7);          /* #A9C0E0 esatto */
+  --tuo-testo: oklch(0.527 0.082 256.7);
+  --tuo-su: oklch(0.331 0.128 262.7);
+  --tuo-velo: oklch(0.950 0.030 256.7);
+  --tuo-bordo: oklch(0.658 0.082 256.7);
 
   /* ---- gli stati ------------------------------------------------------- */
-  /* Rosso e verde non sono un terzo e un quarto colore del marchio: sono due
+  /* Rosso e verde non sono un quarto e un quinto colore del marchio: sono due
      stati, e stanno solo dove qualcosa e' andato storto o e' andato a buon
-     fine. PRODUCT.md chiede che non siano **soli** a dirlo, e infatti ogni
-     posto in cui compaiono ha anche una parola o una forma. */
-  --danger: oklch(0.505 0.200 25);
-  --danger-pieno: oklch(0.505 0.200 25);
-  --danger-soft: oklch(0.945 0.035 25);
-  --ok: oklch(0.480 0.110 165);
-  --ok-deep: oklch(0.480 0.110 165);
-  --ok-pieno: oklch(0.480 0.110 165);
-  --ok-soft: oklch(0.945 0.035 165);
+     fine. Il rosso e' spinto lontano dall'arancio in tinta (27 contro 47) e non
+     solo in saturazione, o «annulla il passaggio» e «prenota» si confonderebbero
+     a colpo d'occhio. PRODUCT.md chiede che non siano **soli** a dirlo, e infatti
+     ogni posto in cui compaiono ha anche una parola o una forma. */
+  --danger: oklch(0.556 0.175 27.0);
+  --danger-pieno: oklch(0.584 0.180 27.0);
+  --danger-soft: oklch(0.965 0.022 27.0);
+  --ok: oklch(0.526 0.115 162.0);
+  --ok-deep: oklch(0.583 0.110 162.0);
+  --ok-pieno: oklch(0.549 0.110 162.0);
+  --ok-soft: oklch(0.965 0.022 162.0);
 
   /* ---- la carrozzeria --------------------------------------------------- */
   /* **La scocca e' una superficie piena, non un contorno**: l'oggetto e' solido
-     e i posti sono buchi scavati dentro, come una mappa dei posti vera.
-
-     Su carta chiara l'auto si ribalta rispetto al buio, e non e' una scelta di
-     gusto: perche' la sagoma si veda contro una pagina chiara la lamiera deve
-     **scendere**, e allora i posti — che sono buchi, quindi piu' scuri della
-     lamiera — non avrebbero piu' dove andare. Quindi qui i buchi sono chiari,
-     scavati in una lamiera scura, e il posto **tuo** resta il viola pieno che
-     e' l'unico riempimento colorato del disegno. Le tre soglie che tengono in
-     piedi questa inversione le misura `npm run contrasto`. */
-  --piastra: oklch(0.185 0.026 304);
-  /* L'inchiostro **dentro** l'auto non segue il tema, perche' non segue la pagina:
-     segue la piastra, che e' scura in tutti e due. Prima erano `--ink` e
-     `--primary-testo`, e alla luce diventavano scuri su scuro. */
-  --posto-testo: oklch(0.956 0.004 236);
-  --posto-libero: oklch(0.820 0.130 301);
-  --scocca: oklch(0.800 0.026 239);
-  --scocca-luce: oklch(0.875 0.022 239);
-  --scocca-ombra: oklch(0.715 0.028 239);
-  --scocca-riga: oklch(0.560 0.030 239);
-  --vetro: oklch(0.380 0.045 301);
-  --gomma: oklch(0.170 0.020 304);
-  /* Il vuoto di un sedile: un buco nella lamiera, quindi piu' scuro di tutto. */
-  --posto: oklch(0.200 0.028 304);
-  --pavimento: oklch(0.300 0.030 304);
-  --posto-bordo: oklch(0.930 0.010 239);
+     e i posti sono buchi scavati dentro, come una mappa dei posti vera. Su carta
+     chiara la lamiera scende, cosi' la sagoma si vede contro la pagina, e i
+     buchi diventano chiari. Il posto **tuo** resta l'arancio pieno, l'unico
+     riempimento caldo del disegno. Le soglie le misura `npm run contrasto`. */
+  --piastra: oklch(0.920 0.026 204.1);
+  /* L'inchiostro **dentro** l'auto non segue il tema, perche' non segue la
+     pagina: segue la piastra, che e' scura in tutti e due. */
+  --posto-testo: oklch(0.240 0.100 262.7);
+  --posto-libero: oklch(0.420 0.090 262.7);
+  --scocca: oklch(0.500 0.080 262.7);
+  --scocca-luce: oklch(0.560 0.075 262.7);
+  --scocca-ombra: oklch(0.380 0.085 262.7);
+  --scocca-riga: oklch(0.270 0.090 262.7);
+  --vetro: oklch(0.320 0.090 262.7);
+  --gomma: oklch(0.020 0.010 262.7);
+  --posto: oklch(0.898 0.030 204.1);
+  --pavimento: oklch(0.350 0.085 262.7);
+  --posto-bordo: oklch(0.240 0.100 262.7);
+  /* Il filo del posto **tuo**. Esiste perche' il riempimento non basta piu' nei
+     due temi con lo stesso valore: l'arancio #F58F20 ha luminanza 0,402, e per
+     staccare 3:1 dalla lamiera la vorrebbe sotto 0,098 — ma un dettaglio scuro
+     su una lamiera blu non supera (luminanza + 0,05) / 0,05, cioe' la pretende
+     sopra 0,1025. Non si incontrano, per il 4%.
+     Percio' ogni tema tiene il **suo** meccanismo, e sono entrambi verificati:
+     alla luce «tuo» e' il blu-grigio e si vede per riempimento (3,25:1), al buio
+     e' l'arancio e lo delimita questo filo, chiaro (3,47:1). Il contorno nel
+     disegno c'era gia': 2,5px su `.seat-mine`. */
+  --posto-tuo-filo: oklch(0.270 0.090 262.7);
 
   /* ---- le forme -------------------------------------------------------- */
-  /* Quattro raggi, uno per classe di oggetto. Il piccolo e' quasi vivo perche'
-     una pastiglia da venti pixel arrotondata a otto e' una caramella. */
-  --r-chip: 3px;
-  --r-btn: 6px;
-  --r-card: 10px;
-  --r-panel: 14px;
+  /* Quattro raggi, uno per classe di oggetto — non un raggio solo su tutto, che
+     e' l'anti-riferimento. La scheda e' generosa come nella schermata di
+     riferimento; la pastiglia resta piccola, perche' una pastiglia da venti
+     pixel arrotondata a dieci e' una caramella. */
+  --r-chip: 6px;
+  --r-btn: 10px;
+  --r-card: 16px;
+  --r-panel: 20px;
   /* Resta per le cose che sono cerchi davvero: le facce, i pallini, gli anelli. */
   --pill: 999px;
   /* Quanto sono alte le due fasce. Il riepilogo ci costruisce sopra una `calc()`
-     per sapere quanto spazio gli resta, quindi **questi numeri devono essere veri**:
-     erano 54 e 58 quando le fasce misurano 57/66 e 62, e quei dodici pixel di
-     bugia erano precisamente quello che finiva sotto la fascia.
-
-     La barra cresce a 768px perche' li' compare la riga del ruolo sotto il nome,
-     e la scheda con la faccia diventa di due righe. Misurato, non stimato — e
-     `min-height` sotto le tiene a questa altezza invece di lasciarle andare. */
+     per sapere quanto spazio gli resta, quindi **questi numeri devono essere
+     veri**: misurati, non stimati. */
   --h-barra: 57px;
   --h-fascia: 62px;
 
   /* ---- profondita' ------------------------------------------------------ */
-  /* Una riga di luce sul bordo alto: e' come si legge un pannello smaltato
-     illuminato da sopra, e costa un pixel invece di un alone.
-     Il valore era un quasi-bianco all'8%, ed era stato scelto quando il foglio
-     aveva un tema solo, quello scuro: sulla carta chiara un bianco all'8% e'
-     esattamente niente. Qui sale, e sopra i riempimenti scuri — il viola pieno,
-     la targa — e' la riga che li fa sembrare smaltati invece che stampati. */
-  --luce: inset 0 1px 0 oklch(1 0 0 / 0.28);
-  /* Le due sole ombre del foglio, e stanno dove una cosa galleggia davvero. */
-  --shadow-1: 0 2px 6px oklch(0 0 0 / 0.5);
-  --shadow-2: 0 8px 30px oklch(0 0 0 / 0.65), 0 2px 8px oklch(0 0 0 / 0.5);
+  /* Una riga di luce sul bordo alto dei riempimenti scuri: e' come si legge un
+     pannello illuminato da sopra, e costa un pixel invece di un alone. */
+  --luce: inset 0 1px 0 oklch(1 0 0 / 0.22);
+  /* Le ombre sono **tinte di blu, non nere**: su una carta azzurra un'ombra
+     grigia e' sporco. E sono due, non una scala: una scheda appoggiata e una
+     cosa che galleggia davvero. */
+  --shadow-1: 0 1px 2px oklch(0.331 0.128 262.7 / 0.10), 0 2px 8px oklch(0.331 0.128 262.7 / 0.06);
+  --shadow-2: 0 8px 28px oklch(0.331 0.128 262.7 / 0.14), 0 2px 8px oklch(0.331 0.128 262.7 / 0.08);
 
   /* ---- movimento -------------------------------------------------------- */
-  /* Una curva sola, ed e' una decelerazione. Al suo posto c'era `--spring`, con
-     il terzo numero sopra 1: quello e' un superamento, cioe' l'elemento va oltre
-     il punto d'arrivo e torna indietro. E' l'«animazione a molla» che sta fra gli
-     anti-riferimenti di PRODUCT.md. Le cose vere rallentano, non rimbalzano. */
+  /* Una curva sola, ed e' una decelerazione. Le cose vere rallentano, non
+     rimbalzano: il superamento a molla e' fra gli anti-riferimenti. */
   --ease-out: cubic-bezier(0.22, 1, 0.36, 1);
   --t-fast: 140ms;
   --t-med: 220ms;
@@ -315,60 +362,85 @@
 }
 
 /* ═══════════════════════════════════════════════════════════════════════════
-   E LO STESSO TABELLONE AL BUIO
+   E LA STESSA PAGINA AL BUIO
 
-   I due estremi della palette si scambiano il posto — il viola-nero diventa la
-   carta, il quasi-bianco l'inchiostro — e il viola resta dov'e'. Qui sotto ci
-   sono **solo** i token che cambiano: quello che non e' scritto e' lo stesso in
-   tutti e due i temi, e cosi' non ci sono due fogli da tenere allineati.
+   La carta e' #04326D, l'inchiostro #B2BED6, e cio' che e' tuo l'arancio
+   #F58F20. Qui sotto ci sono **solo** i token che cambiano: quello che non e'
+   scritto e' lo stesso in tutti e due i temi, e cosi' non ci sono due fogli da
+   tenere allineati.
 
-   D10 diceva «un tema solo, perche' due palette sono due cose da mantenere», e
-   restava vero finche' il tema era uno scuro senza alternativa. La risposta a
-   quel costo non e' rinunciare al tema chiaro: e' `tests/contrasto.mjs`, che da
-   qui in avanti **misura tutte e due** le stesure invece di una.
+   **Questo non e' il rovescio del tema chiaro.** Prima lo era, e i due rapporti
+   principali erano identici (11,43:1 in tutti e due i versi). Adesso sono due
+   palette date, e al buio il margine e' meno di meta': 6,67:1 contro 12,16:1.
+   Da qui vengono due conseguenze che si vedono nei valori:
 
-   Non c'e' `prefers-color-scheme`: il tema si sceglie con l'interruttore in alto
-   e resta scelto. L'app nasce chiara perche' e' cosi' che e' stata disegnata; chi
-   la usa al buio davanti a un portone la gira una volta e non ci pensa piu'. */
+     1. **Le schede schiariscono di un gradino solo** (+0,055 di luminosita'), e
+        non e' un gusto: e' il massimo che lascia l'arancio sopra la soglia
+        quando ci sta come testo. Un gradino in piu' e cede.
+     2. **Gli incassi scendono sotto la carta** invece di salire — le piste, i
+        rilievi, i veli. In un tema scuro e' anche il verso giusto: un incavo e'
+        piu' buio, non piu' chiaro. Alla luce vale il contrario.
+
+   Il costo dei due temi lo paga `tests/contrasto.mjs`, che li misura tutti e
+   due a ogni `npm run check` invece di fidarsi di questo commento.
+
+   **Quale dei due si apre lo decide il browser**, quando nessuno ha scelto:
+   `tema.js` legge `prefers-color-scheme` prima che la pagina venga dipinta. Se
+   invece l'interruttore in alto e' stato usato, quella scelta vince e resta —
+   una preferenza di sistema non scavalca una decisione presa qui. Il blocco
+   scuro sta in un posto solo: non e' duplicato dentro una media query, o
+   sarebbero due stesure da tenere allineate e il controllo del contrasto ne
+   leggerebbe una. */
 :root[data-tema="scuro"] {
   color-scheme: dark;
 
-  --bg: oklch(0.165 0.024 304);
-  --surface: oklch(0.235 0.028 304);
-  --surface-2: oklch(0.300 0.030 304);
-  --rilievo: oklch(0.270 0.055 301);
-  --border: oklch(0.345 0.026 304);
-  --border-strong: oklch(0.570 0.030 300);
-  --ink: oklch(0.956 0.004 236);
-  --ink-soft: oklch(0.760 0.024 239);
-  --segnaposto: oklch(0.720 0.026 239);
-  --primary: oklch(0.532 0.261 301);
-  --primary-testo: oklch(0.820 0.130 301);
-  --primary-hover: oklch(0.462 0.233 296);
-  --su-primario: oklch(0.956 0.004 236);
-  --su-primario-tenue: oklch(0.905 0.026 301);
-  --primary-soft: oklch(0.295 0.075 301);
-  --primary-bordo: oklch(0.600 0.180 301);
-  --tuo: oklch(0.532 0.261 301);
-  --tuo-testo: oklch(0.820 0.130 301);
-  --tuo-su: oklch(0.956 0.004 236);
-  --tuo-velo: oklch(0.295 0.075 301);
-  --tuo-bordo: oklch(0.610 0.185 301);
-  --danger: oklch(0.72 0.16 25);
-  --danger-pieno: oklch(0.53 0.20 25);
-  --danger-soft: oklch(0.265 0.070 25);
-  --ok: oklch(0.80 0.13 165);
-  --ok-deep: oklch(0.80 0.13 165);
-  --ok-pieno: oklch(0.55 0.12 165);
-  --ok-soft: oklch(0.255 0.050 165);
-  --piastra: transparent;
-  /* La targa si ribalta: al buio e' lei la cosa chiara, con l'inchiostro sopra.
-     E' l'unico oggetto del foglio che scambia i due estremi **al contrario**
-     della pagina, ed e' voluto — una targa avvitata su una parete scura e' una
-     targa chiara. */
-  --targa: oklch(0.930 0.006 236);
-  --su-targa: oklch(0.190 0.028 304);
+  --bg: oklch(0.328 0.113 257.5);          /* #04326D esatto */
+  --surface: oklch(0.362 0.099 258.9);
+  --surface-2: oklch(0.270 0.105 257.5);
+  --rilievo: oklch(0.270 0.105 257.5);
+  --border: oklch(0.463 0.073 259.9);
+  --border-strong: oklch(0.626 0.048 264.3);
+  --ink: oklch(0.800 0.037 264.3);         /* #B2BED6 esatto */
+  --ink-soft: oklch(0.734 0.040 264.3);
+  --segnaposto: oklch(0.734 0.040 264.3);
+  /* Al buio si ribalta: quello che si tocca e' l'azzurro pieno con il blu
+     sopra, perche' un blu pieno su carta blu non si vedrebbe. */
+  --primary: oklch(0.800 0.037 264.3);
+  --primary-testo: oklch(0.800 0.037 264.3);
+  --primary-hover: oklch(0.720 0.045 264.3);
+  --su-primario: oklch(0.328 0.113 257.5);
+  --su-primario-tenue: oklch(0.416 0.060 257.5);
+  --tuo-su-tenue: oklch(0.359 0.090 257.5);
+  --primary-soft: oklch(0.270 0.093 258.9);
+  --primary-bordo: oklch(0.626 0.050 264.3);
+  /* Al buio si ribalta come tutto il resto: il velo scende alla luminosita' di
+     `--primary-soft`, la pastiglia sale. */
+  --tessera-2-velo: oklch(0.270 0.055 304.3);
+  --tessera-2-ico: oklch(0.648 0.060 304.3);
+  /* L'arancio non si muove, ed e' l'unica cosa che non si muove: al buio regge
+     6,91:1 sulla carta blu, quindi qui puo' fare anche il testo e il contorno,
+     cosa che alla luce gli e' vietata. */
+  --tuo: oklch(0.743 0.165 60.5);
+  --tuo-testo: oklch(0.743 0.165 60.5);
+  --tuo-su: oklch(0.328 0.113 257.5);
+  --tuo-velo: oklch(0.330 0.070 60.5);
+  --tuo-bordo: oklch(0.743 0.165 60.5);
+  --danger: oklch(0.747 0.120 27.0);
+  --danger-pieno: oklch(0.584 0.180 27.0);
+  --danger-soft: oklch(0.360 0.078 27.0);
+  --ok: oklch(0.723 0.105 162.0);
+  --ok-deep: oklch(0.638 0.110 162.0);
+  --ok-pieno: oklch(0.549 0.110 162.0);
+  --ok-soft: oklch(0.355 0.058 162.0);
+  --piastra: oklch(0.900 0.030 264.3);
+  --posto-tuo-filo: oklch(0.900 0.030 264.3);
+  /* La targa si ribalta al contrario della pagina, ed e' voluto: una targa
+     avvitata su una parete scura e' una targa chiara. */
+  --targa: oklch(0.800 0.037 264.3);
+  --su-targa: oklch(0.328 0.113 257.5);
   --luce: inset 0 1px 0 oklch(1 0 0 / 0.10);
+  --shadow-1: 0 1px 2px oklch(0 0 0 / 0.35), 0 2px 8px oklch(0 0 0 / 0.25);
+  --shadow-2: 0 8px 28px oklch(0 0 0 / 0.45), 0 2px 8px oklch(0 0 0 / 0.30);
 }
 
 * { box-sizing: border-box; margin: 0; }
@@ -421,9 +493,10 @@ svg { vertical-align: -0.15em; }
 
 /* **I collegamenti non avevano una regola.** Dentro l'app quasi tutti i link sono
    bottoni, quindi non si notava; ma `404.html`, `offline.html` e l'informativa hanno
-   link veri, e li' restava il blu predefinito del browser — che sul viola-nero e' un blu
-   quasi nero, cioe' un collegamento invisibile su una pagina il cui unico scopo e'
-   portare da un'altra parte. */
+   link veri, e li' restava il blu predefinito del browser — che sulla carta scura del
+   tema al buio e' un blu su un blu, cioe' un collegamento invisibile su una pagina il
+   cui unico scopo e' portare da un'altra parte. E quelle pagine ora seguono il tema
+   del browser come l'app, quindi il caso non e' piu' teorico. */
 a { color: var(--primary-testo); text-underline-offset: 3px; }
 a:hover { color: var(--primary-hover); }
 
@@ -508,7 +581,7 @@ a:hover { color: var(--primary-hover); }
   white-space: nowrap;
 }
 .targa svg { color: inherit; flex: none; }
-.targa b { font-weight: 500; }
+.targa b { font-weight: 600; }
 
 /* ================= AUTH =================
 
@@ -712,7 +785,7 @@ a:hover { color: var(--primary-hover); }
   margin: 18px 0;
   color: var(--ink-soft);
   font-size: 0.74rem;
-  font-weight: 500;
+  font-weight: 600;
   letter-spacing: 0.02em;
   text-transform: uppercase;
 }
@@ -729,7 +802,7 @@ a:hover { color: var(--primary-hover); }
 label {
   display: block;
   font-size: 0.74rem;
-  font-weight: 500;
+  font-weight: 600;
   letter-spacing: 0.01em;
   text-transform: uppercase;
   color: var(--ink-soft);
@@ -927,7 +1000,7 @@ input[type="time"]::-webkit-calendar-picker-indicator { opacity: 0.6; cursor: po
   color: var(--primary-testo);
   font: inherit;
   font-size: 0.85rem;
-  font-weight: 500;
+  font-weight: 600;
   cursor: pointer;
   text-decoration: underline;
   text-underline-offset: 3px;
@@ -954,10 +1027,12 @@ input[type="time"]::-webkit-calendar-picker-indicator { opacity: 0.6; cursor: po
 .auth-message {
   margin-top: 16px;
   font-size: 0.88rem;
-  font-weight: 500;
+  font-weight: 600;
   color: var(--danger);
   background: var(--danger-soft);
-  border: 1px solid oklch(0.42 0.12 25);
+  /* Era `oklch(0.42 0.12 25)`, scritto a mano: un rosso fisso che al buio
+     spariva sul suo velo, perche' li' il velo e' scuro quanto lui. */
+  border: 1px solid var(--danger);
   border-radius: var(--r-btn);
   padding: 11px 14px;
   line-height: 1.5;
@@ -967,7 +1042,7 @@ input[type="time"]::-webkit-calendar-picker-indicator { opacity: 0.6; cursor: po
 .auth-message.ok {
   color: var(--ok);
   background: var(--ok-soft);
-  border-color: oklch(0.40 0.09 165);
+  border-color: var(--ok);
   animation: entra var(--t-med) var(--ease-out);
 }
 
@@ -1188,7 +1263,7 @@ input[type="time"]::-webkit-calendar-picker-indicator { opacity: 0.6; cursor: po
   margin-bottom: 20px;
 }
 
-.howto-step { display: flex; align-items: center; gap: 12px; font-weight: 500; font-size: 0.9rem; color: var(--ink); }
+.howto-step { display: flex; align-items: center; gap: 12px; font-weight: 600; font-size: 0.9rem; color: var(--ink); }
 .howto-icon {
   color: var(--primary-testo);
   background: var(--primary-soft);
@@ -1334,7 +1409,7 @@ input[type="time"]::-webkit-calendar-picker-indicator { opacity: 0.6; cursor: po
   border-radius: var(--r-chip);
   cursor: pointer;
 }
-.group-members-count { color: var(--ink-soft); font-weight: 500; }
+.group-members-count { color: var(--ink-soft); font-weight: 600; }
 
 /* Riepilogo giorno */
 .day-stats { display: flex; gap: 8px; flex-wrap: wrap; align-items: center; margin-bottom: 20px; }
@@ -1371,7 +1446,7 @@ input[type="time"]::-webkit-calendar-picker-indicator { opacity: 0.6; cursor: po
 .stat-chip svg { color: var(--ink-soft); align-self: center; }
 .stat-chip strong {
   color: var(--ink);
-  font-weight: 500;
+  font-weight: 600;
   font-size: 1.12rem;
   line-height: 1;
   letter-spacing: -0.02em;
@@ -1401,7 +1476,7 @@ input[type="time"]::-webkit-calendar-picker-indicator { opacity: 0.6; cursor: po
 
 .add-card h2 {
   font-size: 0.76rem;
-  font-weight: 500;
+  font-weight: 600;
   letter-spacing: 0.02em;
   text-transform: uppercase;
   color: var(--ink-soft);
@@ -1432,7 +1507,7 @@ input[type="time"]::-webkit-calendar-picker-indicator { opacity: 0.6; cursor: po
 
 .walkers-card h2 {
   font-size: 0.74rem;
-  font-weight: 500;
+  font-weight: 600;
   letter-spacing: 0.02em;
   text-transform: uppercase;
   color: var(--ink-soft);
@@ -1449,7 +1524,7 @@ input[type="time"]::-webkit-calendar-picker-indicator { opacity: 0.6; cursor: po
   border-radius: var(--r-chip);
   padding: 6px 12px;
   font-size: 0.83rem;
-  font-weight: 500;
+  font-weight: 600;
   color: var(--ink-soft);
 }
 .walker-chip.request { background: var(--primary-soft); border-color: var(--primary-bordo); color: var(--primary-testo); font-weight: 600; }
@@ -1705,7 +1780,7 @@ input[type="time"]::-webkit-calendar-picker-indicator { opacity: 0.6; cursor: po
 .car-luce { fill: none; stroke: oklch(1 0 0 / 0.30); stroke-width: 2; stroke-linecap: round; }
 .car-ombra { fill: none; }
 /* Il vetro e' scuro: guardando un'auto dall'alto, dentro non si vede. */
-.vetro-chiaro { stop-color: oklch(0.46 0.055 301); }
+.vetro-chiaro { stop-color: var(--scocca-ombra); }
 .vetro-scuro { stop-color: var(--vetro); }
 .car-glass { fill: var(--vetro); stroke: var(--scocca-riga); stroke-width: 1; }
 .car-riflesso { fill: oklch(1 0 0 / 0.22); }
@@ -1777,7 +1852,7 @@ input[type="time"]::-webkit-calendar-picker-indicator { opacity: 0.6; cursor: po
 .seat-taken .seat-base { stroke: var(--posto-bordo); }
 
 /* Il tuo. L'unico pieno del disegno. */
-.seat-mine .seat-base { fill: var(--tuo); stroke: var(--scocca-riga); stroke-width: 2.5; }
+.seat-mine .seat-base { fill: var(--tuo); stroke: var(--posto-tuo-filo); stroke-width: 2.5; }
 .seat-mine .seat-back { fill: var(--tuo-bordo); }
 .seat-mine .seat-text { fill: var(--tuo-su); }
 .seat-mine .seat-piega { stroke: oklch(1 0 0 / 0.34); }
@@ -1855,7 +1930,7 @@ input[type="time"]::-webkit-calendar-picker-indicator { opacity: 0.6; cursor: po
    riga sotto che lega insieme i passaggi di quel giorno. */
 .history-day-title {
   font-size: 0.72rem;
-  font-weight: 500;
+  font-weight: 600;
   letter-spacing: 0.02em;
   text-transform: uppercase;
   color: var(--ink-soft);
@@ -1883,7 +1958,7 @@ input[type="time"]::-webkit-calendar-picker-indicator { opacity: 0.6; cursor: po
   border-radius: var(--r-chip);
   padding: 3px 10px;
   font-size: 0.79rem;
-  font-weight: 500;
+  font-weight: 600;
   color: var(--ink-soft);
 }
 .history-chip.driver { background: var(--tuo); border-color: var(--tuo); color: var(--tuo-su); font-weight: 700; }
@@ -1919,7 +1994,7 @@ input[type="time"]::-webkit-calendar-picker-indicator { opacity: 0.6; cursor: po
 
 .fermate-box { border-top: 1px solid var(--border); margin: 14px 0 0; padding: 12px 0 0; }
 .fermate-titolo {
-  font-size: 0.70rem; font-weight: 500; letter-spacing: 0.02em; text-transform: uppercase;
+  font-size: 0.70rem; font-weight: 600; letter-spacing: 0.02em; text-transform: uppercase;
   color: var(--ink-soft); margin-bottom: 8px;
 }
 .fermate-elenco { display: flex; gap: 6px; flex-wrap: wrap; margin-bottom: 8px; }
@@ -1960,7 +2035,7 @@ input[type="time"]::-webkit-calendar-picker-indicator { opacity: 0.6; cursor: po
   font-size: 0.72rem; color: var(--ink-soft);
   font-variant-numeric: tabular-nums;
 }
-.week-testa b { color: var(--ink); text-transform: uppercase; letter-spacing: 0.01em; font-size: 0.68rem; font-weight: 500; }
+.week-testa b { color: var(--ink); text-transform: uppercase; letter-spacing: 0.01em; font-size: 0.68rem; font-weight: 600; }
 .week-auto, .week-vuoto {
   display: flex; align-items: baseline; gap: 6px; flex-wrap: wrap;
   width: 100%;
@@ -2025,7 +2100,7 @@ input[type="time"]::-webkit-calendar-picker-indicator { opacity: 0.6; cursor: po
 @media (max-width: 767px) {
   .profile-actions { grid-template-columns: minmax(0, 1fr); }
 }
-.btn-danger-full { color: var(--danger); border-color: oklch(0.42 0.12 25); }
+.btn-danger-full { color: var(--danger); border-color: var(--danger); }
 .btn-danger-full:hover { background: var(--danger-soft); border-color: var(--danger); }
 .profile-hint { color: var(--ink-soft); font-size: 0.85rem; margin-top: 20px; max-width: 60ch; }
 
@@ -2123,7 +2198,9 @@ input[type="time"]::-webkit-calendar-picker-indicator { opacity: 0.6; cursor: po
   box-shadow: var(--shadow-2);
 }
 .app-dialog[open] { animation: entra var(--t-med) var(--ease-out); }
-.app-dialog::backdrop { background: oklch(0.09 0.020 304 / 0.80); }
+/* Il velo sotto la finestra: la tinta dell'inchiostro portata al buio. Era
+   `oklch(0.09 0.020 304)`, cioe' il viola-nero della palette di due palette fa. */
+.app-dialog::backdrop { background: oklch(0.16 0.050 262.7 / 0.80); }
 .app-dialog h3 { font-size: 1.1rem; font-weight: 700; margin-bottom: 4px; }
 .app-dialog .auth-subtitle { margin-bottom: 14px; }
 .app-dialog input, .app-dialog select, .app-dialog textarea { margin-top: 0; }
@@ -2167,7 +2244,7 @@ input[type="time"]::-webkit-calendar-picker-indicator { opacity: 0.6; cursor: po
   position: sticky; top: 0; z-index: 60;
   padding: 8px 14px;
   background: var(--danger-pieno); color: oklch(1 0 0);
-  font-size: 0.84rem; font-weight: 500; text-align: center;
+  font-size: 0.84rem; font-weight: 600; text-align: center;
 }
 .offline-bar[hidden] { display: none; }
 
@@ -2230,7 +2307,7 @@ input[type="time"]::-webkit-calendar-picker-indicator { opacity: 0.6; cursor: po
   margin-top: 18px;
 }
 .card-title {
-  font-size: 0.74rem; font-weight: 500; letter-spacing: 0.02em; text-transform: uppercase;
+  font-size: 0.74rem; font-weight: 600; letter-spacing: 0.02em; text-transform: uppercase;
   color: var(--ink-soft); margin-bottom: 6px;
 }
 .card-sub { color: var(--ink-soft); font-size: 0.86rem; margin-bottom: 14px; max-width: 66ch; }
@@ -2436,7 +2513,7 @@ input[type="time"]::-webkit-calendar-picker-indicator { opacity: 0.6; cursor: po
 }
 .dash .k .lab {
   font-size: 0.65rem; color: var(--ink-soft); overflow-wrap: anywhere;
-  letter-spacing: 0.01em; text-transform: uppercase; font-weight: 500;
+  letter-spacing: 0.01em; text-transform: uppercase; font-weight: 600;
 }
 .dash .k .val {
   font-size: 1.25rem; font-weight: 700; margin-top: 3px; letter-spacing: -0.03em;
@@ -2446,7 +2523,7 @@ input[type="time"]::-webkit-calendar-picker-indicator { opacity: 0.6; cursor: po
 /* Cio' che e' tuo: pieno, con il quasi-bianco sopra. La misura e' la stessa delle altre —
    cambia il materiale, non la dimensione. */
 .dash .k.mio { background: var(--tuo); border-color: var(--tuo); color: var(--tuo-su); }
-.dash .k.mio .lab, .dash .k.mio .nota { color: var(--su-primario-tenue); }
+.dash .k.mio .lab, .dash .k.mio .nota { color: var(--tuo-su-tenue); }
 .dash .k.mio .val { color: var(--tuo-su); }
 .dash .k.allerta { border-color: var(--danger); background: var(--danger-soft); }
 .dash .k.allerta .val { color: var(--danger); }
@@ -2464,7 +2541,7 @@ input[type="time"]::-webkit-calendar-picker-indicator { opacity: 0.6; cursor: po
 }
 .dash .card > .piede { margin-top: auto; }
 .dash .card h3 {
-  margin: 0; font-size: 0.70rem; font-weight: 500; overflow-wrap: anywhere;
+  margin: 0; font-size: 0.70rem; font-weight: 600; overflow-wrap: anywhere;
   letter-spacing: 0.01em; text-transform: uppercase;
 }
 .dash .sub { color: var(--ink-soft); font-size: 0.68rem; overflow-wrap: anywhere; }
@@ -2963,3 +3040,472 @@ form.signup .auth-accetto { display: block; }
    dentro in duecento millisecondi si misura mezzo fuori schermo, e a chi arriva con
    la tastiera quel movimento non dice niente che la posizione non dica gia'. */
 .salta-al-contenuto:focus-visible { top: 12px; }
+
+/* ═══════════════════════════════════════════════════════════════════════════
+   IL RIEPILOGO, RIFATTO SULLA SCHERMATA DI RIFERIMENTO
+
+   La composizione e' quella che il proprietario ha scelto e consegnato come
+   immagine: colonna a sinistra, barra in cima, quattro numeri, due riquadri
+   grandi, tre riquadri in fondo. Qui e' riprodotta com'e', con i tre colori
+   della palette al posto dei suoi e con i dati che WeTransport ha davvero.
+
+   ── LA REGOLA CHE COMANDA TUTTO IL RESTO ─────────────────────────────────
+   **Niente scorrimento, in nessuna delle due direzioni.** Il Riepilogo sta in
+   una schermata e basta, ed e' una regola del progetto, non una rifinitura di
+   questa vista: e' la stessa cosa che C40 aveva chiesto («il riepilogo che sta
+   in una schermata») e che C41 aveva difeso togliendo il quaderno a scorrimento
+   laterale.
+
+   Cambia il modo in cui si scrive il foglio, non solo i numeri:
+
+   1. L'altezza **si distribuisce, non si somma.** `.corpo` e' una griglia di
+      cinque righe: le tre in cima prendono quello che serve, le due in fondo si
+      spartiscono `1fr` di quel che resta. Nessuna riga puo' far crescere la
+      pagina, perche' la pagina e' alta `100dvh` e non un pixel di piu'.
+   2. Ogni contenitore della catena ha `min-height: 0`. Senza, un figlio in
+      griglia si rifiuta di rimpicciolirsi sotto il proprio contenuto ed e'
+      esattamente da li' che rispunta lo scorrimento — e' il difetto piu' comune
+      di una griglia a schermo pieno, e non si vede finche' il contenuto non
+      cresce.
+   3. **Gli elenchi non scorrono: si accorciano.** Quante righe ci stanno lo
+      decide `--righe-scheda`, e le altre diventano una riga di piede che dice
+      quante sono. Un elenco che scorre dentro una scheda e' uno scorrimento in
+      piu', cioe' la cosa che non deve esserci.
+
+   ── LA SCALA DELLE DISTANZE ──────────────────────────────────────────────
+   Un passo solo, di 4px, e cinque valori. Prima erano 11, 13, 14, 15, 16, 17,
+   18 e 22 — otto distanze scelte una alla volta dal componente che le chiedeva,
+   che e' il motivo per cui gli allineamenti non tornavano: due schede affiancate
+   con padding diverso non hanno il testo sulla stessa riga.
+   ═══════════════════════════════════════════════════════════════════════════ */
+
+.app-lynk {
+  --sp-1: 4px;
+  --sp-2: 8px;
+  --sp-3: 12px;
+  --sp-4: 16px;
+  --sp-5: 24px;
+  /* Quante righe entrano in una scheda in fondo. Cambia con la fascia, ed e'
+     l'unico posto in cui si decide: le tre schede in fondo lo leggono tutte. */
+  --righe-scheda: 3;
+
+  display: grid;
+  grid-template-columns: 236px minmax(0, 1fr);
+  /* Due volte, e il ripiego viene prima: `dvh` tiene conto della barra del
+     browser sul telefono, ma un browser che non lo conosce scarta la riga — e
+     se e' l'unica, la pagina torna alta quanto il contenuto, cioe' torna a
+     scorrere. La seconda sovrascrive la prima dove funziona. */
+  height: 100vh;
+  height: 100dvh;
+  max-height: 100vh;
+  max-height: 100dvh;
+  overflow: hidden;
+  background: var(--bg);
+}
+
+/* ── La colonna ─────────────────────────────────────────────────────────── */
+.app-lynk .lato {
+  display: grid;
+  grid-template-rows: auto auto 1fr auto;
+  gap: var(--sp-4);
+  padding: var(--sp-4) var(--sp-3);
+  background: var(--surface);
+  border-right: 1px solid var(--border);
+  min-height: 0;
+}
+.app-lynk .lato-testa { display: flex; align-items: center; gap: var(--sp-2); height: 44px; }
+.app-lynk .lato-testa .targa {
+  display: inline-flex; align-items: center; gap: 7px;
+  background: var(--targa); color: var(--su-targa);
+  padding: 8px 11px; border-radius: var(--r-btn);
+  font-weight: 700; font-size: 0.8rem; letter-spacing: 0.04em; text-transform: uppercase;
+}
+.app-lynk .lato-testa .targa svg { width: 18px; height: 12px; }
+.app-lynk .lato-piega {
+  margin-left: auto; width: 32px; height: 32px; display: grid; place-items: center;
+  background: transparent; border: 0; border-radius: var(--r-btn); color: var(--ink-soft); cursor: pointer;
+}
+.app-lynk .lato-piega svg { width: 18px; height: 18px; }
+.app-lynk .lato-piega:hover { background: var(--surface-2); color: var(--ink); }
+
+.app-lynk .lato-voci { display: flex; flex-direction: column; gap: 2px; }
+.app-lynk .voce {
+  display: flex; align-items: center; gap: var(--sp-3);
+  padding: 10px var(--sp-3); border-radius: var(--r-btn);
+  color: var(--ink-soft); text-decoration: none; font-weight: 600; font-size: 0.88rem;
+  transition: background var(--t-fast) var(--ease-out), color var(--t-fast) var(--ease-out);
+}
+/* Le icone sono disegnate, non emoji: un'emoji porta i suoi colori e non li
+   cede, quindi in una palette di tre colori e' sempre la quarta tinta dello
+   schermo. Queste prendono `currentColor` e seguono lo stato della voce. */
+.app-lynk .voce .ico { width: 20px; height: 20px; flex: none; display: grid; place-items: center; }
+.app-lynk .i { width: 20px; height: 20px; display: block; }
+/* Ogni disegno dentro questa vista e' un blocco, mai in linea: in linea si
+   appoggia alla linea di base e si porta dietro lo spazio del discendente —
+   tre pixel che dentro una pillola alta 32 la fanno diventare 35, e sono
+   quelli a far sembrare storta una fila di controlli allineata. */
+.app-lynk .cerca svg, .app-lynk .periodo svg { display: block; }
+.app-lynk .periodo select, .app-lynk .scelta select { display: block; }
+.app-lynk .riga-chi { display: block; }
+.app-lynk .facce i { display: grid; }
+.app-lynk .tondo .i { width: 19px; height: 19px; }
+.app-lynk .k-ico .i { width: 18px; height: 18px; }
+.app-lynk .io-freccia .i { width: 16px; height: 16px; }
+.app-lynk .voce:hover { background: var(--surface-2); color: var(--ink); }
+.app-lynk .voce.attiva { background: var(--primary-soft); color: var(--primary-testo); }
+/* Un conteggio non e' «tuo»: l'arancio significa quello, e qui direbbe una cosa
+   falsa. Prende il riempimento interattivo. */
+.app-lynk .voce .pallino {
+  margin-left: auto; background: var(--primary); color: var(--su-primario);
+  font-size: 0.68rem; font-weight: 700; padding: 1px 7px; border-radius: var(--pill);
+}
+
+/* Al posto di «Upgrade to Pro»: l'invito a installarla, che esiste da C12 e non
+   ha mai avuto una casa. Sta in fondo alla riga `1fr`, cioe' si appoggia al
+   fondo senza spingere niente. */
+.app-lynk .lato-promo {
+  align-self: end;
+  background: var(--targa); color: var(--su-targa);
+  border-radius: var(--r-card); padding: var(--sp-4) var(--sp-4) var(--sp-3);
+}
+.app-lynk .lato-promo h2 { font-size: 0.95rem; font-weight: 700; margin-bottom: var(--sp-1); }
+.app-lynk .lato-promo p { font-size: 0.76rem; line-height: 1.45; opacity: 0.82; margin-bottom: var(--sp-3); }
+.app-lynk .btn-promo {
+  width: 100%; font: inherit; font-weight: 700; font-size: 0.8rem; cursor: pointer;
+  background: var(--tuo); color: var(--tuo-su); border: 0;
+  border-radius: var(--r-btn); padding: 9px var(--sp-3);
+}
+.app-lynk .btn-promo:hover { filter: brightness(1.06); }
+/* Dove `beforeinstallprompt` non esiste — Safari, su iPhone e su Mac — al posto
+   del bottone compare la riga che dice quali due tocchi servono. Prende lo stile
+   del paragrafo sopra ma **senza il margine in fondo**: e' l'ultima cosa nel
+   riquadro, e quel margine diventerebbe un buco fra la riga e il bordo. */
+.app-lynk .promo-mano {
+  font-size: 0.76rem; line-height: 1.45; opacity: 0.82; margin-bottom: 0;
+}
+
+.app-lynk .lato-io {
+  display: flex; align-items: center; gap: var(--sp-3);
+  padding: var(--sp-2); border-radius: var(--r-btn); border: 1px solid var(--border);
+  min-width: 0;
+}
+.app-lynk .io-chi { display: flex; flex-direction: column; line-height: 1.25; min-width: 0; }
+.app-lynk .io-chi b { font-size: 0.84rem; font-weight: 600; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.app-lynk .io-chi small { font-size: 0.72rem; color: var(--ink-soft); }
+.app-lynk .io-freccia { margin-left: auto; color: var(--ink-soft); flex: none; }
+
+/* ── Il corpo: cinque righe, e solo le ultime due crescono ──────────────── */
+.app-lynk .corpo {
+  display: grid;
+  grid-template-rows: auto auto auto minmax(0, 1.05fr) minmax(0, 1fr);
+  gap: var(--sp-3);
+  padding: var(--sp-4) var(--sp-5) var(--sp-4);
+  min-height: 0; min-width: 0;
+}
+
+/* **Un `label` qui dentro non porta i margini del resto del foglio.** L'app
+   veste i `label` dei moduli con `margin-bottom`, e la barra di ricerca, il
+   selettore del periodo e le due tendine delle schede sono `label`: con
+   l'allineamento al centro quel margine finiva nella scatola dell'elemento e lo
+   alzava di sette pixel rispetto ai bottoni accanto. Non era una spaziatura
+   sbagliata, era una regola scritta per un altro posto che arrivava fin qui. */
+.app-lynk label { margin: 0; }
+
+.app-lynk .cima { display: flex; align-items: center; gap: var(--sp-2); height: 44px; }
+/* I bottoni si appoggiano al bordo destro, dove finiscono tutte le altre righe
+   della vista. Senza, la fila si fermava dove finiva la ricerca e restavano
+   duecentottanta pixel di vuoto: la barra galleggiava mentre tutto il resto era
+   allineato, ed e' il genere di scarto che si sente prima di vederlo. */
+.app-lynk .cima .tondo:first-of-type { margin-left: auto; }
+.app-lynk .cerca {
+  flex: 1 1 auto; max-width: 460px; display: flex; align-items: center; gap: var(--sp-2);
+  background: var(--surface); border: 1px solid var(--border);
+  border-radius: var(--pill); padding: 0 var(--sp-4); height: 44px;
+}
+.app-lynk .cerca svg { width: 17px; height: 17px; color: var(--ink-soft); flex: none; }
+.app-lynk .cerca input { flex: 1; min-width: 0; }
+.app-lynk .cerca input::placeholder { color: var(--segnaposto); }
+.app-lynk .cerca kbd {
+  font-family: var(--font-mono); font-size: 0.68rem; color: var(--ink-soft);
+  background: var(--surface-2); border-radius: var(--r-chip); padding: 3px 6px; flex: none;
+}
+.app-lynk .tondo {
+  position: relative; flex: none; width: 44px; height: 44px; display: grid; place-items: center;
+  background: var(--surface); border: 1px solid var(--border); border-radius: var(--pill);
+  color: var(--ink); cursor: pointer;
+}
+.app-lynk .tondo:hover { background: var(--surface-2); }
+.app-lynk .tondo .bollino {
+  position: absolute; top: 9px; right: 11px; width: 8px; height: 8px;
+  border-radius: var(--pill); background: var(--danger); border: 2px solid var(--surface);
+}
+.app-lynk .btn-cima {
+  flex: none; font: inherit; font-weight: 700; font-size: 0.86rem; cursor: pointer;
+  background: var(--primary); color: var(--su-primario); border: 0;
+  border-radius: var(--pill); padding: 0 var(--sp-5); height: 44px; box-shadow: var(--luce);
+}
+.app-lynk .btn-cima:hover { background: var(--primary-hover); }
+
+.app-lynk .testa-vista { display: flex; align-items: center; gap: var(--sp-4); min-height: 44px; }
+.app-lynk .testa-vista h1 { font-size: 1.5rem; font-weight: 700; letter-spacing: -0.03em; line-height: 1.1; }
+.app-lynk .testa-vista p { color: var(--ink-soft); font-size: 0.84rem; margin-top: 2px; }
+.app-lynk .periodo {
+  margin-left: auto; flex: none; display: flex; align-items: center; gap: var(--sp-2);
+  background: var(--surface); border: 1px solid var(--border); border-radius: var(--r-btn);
+  padding: 0 var(--sp-3); height: 40px;
+}
+.app-lynk .periodo .giu, .app-lynk .scelta .giu {
+  width: 14px; height: 14px; color: var(--ink-soft); flex: none; display: block;
+}
+/* **Un `select` e un `input` non stanno nella loro pillola senza che glielo si
+   dica.** Portano da soli un'altezza di riga e un riempimento del browser, e
+   dentro un contenitore alto 32 o 44 diventano 41 e 47: sporgono di qualche
+   pixel, e sono quei pixel a far sembrare storta una fila di controlli che
+   invece e' allineata. Si azzerano e si prendono l'altezza del contenitore. */
+.app-lynk .periodo select,
+.app-lynk .scelta select,
+.app-lynk .cerca input {
+  height: 100%; padding: 0; line-height: 1; appearance: none;
+  border: 0; background: transparent; font: inherit; font-weight: 600;
+  color: var(--ink); outline: none; cursor: pointer;
+}
+.app-lynk .periodo select, .app-lynk .scelta select { font-size: 0.82rem; padding-right: 2px; }
+.app-lynk .cerca input { font-weight: 400; font-size: 0.86rem; cursor: text; }
+.app-lynk .scelta {
+  display: inline-flex; align-items: center; background: var(--surface-2);
+  border-radius: var(--r-btn); padding: 0 var(--sp-3); height: 32px; overflow: hidden;
+}
+
+/* ── I quattro numeri ───────────────────────────────────────────────────── */
+.app-lynk .numeri { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: var(--sp-3); }
+.app-lynk .k {
+  position: relative; overflow: hidden; min-width: 0;
+  display: grid; grid-template-rows: auto auto auto 1fr;
+  background: var(--surface); border: 1px solid var(--border); border-radius: var(--r-card);
+  padding: var(--sp-3) var(--sp-4) 0; box-shadow: var(--shadow-1);
+}
+.app-lynk .k-alto { display: flex; align-items: center; gap: var(--sp-2); min-width: 0; }
+.app-lynk .k-ico {
+  width: 32px; height: 32px; flex: none; display: grid; place-items: center;
+  background: var(--primary-soft); color: var(--primary-testo); border-radius: var(--r-btn);
+}
+.app-lynk .k-lab {
+  font-size: 0.76rem; font-weight: 600; color: var(--ink-soft);
+  overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+}
+.app-lynk .k-val { font-size: 1.6rem; font-weight: 700; letter-spacing: -0.035em; margin-top: var(--sp-2); font-family: var(--font-mono); line-height: 1.1; }
+.app-lynk .k-nota { font-size: 0.73rem; color: var(--ink-soft); margin-top: 1px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+/* La linea si appoggia al fondo della scheda e prende quel che avanza: e' cosi'
+   che quattro schede con etichette di lunghezza diversa restano alte uguali. */
+.app-lynk .linea { display: block; width: 100%; height: 100%; min-height: 28px; align-self: end; margin: var(--sp-2) calc(var(--sp-4) * -1) 0; width: calc(100% + var(--sp-4) * 2); }
+.app-lynk .linea-tratto { fill: none; stroke: var(--primary); stroke-width: 2; vector-effect: non-scaling-stroke; }
+.app-lynk .linea-velo { fill: var(--primary-soft); stroke: none; }
+
+/* La seconda tessera porta la sua tinta. La terza e la quarta la loro ce l'hanno
+   qui sotto e vincono su questa, perche' vengono dopo: «tuo» e «scoperto» sono
+   informazione, una tinta d'identita' no. */
+.app-lynk .k.tinta-2 .k-ico { background: var(--tessera-2-velo); color: var(--tessera-2-ico); }
+.app-lynk .k.mio { background: var(--tuo); border-color: var(--tuo); color: var(--tuo-su); }
+.app-lynk .k.mio .k-lab, .app-lynk .k.mio .k-nota { color: var(--tuo-su-tenue); }
+.app-lynk .k.mio .k-ico { background: oklch(1 0 0 / 0.35); color: var(--tuo-su); }
+.app-lynk .k.mio .linea-tratto { stroke: var(--tuo-su); }
+.app-lynk .k.mio .linea-velo { fill: oklch(1 0 0 / 0.22); }
+/* L'allerta non e' solo rossa: il numero cambia colore **e** l'icona e' un
+   triangolo. Un giorno scoperto non puo' dipendere dal fatto che si veda il rosso. */
+.app-lynk .k.allerta .k-val { color: var(--danger); }
+.app-lynk .k.allerta .k-ico { background: var(--danger-soft); color: var(--danger); }
+.app-lynk .k.allerta .linea-tratto { stroke: var(--danger); stroke-width: 1.6; }
+.app-lynk .k.allerta .linea-velo { fill: var(--danger-soft); }
+
+/* ── I riquadri ─────────────────────────────────────────────────────────── */
+.app-lynk .scheda {
+  background: var(--surface); border: 1px solid var(--border); border-radius: var(--r-card);
+  padding: var(--sp-3) var(--sp-4) var(--sp-3); box-shadow: var(--shadow-1);
+  display: grid; grid-template-rows: auto minmax(0, 1fr) auto;
+  min-width: 0; min-height: 0; overflow: hidden;
+}
+.app-lynk .scheda-testa { display: flex; align-items: center; gap: var(--sp-3); min-height: 32px; margin-bottom: var(--sp-2); }
+.app-lynk .scheda-testa h2 { font-size: 0.98rem; font-weight: 700; letter-spacing: -0.015em; }
+.app-lynk .scheda-testa p { font-size: 0.76rem; color: var(--ink-soft); margin-top: 1px; }
+.app-lynk .scheda-testa .scelta, .app-lynk .scheda-testa .btn-tenue { margin-left: auto; flex: none; }
+.app-lynk .btn-tenue {
+  font: inherit; font-size: 0.76rem; font-weight: 600; cursor: pointer;
+  background: var(--surface-2); color: var(--ink); border: 0;
+  border-radius: var(--r-btn); padding: 6px var(--sp-3); height: 32px;
+}
+.app-lynk .btn-tenue:hover { background: var(--primary-soft); color: var(--primary-testo); }
+.app-lynk .scheda-corpo { min-height: 0; overflow: hidden; }
+.app-lynk .scheda-piede {
+  padding-top: var(--sp-2); margin-top: var(--sp-2); border-top: 1px solid var(--border);
+  font-size: 0.73rem; color: var(--ink-soft);
+  overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+}
+
+.app-lynk .fila-due { display: grid; grid-template-columns: minmax(0, 1.65fr) minmax(0, 1fr); gap: var(--sp-3); min-height: 0; }
+.app-lynk .fila-tre { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: var(--sp-3); min-height: 0; }
+
+/* Il grafico ad area: prende l'altezza che la riga gli lascia, non una sua. */
+/* `relative` perche' il suggerimento e le sonde si appendono a lui. */
+.app-lynk .grafico { min-height: 0; position: relative; }
+.app-lynk .area { display: block; width: 100%; height: 100%; }
+.app-lynk .griglia { stroke: var(--border); stroke-width: 1; }
+.app-lynk .asse { fill: var(--ink-soft); font-size: 11px; font-family: var(--font-sans); }
+/* Due aree: i posti **offerti** sono il velo largo, i posti **presi** quello
+   pieno. La distanza fra le due e' il posto che nessuno ha preso, ed e' il dato
+   per cui questa scheda esiste. */
+.app-lynk .area-offerti { fill: var(--surface-2); }
+.app-lynk .area-velo { fill: var(--primary-soft); }
+.app-lynk .area-tratto { fill: none; stroke: var(--primary); stroke-width: 2.5; stroke-linejoin: round; vector-effect: non-scaling-stroke; }
+.app-lynk .punto { fill: var(--surface); stroke: var(--primary); stroke-width: 2.5; vector-effect: non-scaling-stroke; }
+/* Il punto del giorno che si guarda. Il segno che conta e' il **riempimento**:
+   `r` come proprieta' CSS non e' vecchia come il resto del foglio, e dove non
+   c'e' il pallino resta piccolo ma pieno, cioe' si distingue comunque. */
+.app-lynk .punto.acceso { fill: var(--primary); r: 5.5; }
+
+/* ── Il suggerimento sul grafico ────────────────────────────────────────── */
+/* La schermata di riferimento ha un riquadro appeso al giorno che si guarda, e
+   senza quello il grafico dice la forma ma non i numeri: si vede che mercoledi'
+   e' andato peggio di martedi', non di quanto.
+   Due cose lo tengono onesto. **Le sonde sono sette bottoni veri**, non un
+   ascolto del movimento del mouse: cosi' il suggerimento si raggiunge col
+   tasto di tabulazione e la percentuale sta anche nel nome accessibile, per chi
+   il grafico non lo vede affatto. E **il riquadro e' sfilato dal flusso**,
+   quindi non puo' allungare la scheda: e' la regola di questa vista. */
+.app-lynk .sonde { position: absolute; inset: 0; }
+.app-lynk .sonda {
+  position: absolute; top: 0; bottom: 0; border: 0; padding: 0; cursor: pointer;
+  background: transparent; border-radius: var(--r-btn);
+}
+.app-lynk .sonda:hover, .app-lynk .sonda:focus-visible { background: var(--primary-soft); }
+.app-lynk .sonda:focus-visible { outline: 2px solid var(--primary-testo); outline-offset: -2px; }
+/* Sul blu della targa, non sulla carta: un riquadro che galleggia sopra il
+   grafico deve staccare dal grafico, e la targa e' la coppia piu' alta del
+   foglio (14,43:1 alla luce, 11,41:1 al buio). */
+.app-lynk .bolla {
+  position: absolute; z-index: 2; transform: translate(-50%, -100%);
+  margin-top: -12px; pointer-events: none; white-space: nowrap;
+  background: var(--targa); color: var(--su-targa);
+  border-radius: var(--r-btn); padding: 4px var(--sp-2);
+  font-size: 0.73rem; font-weight: 600; line-height: 1.35;
+}
+/* Ai due bordi il riquadro non si centra, o meta' finisce fuori dalla scheda —
+   che ha `overflow: hidden` e lo taglierebbe invece di allargarsi. */
+.app-lynk .bolla.al-margine-sx { transform: translate(0, -100%); }
+.app-lynk .bolla.al-margine-dx { transform: translate(-100%, -100%); }
+.app-lynk .bolla b { font-family: var(--font-mono); font-weight: 700; }
+
+/* La ciambella */
+.app-lynk .ciambella-riga { display: flex; align-items: center; gap: var(--sp-4); min-height: 0; }
+.app-lynk .ciambella { flex: none; width: clamp(96px, 34%, 140px); }
+.app-lynk .ciambella svg { display: block; width: 100%; }
+.app-lynk .ciambella-n { fill: var(--ink); font-size: 26px; font-weight: 700; font-family: var(--font-mono); }
+.app-lynk .ciambella-lab { fill: var(--ink-soft); font-size: 11px; font-family: var(--font-sans); }
+.app-lynk .legenda { flex: 1 1 0; display: flex; flex-direction: column; gap: var(--sp-2); list-style: none; min-width: 0; }
+.app-lynk .legenda li { display: flex; align-items: center; gap: var(--sp-2); font-size: 0.82rem; min-width: 0; }
+.app-lynk .legenda .pt { width: 10px; height: 10px; border-radius: var(--pill); flex: none; }
+.app-lynk .legenda .lg-n { font-weight: 600; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.app-lynk .legenda .lg-v { margin-left: auto; font-family: var(--font-mono); font-weight: 500; white-space: nowrap; flex: none; }
+.app-lynk .legenda .lg-v small { color: var(--ink-soft); font-family: var(--font-sans); }
+
+/* ── Le righe delle tre schede in fondo ─────────────────────────────────── */
+/* Non scorrono: si accorciano. Le righe che ci stanno le decide
+   `--righe-scheda`, e quelle in piu' diventano una riga di piede che le conta. */
+.app-lynk .righe { display: grid; grid-auto-rows: minmax(0, 1fr); min-height: 0; overflow: hidden; }
+/* Quando la ricerca non trova niente la scheda non resta vuota: dire cosa non
+   c'e' e' l'unico modo di distinguere «nessun risultato» da «non ha caricato».
+   Sta in alto e non al centro, perche' al centro di una scheda alta tre righe
+   una frase sola sembra un errore di impaginazione. */
+.app-lynk .riga-vuota { font-size: 0.8rem; color: var(--ink-soft); padding: var(--sp-3) 2px 0; }
+.app-lynk .riga {
+  display: flex; align-items: center; gap: var(--sp-3);
+  border-bottom: 1px solid var(--border); min-width: 0; overflow: hidden;
+}
+.app-lynk .riga:last-child { border-bottom: 0; }
+.app-lynk .av {
+  width: 34px; height: 34px; flex: none; display: grid; place-items: center;
+  border-radius: var(--pill); color: oklch(1 0 0); font-weight: 700; font-size: 0.76rem;
+}
+.app-lynk .av-piccolo { width: 24px; height: 24px; font-size: 0.62rem; border: 2px solid var(--surface); margin-left: -8px; }
+.app-lynk .av-piu { background: var(--surface-2); color: var(--ink-soft); }
+.app-lynk .facce { margin-left: auto; display: flex; padding-left: var(--sp-2); flex: none; }
+.app-lynk .riga-chi { min-width: 0; font-size: 0.84rem; line-height: 1.3; overflow: hidden; }
+.app-lynk .riga-chi b { font-weight: 600; }
+/* Il **figlio diretto** `b` e' la prima delle due righe quando la voce non ha
+   `.l1` — le righe dei conti e dei prossimi passaggi sono fatte cosi'. Senza
+   questa regola «Piazza Dante → Stazione» va a capo, la voce diventa tre righe
+   e si accavalla con quella sotto: e' la stessa cosa che il commento qui sotto
+   vieta, e che valeva solo per `.l1`, cioe' per una scheda su tre. Il `>` serve:
+   dentro `.l1` c'e' un `b` annidato, e mandarlo a blocco spezzerebbe in due la
+   riga «Tizio ha preso un posto». */
+.app-lynk .riga-chi > b { display: block; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+/* Le due righe di una voce sono **due righe**, e nessuna delle due va a capo:
+   una che si spezza in tre fa saltare l'altezza della traccia, e con la
+   griglia a schermo pieno quella e' la differenza fra una scheda pulita e tre
+   voci accavallate. */
+.app-lynk .riga-chi .l1 { display: block; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.app-lynk .riga-chi small { display: block; font-size: 0.74rem; color: var(--ink-soft); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+/* La barra sotto una voce dei conti: dice **quanto pesa** quel conto rispetto al
+   piu' grosso in elenco, che e' la cosa che un importo da solo non dice — sette
+   euro non si sa se sono molti finche' non si sa qual e' il massimo.
+   Sta solo nella prima delle tre schede in fondo: le altre due elencano fatti,
+   e un fatto non ha una grandezza da confrontare. Il colore raddoppia il segno
+   che l'importo porta gia' in parola e in posizione, non lo sostituisce. */
+.app-lynk .barra {
+  display: block; height: 4px; margin-top: 5px; border-radius: var(--pill);
+  background: var(--surface-2); overflow: hidden;
+}
+.app-lynk .barra i { display: block; height: 100%; border-radius: var(--pill); background: var(--ink-soft); }
+.app-lynk .barra.dare i { background: var(--danger); }
+.app-lynk .barra.avere i { background: var(--ok); }
+.app-lynk .riga-imp { margin-left: auto; font-family: var(--font-mono); font-weight: 500; font-size: 0.88rem; white-space: nowrap; flex: none; }
+.app-lynk .riga-imp.dare { color: var(--danger); }
+.app-lynk .riga-imp.avere { color: var(--ok); }
+.app-lynk .riga-quando { margin-left: auto; font-size: 0.73rem; color: var(--ink-soft); white-space: nowrap; flex: none; }
+.app-lynk .btn-riga {
+  flex: none; font: inherit; font-size: 0.72rem; font-weight: 600; cursor: pointer;
+  background: transparent; color: var(--ink); border: 1px solid var(--border-strong);
+  border-radius: var(--r-btn); padding: 5px var(--sp-2);
+}
+.app-lynk .btn-riga:hover { background: var(--primary-soft); border-color: var(--primary-bordo); color: var(--primary-testo); }
+.app-lynk .data {
+  flex: none; width: 42px; text-align: center; background: var(--surface-2);
+  border-radius: var(--r-btn); padding: 5px 0; line-height: 1.1;
+}
+.app-lynk .data b { display: block; font-family: var(--font-mono); font-weight: 500; font-size: 1rem; }
+.app-lynk .data small { font-size: 0.6rem; font-weight: 600; letter-spacing: 0.1em; color: var(--ink-soft); }
+
+/* ── Le fasce ───────────────────────────────────────────────────────────── */
+/* Sotto i 1280 la composizione della schermata di riferimento non ci sta in una
+   schermata: e la regola e' che non si scorre, quindi non e' il contenuto a
+   traboccare — sono le colonne a ridursi e le righe delle schede a diminuire. */
+@media (max-width: 1279px) {
+  .app-lynk { --righe-scheda: 2; grid-template-columns: 200px minmax(0, 1fr); }
+  .app-lynk .numeri { grid-template-columns: repeat(4, minmax(0, 1fr)); }
+  .app-lynk .k-val { font-size: 1.3rem; }
+  .app-lynk .corpo { padding: var(--sp-3) var(--sp-4); }
+  .app-lynk .cerca { max-width: none; }
+}
+@media (max-width: 767px) {
+  /* Qui la colonna non esiste e torna la pillola in basso. L'immagine di come
+     va fatta la porta il proprietario: fino ad allora questa e' una resa
+     provvisoria, dichiarata, e **anche qui non si scorre**. */
+  /* **Una riga, non due.** Con due, la banda che tocca a una riga qui e' alta
+     25px e il contenuto 34: le voci si accavallavano, e non per la barra ma per
+     l'altezza — succedeva anche prima che ci fosse. Accorciare l'elenco e'
+     esattamente il rimedio che questa vista ha (`--righe-scheda`), e il piede
+     dice quante voci restano fuori: «e altri 3». */
+  .app-lynk { --righe-scheda: 1; grid-template-columns: minmax(0, 1fr); }
+  .app-lynk .lato { display: none; }
+  .app-lynk .corpo { padding: var(--sp-2) var(--sp-3) var(--sp-3); gap: var(--sp-2); grid-template-rows: auto auto auto minmax(0, 1fr) minmax(0, 1fr); }
+  .app-lynk .numeri { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  .app-lynk .fila-due, .app-lynk .fila-tre { grid-template-columns: minmax(0, 1fr); }
+  .app-lynk .fila-due > :last-child, .app-lynk .fila-tre > :nth-child(n + 2) { display: none; }
+  .app-lynk .cerca { display: none; }
+  .app-lynk .btn-cima { padding: 0 var(--sp-3); }
+}
+
+.app-lynk .giorni {
+  display: grid; grid-template-columns: repeat(7, minmax(0, 1fr));
+  padding: var(--sp-1) 6px 0 26px; margin-top: var(--sp-1);
+  font-size: 0.72rem; color: var(--ink-soft); text-align: center;
+}

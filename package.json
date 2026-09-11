@@ -9,6 +9,8 @@
     "test:e2e": "playwright test",
     "contrasto": "node tests/contrasto.mjs",
     "moduli": "node tests/moduli.mjs",
+    "auto": "node --disable-warning=MODULE_TYPELESS_PACKAGE_JSON tests/auto.mjs",
+    "immagini": "node immagini.mjs",
     "check": "npm run lint && npm run validate && npm run moduli && npm run contrasto",
     "vendor": "esbuild node_modules/@supabase/supabase-js/dist/index.mjs --bundle --format=esm --minify --target=es2020 --legal-comments=none --platform=browser --outfile=vendor/supabase-js.esm.js"
   },

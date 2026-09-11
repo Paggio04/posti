@@ -27,19 +27,62 @@ const ROW_FRONT = 122, ROW_BACK = ROW_FRONT + PASSO_FILA, ROW_THIRD = ROW_BACK +
 // le ruote sono finite fuori di 4px, con quelle di sinistra tagliate dal bordo.
 const CAR_W = 150;                          // larghezza del viewBox
 const CAR_INSET = 18;                       // margine della scocca dal viewBox
+// Il vano dell'abitacolo, cioe' dove il tetto e' tagliato via per far vedere i
+// sedili. Stava a 22 e i sedili esterni della panchina da tre lo sforavano di un
+// pixel: appoggiavano sul suo contorno, che e' la riga che dovrebbe contenerli.
+// A 20 li contiene con un pixel di margine, e restano 2 unita' fra questo contorno
+// e il fianco della scocca.
+const ABITACOLO_INSET = 20;
 const CAR_MID = CAR_W / 2;
 const specchia = (x, w) => CAR_W - x - w;   // riflette un rettangolo sull'asse
 // Larghezza di un sedile: poltrona davanti, posto di panchina dietro.
-const W_AVANTI = 40, W_DIETRO = 34;
-const DRIVER_POS = { x: 44, y: ROW_FRONT, w: W_AVANTI };
+//
+// **44 e' la misura del dito, non un numero scelto.** `.car-svg` e' larga al massimo
+// 150px su un viewBox di 150, quindi la scala non supera mai 1 e una unita' del
+// disegno **e' un pixel vero**: un sedile da 40 e' un bersaglio da 40, sotto la
+// soglia. Le poltrone salgono quindi a 44, e lo spazio lo prendono dal pavimento
+// (`tests/auto.mjs` misura che ne resti).
+//
+// **La panchina da tre, invece, non ci arriva e non e' una scelta.** Fra i due
+// fianchi ci sono 114 unita'; tre sedili da 44 ne vogliono 132, cioe' 18 in piu' di
+// quante esistano — anche appiccicandoli, anche senza margine. Il massimo fisico di
+// quella fila e' 38 con zero luce fra i sedili, 36 con la luce che serve a non
+// sbagliare tocco: due pixel guadagnati spendendo tutto il margine dal fianco. Non
+// li vale, e restano 34. Per portare anche quella fila a 44 l'auto deve crescere,
+// e allora cresce anche `.car-svg` — che e' una decisione, non una rifinitura.
+const W_AVANTI = 44, W_DIETRO = 34;
+
+// Le poltrone stanno dove stavano, spostate di un'unita' per restare simmetriche
+// adesso che sono piu' larghe: 30 unita' a destra e a sinistra della mezzeria,
+// cioe' 5 di margine dal fianco e 16 di luce fra le due. La coppia di dietro delle
+// auto da 3 (e la terza fila di quelle da 6) sta piu' raccolta, 27 dalla mezzeria:
+// e' una panchina divisa in due, non due poltrone.
+const X_POLTRONA = 30, X_PANCHETTA = 27;
+const AV_SX = CAR_MID - X_POLTRONA, AV_DX = CAR_MID + X_POLTRONA;
+const PAN_SX = CAR_MID - X_PANCHETTA, PAN_DX = CAR_MID + X_PANCHETTA;
+
+const DRIVER_POS = { x: AV_SX, y: ROW_FRONT, w: W_AVANTI };
 const SEAT_LAYOUTS = {
-  1: { 1: { x: 106, y: ROW_FRONT, w: W_AVANTI } },
-  2: { 1: { x: 106, y: ROW_FRONT, w: W_AVANTI }, 4: { x: CAR_MID, y: ROW_BACK, w: W_AVANTI } },
-  3: { 1: { x: 106, y: ROW_FRONT, w: W_AVANTI }, 2: { x: 52, y: ROW_BACK, w: W_AVANTI }, 4: { x: 98, y: ROW_BACK, w: W_AVANTI } },
-  4: { 1: { x: 106, y: ROW_FRONT, w: W_AVANTI }, 2: { x: 38, y: ROW_BACK, w: W_DIETRO }, 3: { x: CAR_MID, y: ROW_BACK, w: W_DIETRO }, 4: { x: 112, y: ROW_BACK, w: W_DIETRO } },
-  5: { 1: { x: 106, y: ROW_FRONT, w: W_AVANTI }, 2: { x: 38, y: ROW_BACK, w: W_DIETRO }, 3: { x: CAR_MID, y: ROW_BACK, w: W_DIETRO }, 4: { x: 112, y: ROW_BACK, w: W_DIETRO }, 6: { x: CAR_MID, y: ROW_THIRD, w: W_AVANTI } },
-  6: { 1: { x: 106, y: ROW_FRONT, w: W_AVANTI }, 2: { x: 38, y: ROW_BACK, w: W_DIETRO }, 3: { x: CAR_MID, y: ROW_BACK, w: W_DIETRO }, 4: { x: 112, y: ROW_BACK, w: W_DIETRO }, 5: { x: 52, y: ROW_THIRD, w: W_AVANTI }, 6: { x: 98, y: ROW_THIRD, w: W_AVANTI } },
+  1: { 1: { x: AV_DX, y: ROW_FRONT, w: W_AVANTI } },
+  2: { 1: { x: AV_DX, y: ROW_FRONT, w: W_AVANTI }, 4: { x: CAR_MID, y: ROW_BACK, w: W_AVANTI } },
+  3: { 1: { x: AV_DX, y: ROW_FRONT, w: W_AVANTI }, 2: { x: PAN_SX, y: ROW_BACK, w: W_AVANTI }, 4: { x: PAN_DX, y: ROW_BACK, w: W_AVANTI } },
+  4: { 1: { x: AV_DX, y: ROW_FRONT, w: W_AVANTI }, 2: { x: 38, y: ROW_BACK, w: W_DIETRO }, 3: { x: CAR_MID, y: ROW_BACK, w: W_DIETRO }, 4: { x: 112, y: ROW_BACK, w: W_DIETRO } },
+  5: { 1: { x: AV_DX, y: ROW_FRONT, w: W_AVANTI }, 2: { x: 38, y: ROW_BACK, w: W_DIETRO }, 3: { x: CAR_MID, y: ROW_BACK, w: W_DIETRO }, 4: { x: 112, y: ROW_BACK, w: W_DIETRO }, 6: { x: CAR_MID, y: ROW_THIRD, w: W_AVANTI } },
+  6: { 1: { x: AV_DX, y: ROW_FRONT, w: W_AVANTI }, 2: { x: 38, y: ROW_BACK, w: W_DIETRO }, 3: { x: CAR_MID, y: ROW_BACK, w: W_DIETRO }, 4: { x: 112, y: ROW_BACK, w: W_DIETRO }, 5: { x: PAN_SX, y: ROW_THIRD, w: W_AVANTI }, 6: { x: PAN_DX, y: ROW_THIRD, w: W_AVANTI } },
 };
+
+// L'ingombro verticale di un sedile, e **qui sta il pavimento che si prende**: la
+// seduta passa da 42 a 50, cosi' un sedile da 44 resta piu' alto che largo. Era la
+// ragione per cui erano 34-40 e non 44 per 40 — «tre quadrati in fila si leggono
+// come una griglia invece che come una panchina» — e allargando senza alzare quella
+// ragione tornava valida. Fra due file il passo e' 88, l'ingombro 63: restano 25
+// unita' di pavimento, erano 33.
+//
+// Sono costanti e non numeri scritti dentro al disegno perche' le legge anche
+// `tests/auto.mjs`, che senza di loro dovrebbe ricopiarsele.
+const H_SPALLIERA = 13;   // lo schienale, sopra la seduta
+const H_SEDUTA = 50;      // il cuscino
+const Y_SEDUTA = -15;     // dove comincia la seduta, rispetto al centro del posto
 
 // La sagoma, ricavata dall'altezza. Un `path` e non un `rect` con il raggio
 // grande, perche' e' il raggio grande a fare la capsula — e nessun valore di `rx`
@@ -67,8 +110,8 @@ function sagomaAuto(H) {
 // dal riferimento che mi e' stato dato — che pero' e' un'auto **di profilo**, e
 // di profilo un sedile non si puo' toccare: qui la vista resta dall'alto e di
 // quel disegno si prende il vocabolario, non l'inquadratura. Stessa ragione per
-// cui i fari sono viola e non ciano al neon: i colori dell'app sono quelli della
-// palette, e nessuno di piu'.
+// cui i fari portano il colore del tocco e non il ciano al neon: i colori dell'app
+// sono quelli della palette, e nessuno di piu'.
 //
 // Tutto quello che sta a destra si ricava da quello che sta a sinistra.
 function finitureAuto(svg, H, righe) {
@@ -139,7 +182,8 @@ function finitureAuto(svg, H, righe) {
   // Senza questo contorno, muso, abitacolo e coda sono la stessa superficie nera e
   // i sedili sembrano appoggiati sopra la lamiera invece che dentro l'auto.
   svg.appendChild(svgEl('rect', {
-    x: 22, y: 62, width: CAR_W - 44, height: H - 62 - 46, rx: 16, class: 'car-abitacolo',
+    x: ABITACOLO_INSET, y: 62, width: CAR_W - 2 * ABITACOLO_INSET, height: H - 62 - 46,
+    rx: 16, class: 'car-abitacolo',
   }));
 
   // Le due pieghe dei fianchi: danno spessore alla lamiera, come la `body-line`
@@ -167,12 +211,17 @@ function svgEl(tag, attrs) {
 }
 
 export {
+  ABITACOLO_INSET,
+  CAR_INSET,
   CAR_MID,
   CAR_W,
   DRIVER_POS,
+  H_SEDUTA,
+  H_SPALLIERA,
   PASSO_FILA,
   SEAT_LAYOUTS,
   W_AVANTI,
+  Y_SEDUTA,
   finitureAuto,
   initials,
   sagomaAuto,

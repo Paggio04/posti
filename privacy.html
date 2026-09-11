@@ -5,8 +5,13 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>Privacy — WeTransport</title>
   <meta name="description" content="Come WeTransport tratta i tuoi dati: quali raccoglie, perché, per quanto li conserva e come esportarli o cancellarli." />
-  <meta name="color-scheme" content="dark" />
-  <meta name="theme-color" content="#EEF1F3" />
+  <meta name="color-scheme" content="light dark" />
+  <!-- La barra del browser segue il tema del browser: due meta, e sceglie lui.
+       Qui non c'e' un interruttore da inseguire, quindi non serve il codice che
+       nell'app aggiorna questo valore a mano. -->
+  <meta name="theme-color" content="#F4FEFF" media="(prefers-color-scheme: light)" />
+  <meta name="theme-color" content="#04326D" media="(prefers-color-scheme: dark)" />
+  <script src="tema.js"></script>
   <link rel="stylesheet" href="style.css" />
   <link rel="icon" href="icon.svg" type="image/svg+xml" />
   <!-- Questa pagina risponde a due indirizzi (/privacy e /privacy.html): il canonico e'

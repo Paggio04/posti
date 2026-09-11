@@ -1938,6 +1938,376 @@ Due cose scritte facendolo, e la seconda è la solita:
 
 ---
 
+## Fase 12 — Il restyling (10/09/2026)
+
+### C51 — Il mondo visivo nuovo, in tre fasi su un ramo solo — *in corso*
+
+Deciso in un'intervista di nove domande, ed è scritto qui perché **una sessione nuova
+non ha la conversazione**: senza queste righe, chi riprende ricomincia a chiedere.
+
+**Il punto di partenza è una scelta del proprietario, non una direzione derivata.** Il
+dado di `impeccable` aveva assegnato prima il tabellone Solari (rifiutato: è il mondo già
+in casa, e questo è un *redesign*), poi il libretto di bordo — costruito come campione e
+bocciato, «sembra la locandina di un ristorante», che era vero: le fasce piene in testa
+ai riquadri sono la lavagna di un menù. Il secondo campione (biglietto/abbonamento, con
+guilloche e perforazione) non è stato giudicato. A quel punto il proprietario ha preso
+**l'uscita di sicurezza** — lo standard di categoria — e ha consegnato **un'immagine di
+riferimento**: una dashboard SaaS chiara con colonna a sinistra, quattro numeri con
+sparkline, un grafico ad area, una ciambella e tre schede in fondo.
+
+> **L'immagine di riferimento non è nel repo**, ed è la cosa che una sessione nuova non
+> può ricostruire. Va richiesta al proprietario prima di continuare.
+
+#### Le nove decisioni
+
+| | Domanda | Scelta |
+|---|---|---|
+| 1 | Perimetro | **Tutto**, pagine legali comprese, più `manifest.json`, le quattro icone, `icon.svg` e `anteprima.png` — a fasi dichiarate |
+| 2 | Temi | **Due**, e si rovesciano. Chiaro: carta `#C0EBFF`, inchiostro `#002B4C`. Scuro: l'inverso. L'arancio `#F59E71` resta dov'è. Due rapporti identici, 11,43:1 — ~~vale~~ **superata da C52**: due palette diverse, e non si rovesciano |
+| 3 | Oltre i tre colori | Neutri **ricavati dal blu**, non grigi neutri. Rosso e verde restano per pericolo e conferma, col rosso spinto lontano dall'arancio in tinta (27 contro 47) |
+| 4 | Profondità | Pelle ovunque **+ ricomposizione di Home e Riepilogo**. Le altre tre viste prendono solo la pelle. Le tre fasce e le due soglie restano |
+| 5 | Tipografia | IBM Plex resta per testo e numeri; **un carattere da titolo** in pochi posti — *non ancora scelto, serve il permesso di scaricarlo, licenza OFL o simile* |
+| 6-7 | L'auto | **Ridisegnata da capo, geometria compresa**, con `tests/auto.mjs` che nasce insieme: nessuna sovrapposizione, tutto dentro la scocca, il posto del guidatore mai prenotabile, bersaglio ≥44px a 360 di larghezza |
+| 8 | Come si guarda | `banco.html`: i moduli veri con dati inventati. Serve perché quattro viste su cinque stanno dietro il login e W5 non è fatto |
+| 9 | Consegna | **Un ramo solo, `claude/restyling`**, tre fasi come commit, anteprima Netlify a ogni fase, **fusione una volta sola** |
+
+#### Le regole che ne sono uscite, e che valgono da qui in avanti
+
+1. **Niente scorrimento, in nessuna delle due direzioni.** Il Riepilogo sta in una
+   schermata. È la stessa cosa che C40 aveva chiesto e C41 difeso. Il come sta scritto in
+   testa al blocco `.app-lynk` di `style.css`: l'altezza si distribuisce invece di
+   sommarsi, ogni contenitore ha `min-height: 0`, e gli elenchi **si accorciano invece di
+   scorrere** (`--righe-scheda`).
+2. **L'arancio si riempie, non si scrive e non si contorna.** 2,09:1 sul bianco, 1,65:1
+   sulla carta azzurra. Come blocco pieno col blu sopra fa 6,91:1. Per le due volte in cui
+   serve scritto c'è `--tuo-testo`.
+3. **Le icone sono disegnate, mai emoji.** Un'emoji porta i suoi colori e non li cede: in
+   una palette di tre colori è sempre la quarta tinta dello schermo.
+4. **Un `label` dentro `.app-lynk` non porta i margini del resto del foglio.** Il
+   `margin-bottom` dei moduli dell'accesso arrivava fin dentro la barra della dashboard e
+   la alzava di sette pixel.
+5. **Una scala di distanze sola**: passo 4px, cinque valori. Prima erano otto, scelte una
+   alla volta dal componente che le chiedeva.
+
+#### I tre riquadri della foto che nell'app non esistono
+
+Il proprietario li vuole **tutti e tre, veri**: la **ricerca** cerca fra persone,
+destinazioni e fermate già caricate; il **selettore di periodo** filtra davvero (il
+Riepilogo scarica già tutti i passaggi, quindi ricalcola senza chiedere niente al
+database); e **«Upgrade to Pro»** diventa l'invito a **installare l'app**, che esiste da
+C12 e non aveva una casa. Oggi nel banco sono disegnati ma inerti: la logica è da
+scrivere.
+
+#### Dov'è arrivato, commit per commit
+
+1. `098c253` — la palette: i tre colori esatti in oklch, i 94 token rivalutati tenendo il
+   nome, le 50 coppie di contrasto verdi nei due temi, e i **19 pesi finti** (`font-weight: 500`
+   su una famiglia che il 500 non ce l'ha) portati a 600.
+2. `b29102c` — il Riepilogo riprodotto dalla foto, e `banco.html`.
+3. `eba046a` — la regola del «niente scorrimento», con il difetto che l'aveva nascosta:
+   `height: 100dvh` **senza ripiego**, che un browser che non conosce `dvh` scarta — e la
+   pagina torna alta quanto il contenuto.
+4. `b299219` — i sette pixel del `label` e la barra in cima che non arrivava al bordo.
+
+#### Cosa resta, in ordine
+
+1. **La fedeltà alla foto**, tre cose viste sull'immagine grande e non ancora fatte: le
+   **quattro tinte diverse** sulle icone delle tessere, il **riquadro del suggerimento**
+   sul grafico («Thursday · 75%»), e le **barre di avanzamento** nelle righe della prima
+   scheda in fondo.
+2. **La barra in basso sotto i 768px.** Il proprietario consegna un'immagine anche per
+   quella; fino ad allora c'è una resa provvisoria dichiarata, e **anche lì non si scorre**.
+3. **Il carattere da titolo** (domanda 5): due o tre candidati con licenza verificata, e
+   il permesso di scaricarlo.
+4. **Le altre quattro viste** — Passaggi, Comitive, Storico, Profilo — che oggi hanno la
+   palette nuova ma la composizione vecchia.
+5. **L'auto ridisegnata** con `tests/auto.mjs` (fase 3).
+6. **`PRODUCT.md` va rivisto**: elenca fra le anti-referenze cose che adesso pubblichiamo
+   — angoli tutti arrotondati, gradienti morbidi, palette morbida. O si aggiorna quel
+   file, o resta a dire il contrario del sito.
+
+### C52 — La dashboard finita, e due bug che la barra ha scoperto — *fatto*
+
+Le tre cose che C51 lasciava in sospeso sulla fedeltà alla foto, fatte sul banco:
+le **quattro tinte** sulle pastiglie delle tessere (tre le avevano già — blu, «tuo»,
+rosso di un giorno scoperto; solo la seconda era una copia della prima), il
+**riquadro del suggerimento** sul grafico e le **barre di avanzamento** nelle righe
+dei conti.
+
+Il suggerimento non è un ascolto del mouse: sono **sette bottoni veri**, centrati
+sui punti della curva e non sulle etichette sotto, con la percentuale anche nel nome
+accessibile. Così si raggiunge col tasto di tabulazione, e il dato esiste anche per
+chi il grafico non lo vede.
+
+Due difetti che la barra ha portato a galla, ed erano lì da prima:
+
+1. Nelle righe dei conti e dei prossimi passaggi il **nome andava a capo** —
+   «Piazza Dante → Stazione» diventava due righe, la voce tre, e si accavallava con
+   quella sotto. Il foglio lo vietava già in un commento, ma la protezione era su
+   `.l1` e copriva una scheda su tre. Ora è su `.riga-chi > b`.
+2. **Sotto i 768px la banda di una riga è alta 25px e il contenuto 34**: si
+   accavallava anche senza la barra. Passata a `--righe-scheda: 1`, che è il rimedio
+   che questa vista ha già.
+
+E la ragione per cui `style.css.tmp` stava nel repo: **`npx serve` tiene un handle
+aperto sul foglio**, quindi `os.replace(tmp, style.css)` falliva con WinError 5 e il
+temporaneo restava. Rimosso, e da qui in avanti si scrive in posto quando il server
+gira.
+
+### C53 — Due palette date, e il browser che decide quale si apre — *fatto*
+
+Due richieste del proprietario, e la seconda ha spostato l'intera identità.
+
+**Il tema segue il browser.** `tema.js` legge `prefers-color-scheme` prima che la
+pagina venga dipinta; una scelta salvata vince comunque, e la distinzione fra «non
+ha scelto» e «ha scelto chiaro» funziona perché la chiave vale `'scuro'` **o**
+`'chiaro'`. Il blocco scuro del CSS **non è duplicato** dentro una media query:
+sarebbero due stesure da tenere allineate, e `tests/contrasto.mjs` ne leggerebbe una.
+I quattro documenti statici — informativa, termini, 404, offline — non caricavano
+`tema.js` e restavano chiari per sempre: adesso lo caricano.
+
+**Le due palette nuove, una per tema**, che sostituiscono la terzina unica:
+
+| | chiaro | scuro |
+|---|---|---|
+| la carta | `#F4FEFF` | `#04326D` |
+| ciò che è tuo | `#A9C0E0` | `#F58F20` |
+| l'inchiostro e il tocco | `#0E2F76` | `#B2BED6` |
+
+I ruoli non sono stati scelti a occhio: le due terzine **combaciano per luminosità**
+con i tre mestieri di prima (carta 0,99 ↔ 0,92; «tuo» 0,80 ↔ 0,78; inchiostro
+0,33 ↔ 0,28), quindi la mappa era determinata. Tutti gli altri 94 token sono
+**ricavati** dai tre, con la luminosità risolta per soglia dove una soglia esiste, e
+le 55 coppie di `tests/contrasto.mjs` sono verdi nei due temi.
+
+Quattro conseguenze da conoscere, perché nessuna era prevedibile leggendo i sei
+esadecimali:
+
+1. **I due temi non si rovesciano più.** 12,16:1 alla luce contro 6,67:1 al buio: la
+   decisione 2 di C51 decade.
+2. **Al buio la scala è strozzata.** Con 6,67:1 di margine, una scheda può schiarirsi
+   di 0,055 di luminosità e non oltre — è il massimo che lascia l'arancio quando ci
+   sta sopra come testo. Perciò al buio gli **incassi scendono** sotto la carta
+   invece di salire; alla luce vale il contrario.
+3. **Alla luce una scheda non si distingue per il riempimento.** La carta è quasi
+   bianca (L 0,990 contro 0,999): la staccano il filo del bordo e l'ombra. È il
+   rovescio esatto della regola 3 del foglio, che era scritta per un fondo quasi nero.
+4. **L'auto non ha una lamiera che vada bene a tutti.** L'arancio `#F58F20` ha
+   luminanza 0,402, quindi per staccare 3:1 vuole una lamiera sotto 0,098; un
+   dettaglio scuro su una lamiera blu non può superare (luminanza + 0,05) / 0,05,
+   quindi la gomma la pretende sopra 0,1025. **Non si incontrano, per il 4%.** Si è
+   scelta la lamiera che serve alla gomma, e al buio il posto arancione lo delimita il
+   suo contorno — che nel disegno c'era già, 2,5px su `.seat-mine`, ora nel token
+   `--posto-tuo-filo`. Ogni tema ha quindi il suo meccanismo verificato: riempimento
+   alla luce (3,25:1), contorno al buio (4,47:1). **Da rivedere nella fase 3**, quando
+   l'auto si ridisegna con `tests/auto.mjs`.
+
+E due residui che il restyling aveva saltato, trovati adesso:
+
+- **L'intestazione del foglio descriveva ancora la palette viola** — cinque colori,
+  `#8A22E7`, «il buio è il materiale, non un tema», «le ombre sono sporco». Era la
+  carta costituzionale di `style.css` e diceva il contrario di quello che il foglio fa.
+  Riscritta.
+- **L'identità fuori dal CSS era tutta viola**: `theme-color` `#EEF1F3`/`#110C17` in
+  cinque pagine, `manifest.json`, il fondo di `icon.svg`. Allineata. Le quattro icone
+  PNG **no**: sono raster e vanno ridisegnate, non ricolorate da qui.
+
+Le sei tinte degli avatar si sono spostate coi 15,7 gradi dell'inchiostro, per non
+restare in una famiglia che la palette ha lasciato.
+
+*Fatto quando:* le cinque viste e la schermata d'accesso stanno nel mondo nuovo,
+`npm run check` è verde, l'identità fuori dal CSS è allineata, e il ramo è fuso una volta
+sola.
+
+### C54 — Dov'è davvero il restyling, misurato — *in corso*
+
+Prima di continuare sulle «altre quattro viste» ho misurato quante di quelle nuove
+arrivano all'app. La risposta cambia l'ordine di quello che resta.
+
+**Il mondo nuovo è un mondo parallelo, e vive solo nel banco.** Tutto il blocco sta
+sotto `.app-lynk` in `style.css` — 414 righe, il 12% del foglio — e `.app-lynk` compare
+in `banco.html` e in nessun altro file. In `index.html` non c'è né `.app-lynk`, né `.lato`,
+né `.cima`, né `.testa-vista`: **82 delle 92 classi del banco non compaiono mai
+nell'app**, che usa ancora `.bottom-nav` e le sue viste di prima.
+
+Quindi la riga di C51 «le altre quattro viste hanno la palette nuova ma la composizione
+vecchia» vale per **cinque viste su cinque**, Riepilogo compreso: il Riepilogo dell'app lo
+scrive `disegnaRiepilogo()` in `mod/storico.js` con un suo impianto (`.dash-top`,
+`#dash-conti`), che non è quello del banco. Sono due stesure della stessa vista.
+
+Il lato buono è che il namespace ha tenuto: **finora il restyling non ha potuto rompere
+niente**, perché nell'app non entra. Il lato caro è che non ha ancora consegnato niente.
+
+**E il trasloco è bloccato in basso, non in alto.** Sotto i 767px la resa provvisoria del
+banco non si limita a impaginare stretto: nasconde `.cerca` e, dentro `.fila-due` e
+`.fila-tre`, tutti i riquadri dopo il primo. Portare il guscio nell'app oggi vorrebbe dire
+pubblicare un telefono a cui manca del contenuto — e il telefono è il posto da cui questa
+app si usa. **L'immagine della barra in basso non è una rifinitura: è la condizione del
+trasloco.**
+
+#### `tests/auto.mjs`, e le quattro regole della fase 3
+
+Le regole delle decisioni 6-7 erano scritte qui e in nessun posto che le controllasse.
+Adesso c'è `npm run auto`, che legge la geometria **dal modulo vero** (`mod/auto-svg.js`,
+che in Node si importa perché non tocca il DOM al caricamento). Le prime tre reggono già:
+
+- **nessuna sovrapposizione**: la luce minima fra due bersagli è 22px sulle auto da 1 e 2,
+  6px su quella da 3, **3px** su quelle da 4, 5 e 6;
+- **tutto dentro la scocca**: 6px di margine dal fianco, 3px sulle auto da 4 in su;
+- **il posto di chi guida non si prenota**: nessun posto prenotabile ci cade sopra, e la
+  chiamata che lo disegna non passa `clickable`. Due prove, perché una sola si aggira.
+
+#### La fase 3, fatta dove lo spazio c'era — e il muro dove non c'era
+
+La scelta del proprietario fra le due strade è stata **allargare i sedili prendendo il
+pavimento**, non alzare il tetto di `.car-svg`. Fatto, e con un risultato diviso in due.
+
+**Dove c'era spazio: 44 veri.** `W_AVANTI` passa da 40 a 44, e le poltrone si spostano di
+un'unità per restare simmetriche — 30 dalla mezzeria, cioè 5 di margine dal fianco e 16 di
+luce fra le due. La coppia di dietro delle auto da 3 (e la terza fila di quelle da 6) sta
+più raccolta, 27 dalla mezzeria: è una panchina divisa in due, non due poltrone. **Le auto
+da 1, 2 e 3 sono verdi.**
+
+**Il pavimento che si è preso è quello verticale**, perché in larghezza non ce n'era: la
+seduta passa da 42 a 50, e fra due file restano 25 unità invece di 33. Non è un dettaglio
+di misura — serviva a non riaprire il difetto che `auto-svg.js` documenta da sempre: 44 per
+40 erano quadrati, e «tre quadrati in fila si leggono come una griglia invece che come una
+panchina». Allargare senza alzare rendeva quella frase vera di nuovo. Le due altezze sono
+ora costanti esportate (`H_SEDUTA`, `H_SPALLIERA`, `Y_SEDUTA`), e da lì si ricavano anche la
+piega del cuscino, il tondo della foto e le iniziali: il giorno in cui la seduta cambia,
+niente resta indietro.
+
+**Dove non c'era, non c'è andata, e non è una svista.** La panchina da tre delle auto da 4,
+5 e 6 resta a 34:
+
+> Fra i due fianchi ci sono **114 unità**. Tre sedili da 44 ne vogliono **132**: mancano 18
+> unità che non esistono, anche appiccicandoli, anche togliendo ogni margine. Il massimo
+> fisico di quella fila è 38 con zero luce, **36** con la luce che serve a non sbagliare
+> tocco — due pixel guadagnati spendendo tutto il margine dal fianco, che non li vale.
+
+Quella fila sale a 44 solo se l'auto cresce, e allora cresce anche `.car-svg`: è la strada
+che il proprietario ha scartato, e resta scartata finché non decide diversamente. Per la
+soglia AA i 34 bastano (il minimo è 24×24); i 44 sono la soglia buona, e su quella fila
+restano un debito **dichiarato**. Per questo `npm run auto` non entra ancora in
+`npm run check`: un `check` rosso per una decisione che aspetta smette di voler dire
+qualcosa.
+
+Il test adesso misura **fila per fila** invece di stampare un minimo solo: con il minimo
+unico l'auto sembrava rotta tutta, mentre la fila che non ci arriva è una.
+
+**E una copia che stava per divergere.** L'auto del cartello dell'accesso è scritta a mano
+in `index.html` — quel riquadro sta in pagina anche senza JavaScript — ed è una copia di
+`SEAT_LAYOUTS[4]`. Allargando il modulo sarebbe rimasta a 40, e le due auto si vedono nella
+stessa sessione. Allineata, e adesso c'è una quinta regola nel test che confronta le cinque
+sedute del cartello con quelle del modulo, una per una.
+
+Una misura in più che il test stampa e non giudica: sulle auto da 4, 5 e 6 i sedili esterni
+**sforano di 1px il contorno dell'abitacolo** (restano dentro la scocca, 3px dal fianco).
+Da decidere se è l'abitacolo a dover allargarsi, non prima.
+
+#### Cosa resta, riordinato
+
+1. **L'immagine della barra sotto i 768px** — non è più il punto 2 di una lista, è ciò che
+   sblocca il trasloco del guscio nell'app.
+2. **Il trasloco**: `index.html` prende il guscio del banco, e `mod/storico.js` smette di
+   avere una seconda stesura del Riepilogo.
+3. **La panchina da tre**: o l'auto cresce (e con lei `.car-svg`), o quella fila resta a
+   34 e i 44 valgono per le poltrone. Tutto il resto della fase 3 è fatto.
+4. ~~Il carattere da titolo, le quattro icone PNG, e i tre riquadri del banco da
+   accendere.~~ Restano solo **il carattere da titolo** (serve il permesso di scaricarlo):
+   le icone e i tre riquadri li ha chiusi C55.
+
+### C55 — I tre riquadri accesi, l'invito che non c'era, e le immagini rifatte — *fatto*
+
+#### I tre riquadri della foto non sono piu' inerti
+
+Erano disegnati e fermi, e **il selettore di periodo lo era per forza**: un periodo non
+puo' filtrare dei numeri scritti a mano. Finche' i numeri del banco erano quattro elenchi
+battuti a tastiera, quel controllo era un ornamento, e accenderlo voleva dire prima
+dargli qualcosa da filtrare.
+
+Adesso il banco parte da un elenco di **passaggi con una data** — la stessa forma che
+hanno nell'app, dove `mod/storico.js` scarica tutti i passaggi del gruppo e poi conta.
+Novantasette giorni generati con un seme fisso, perche' un banco che mostra numeri diversi
+a ogni ricarica non si puo' approvare e due schermate a confronto non direbbero niente.
+Da li' si **ricavano** le quattro tessere, il grafico della settimana, la ciambella dei
+turni, i conti in sospeso e i prossimi passaggi: cambiare periodo e' ricontare, che e' il
+punto — nell'app non costera' una richiesta in piu'.
+
+- **La ricerca** filtra le tre schede in fondo su persone, tratte e fermate gia' caricate.
+  Senza accenti e senza maiuscole, mentre si scrive, senza un bottone: non e' una domanda
+  al server, e' un filtro su quello che si sta guardando. Il piede di ogni scheda dice due
+  cose diverse — quante righe non ci stanno e quante ne ha tolte la ricerca — perche' un
+  elenco corto mentre si cerca non e' un elenco corto, e' una ricerca.
+- **Il periodo** ricalcola davvero: 5 passaggi in 7 giorni, 27 in 30, 79 in 90. Il saldo
+  cambia perfino di segno fra un mese e tre. «Questo mese» non e' «ultimi 30 giorni» e non
+  gli e' stato fatto dire la stessa cosa: il 10 del mese sono dieci giorni.
+- Ne sono stati accesi anche i due di scheda: la **settimana** del grafico e la
+  **finestra** della ciambella. Quest'ultima resta separata dal periodo in cima di
+  proposito — «chi guida di solito» e' un'altra domanda da «com'e' andato questo mese», e
+  stringerle insieme farebbe sparire chi guida poco.
+
+Ogni controllo scrive in un solo stato e chiama un solo `disegna()`: cosi' non esiste il
+caso in cui una tessera e' del periodo nuovo e la ciambella di quello vecchio. E quando un
+filtro non trova niente la scheda lo **dice**, invece di restare vuota: vuoto e rotto si
+somigliano troppo.
+
+#### L'invito a installare, che in tre anni non e' mai stato fatto a nessuno
+
+C12 ha reso l'app installabile e poi non l'ha proposto: in tutta l'interfaccia non c'era
+una riga che dicesse che si puo' fare. `mod/installa.js` e' la logica vera, e sono **tre
+strade**, non una:
+
+1. Chrome manda `beforeinstallprompt`, e allora c'e' un dialogo da aprire. Va catturato
+   appena parte — arriva una volta sola e non aspetta che qualcuno sia pronto — e va
+   speso una volta sola: se si tenesse e si riprovasse, il secondo `prompt()` solleverebbe
+   e il bottone sembrerebbe rotto.
+2. **Safari non lo manda mai.** Non e' un errore da nascondere: li' si installa a mano, e
+   l'unica cosa utile e' dire quali due tocchi servono. Una PWA che su iPhone non dice
+   niente e' una PWA che su iPhone non si installa.
+3. Chi ce l'ha gia' non vede niente — e la prova non e' una bandierina salvata da noi, che
+   si cancella e mentirebbe, ma come la pagina e' aperta adesso (`display-mode:
+   standalone`).
+
+Oggi lo usa solo il banco, perche' il riquadro sta nel guscio nuovo che nell'app non e'
+ancora entrato (C54). Ed e' la ragione per cui `tests/moduli.mjs` adesso **confronta il
+guscio di `sw.js` con i moduli raggiungibili da `app.js`**: un modulo che l'app importa e
+il service worker non ha non da' errore in linea, da' un'app installata che offline non
+apre. `mod/installa.js` non e' nel guscio perche' l'app non lo importa; il giorno in cui lo
+importera', quella riga diventa rossa finche' non si aggiunge anche li'.
+
+#### Le cinque immagini, rifatte da quello che c'e' nel repo
+
+`icon.svg` era stato allineato in C53, i raster no: chi installava l'app si ritrovava sulla
+schermata home la tessera quasi nera con l'auto lavanda, e chi mandava il link in chat
+mandava un'anteprima di due palette fa. **Erano anche disegni diversi** — nei PNG l'auto
+era piena, nell'SVG e' di contorno, e nell'anteprima era la capsula vecchia: tre marchi,
+non uno.
+
+`npm run immagini` li rifa tutti e cinque da `icon.svg` e dall'auto del cartello in
+`index.html`, rasterizzando col Chromium che Playwright ha gia' in casa — nessuna
+dipendenza nuova. Le **maskable** non sono le altre con un altro nome: Android ritaglia
+nella forma che decide il telefono e garantisce solo il cerchio dentro l'80% del lato,
+quindi niente angoli arrotondati (li mette il sistema, e i nostri finirebbero tagliati
+storti), fondo a filo e disegno al 62%.
+
+Cosi' la domanda «quale dei due marchi e' quello buono» non si pone piu', e il giorno in
+cui cambia si cambia un file e si rilancia un comando.
+
+#### E i residui della palette vecchia nei commenti
+
+Tre commenti al presente dicevano ancora il falso: i fari dell'auto «sono viola», il viola
+«in questo foglio vuol dire si tocca», i sei colori degli avatar «tutti nella famiglia del
+viola» — quest'ultimo seguito, due righe sotto, dal paragrafo che C53 aveva aggiunto e che
+diceva il contrario. Riscritti. I commenti che raccontano **cosa c'era prima** restano:
+quelli non sono sbagliati, sono la memoria.
+
+E l'abitacolo passa da 22 a 20, cosi' i sedili esterni della panchina da tre ci stanno
+dentro invece di appoggiarsi sul suo contorno: la misura che `tests/auto.mjs` stampava e'
+diventata una regola.
+
+---
+
 ## Decisioni prese dopo la prima stesura
 
 | # | Punto | Scelta |
