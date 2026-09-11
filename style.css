@@ -3364,6 +3364,30 @@ form.signup .auth-accetto { display: block; }
 .app-lynk .k-nota { font-size: 0.73rem; color: var(--ink-soft); margin-top: 1px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 /* La linea si appoggia al fondo della scheda e prende quel che avanza: e' cosi'
    che quattro schede con etichette di lunghezza diversa restano alte uguali. */
+/* Una tessera senza linea non le tiene il posto. La quarta riga e' `1fr` proprio
+   perche' la linea prenda quel che avanza e le quattro tessere restino alte
+   uguali; quando la linea non c'e' — perche' il dato non ha un andamento, o
+   perche' l'andamento e' piatto — quel `1fr` diventa un buco. */
+.app-lynk .k.senza-linea { grid-template-rows: auto auto auto; padding-bottom: var(--sp-3); }
+
+/* **I riquadri dell'app non hanno tre figli.** `.scheda` distribuisce l'altezza
+   su testa / corpo / piede, ed e' giusto per il banco, che e' fatto cosi'. I
+   riquadri del Riepilogo invece hanno una testa e poi N righe: con quel modello
+   il `1fr` cadeva sul **secondo figlio qualunque esso fosse** e lo stirava, che
+   e' da dove venivano le voragini — sotto il titolo di «Prossimo passaggio»,
+   sotto la prima riga di «Attivita' recente».
+   Qui le righe stanno in colonna e si tengono la loro altezza; e' il **piede**
+   che va in fondo, ed e' lui a tenere allineati i tre riquadri. */
+.app-lynk .card.scheda { display: flex; flex-direction: column; }
+.app-lynk .card.scheda > .piede { margin-top: auto; }
+
+/* **Il vuoto si centra.** Con una frase sola quella frase restava incollata in
+   alto e sotto c'era una voragine, che si legge come «non ha caricato».
+   Centrata dice quello che e': qui non c'e' ancora niente. Ed e' il caso di chi
+   apre l'app il primo giorno, cioe' il piu' comune che ci sia. */
+.app-lynk .card.scheda > .vuoto { margin: auto; text-align: center; max-width: 34ch; }
+.app-lynk .scheda > .riga-vuota { align-self: center; text-align: center; max-width: 34ch; margin: 0 auto; }
+
 .app-lynk .linea { display: block; width: 100%; height: 100%; min-height: 28px; align-self: end; margin: var(--sp-2) calc(var(--sp-4) * -1) 0; width: calc(100% + var(--sp-4) * 2); }
 .app-lynk .linea-tratto { fill: none; stroke: var(--primary); stroke-width: 2; vector-effect: non-scaling-stroke; }
 .app-lynk .linea-velo { fill: var(--primary-soft); stroke: none; }

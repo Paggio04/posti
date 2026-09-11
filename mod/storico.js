@@ -451,8 +451,8 @@ async function disegnaRiepilogo(box) {
     </section>` : `
     <section class="card scheda next">
       <div class="head"><span class="sub">Prossimo passaggio</span></div>
-      <div class="titolo">Nessun passaggio in programma</div>
-      <div class="riga"><span>Guidi tu?</span><b>Pubblica la tua auto dalla Home</b></div>
+      <p class="vuoto">Nessun passaggio in programma.</p>
+      <div class="piede"><span>Guidi tu?</span> <b>Pubblica la tua auto dalla Home</b></div>
       <button type="button" class="go" data-vai="home" aria-label="Vai alla Home">→</button>
     </section>`;
 
@@ -746,11 +746,19 @@ function testata(sottotitolo, conComitiva = false) {
 // mancare: una tessera senza linea e' una tessera, una tessera con una linea
 // inventata e' una bugia piccola che si legge come un dato.
 function tessera(cls, icona, etichetta, valore, nota, serie = null) {
-  return `<article class="k${cls ? ' ' + cls : ''}">
+  // **Una linea piatta non e' una linea.** La condizione era «c'e' almeno un
+  // valore diverso da zero», e su una comitiva senza passaggi i sette giorni
+  // scoperti valgono tutti 1: veniva fuori un trattino dritto in fondo alla
+  // tessera, rosso, che sembrava un difetto di disegno e non diceva niente.
+  // Serve **una differenza**, non un valore: due punti diversi o niente.
+  const disegnabile = serie && new Set(serie).size > 1;
+  // Senza linea la tessera non le tiene il posto: la riga `1fr` in fondo restava
+  // vuota e lasciava un buco alto quanto la linea che non c'e'.
+  return `<article class="k${cls ? ' ' + cls : ''}${disegnabile ? '' : ' senza-linea'}">
     <div class="k-alto"><span class="k-ico">${iconaSvg(icona, 18)}</span><span class="k-lab">${escapeHtml(etichetta)}</span></div>
     <div class="k-val">${escapeHtml(valore)}</div>
     <div class="k-nota">${escapeHtml(nota)}</div>
-    ${serie && serie.some(v => v) ? lineaTessera(serie) : ''}
+    ${disegnabile ? lineaTessera(serie) : ''}
   </article>`;
 }
 
