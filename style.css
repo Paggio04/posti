@@ -3145,7 +3145,20 @@ form.signup .auth-accetto { display: block; }
   .app-lynk .lato > .topbar {
     position: static; min-height: 0; background: none; border: 0;
     padding: var(--sp-3) 0 0; border-top: 1px solid var(--border);
+    /* **`min-width: 0`, o niente di quello che c'e' dentro serve.** `.lato` e'
+       una griglia, e un figlio di griglia parte da `min-width: auto`: si rifiuta
+       di stringersi sotto il proprio contenuto. `.top-me` e `.top-chi` hanno
+       gia' il loro `min-width: 0` e l'ellissi, ma cedono a un genitore che non
+       cede: misurato sulla pagina vera, la colonna e' larga 236, lo spazio
+       dentro 212, e questa barra era 233 — nove pixel **oltre il bordo della
+       colonna** e ventuno oltre il suo riempimento. Con questa riga: 211. */
+    min-width: 0;
   }
+  /* Il ruolo va a capo invece di troncarsi. In cima era una riga sola perche'
+     la fascia era alta 44; qui c'e' l'altezza, e «Amministratore · 2 comitive»
+     in 114 pixel non ci sta in nessun modo. Due righe intere dicono la cosa,
+     un puntino no. */
+  .app-lynk .lato > .topbar .top-chi small { white-space: normal; }
   .app-lynk .lato > .topbar .top-fine { width: 100%; gap: var(--sp-2); }
   /* La targhetta prende quel che resta: la lunetta e' larga quanto e', il nome
      no, ed e' lui a doversi accorciare quando la colonna si stringe a 200px. */
