@@ -3110,10 +3110,18 @@ form.signup .auth-accetto { display: block; }
 @media (min-width: 768px) {
   .app-lynk .bottom-nav { display: none; }
   .app-lynk .topbar .brand { display: none; }
-  .app-lynk .topbar {
-    position: static; height: 44px; padding: 0; border: 0; background: none;
+  /* La barra qui e' l'ultima riga della colonna — `mod/schede.js` ce la sposta —
+     e si veste come la targhetta del banco: un filo che la stacca dal riquadro
+     dell'invito, e dentro la lunetta e te. Erano 44px piu' 12 di distacco in
+     cima a **ogni** vista per due controlli, e tutto il resto aria. */
+  .app-lynk .lato > .topbar {
+    position: static; min-height: 0; background: none; border: 0;
+    padding: var(--sp-3) 0 0; border-top: 1px solid var(--border);
   }
-  .app-lynk .topbar .top-fine { margin-left: auto; }
+  .app-lynk .lato > .topbar .top-fine { width: 100%; gap: var(--sp-2); }
+  /* La targhetta prende quel che resta: la lunetta e' larga quanto e', il nome
+     no, ed e' lui a doversi accorciare quando la colonna si stringe a 200px. */
+  .app-lynk .lato > .topbar .top-me { flex: 1 1 auto; min-width: 0; }
   .app-lynk .app-view {
     min-height: 0; min-width: 0; overflow-y: auto; padding: 0;
     max-width: none; margin: 0;
@@ -3254,8 +3262,11 @@ form.signup .auth-accetto { display: block; }
    Adesso se le porta lui, in `.vista-dash`. */
 .app-lynk .corpo {
   display: grid;
-  grid-template-rows: auto minmax(0, 1fr);
-  gap: var(--sp-3);
+  /* Una riga sola, e non due. La fascia in alto stava nella prima: da quando
+     vive in fondo alla colonna qui resta la vista, e se la riga `auto` restasse
+     sarebbe lei a prendersi il contenuto — con `1fr` vuoto sotto, cioe' con la
+     catena dell'altezza spezzata e il Riepilogo che torna a scorrere. */
+  grid-template-rows: minmax(0, 1fr);
   padding: var(--sp-4) var(--sp-5) var(--sp-4);
   min-height: 0; min-width: 0;
 }
@@ -3603,13 +3614,25 @@ form.signup .auth-accetto { display: block; }
   .app-lynk .corpo { padding: var(--sp-3) var(--sp-4); }
   .app-lynk .cerca { max-width: none; }
 }
+/* Sotto i 1100 la tessera scende sotto i 150px e l'etichetta non ci sta piu':
+   a 1024 ne uscivano troncate tre su cinque, e «Passaggi in…» due volte sono
+   due tessere diverse con lo stesso nome. Qui l'etichetta va a capo invece di
+   sparire — le tessere restano alte uguali perche' e' la griglia a tenerle
+   allineate, non il contenuto. E' la stessa scelta gia' fatta sul telefono, per
+   la stessa ragione. */
+@media (min-width: 768px) and (max-width: 1099px) {
+  .app-lynk .k-lab { white-space: normal; }
+}
 /* Le righe per scheda guardavano solo la larghezza, ma una riga dei conti e'
    alta tre piani — il nome, la riga che lo qualifica, la barra del peso — e
    sotto gli 890px di **altezza** la terza veniva tagliata a meta'. Una riga
    tagliata si legge come un difetto; due righe intere piu' il piede che conta
    le altre dicono la stessa cosa senza sembrare rotte.
-   1280×800 e' il portatile piu' comune: non e' un caso di confine. */
-@media (max-height: 889px) {
+   La soglia era 889px finche' la fascia in alto si prendeva 44px piu' 12 di
+   distacco; da quando quei 56px sono tornati alla vista le tre righe ci stanno
+   molto prima. Il numero non e' scelto, e' misurato: a 800px la riga avrebbe
+   47,9 pixel e ne vuole 48 — manca per un decimo — e a 820 ne ha 51,3. */
+@media (max-height: 819px) {
   .app-lynk { --righe-scheda: 2; }
 }
 @media (max-width: 767px) {
@@ -3648,6 +3671,12 @@ form.signup .auth-accetto { display: block; }
   .app-lynk .k-lab, .app-lynk .k-nota { white-space: normal; overflow: visible; }
   .app-lynk .cerca { display: none; }
   .app-lynk .btn-cima { padding: 0 var(--sp-3); }
+  /* Sul telefono la targhetta e' **solo il tondo**. Il nome non ci stava accanto
+     al marchio e usciva «Elia Pa…», cioe' un nome sbagliato scritto grande: le
+     iniziali dicono la stessa cosa e non mentono. Il nome per intero sta nel
+     Profilo, che e' dove questo bottone porta — lo dice gia' il suo `aria-label`. */
+  .app-lynk .top-me { padding: 5px; }
+  .app-lynk .top-me .top-chi { display: none; }
 }
 
 .app-lynk .giorni {
