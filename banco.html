@@ -60,7 +60,7 @@
     </section>
 
     <div class="lato-io">
-      <span class="av" style="background: oklch(0.470 0.090 247)">EP</span>
+      <span class="av" style="background: oklch(0.470 0.090 263)">EP</span>
       <span class="io-chi"><b>Elia Paggetti</b><small>Amministratore</small></span>
       <span class="io-freccia" id="freccia"></span>
     </div>
@@ -160,8 +160,8 @@ const ICO = {
   punti: S('<circle cx="5" cy="10" r="1.1" fill="currentColor" stroke="none"/><circle cx="10" cy="10" r="1.1" fill="currentColor" stroke="none"/><circle cx="15" cy="10" r="1.1" fill="currentColor" stroke="none"/>'),
   freccia: S('<path d="M6 8.5 10 12.5 14 8.5"/>'),
 };
-const AV = ['oklch(0.470 0.090 247)', 'oklch(0.440 0.070 210)', 'oklch(0.455 0.075 285)',
-  'oklch(0.425 0.065 180)', 'oklch(0.480 0.085 265)', 'oklch(0.410 0.060 200)'];
+const AV = ['oklch(0.470 0.090 263)', 'oklch(0.440 0.070 226)', 'oklch(0.455 0.075 301)',
+  'oklch(0.425 0.065 196)', 'oklch(0.480 0.085 281)', 'oklch(0.410 0.060 216)'];
 const iniz = (n) => n.split(' ').map((p) => p[0]).join('').slice(0, 2).toUpperCase();
 const met = (id, html) => { document.getElementById(id).innerHTML = html; };
 
@@ -195,10 +195,10 @@ function linea(vals, w = 210, h = 40) {
 }
 met('numeri', [
   { lab: 'Passaggi in programma', val: '6', nota: 'il primo domani, 07:40', ico: ICO.auto, serie: [1, 0, 2, 1, 3, 2, 1, 2, 0, 1, 2, 3] },
-  { lab: 'Passaggi nel mese', val: '19', nota: 'di cui 7 guidati da te', ico: ICO.griglia, serie: [2, 1, 3, 2, 0, 1, 2, 3, 2, 1, 3, 2] },
+  { lab: 'Passaggi nel mese', val: '19', nota: 'di cui 7 guidati da te', ico: ICO.griglia, tinta: 2, serie: [2, 1, 3, 2, 0, 1, 2, 3, 2, 1, 3, 2] },
   { lab: 'Il tuo saldo', val: '− 7,00 €', nota: 'verso due persone', ico: ICO.euro, mio: true, serie: [0, -2, -2, -4.5, -4.5, -2, -2, -4.5, -7, -7, -7, -7] },
   { lab: 'Giorni scoperti', val: '2', nota: 'il primo: giovedì 11', ico: ICO.allerta, allerta: true, serie: [0, 1, 0, 0, 2, 1, 0, 1, 2, 1, 2, 2] },
-].map((t) => `<article class="k${t.mio ? ' mio' : ''}${t.allerta ? ' allerta' : ''}">
+].map((t) => `<article class="k${t.tinta ? ' tinta-' + t.tinta : ''}${t.mio ? ' mio' : ''}${t.allerta ? ' allerta' : ''}">
     <div class="k-alto"><span class="k-ico">${t.ico}</span><span class="k-lab">${t.lab}</span></div>
     <div class="k-val">${t.val}</div>
     <div class="k-nota">${t.nota}</div>
@@ -207,6 +207,9 @@ met('numeri', [
 
 // ── L'occupazione settimanale ────────────────────────────────────────────
 const sett = [['lun', 2, 4], ['mar', 3, 4], ['mer', 1, 3], ['gio', 0, 0], ['ven', 3, 4], ['sab', 1, 2], ['dom', 0, 0]];
+// Il nome intero serve solo al suggerimento e al nome accessibile: sull'asse ci
+// sta l'abbreviazione, in una frase letta ad alta voce «gio» non e' un giorno.
+const NOMI = { lun: 'lunedì', mar: 'martedì', mer: 'mercoledì', gio: 'giovedì', ven: 'venerdì', sab: 'sabato', dom: 'domenica' };
 {
   const W = 640, H = 200, P = { l: 26, r: 6, t: 8, b: 22 };
   const max = Math.max(...sett.map(([, , o]) => o), 1);
@@ -229,6 +232,58 @@ const sett = [['lun', 2, 4], ['mar', 3, 4], ['mer', 1, 3], ['gio', 0, 0], ['ven'
     ${sett.map(([, p], i) => `<circle cx="${x(i)}" cy="${y(p)}" r="4" class="punto"/>`).join('')}
   </svg>`);
   met('giorni', sett.map(([g]) => `<span>${g}</span>`).join(''));
+
+  // ── Le sonde e il suggerimento ────────────────────────────────────────
+  // Sette bottoni veri, uno per giorno, larghi quanto la colonna e centrati sul
+  // punto della curva — non sull'etichetta sotto, che sta al centro del suo
+  // settimo e quindi non ci cade sopra. La percentuale sta nel nome accessibile
+  // oltre che nel riquadro: il suggerimento e' una comodita' per chi vede il
+  // grafico, non l'unico posto in cui il dato esista.
+  const fx = (i) => (P.l + (i / (sett.length - 1)) * (W - P.l - P.r)) / W;
+  const mezza = (W - P.l - P.r) / (sett.length - 1) / 2 / W;
+  const pct = (pr, of) => (of ? Math.round((pr / of) * 100) : null);
+  const dice = ([g, pr, of]) => {
+    const q = pct(pr, of);
+    return q === null
+      ? `${NOMI[g]}: nessun passaggio`
+      : `${NOMI[g]}: ${pr} ${pr === 1 ? 'posto preso' : 'posti presi'} su ${of} offerti, ${q}%`;
+  };
+  const grafico = document.getElementById('grafico');
+  grafico.insertAdjacentHTML('beforeend',
+    `<div class="bolla" hidden></div><div class="sonde">${sett.map((r, i) => {
+      const da = Math.max(0, fx(i) - mezza), a = Math.min(1, fx(i) + mezza);
+      return `<button type="button" class="sonda" data-g="${i}"
+        style="left:${(da * 100).toFixed(3)}%;width:${((a - da) * 100).toFixed(3)}%"
+        aria-label="${dice(r)}"></button>`;
+    }).join('')}</div>`);
+
+  const bolla = grafico.querySelector('.bolla');
+  const punti = grafico.querySelectorAll('.punto');
+  const mostra = (i) => {
+    const [g, pr, of] = sett[i];
+    const q = pct(pr, of);
+    bolla.innerHTML = `${NOMI[g]} · <b>${q === null ? '—' : q + '%'}</b><br>` +
+      `${q === null ? 'nessun passaggio' : `${pr} su ${of} posti`}`;
+    bolla.style.left = (fx(i) * 100).toFixed(3) + '%';
+    bolla.style.top = ((y(pr) / H) * 100).toFixed(3) + '%';
+    // Ai due estremi il riquadro non si centra: la scheda ha `overflow: hidden`
+    // e la meta' che sborda verrebbe tagliata, non mostrata piu' in la'.
+    bolla.classList.toggle('al-margine-sx', i === 0);
+    bolla.classList.toggle('al-margine-dx', i === sett.length - 1);
+    bolla.hidden = false;
+    punti.forEach((c, n) => c.classList.toggle('acceso', n === i));
+  };
+  const nascondi = () => {
+    bolla.hidden = true;
+    punti.forEach((c) => c.classList.remove('acceso'));
+  };
+  for (const s of grafico.querySelectorAll('.sonda')) {
+    const i = Number(s.dataset.g);
+    s.addEventListener('pointerenter', () => mostra(i));
+    s.addEventListener('focus', () => mostra(i));
+    s.addEventListener('blur', nascondi);
+  }
+  grafico.querySelector('.sonde').addEventListener('pointerleave', nascondi);
 }
 
 // ── La ciambella dei turni ───────────────────────────────────────────────
@@ -288,9 +343,13 @@ function disegna() {
       resto > 0 ? `e ${resto === 1 ? 'un altro' : 'altri ' + resto} · ${testo}` : testo;
   };
 
+  // La barra e' relativa al conto piu' grosso in elenco, non a un massimo
+  // inventato: e' un confronto fra queste righe, e serve a dire quale pesa.
+  const grosso = Math.max(...conti.map(([, , v]) => Math.abs(v)), 1);
   met('conti', conti.slice(0, quante).map(([n, s, v, a], i) => `<div class="riga">
       <span class="av" style="background:${AV[i % AV.length]}">${iniz(n)}</span>
-      <span class="riga-chi"><b>${n}</b><small>${s}</small></span>
+      <span class="riga-chi"><b>${n}</b><small>${s}</small>
+        <span class="barra ${v < 0 ? 'dare' : 'avere'}"><i style="width:${(Math.abs(v) / grosso * 100).toFixed(1)}%"></i></span></span>
       <span class="riga-imp ${v < 0 ? 'dare' : 'avere'}">${eur(v)}</span>
       <button type="button" class="btn-riga">${a}</button>
     </div>`).join(''));
@@ -314,6 +373,12 @@ disegna();
 addEventListener('resize', disegna);
 
 // ── L'interruttore del tema, che nell'app e' la lunetta in alto ──────────
+// Il banco parte come l'app: **come lo vuole il browser**. Qui non c'e' nulla di
+// salvato — e' una pagina di prova, non un'app con una preferenza — quindi la
+// preferenza di sistema e' l'unica cosa che decide il primo disegno.
+if (matchMedia('(prefers-color-scheme: dark)').matches) {
+  document.documentElement.setAttribute('data-tema', 'scuro');
+}
 const gira = () => {
   const scuro = document.documentElement.getAttribute('data-tema') === 'scuro';
   document.documentElement.setAttribute('data-tema', scuro ? 'chiaro' : 'scuro');

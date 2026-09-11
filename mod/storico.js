@@ -756,8 +756,8 @@ const iconaSvg = (id, w = 15) =>
 // non e' fra loro di proposito — qui l'arancio vuol dire «tuo», e un avatar
 // arancione direbbe che quella persona sei tu. Le lettere sopra sono sempre
 // bianche, e le sei coppie le misura `tests/contrasto.mjs`.
-const COLORI_AV = ['oklch(0.470 0.090 247)', 'oklch(0.440 0.070 210)', 'oklch(0.455 0.075 285)',
-  'oklch(0.425 0.065 180)', 'oklch(0.480 0.085 265)', 'oklch(0.410 0.060 200)'];
+const COLORI_AV = ['oklch(0.470 0.090 263)', 'oklch(0.440 0.070 226)', 'oklch(0.455 0.075 301)',
+  'oklch(0.425 0.065 196)', 'oklch(0.480 0.085 281)', 'oklch(0.410 0.060 216)'];
 function coloreDi(id) {
   let h = 0;
   for (const c of String(id || '')) h = (h * 31 + c.charCodeAt(0)) >>> 0;

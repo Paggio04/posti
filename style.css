@@ -60,38 +60,61 @@
 /* ═══════════════════════════════════════════════════════════════════════════
    IL TABELLONE
 
-   Cinque colori, e sono quelli della palette del proprietario: **quasi-bianco**
-   #EEF1F3, **viola** #8A22E7, **viola cupo**, **grigio-blu**, **viola-nero**
-   #110C17. Il riferimento fisico non e' un cruscotto ne' un terminale: e' una
-   targa smaltata scura con le lettere chiare sopra — un tabellone degli orari,
-   il cartello di una fermata. Da li' vengono le tre regole che tengono insieme
-   tutto il foglio.
+   **Sei colori: tre per tema.** Sono la palette del proprietario, e ogni terzina
+   ha gli stessi tre mestieri — la carta, cio' che e' tuo, l'inchiostro (che e'
+   anche cio' che si tocca):
 
-   1. **Il buio e' il materiale, non un tema.** Non c'e' un tema chiaro e uno
-      scuro: c'e' il viola-nero. Il contesto d'uso di PRODUCT.md e' in piedi al
-      buio davanti a un portone, e uno schermo che spara bianco addosso li' e'
-      una scelta contro chi lo usa. `color-scheme: dark` lo dice anche al
-      browser, cosi' i controlli nativi — la data, l'ora, le tendine — nascono
-      scuri invece di essere l'unica cosa bianca della pagina.
+     CHIARO                              SCURO
+     #F4FEFF  la carta                    #04326D  la carta
+     #A9C0E0  cio' che e' tuo             #F58F20  cio' che e' tuo
+     #0E2F76  l'inchiostro e il tocco     #B2BED6  l'inchiostro e il tocco
 
-   2. **Il viola vuol dire due cose sole**: «questo si tocca» e «questo e' tuo».
-      Le due non si confondono perche' si distinguono per **forma**, non per
-      tinta: cio' che si tocca e' il colore *scritto* o un contorno, cio' che e'
-      tuo e' un blocco *pieno* con il quasi-bianco sopra. Niente di decorativo
-      e' viola. Il resto della pagina e' viola-nero, grigio-blu e una riga di
-      bordo.
+   Il riferimento fisico non e' un cruscotto ne' un terminale: e' una targa
+   smaltata con le lettere sopra — un tabellone degli orari, il cartello di una
+   fermata. Da li' vengono le regole che tengono insieme tutto il foglio.
 
-      **Scritto e pieno non sono lo stesso viola**, ed e' l'unico posto dove il
-      foglio ha due token per un colore: quello della palette e' scuro, quindi
-      riempie bene e come testo sul fondo sarebbe illeggibile. Si schiarisce
-      quando e' scritto — `--primary-testo` — e la misura sta in
-      `tests/contrasto.mjs`.
+   1. **Due temi, e lo apre il browser.** Il tema di casa e' quello chiaro, ma
+      non e' quello che si vede per primo: `tema.js` legge
+      `prefers-color-scheme` prima che la pagina venga dipinta, e chi ha il
+      sistema al buio apre una pagina al buio. L'interruttore in alto resta, e
+      quello che sceglie **vince** sul browser e resta scelto — una preferenza di
+      sistema non scavalca una decisione presa qui.
+      Il contesto d'uso di PRODUCT.md e' in piedi al buio davanti a un portone, e
+      per quel caso il tema scuro c'e'; ma imporlo a chi guarda l'app di giorno
+      era la stessa prepotenza al contrario. `color-scheme` dice al browser che
+      la pagina sa fare tutti e due, cosi' i controlli nativi — la data, l'ora,
+      le tendine — nascono del tema giusto invece di essere l'unica cosa
+      dell'altro colore.
 
-   3. **La profondita' la fanno le righe, non le ombre.** Su un fondo quasi nero
-      un'ombra e' invisibile o e' sporco: due schede si separano con un bordo da
-      un pixel e mezzo tono di fondo, come due pannelli avvitati sulla stessa
-      lamiera. Le ombre restano solo dove una cosa **galleggia davvero** sopra
-      un'altra: la finestra di dialogo e il messaggio che compare.
+   2. **Il colore vuol dire due cose sole**: «questo si tocca» e «questo e' tuo»,
+      e sono **due colori diversi**, non due usi dello stesso. Le due non si
+      confondono nemmeno per forma: cio' che si tocca e' l'inchiostro *scritto* o
+      un contorno, cio' che e' tuo e' un blocco *pieno*. Niente di decorativo
+      prende uno dei due.
+
+      Il caldo esiste **solo al buio**: alla luce «tuo» e' il blu-grigio della
+      terzina chiara. E' una scelta del proprietario, e la conseguenza da
+      conoscere e' che alla luce «tuo» non e' piu' il colore piu' caldo dello
+      schermo — quindi dove «tuo» deve saltare all'occhio non basta la tinta,
+      serve anche la parola o la forma. Che e' la regola di PRODUCT.md, ma qui
+      diventa obbligo invece di buona educazione.
+
+      Restano due token per il tocco — `--primary` e `--primary-testo` — e oggi
+      **portano lo stesso valore in tutti e due i temi**, perche' l'inchiostro
+      della palette regge sia riempito sia scritto. Non sono un doppione da
+      unire: erano due quando il colore del tocco era scuro alla luce, e
+      tornerebbero due il giorno che «cio' che si tocca» smettesse di essere
+      l'inchiostro. La misura sta in `tests/contrasto.mjs`, non in questo
+      commento.
+
+   3. **La profondita' la fanno le righe al buio e le ombre alla luce.** Su carta
+      quasi nera un'ombra e' invisibile o e' sporco: al buio due schede si
+      separano con un bordo da un pixel e mezzo tono di fondo, come due pannelli
+      avvitati sulla stessa lamiera. Alla luce e' il contrario, e **per forza**:
+      la carta e' #F4FEFF, cioe' quasi bianca, e una scheda bianca sopra non si
+      distingue per il riempimento — la staccano il filo del bordo e l'ombra.
+      Le ombre restano comunque riservate a chi **galleggia davvero**: la
+      finestra di dialogo, il messaggio che compare, e la scheda alla luce.
 
    I raggi sono quattro e diversi fra loro, di proposito: «tutto arrotondato
    allo stesso raggio» sta fra gli anti-riferimenti di PRODUCT.md, ed era vero —
@@ -143,83 +166,117 @@
   --font-mono: 'IBM Plex Mono', ui-monospace, monospace;
 
   /* ---- i fondi -------------------------------------------------------- */
-  /* **Il tema di casa e' quello chiaro**, e la sua carta e' l'azzurro della
-     palette: il fondo e' tinto, le schede sono bianche e ci galleggiano sopra.
-     E' il rapporto della schermata di riferimento — fondo con una tinta, schede
-     bianche — portato sul colore vero invece che su un grigino.
+  /* **Due terzine, una per tema**, e ognuna ha gli stessi tre mestieri:
 
-     Tre colori, tre mestieri, e valgono per tutti e due i temi:
+       CHIARO                              SCURO
+       #F4FEFF  la carta                    #04326D  la carta
+       #A9C0E0  cio' che e' tuo             #F58F20  cio' che e' tuo
+       #0E2F76  l'inchiostro e il tocco     #B2BED6  l'inchiostro e il tocco
 
-       azzurro #C0EBFF   la carta        (al buio: l'inchiostro)
-       blu     #002B4C   l'inchiostro e cio' che si tocca  (al buio: la carta)
-       arancio #F59E71   cio' che e' tuo, **sempre da riempire**
+     **E qui i due temi non sono piu' lo stesso documento stampato al
+     contrario.** Prima lo erano — due colori che si scambiavano il posto, lo
+     stesso rapporto in tutti e due i versi — e c'era una terzina sola. Adesso
+     sono due palette diverse, e i rapporti principali non combaciano: 12,16:1
+     alla luce contro 6,67:1 al buio. Regge tutto, ma il margine al buio e'
+     meno di meta', ed e' la ragione per cui la scala delle superfici scure qui
+     sotto e' strozzata.
 
-     I due estremi si scambiano il posto, l'arancio resta dov'e'. */
-  --bg: oklch(0.916 0.052 227.8);          /* #C0EBFF esatto */
+     Il colore caldo esiste **solo al buio**: alla luce «tuo» e' il blu-grigio
+     della terzina chiara. E' una scelta del proprietario, non una conseguenza —
+     la terzina chiara non contiene un arancio, e con tre colori il terzo e' il
+     solo che possa fare quel mestiere.
+
+     Le schede restano bianche e la carta e' tinta, come nella schermata di
+     riferimento — ma alla luce la carta e' quasi bianca (L 0,990 contro 0,999),
+     quindi **una scheda non si distingue per il riempimento**: la staccano il
+     filo del bordo e l'ombra. Al buio invece si distingue eccome, ed e' l'unico
+     posto in cui la scheda schiarisce. */
+  --bg: oklch(0.990 0.011 204.1);          /* #F4FEFF esatto */
   --surface: oklch(0.999 0 0);             /* la scheda: bianca, come nella foto */
-  --surface-2: oklch(0.955 0.030 227.8);
-  --rilievo: oklch(0.955 0.030 227.8);
+  --surface-2: oklch(0.948 0.028 215.9);
+  --rilievo: oklch(0.948 0.028 215.9);
 
   /* ---- la targa --------------------------------------------------------- */
   /* Il marchio in alto a sinistra: l'unico oggetto che si **ribalta** con il
      tema invece di seguirlo. Alla luce e' inchiostro con le lettere chiare, al
      buio e' chiaro con le lettere scure — in tutti e due i casi la cosa piu'
      contrastata dello schermo. */
-  --targa: oklch(0.282 0.075 247.6);       /* #002B4C esatto */
-  --su-targa: oklch(0.916 0.052 227.8);
+  --targa: oklch(0.331 0.128 262.7);       /* #0E2F76 esatto */
+  --su-targa: oklch(0.990 0.011 204.1);
 
   /* ---- le righe ------------------------------------------------------- */
   /* --border separa e basta: non porta informazione, quindi non deve reggere
      3:1. --border-strong disegna il **campo** — dice dove si scrive — e per la
      1.4.11 vale la soglia degli elementi non testuali: 3:1 sul bianco. */
-  --border: oklch(0.900 0.035 227.8);
-  --border-strong: oklch(0.590 0.048 227.8);
+  --border: oklch(0.888 0.034 221.7);
+  --border-strong: oklch(0.656 0.050 239.3);
 
   /* ---- l'inchiostro --------------------------------------------------- */
-  --ink: oklch(0.282 0.075 247.6);         /* #002B4C esatto */
+  --ink: oklch(0.331 0.128 262.7);         /* #0E2F76 esatto */
   /* Sceso finche' regge 4.5:1 **su tutti e due** i fondi su cui capita: la carta
      azzurra e la scheda bianca. Il piu' severo dei due decide. */
-  --ink-soft: oklch(0.500 0.060 227.8);
+  --ink-soft: oklch(0.527 0.062 251.0);
   /* Il segnaposto ha bisogno degli stessi 4.5:1 del testo: il grigio chiaro «che
      si vede che e' un suggerimento» e' testo illeggibile con una scusa. */
-  --segnaposto: oklch(0.500 0.060 227.8);
+  --segnaposto: oklch(0.527 0.062 251.0);
 
   /* ---- il blu, cioe' cio' che si tocca ---------------------------------- */
-  /* Il blu e' scuro (L 0.28), quindi fa i due mestieri con lo stesso valore:
-     riempie con il bianco sopra (14.4:1) e si scrive sulla carta (11.4:1). E'
-     l'opposto del viola di prima, che sopra i 4.5:1 come testo non ci arrivava
-     e per questo aveva due token: qui restano due nomi con lo stesso valore,
-     perche' il giorno in cui la carta si scurisce si cambia una riga sola. */
-  --primary: oklch(0.282 0.075 247.6);
-  --primary-testo: oklch(0.282 0.075 247.6);
-  --primary-hover: oklch(0.360 0.080 247.6);
+  /* L'inchiostro e' scuro (L 0.331), quindi fa i due mestieri con lo stesso
+     valore: riempie con il bianco sopra (12,43:1) e si scrive sulla carta
+     (12,16:1). E' l'opposto del viola di prima, che sopra i 4.5:1 come testo non
+     ci arrivava e per questo aveva due token: qui restano due nomi con lo stesso
+     valore, perche' il giorno in cui la carta si scurisce si cambia una riga
+     sola. */
+  --primary: oklch(0.331 0.128 262.7);
+  --primary-testo: oklch(0.331 0.128 262.7);
+  --primary-hover: oklch(0.406 0.116 262.7);
   --su-primario: oklch(0.999 0 0);
-  /* Sopra il blu pieno, la riga di servizio: l'azzurro della palette tenuto
-     indietro. E' l'unico token che non cambia fra i due temi, perche' il fondo
-     su cui sta non cambia — e' sempre il blu. */
-  --su-primario-tenue: oklch(0.860 0.045 227.8);
-  /* E la stessa riga **sopra l'arancio** non puo' essere questa: il blu e' scuro
-     e vuole una riga chiara, l'arancio e' chiaro e vuole una riga scura. Erano
-     un token solo perche' prima i due riempimenti erano lo stesso viola; adesso
-     sono due colori con due luminosita' opposte, e un valore solo ne serve bene
-     uno e tradisce l'altro. */
-  --tuo-su-tenue: oklch(0.380 0.075 247.6);
-  --primary-soft: oklch(0.940 0.038 227.8);
-  --primary-bordo: oklch(0.560 0.055 247.6);
+  /* Sopra il pieno di cio' che si tocca, la riga di servizio: la carta della
+     palette tenuta indietro. Cambia fra i due temi, e prima no: allora il
+     riempimento era il blu in tutti e due i casi, adesso alla luce e' il blu
+     scuro e al buio l'azzurro chiaro, cioe' due fondi opposti. */
+  --su-primario-tenue: oklch(0.855 0.045 204.1);
+  /* E la stessa riga **sopra cio' che e' tuo** non puo' essere questa: il pieno
+     che si tocca e' scuro alla luce e vuole una riga chiara, mentre «tuo» e'
+     chiaro nei due temi — il blu-grigio alla luce, l'arancio al buio — e vuole
+     una riga scura. Due riempimenti con due luminosita' opposte non stanno in un
+     token solo: uno lo serve bene e l'altro lo tradisce. */
+  --tuo-su-tenue: oklch(0.419 0.080 262.7);
+  --primary-soft: oklch(0.940 0.032 236.4);
+  --primary-bordo: oklch(0.659 0.075 262.7);
+
+  /* ---- la tinta della seconda tessera ----------------------------------- */
+  /* Le quattro tessere in cima al Riepilogo hanno **quattro tinte diverse**, come
+     nella schermata di riferimento. Tre le avevano gia': la prima e' il blu della
+     palette, la terza il colore di «questo e' tuo», la quarta il rosso di un
+     giorno scoperto. Solo la seconda era una copia esatta della prima, e due
+     pastiglie identiche in fila fanno sembrare che dicano la stessa cosa.
+     La tinta nuova **non e' un colore nuovo**: e' lo stesso giro intorno al blu
+     da cui escono le sei tinte degli avatar, fermato quaranta gradi oltre
+     l'inchiostro. Sta lontano dal 162 della conferma, dal 27 del rosso e dal 60
+     dell'arancio, che qui significano altro: una pastiglia verde direbbe
+     «andato a buon fine», una arancione «tuo». */
+  --tessera-2-velo: oklch(0.940 0.036 302.7);
+  --tessera-2-ico: oklch(0.571 0.095 302.7);
 
   /* ---- «questo e' tuo» — l'arancio -------------------------------------- */
-  /* **L'arancio si riempie, non si scrive e non si contorna.** #F59E71 fa 2,09:1
-     sul bianco e 1,65:1 sulla carta azzurra: come linea sottile o come testo
-     e' invisibile, sotto qualunque soglia. Come **blocco pieno con il blu
-     sopra** fa 6,91:1 ed e' il colore piu' caldo dello schermo. Chi aggiunge un
-     `1px solid var(--tuo)` su fondo chiaro sta disegnando niente.
-     Per le due volte in cui serve davvero scritto — un importo, un'etichetta —
-     c'e' `--tuo-testo`, che e' lo stesso arancio sceso fino a 4.5:1. */
-  --tuo: oklch(0.777 0.120 47.7);          /* #F59E71 esatto */
-  --tuo-testo: oklch(0.515 0.120 47.7);
-  --tuo-su: oklch(0.282 0.075 247.6);
-  --tuo-velo: oklch(0.955 0.035 47.7);
-  --tuo-bordo: oklch(0.515 0.120 47.7);
+  /* **«Tuo» si riempie, non si scrive e non si contorna** — e questo vale alla
+     luce, dove «tuo» e' il blu-grigio #A9C0E0: fa 2,32:1 sul bianco, quindi come
+     linea sottile o come testo e' sotto qualunque soglia. Come **blocco pieno con
+     l'inchiostro sopra** fa 6,71:1. Chi aggiunge un `1px solid var(--tuo)` su
+     fondo chiaro sta disegnando niente.
+     **Al buio la regola cade**, e non per distrazione: li' «tuo» e' l'arancio
+     #F58F20, che sulla carta blu fa 5,24:1 e puo' quindi fare anche il testo e il
+     filo. Percio' `--tuo-testo` e `--tuo-bordo` al buio **sono** l'arancio, e
+     alla luce sono il blu-grigio sceso fino a soglia.
+     Un avvertimento che vale sempre: l'arancio non ce l'ha piu' l'inchiostro
+     sopra ma la **carta scura**, perche' l'inchiostro chiaro sull'arancio fa
+     1,27:1. */
+  --tuo: oklch(0.801 0.052 256.7);          /* #A9C0E0 esatto */
+  --tuo-testo: oklch(0.527 0.082 256.7);
+  --tuo-su: oklch(0.331 0.128 262.7);
+  --tuo-velo: oklch(0.950 0.030 256.7);
+  --tuo-bordo: oklch(0.658 0.082 256.7);
 
   /* ---- gli stati ------------------------------------------------------- */
   /* Rosso e verde non sono un quarto e un quinto colore del marchio: sono due
@@ -228,12 +285,12 @@
      solo in saturazione, o «annulla il passaggio» e «prenota» si confonderebbero
      a colpo d'occhio. PRODUCT.md chiede che non siano **soli** a dirlo, e infatti
      ogni posto in cui compaiono ha anche una parola o una forma. */
-  --danger: oklch(0.545 0.175 27.0);
-  --danger-pieno: oklch(0.520 0.180 27.0);
+  --danger: oklch(0.556 0.175 27.0);
+  --danger-pieno: oklch(0.584 0.180 27.0);
   --danger-soft: oklch(0.965 0.022 27.0);
-  --ok: oklch(0.505 0.115 162.0);
-  --ok-deep: oklch(0.554 0.110 162.0);
-  --ok-pieno: oklch(0.500 0.110 162.0);
+  --ok: oklch(0.526 0.115 162.0);
+  --ok-deep: oklch(0.583 0.110 162.0);
+  --ok-pieno: oklch(0.549 0.110 162.0);
   --ok-soft: oklch(0.965 0.022 162.0);
 
   /* ---- la carrozzeria --------------------------------------------------- */
@@ -242,20 +299,30 @@
      chiara la lamiera scende, cosi' la sagoma si vede contro la pagina, e i
      buchi diventano chiari. Il posto **tuo** resta l'arancio pieno, l'unico
      riempimento caldo del disegno. Le soglie le misura `npm run contrasto`. */
-  --piastra: oklch(0.920 0.030 227.8);
+  --piastra: oklch(0.920 0.026 204.1);
   /* L'inchiostro **dentro** l'auto non segue il tema, perche' non segue la
      pagina: segue la piastra, che e' scura in tutti e due. */
-  --posto-testo: oklch(0.240 0.070 247.6);
-  --posto-libero: oklch(0.400 0.060 247.6);
-  --scocca: oklch(0.480 0.058 247.6);
-  --scocca-luce: oklch(0.540 0.055 247.6);
-  --scocca-ombra: oklch(0.360 0.060 247.6);
-  --scocca-riga: oklch(0.280 0.065 247.6);
-  --vetro: oklch(0.300 0.065 247.6);
-  --gomma: oklch(0.060 0.020 247.6);
-  --posto: oklch(0.900 0.035 227.8);
-  --pavimento: oklch(0.330 0.060 247.6);
-  --posto-bordo: oklch(0.240 0.070 247.6);
+  --posto-testo: oklch(0.240 0.100 262.7);
+  --posto-libero: oklch(0.420 0.090 262.7);
+  --scocca: oklch(0.500 0.080 262.7);
+  --scocca-luce: oklch(0.560 0.075 262.7);
+  --scocca-ombra: oklch(0.380 0.085 262.7);
+  --scocca-riga: oklch(0.270 0.090 262.7);
+  --vetro: oklch(0.320 0.090 262.7);
+  --gomma: oklch(0.020 0.010 262.7);
+  --posto: oklch(0.898 0.030 204.1);
+  --pavimento: oklch(0.350 0.085 262.7);
+  --posto-bordo: oklch(0.240 0.100 262.7);
+  /* Il filo del posto **tuo**. Esiste perche' il riempimento non basta piu' nei
+     due temi con lo stesso valore: l'arancio #F58F20 ha luminanza 0,402, e per
+     staccare 3:1 dalla lamiera la vorrebbe sotto 0,098 — ma un dettaglio scuro
+     su una lamiera blu non supera (luminanza + 0,05) / 0,05, cioe' la pretende
+     sopra 0,1025. Non si incontrano, per il 4%.
+     Percio' ogni tema tiene il **suo** meccanismo, e sono entrambi verificati:
+     alla luce «tuo» e' il blu-grigio e si vede per riempimento (3,25:1), al buio
+     e' l'arancio e lo delimita questo filo, chiaro (3,47:1). Il contorno nel
+     disegno c'era gia': 2,5px su `.seat-mine`. */
+  --posto-tuo-filo: oklch(0.270 0.090 262.7);
 
   /* ---- le forme -------------------------------------------------------- */
   /* Quattro raggi, uno per classe di oggetto — non un raggio solo su tutto, che
@@ -281,8 +348,8 @@
   /* Le ombre sono **tinte di blu, non nere**: su una carta azzurra un'ombra
      grigia e' sporco. E sono due, non una scala: una scheda appoggiata e una
      cosa che galleggia davvero. */
-  --shadow-1: 0 1px 2px oklch(0.282 0.075 247.6 / 0.10), 0 2px 8px oklch(0.282 0.075 247.6 / 0.06);
-  --shadow-2: 0 8px 28px oklch(0.282 0.075 247.6 / 0.14), 0 2px 8px oklch(0.282 0.075 247.6 / 0.08);
+  --shadow-1: 0 1px 2px oklch(0.331 0.128 262.7 / 0.10), 0 2px 8px oklch(0.331 0.128 262.7 / 0.06);
+  --shadow-2: 0 8px 28px oklch(0.331 0.128 262.7 / 0.14), 0 2px 8px oklch(0.331 0.128 262.7 / 0.08);
 
   /* ---- movimento -------------------------------------------------------- */
   /* Una curva sola, ed e' una decelerazione. Le cose vere rallentano, non
@@ -297,62 +364,80 @@
 /* ═══════════════════════════════════════════════════════════════════════════
    E LA STESSA PAGINA AL BUIO
 
-   I due estremi della palette si scambiano il posto — il blu diventa la carta,
-   l'azzurro l'inchiostro — e l'arancio resta dov'e'. Qui sotto ci sono **solo**
-   i token che cambiano: quello che non e' scritto e' lo stesso in tutti e due i
-   temi, e cosi' non ci sono due fogli da tenere allineati.
+   La carta e' #04326D, l'inchiostro #B2BED6, e cio' che e' tuo l'arancio
+   #F58F20. Qui sotto ci sono **solo** i token che cambiano: quello che non e'
+   scritto e' lo stesso in tutti e due i temi, e cosi' non ci sono due fogli da
+   tenere allineati.
 
-   Il rovescio non e' un tema disegnato due volte: e' lo stesso documento
-   stampato al contrario, e i due rapporti principali sono identici — blu su
-   azzurro e azzurro su blu fanno tutti e due 11,43:1.
+   **Questo non e' il rovescio del tema chiaro.** Prima lo era, e i due rapporti
+   principali erano identici (11,43:1 in tutti e due i versi). Adesso sono due
+   palette date, e al buio il margine e' meno di meta': 6,67:1 contro 12,16:1.
+   Da qui vengono due conseguenze che si vedono nei valori:
+
+     1. **Le schede schiariscono di un gradino solo** (+0,055 di luminosita'), e
+        non e' un gusto: e' il massimo che lascia l'arancio sopra la soglia
+        quando ci sta come testo. Un gradino in piu' e cede.
+     2. **Gli incassi scendono sotto la carta** invece di salire — le piste, i
+        rilievi, i veli. In un tema scuro e' anche il verso giusto: un incavo e'
+        piu' buio, non piu' chiaro. Alla luce vale il contrario.
 
    Il costo dei due temi lo paga `tests/contrasto.mjs`, che li misura tutti e
    due a ogni `npm run check` invece di fidarsi di questo commento.
 
-   Non c'e' `prefers-color-scheme`: il tema si sceglie con l'interruttore in alto
-   e resta scelto. */
+   **Quale dei due si apre lo decide il browser**, quando nessuno ha scelto:
+   `tema.js` legge `prefers-color-scheme` prima che la pagina venga dipinta. Se
+   invece l'interruttore in alto e' stato usato, quella scelta vince e resta —
+   una preferenza di sistema non scavalca una decisione presa qui. Il blocco
+   scuro sta in un posto solo: non e' duplicato dentro una media query, o
+   sarebbero due stesure da tenere allineate e il controllo del contrasto ne
+   leggerebbe una. */
 :root[data-tema="scuro"] {
   color-scheme: dark;
 
-  --bg: oklch(0.282 0.075 247.6);          /* #002B4C esatto */
-  --surface: oklch(0.345 0.058 247.6);
-  --surface-2: oklch(0.410 0.055 247.6);
-  --rilievo: oklch(0.410 0.055 247.6);
-  --border: oklch(0.400 0.050 247.6);
-  --border-strong: oklch(0.620 0.050 227.8);
-  --ink: oklch(0.916 0.052 227.8);         /* #C0EBFF esatto */
-  --ink-soft: oklch(0.800 0.045 227.8);
-  --segnaposto: oklch(0.800 0.045 227.8);
+  --bg: oklch(0.328 0.113 257.5);          /* #04326D esatto */
+  --surface: oklch(0.362 0.099 258.9);
+  --surface-2: oklch(0.270 0.105 257.5);
+  --rilievo: oklch(0.270 0.105 257.5);
+  --border: oklch(0.463 0.073 259.9);
+  --border-strong: oklch(0.626 0.048 264.3);
+  --ink: oklch(0.800 0.037 264.3);         /* #B2BED6 esatto */
+  --ink-soft: oklch(0.734 0.040 264.3);
+  --segnaposto: oklch(0.734 0.040 264.3);
   /* Al buio si ribalta: quello che si tocca e' l'azzurro pieno con il blu
      sopra, perche' un blu pieno su carta blu non si vedrebbe. */
-  --primary: oklch(0.916 0.052 227.8);
-  --primary-testo: oklch(0.916 0.052 227.8);
-  --primary-hover: oklch(0.830 0.055 227.8);
-  --su-primario: oklch(0.282 0.075 247.6);
-  --su-primario-tenue: oklch(0.500 0.060 247.6);
-  --tuo-su-tenue: oklch(0.380 0.075 247.6);
-  --primary-soft: oklch(0.400 0.055 247.6);
-  --primary-bordo: oklch(0.750 0.055 227.8);
+  --primary: oklch(0.800 0.037 264.3);
+  --primary-testo: oklch(0.800 0.037 264.3);
+  --primary-hover: oklch(0.720 0.045 264.3);
+  --su-primario: oklch(0.328 0.113 257.5);
+  --su-primario-tenue: oklch(0.416 0.060 257.5);
+  --tuo-su-tenue: oklch(0.359 0.090 257.5);
+  --primary-soft: oklch(0.270 0.093 258.9);
+  --primary-bordo: oklch(0.626 0.050 264.3);
+  /* Al buio si ribalta come tutto il resto: il velo scende alla luminosita' di
+     `--primary-soft`, la pastiglia sale. */
+  --tessera-2-velo: oklch(0.270 0.055 304.3);
+  --tessera-2-ico: oklch(0.648 0.060 304.3);
   /* L'arancio non si muove, ed e' l'unica cosa che non si muove: al buio regge
      6,91:1 sulla carta blu, quindi qui puo' fare anche il testo e il contorno,
      cosa che alla luce gli e' vietata. */
-  --tuo: oklch(0.777 0.120 47.7);
-  --tuo-testo: oklch(0.777 0.120 47.7);
-  --tuo-su: oklch(0.282 0.075 247.6);
-  --tuo-velo: oklch(0.330 0.070 47.7);
-  --tuo-bordo: oklch(0.777 0.120 47.7);
-  --danger: oklch(0.810 0.120 27.0);
-  --danger-pieno: oklch(0.560 0.180 27.0);
-  --danger-soft: oklch(0.400 0.080 27.0);
-  --ok: oklch(0.775 0.105 162.0);
+  --tuo: oklch(0.743 0.165 60.5);
+  --tuo-testo: oklch(0.743 0.165 60.5);
+  --tuo-su: oklch(0.328 0.113 257.5);
+  --tuo-velo: oklch(0.330 0.070 60.5);
+  --tuo-bordo: oklch(0.743 0.165 60.5);
+  --danger: oklch(0.747 0.120 27.0);
+  --danger-pieno: oklch(0.584 0.180 27.0);
+  --danger-soft: oklch(0.360 0.078 27.0);
+  --ok: oklch(0.723 0.105 162.0);
   --ok-deep: oklch(0.638 0.110 162.0);
-  --ok-pieno: oklch(0.530 0.110 162.0);
-  --ok-soft: oklch(0.390 0.060 162.0);
-  --piastra: oklch(0.900 0.035 227.8);
+  --ok-pieno: oklch(0.549 0.110 162.0);
+  --ok-soft: oklch(0.355 0.058 162.0);
+  --piastra: oklch(0.900 0.030 264.3);
+  --posto-tuo-filo: oklch(0.900 0.030 264.3);
   /* La targa si ribalta al contrario della pagina, ed e' voluto: una targa
      avvitata su una parete scura e' una targa chiara. */
-  --targa: oklch(0.916 0.052 227.8);
-  --su-targa: oklch(0.282 0.075 247.6);
+  --targa: oklch(0.800 0.037 264.3);
+  --su-targa: oklch(0.328 0.113 257.5);
   --luce: inset 0 1px 0 oklch(1 0 0 / 0.10);
   --shadow-1: 0 1px 2px oklch(0 0 0 / 0.35), 0 2px 8px oklch(0 0 0 / 0.25);
   --shadow-2: 0 8px 28px oklch(0 0 0 / 0.45), 0 2px 8px oklch(0 0 0 / 0.30);
@@ -408,9 +493,10 @@ svg { vertical-align: -0.15em; }
 
 /* **I collegamenti non avevano una regola.** Dentro l'app quasi tutti i link sono
    bottoni, quindi non si notava; ma `404.html`, `offline.html` e l'informativa hanno
-   link veri, e li' restava il blu predefinito del browser — che sul viola-nero e' un blu
-   quasi nero, cioe' un collegamento invisibile su una pagina il cui unico scopo e'
-   portare da un'altra parte. */
+   link veri, e li' restava il blu predefinito del browser — che sulla carta scura del
+   tema al buio e' un blu su un blu, cioe' un collegamento invisibile su una pagina il
+   cui unico scopo e' portare da un'altra parte. E quelle pagine ora seguono il tema
+   del browser come l'app, quindi il caso non e' piu' teorico. */
 a { color: var(--primary-testo); text-underline-offset: 3px; }
 a:hover { color: var(--primary-hover); }
 
@@ -944,7 +1030,9 @@ input[type="time"]::-webkit-calendar-picker-indicator { opacity: 0.6; cursor: po
   font-weight: 600;
   color: var(--danger);
   background: var(--danger-soft);
-  border: 1px solid oklch(0.42 0.12 25);
+  /* Era `oklch(0.42 0.12 25)`, scritto a mano: un rosso fisso che al buio
+     spariva sul suo velo, perche' li' il velo e' scuro quanto lui. */
+  border: 1px solid var(--danger);
   border-radius: var(--r-btn);
   padding: 11px 14px;
   line-height: 1.5;
@@ -954,7 +1042,7 @@ input[type="time"]::-webkit-calendar-picker-indicator { opacity: 0.6; cursor: po
 .auth-message.ok {
   color: var(--ok);
   background: var(--ok-soft);
-  border-color: oklch(0.40 0.09 165);
+  border-color: var(--ok);
   animation: entra var(--t-med) var(--ease-out);
 }
 
@@ -1692,7 +1780,7 @@ input[type="time"]::-webkit-calendar-picker-indicator { opacity: 0.6; cursor: po
 .car-luce { fill: none; stroke: oklch(1 0 0 / 0.30); stroke-width: 2; stroke-linecap: round; }
 .car-ombra { fill: none; }
 /* Il vetro e' scuro: guardando un'auto dall'alto, dentro non si vede. */
-.vetro-chiaro { stop-color: oklch(0.46 0.055 301); }
+.vetro-chiaro { stop-color: var(--scocca-ombra); }
 .vetro-scuro { stop-color: var(--vetro); }
 .car-glass { fill: var(--vetro); stroke: var(--scocca-riga); stroke-width: 1; }
 .car-riflesso { fill: oklch(1 0 0 / 0.22); }
@@ -1764,7 +1852,7 @@ input[type="time"]::-webkit-calendar-picker-indicator { opacity: 0.6; cursor: po
 .seat-taken .seat-base { stroke: var(--posto-bordo); }
 
 /* Il tuo. L'unico pieno del disegno. */
-.seat-mine .seat-base { fill: var(--tuo); stroke: var(--scocca-riga); stroke-width: 2.5; }
+.seat-mine .seat-base { fill: var(--tuo); stroke: var(--posto-tuo-filo); stroke-width: 2.5; }
 .seat-mine .seat-back { fill: var(--tuo-bordo); }
 .seat-mine .seat-text { fill: var(--tuo-su); }
 .seat-mine .seat-piega { stroke: oklch(1 0 0 / 0.34); }
@@ -2012,7 +2100,7 @@ input[type="time"]::-webkit-calendar-picker-indicator { opacity: 0.6; cursor: po
 @media (max-width: 767px) {
   .profile-actions { grid-template-columns: minmax(0, 1fr); }
 }
-.btn-danger-full { color: var(--danger); border-color: oklch(0.42 0.12 25); }
+.btn-danger-full { color: var(--danger); border-color: var(--danger); }
 .btn-danger-full:hover { background: var(--danger-soft); border-color: var(--danger); }
 .profile-hint { color: var(--ink-soft); font-size: 0.85rem; margin-top: 20px; max-width: 60ch; }
 
@@ -2110,7 +2198,9 @@ input[type="time"]::-webkit-calendar-picker-indicator { opacity: 0.6; cursor: po
   box-shadow: var(--shadow-2);
 }
 .app-dialog[open] { animation: entra var(--t-med) var(--ease-out); }
-.app-dialog::backdrop { background: oklch(0.09 0.020 304 / 0.80); }
+/* Il velo sotto la finestra: la tinta dell'inchiostro portata al buio. Era
+   `oklch(0.09 0.020 304)`, cioe' il viola-nero della palette di due palette fa. */
+.app-dialog::backdrop { background: oklch(0.16 0.050 262.7 / 0.80); }
 .app-dialog h3 { font-size: 1.1rem; font-weight: 700; margin-bottom: 4px; }
 .app-dialog .auth-subtitle { margin-bottom: 14px; }
 .app-dialog input, .app-dialog select, .app-dialog textarea { margin-top: 0; }
@@ -3204,6 +3294,10 @@ form.signup .auth-accetto { display: block; }
 .app-lynk .linea-tratto { fill: none; stroke: var(--primary); stroke-width: 2; vector-effect: non-scaling-stroke; }
 .app-lynk .linea-velo { fill: var(--primary-soft); stroke: none; }
 
+/* La seconda tessera porta la sua tinta. La terza e la quarta la loro ce l'hanno
+   qui sotto e vincono su questa, perche' vengono dopo: «tuo» e «scoperto» sono
+   informazione, una tinta d'identita' no. */
+.app-lynk .k.tinta-2 .k-ico { background: var(--tessera-2-velo); color: var(--tessera-2-ico); }
 .app-lynk .k.mio { background: var(--tuo); border-color: var(--tuo); color: var(--tuo-su); }
 .app-lynk .k.mio .k-lab, .app-lynk .k.mio .k-nota { color: var(--tuo-su-tenue); }
 .app-lynk .k.mio .k-ico { background: oklch(1 0 0 / 0.35); color: var(--tuo-su); }
@@ -3244,7 +3338,8 @@ form.signup .auth-accetto { display: block; }
 .app-lynk .fila-tre { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: var(--sp-3); min-height: 0; }
 
 /* Il grafico ad area: prende l'altezza che la riga gli lascia, non una sua. */
-.app-lynk .grafico { min-height: 0; }
+/* `relative` perche' il suggerimento e le sonde si appendono a lui. */
+.app-lynk .grafico { min-height: 0; position: relative; }
 .app-lynk .area { display: block; width: 100%; height: 100%; }
 .app-lynk .griglia { stroke: var(--border); stroke-width: 1; }
 .app-lynk .asse { fill: var(--ink-soft); font-size: 11px; font-family: var(--font-sans); }
@@ -3255,6 +3350,42 @@ form.signup .auth-accetto { display: block; }
 .app-lynk .area-velo { fill: var(--primary-soft); }
 .app-lynk .area-tratto { fill: none; stroke: var(--primary); stroke-width: 2.5; stroke-linejoin: round; vector-effect: non-scaling-stroke; }
 .app-lynk .punto { fill: var(--surface); stroke: var(--primary); stroke-width: 2.5; vector-effect: non-scaling-stroke; }
+/* Il punto del giorno che si guarda. Il segno che conta e' il **riempimento**:
+   `r` come proprieta' CSS non e' vecchia come il resto del foglio, e dove non
+   c'e' il pallino resta piccolo ma pieno, cioe' si distingue comunque. */
+.app-lynk .punto.acceso { fill: var(--primary); r: 5.5; }
+
+/* ── Il suggerimento sul grafico ────────────────────────────────────────── */
+/* La schermata di riferimento ha un riquadro appeso al giorno che si guarda, e
+   senza quello il grafico dice la forma ma non i numeri: si vede che mercoledi'
+   e' andato peggio di martedi', non di quanto.
+   Due cose lo tengono onesto. **Le sonde sono sette bottoni veri**, non un
+   ascolto del movimento del mouse: cosi' il suggerimento si raggiunge col
+   tasto di tabulazione e la percentuale sta anche nel nome accessibile, per chi
+   il grafico non lo vede affatto. E **il riquadro e' sfilato dal flusso**,
+   quindi non puo' allungare la scheda: e' la regola di questa vista. */
+.app-lynk .sonde { position: absolute; inset: 0; }
+.app-lynk .sonda {
+  position: absolute; top: 0; bottom: 0; border: 0; padding: 0; cursor: pointer;
+  background: transparent; border-radius: var(--r-btn);
+}
+.app-lynk .sonda:hover, .app-lynk .sonda:focus-visible { background: var(--primary-soft); }
+.app-lynk .sonda:focus-visible { outline: 2px solid var(--primary-testo); outline-offset: -2px; }
+/* Sul blu della targa, non sulla carta: un riquadro che galleggia sopra il
+   grafico deve staccare dal grafico, e la targa e' la coppia piu' alta del
+   foglio (14,43:1 alla luce, 11,41:1 al buio). */
+.app-lynk .bolla {
+  position: absolute; z-index: 2; transform: translate(-50%, -100%);
+  margin-top: -12px; pointer-events: none; white-space: nowrap;
+  background: var(--targa); color: var(--su-targa);
+  border-radius: var(--r-btn); padding: 4px var(--sp-2);
+  font-size: 0.73rem; font-weight: 600; line-height: 1.35;
+}
+/* Ai due bordi il riquadro non si centra, o meta' finisce fuori dalla scheda —
+   che ha `overflow: hidden` e lo taglierebbe invece di allargarsi. */
+.app-lynk .bolla.al-margine-sx { transform: translate(0, -100%); }
+.app-lynk .bolla.al-margine-dx { transform: translate(-100%, -100%); }
+.app-lynk .bolla b { font-family: var(--font-mono); font-weight: 700; }
 
 /* La ciambella */
 .app-lynk .ciambella-riga { display: flex; align-items: center; gap: var(--sp-4); min-height: 0; }
@@ -3287,12 +3418,33 @@ form.signup .auth-accetto { display: block; }
 .app-lynk .facce { margin-left: auto; display: flex; padding-left: var(--sp-2); flex: none; }
 .app-lynk .riga-chi { min-width: 0; font-size: 0.84rem; line-height: 1.3; overflow: hidden; }
 .app-lynk .riga-chi b { font-weight: 600; }
+/* Il **figlio diretto** `b` e' la prima delle due righe quando la voce non ha
+   `.l1` — le righe dei conti e dei prossimi passaggi sono fatte cosi'. Senza
+   questa regola «Piazza Dante → Stazione» va a capo, la voce diventa tre righe
+   e si accavalla con quella sotto: e' la stessa cosa che il commento qui sotto
+   vieta, e che valeva solo per `.l1`, cioe' per una scheda su tre. Il `>` serve:
+   dentro `.l1` c'e' un `b` annidato, e mandarlo a blocco spezzerebbe in due la
+   riga «Tizio ha preso un posto». */
+.app-lynk .riga-chi > b { display: block; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 /* Le due righe di una voce sono **due righe**, e nessuna delle due va a capo:
    una che si spezza in tre fa saltare l'altezza della traccia, e con la
    griglia a schermo pieno quella e' la differenza fra una scheda pulita e tre
    voci accavallate. */
 .app-lynk .riga-chi .l1 { display: block; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .app-lynk .riga-chi small { display: block; font-size: 0.74rem; color: var(--ink-soft); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+/* La barra sotto una voce dei conti: dice **quanto pesa** quel conto rispetto al
+   piu' grosso in elenco, che e' la cosa che un importo da solo non dice — sette
+   euro non si sa se sono molti finche' non si sa qual e' il massimo.
+   Sta solo nella prima delle tre schede in fondo: le altre due elencano fatti,
+   e un fatto non ha una grandezza da confrontare. Il colore raddoppia il segno
+   che l'importo porta gia' in parola e in posizione, non lo sostituisce. */
+.app-lynk .barra {
+  display: block; height: 4px; margin-top: 5px; border-radius: var(--pill);
+  background: var(--surface-2); overflow: hidden;
+}
+.app-lynk .barra i { display: block; height: 100%; border-radius: var(--pill); background: var(--ink-soft); }
+.app-lynk .barra.dare i { background: var(--danger); }
+.app-lynk .barra.avere i { background: var(--ok); }
 .app-lynk .riga-imp { margin-left: auto; font-family: var(--font-mono); font-weight: 500; font-size: 0.88rem; white-space: nowrap; flex: none; }
 .app-lynk .riga-imp.dare { color: var(--danger); }
 .app-lynk .riga-imp.avere { color: var(--ok); }
@@ -3325,7 +3477,12 @@ form.signup .auth-accetto { display: block; }
   /* Qui la colonna non esiste e torna la pillola in basso. L'immagine di come
      va fatta la porta il proprietario: fino ad allora questa e' una resa
      provvisoria, dichiarata, e **anche qui non si scorre**. */
-  .app-lynk { --righe-scheda: 2; grid-template-columns: minmax(0, 1fr); }
+  /* **Una riga, non due.** Con due, la banda che tocca a una riga qui e' alta
+     25px e il contenuto 34: le voci si accavallavano, e non per la barra ma per
+     l'altezza — succedeva anche prima che ci fosse. Accorciare l'elenco e'
+     esattamente il rimedio che questa vista ha (`--righe-scheda`), e il piede
+     dice quante voci restano fuori: «e altri 3». */
+  .app-lynk { --righe-scheda: 1; grid-template-columns: minmax(0, 1fr); }
   .app-lynk .lato { display: none; }
   .app-lynk .corpo { padding: var(--sp-2) var(--sp-3) var(--sp-3); gap: var(--sp-2); grid-template-rows: auto auto auto minmax(0, 1fr) minmax(0, 1fr); }
   .app-lynk .numeri { grid-template-columns: repeat(2, minmax(0, 1fr)); }

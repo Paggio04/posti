@@ -11,8 +11,15 @@
   <link rel="stylesheet" href="style.css" />
   <link rel="manifest" href="manifest.json" />
   <link rel="icon" href="icon.svg" type="image/svg+xml" />
-  <meta name="theme-color" content="#EEF1F3" />
-  <meta name="color-scheme" content="dark" />
+  <!-- Il valore di partenza e' quello del tema chiaro; `mostraTema` in
+       mod/schede.js lo gira insieme al tema. Un meta solo, non due con `media`:
+       con due, il codice ne aggiornerebbe uno e l'altro direbbe il contrario. -->
+  <meta name="theme-color" content="#F4FEFF" />
+  <!-- Tutti e due, e in questo ordine: il chiaro e' il tema di casa, ma la pagina
+       parte come la vuole il browser (vedi tema.js). Diceva `dark` e basta, che era
+       un residuo della palette viola: al browser faceva dipingere i controlli di
+       sistema sempre scuri, anche sulla pagina chiara. -->
+  <meta name="color-scheme" content="light dark" />
 
   <!-- Netlify serve l'informativa sia come /privacy sia come /privacy.html, entrambe con
        200: senza canonical un motore di ricerca vede due pagine identiche e sceglie lui. -->

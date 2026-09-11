@@ -97,10 +97,26 @@ function mostraTema(scuro, gira = false) {
   // Anche la barra del browser sul telefono segue il tema: altrimenti resta del
   // colore dell'altro, ed e' la striscia piu' grande dello schermo a dirlo.
   document.querySelector('meta[name="theme-color"]')
-    ?.setAttribute('content', scuro ? '#110C17' : '#EEF1F3');
+    ?.setAttribute('content', scuro ? '#04326D' : '#F4FEFF');
 }
 
 mostraTema(document.documentElement.getAttribute('data-tema') === 'scuro');
+
+// Senza una scelta salvata comanda il browser **anche mentre la pagina e' aperta**:
+// chi ha il tema di sistema automatico lo vede girare all'imbrunire senza ricaricare.
+// Con una scelta salvata no: quella e' una decisione, e un'impostazione generale non
+// la scavalca. La chiave si rilegge ogni volta invece di tenerla in una variabile,
+// perche' un'altra scheda della stessa app puo' averla cambiata nel frattempo.
+window.matchMedia?.('(prefers-color-scheme: dark)')
+  ?.addEventListener('change', (ev) => {
+    let scelto = null;
+    try {
+      scelto = localStorage.getItem('wt_tema');
+    } catch {
+      // Memoria chiusa: nessuna scelta, quindi si segue il browser.
+    }
+    if (!scelto) mostraTema(ev.matches, true);
+  });
 
 tastoTema?.addEventListener('click', () => {
   const scuro = document.documentElement.getAttribute('data-tema') !== 'scuro';

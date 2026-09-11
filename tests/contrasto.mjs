@@ -24,11 +24,11 @@
 // E' questo file la risposta al costo che D10 temeva («due palette sono due cose da
 // mantenere»): il costo resta, ma non lo paga chi legge il foglio sperando bene.
 //
-// Con il viola della palette `--primary` e `--primary-testo` sono tornati a essere
-// **due colori diversi**, non due nomi per uno. Il candy blue era chiaro e faceva
-// entrambi i mestieri con lo stesso valore; il viola e' scuro (L 0.53), quindi si
-// riempie col quasi-bianco sopra ma come testo sul fondo farebbe 2.4:1. La coppia
-// che l'ha imposto sta qui sotto ed e' l'unica ragione per cui i due token esistono.
+// `--primary` e `--primary-testo` sono di nuovo **due nomi con lo stesso valore**,
+// in tutti e due i temi: con le palette di C53 il tocco fa entrambi i mestieri senza
+// cambiare colore. I due token restano separati perche' il giorno in cui la carta si
+// scurisce si cambia una riga sola invece di rincorrere ogni uso; le coppie qui sotto
+// li controllano comunque tutti e due, che e' quello che li tiene onesti.
 
 import { readFileSync } from 'node:fs';
 import { fileURLToPath } from 'node:url';
@@ -141,19 +141,19 @@ const COPPIE = [
   ['lettere sulla targa del marchio', '--su-targa', '--targa', 4.5],
   ['la targa contro il fondo pagina', '--targa', '--bg', 3],
 
-  ['viola come testo, su carta', '--primary-testo', '--surface', 4.5],
-  ['viola come testo, sul fondo', '--primary-testo', '--bg', 4.5],
-  ['viola come testo, sul suo velo', '--primary-testo', '--primary-soft', 4.5],
-  ['viola come testo, sul rilievo', '--primary-testo', '--rilievo', 4.5],
-  ['quasi-bianco sul viola pieno', '--su-primario', '--primary', 4.5],
-  ['quasi-bianco sul viola premuto', '--su-primario', '--primary-hover', 4.5],
-  // La riga di servizio dentro un riquadro pieno di viola: e' testo piccolo, quindi
+  ['il tocco come testo, su carta', '--primary-testo', '--surface', 4.5],
+  ['il tocco come testo, sul fondo', '--primary-testo', '--bg', 4.5],
+  ['il tocco come testo, sul suo velo', '--primary-testo', '--primary-soft', 4.5],
+  ['il tocco come testo, sul rilievo', '--primary-testo', '--rilievo', 4.5],
+  ['quasi-bianco sul tocco pieno', '--su-primario', '--primary', 4.5],
+  ['quasi-bianco sul tocco premuto', '--su-primario', '--primary-hover', 4.5],
+  // La riga di servizio dentro un riquadro pieno del tocco: e' testo piccolo, quindi
   // 4.5 anche se e' un sottotitolo. Stava scritta a mano nel foglio e non era qui.
-  ['riga tenue sul viola pieno', '--su-primario-tenue', '--primary', 4.5],
+  ['riga tenue sul tocco pieno', '--su-primario-tenue', '--primary', 4.5],
   ['anello di fuoco sul fondo pagina', '--primary-testo', '--bg', 3],
-  ['contorno del viola, sulla carta', '--primary-bordo', '--surface', 3],
+  ['contorno del tocco, sulla carta', '--primary-bordo', '--surface', 3],
 
-  // «Questo e' tuo»: viola pieno con il quasi-bianco sopra, e il contorno intorno.
+  // «Questo e' tuo»: riempimento pieno col quasi-bianco sopra, e il contorno intorno.
   ['quasi-bianco su cio\' che e\' tuo', '--tuo-su', '--tuo', 4.5],
   // Sopra l'arancio la riga di servizio non e' quella del blu: i due riempimenti
   // hanno luminosita' opposte, quindi due token. Vale la soglia del testo.
@@ -181,13 +181,28 @@ const COPPIE = [
   // perche' li' il riempimento interattivo e' chiaro — ma questi sei riempimenti
   // sono di mezzo tono in tutti e due i temi, e il bianco e' l'unico inchiostro
   // che ci regge sopra.
-  ['iniziali sull\'avatar 1', 'oklch(0.999 0 0)', 'oklch(0.470 0.090 247)', 4.5],
-  ['iniziali sull\'avatar 2', 'oklch(0.999 0 0)', 'oklch(0.440 0.070 210)', 4.5],
-  ['iniziali sull\'avatar 3', 'oklch(0.999 0 0)', 'oklch(0.455 0.075 285)', 4.5],
-  ['iniziali sull\'avatar 4', 'oklch(0.999 0 0)', 'oklch(0.425 0.065 180)', 4.5],
-  ['iniziali sull\'avatar 5', 'oklch(0.999 0 0)', 'oklch(0.480 0.085 265)', 4.5],
-  ['iniziali sull\'avatar 6', 'oklch(0.999 0 0)', 'oklch(0.410 0.060 200)', 4.5],
+  ['iniziali sull\'avatar 1', 'oklch(0.999 0 0)', 'oklch(0.470 0.090 263)', 4.5],
+  ['iniziali sull\'avatar 2', 'oklch(0.999 0 0)', 'oklch(0.440 0.070 226)', 4.5],
+  ['iniziali sull\'avatar 3', 'oklch(0.999 0 0)', 'oklch(0.455 0.075 301)', 4.5],
+  ['iniziali sull\'avatar 4', 'oklch(0.999 0 0)', 'oklch(0.425 0.065 196)', 4.5],
+  ['iniziali sull\'avatar 5', 'oklch(0.999 0 0)', 'oklch(0.480 0.085 281)', 4.5],
+  ['iniziali sull\'avatar 6', 'oklch(0.999 0 0)', 'oklch(0.410 0.060 216)', 4.5],
   ['iniziali sull\'avatar tuo', '--tuo-su', '--tuo', 4.5],
+
+  // La pastiglia della seconda tessera. Dentro c'e' un'icona, non del testo:
+  // vale la 1.4.11 e la soglia e' 3, sia contro il suo velo sia contro la carta
+  // — perche' il velo e' cosi' tenue (1,20:1 sulla carta alla luce) che a
+  // distinguere la pastiglia dallo sfondo ci pensa il disegno dentro, non il
+  // riempimento.
+  ['icona della seconda tessera, sul suo velo', '--tessera-2-ico', '--tessera-2-velo', 3],
+  ['icona della seconda tessera, sulla carta', '--tessera-2-ico', '--surface', 3],
+
+  // Le barre nelle righe dei conti: una forma che porta informazione, quindi 3
+  // contro la sua pista. Non sono l'unico segno del verso — l'importo lo dice in
+  // parola e in colore — ma **quanto pesa** un conto lo dice solo la barra.
+  ['barra di un conto in dare, sulla sua pista', '--danger', '--surface-2', 3],
+  ['barra di un conto in avere, sulla sua pista', '--ok', '--surface-2', 3],
+  ['barra di un conto, sulla sua pista', '--ink-soft', '--surface-2', 3],
 
   // L'auto. La scocca e' un elemento non testuale che porta informazione — se non
   // si vede, non si vede che c'e' un'auto — quindi vale la 1.4.11 e la soglia e'
@@ -202,15 +217,25 @@ const COPPIE = [
   // arancione. Un fondo solo, misurato in tutti e due i temi.
   ['scocca dell\'auto, sulla sua piastra', '--scocca', '--piastra', 3],
   ['il vuoto di un posto, sulla scocca', '--posto', '--scocca', 3],
-  ['il posto tuo, sulla scocca', '--tuo', '--scocca', 3],
+  // Il posto **tuo**, e perche' qui la coppia e' una per tema invece di una sola.
+  // Non e' una soglia ammorbidita: e' che con l'arancio #F58F20 non esiste una
+  // lamiera che vada bene a tutti. L'arancio ha luminanza 0,402, quindi per
+  // staccare 3:1 vuole una lamiera sotto 0,098; un dettaglio scuro su una lamiera
+  // blu non puo' superare (luminanza + 0,05) / 0,05, quindi la gomma la pretende
+  // sopra 0,1025. Le due richieste non si incontrano, per il 4%: si e' scelta la
+  // lamiera che serve alla gomma, e al buio il posto arancione lo delimita il suo
+  // contorno — che nel disegno c'era gia', 2,5px su `.seat-mine`.
+  // Alla luce non serve: li' «tuo» e' il blu-grigio e il riempimento ce la fa.
+  ['il posto tuo, sulla scocca', '--tuo', '--scocca', 3, 'chiaro'],
+  ['contorno del posto tuo, sulla scocca', '--posto-tuo-filo', '--scocca', 3, 'scuro'],
   ['contorno di un posto, sul suo vuoto', '--posto-bordo', '--posto', 3],
   ['contorno di un posto libero, sul suo vuoto', '--posto-libero', '--posto', 3],
   ['iniziali dentro un posto', '--posto-testo', '--posto', 4.5],
   ['iniziali dentro il posto tuo', '--tuo-su', '--tuo', 4.5],
   ['gomma sulla scocca', '--gomma', '--scocca', 3],
 
-  // Il benvenuto e' l'unico riquadro dove il viola prende tutta la superficie: il
-  // bottone dentro e' il verso rovesciato, chiaro pieno con il viola scritto sopra.
+  // Il benvenuto e' l'unico riquadro dove il tocco prende tutta la superficie: il
+  // bottone dentro e' il verso rovesciato, chiaro pieno col tocco scritto sopra.
   ['bottone chiaro dentro il benvenuto', '--primary', '--su-primario', 4.5],
 
 ];
