@@ -392,23 +392,32 @@ async function disegnaRiepilogo(box) {
   // stanno piu' nel piede della settimana, il saldo non sta piu' nella pastiglia
   // dei conti. Erano cinque: «Posti disponibili» diceva un numero che ora sta
   // nella nota qui accanto, dove costa una riga invece di un riquadro.
+  // Le linee sotto i numeri non sono decorazione e non sono inventate: escono
+  // dalle stesse righe gia' scaricate. Dove una serie vera non c'e' — il saldo,
+  // che vorrebbe la storia dei pagamenti giorno per giorno — la tessera **non ha
+  // la linea**, invece di avere una linea finta.
+  const ultimiQuattordici = Array.from({ length: 14 }, (_, i) =>
+    (perGiorno.get(todayISO(-13 + i)) ?? []).length);
   const numeri = [
-    tessera('', 'Passaggi in programma', String(futuri.length),
-      plurale(liberiTot, 'posto libero', 'posti liberi')),
-    tessera('', 'Passaggi nel mese', String(nelMese),
-      plurale(guidaNelMese.size, 'persona alla guida', 'persone alla guida')),
-    tessera('mio', 'Il tuo saldo', firma(saldo),
+    tessera('', 'car', 'Passaggi in programma', String(futuri.length),
+      plurale(liberiTot, 'posto libero', 'posti liberi'),
+      settimana.map(g => g.rides.length)),
+    tessera('', 'calendar', 'Passaggi nel mese', String(nelMese),
+      plurale(guidaNelMese.size, 'persona alla guida', 'persone alla guida'),
+      ultimiQuattordici),
+    tessera('mio', 'fuel', 'Il tuo saldo', firma(saldo),
       partite.length ? plurale(partite.length, 'conto in sospeso', 'conti in sospeso') : 'nessun conto in sospeso'),
     scoperti
-      ? tessera('allerta', 'Giorni scoperti', String(scoperti), `il primo: ${dataBreve(primoScoperto.giorno)}`)
-      : tessera('', 'Giorni scoperti', '0', 'sette giorni tutti coperti'),
+      ? tessera('allerta', 'info', 'Giorni scoperti', String(scoperti), `il primo: ${dataBreve(primoScoperto.giorno)}`,
+        settimana.map(g => (g.rides.length ? 0 : 1)))
+      : tessera('', 'info', 'Giorni scoperti', '0', 'sette giorni tutti coperti'),
   ].join('');
 
   // Il grafico: si disegna solo se ci sono due mesi con qualcosa dentro. Una
   // linea costruita su un punto solo e' una decorazione, non una misura.
   const via = sparkline(serie);
   const cardCarburante = `
-    <section class="card hero">
+    <section class="card scheda hero">
       <div class="head"><span class="sub">Carburante ripartito · mese corrente</span></div>
       <div class="big">${escapeHtml(eur(meseCorr.tot))}</div>
       <div class="d">${
@@ -428,7 +437,7 @@ async function disegnaRiepilogo(box) {
 
   const liberiProssimo = prossimo ? Math.max(0, (prossimo.seats || 0) - prossimo.seat_claims.length) : 0;
   const cardProssimo = prossimo ? `
-    <section class="card next">
+    <section class="card scheda next">
       <div class="head"><span class="sub">Prossimo passaggio · ${escapeHtml(dataBreve(prossimo.ride_date))}</span></div>
       <div class="titolo">${escapeHtml((prossimo.depart_time || '').slice(0, 5))} · ${escapeHtml(prossimo.origin || '—')} → ${escapeHtml(prossimo.destination || '')}</div>
       <div class="riga${mio(prossimo.driver_id) ? ' tua' : ''}"><span>Conducente</span><b>${escapeHtml(nomeCorto(prossimo.driver_id))}</b></div>
@@ -440,7 +449,7 @@ async function disegnaRiepilogo(box) {
           : 'nessuno, per ora'}</b></div>
       <button type="button" class="go" data-vai="home" aria-label="Vai al passaggio">→</button>
     </section>` : `
-    <section class="card next">
+    <section class="card scheda next">
       <div class="head"><span class="sub">Prossimo passaggio</span></div>
       <div class="titolo">Nessun passaggio in programma</div>
       <div class="riga"><span>Guidi tu?</span><b>Pubblica la tua auto dalla Home</b></div>
@@ -448,7 +457,7 @@ async function disegnaRiepilogo(box) {
     </section>`;
 
   const cardSettimana = `
-    <section class="card">
+    <section class="card scheda">
       <div class="head"><h3>Occupazione settimanale</h3></div>
       ${settimana.map(g => {
         // Con piu' di un'auto nello stesso giorno il nome di chi guida la prima
@@ -474,7 +483,7 @@ async function disegnaRiepilogo(box) {
   const totTurni = turni.reduce((s, [, v]) => s + v.n, 0);
   const mieiTurni = turni30.get(currentUser.id)?.n ?? 0;
   const cardTurni = `
-    <section class="card">
+    <section class="card scheda">
       <div class="head"><h3>Distribuzione turni</h3><span class="sub">ultimi 30 giorni</span></div>
       ${turni.length ? turni.map(([id, v]) => `<div class="turno">
           <span class="n">${mio(id) ? '<b>Tu</b>' : escapeHtml(v.nome)}</span>
@@ -485,7 +494,7 @@ async function disegnaRiepilogo(box) {
     </section>`;
 
   const cardConti = `
-    <section class="card" id="dash-conti">
+    <section class="card scheda" id="dash-conti">
       <div class="head"><h3>Conti in sospeso</h3></div>
       ${partite.length ? `<div class="conti">${partite.slice(0, CONTI_IN_VISTA).map(p => {
         const n = quantiCon.get(p.id) || 0;
@@ -522,7 +531,7 @@ async function disegnaRiepilogo(box) {
     </section>`;
 
   const cardAttivita = `
-    <section class="card">
+    <section class="card scheda">
       <div class="head"><h3>Attività recente</h3></div>
       ${eventi.length ? eventi.map(e => {
         const chi = nomeCorto(e.attore);
@@ -543,17 +552,36 @@ async function disegnaRiepilogo(box) {
   const azioni = `<div class="azioni">${AZIONI_RIEPILOGO.map(([icona, testo, azione]) =>
     `<button type="button" class="az" data-azione="${azione}"><span class="o">${iconaSvg(icona)}</span><span class="t">${escapeHtml(testo)}</span></button>`).join('')}</div>`;
 
-  box.innerHTML = testata(oggiInLettere(), true)
-    + `<div class="numeri">${numeri}</div>
-    <div class="grid">
-      ${cardProssimo}
+  // ── Il montaggio ─────────────────────────────────────────────────────────
+  // Prima era una testata e una `.grid` con sei riquadri in fila indiana, che sul
+  // largo diventava una colonna lunga da scorrere. Adesso e' la composizione della
+  // schermata di riferimento: i quattro numeri, due riquadri larghi, tre stretti.
+  //
+  // **Nessuno dei sei se n'e' andato.** Il carburante del mese era un riquadro
+  // intero per un numero, una percentuale e una linea: sta nella testata, che e'
+  // il posto dove quel genere di cosa si legge senza cercarla. Gli altri cinque
+  // sono dove ci si aspetta: quello che succede presto in alto a sinistra, i conti
+  // in basso.
+  box.innerHTML = `<div class="vista-dash">
+    <div class="testa-vista">
+      <div>
+        <h1>Riepilogo</h1>
+        <p>${escapeHtml(oggiInLettere())} · ${escapeHtml(nomeComitiva())}</p>
+      </div>
       ${cardCarburante}
+    </div>
+    <div class="numeri">${numeri}</div>
+    <div class="fila-due">
       ${cardSettimana}
       ${cardTurni}
+    </div>
+    <div class="fila-tre">
+      ${cardProssimo}
       ${cardConti}
       ${cardAttivita}
     </div>
-    ${azioni}`;
+    ${azioni}
+  </div>`;
 
   // I riquadri portano da qualche parte: nessun bottone qui sopra e' finto.
   box.querySelectorAll('[data-vai="home"]').forEach(b => b.addEventListener('click', () => switchView('home')));
@@ -712,10 +740,33 @@ function testata(sottotitolo, conComitiva = false) {
     </div>`;
 }
 
-// Uno dei quattro numeri in cima: etichetta, valore, e la riga che lo qualifica.
-function tessera(cls, etichetta, valore, nota) {
-  return `<div class="k${cls ? ' ' + cls : ''}"><div class="lab">${escapeHtml(etichetta)}</div>`
-    + `<div class="val">${escapeHtml(valore)}</div><div class="nota">${escapeHtml(nota)}</div></div>`;
+// Uno dei quattro numeri in cima: icona, etichetta, valore, la riga che lo
+// qualifica, e — quando esiste davvero — la linea che ne dice l'andamento.
+// `serie` e' l'ultimo argomento e non il primo perche' e' l'unico che puo'
+// mancare: una tessera senza linea e' una tessera, una tessera con una linea
+// inventata e' una bugia piccola che si legge come un dato.
+function tessera(cls, icona, etichetta, valore, nota, serie = null) {
+  return `<article class="k${cls ? ' ' + cls : ''}">
+    <div class="k-alto"><span class="k-ico">${iconaSvg(icona, 18)}</span><span class="k-lab">${escapeHtml(etichetta)}</span></div>
+    <div class="k-val">${escapeHtml(valore)}</div>
+    <div class="k-nota">${escapeHtml(nota)}</div>
+    ${serie && serie.some(v => v) ? lineaTessera(serie) : ''}
+  </article>`;
+}
+
+// La linea di una tessera: la stessa forma della `sparkline` grande, con i tre
+// nomi che il foglio veste dentro `.k`.
+function lineaTessera(vals, w = 210, h = 40) {
+  const max = Math.max(...vals, 1), min = Math.min(...vals, 0);
+  const x = (i) => (i / Math.max(1, vals.length - 1)) * w;
+  const y = (v) => h - ((v - min) / (max - min || 1)) * (h - 4) - 2;
+  let d = `M ${x(0)} ${y(vals[0])}`;
+  for (let i = 1; i < vals.length; i++) {
+    const xm = (x(i - 1) + x(i)) / 2;
+    d += ` C ${xm} ${y(vals[i - 1])} ${xm} ${y(vals[i])} ${x(i)} ${y(vals[i])}`;
+  }
+  return `<svg class="linea" viewBox="0 0 ${w} ${h}" preserveAspectRatio="none" aria-hidden="true">
+    <path d="${d} L ${w} ${h} L 0 ${h} Z" class="linea-velo"/><path d="${d}" class="linea-tratto"/></svg>`;
 }
 
 // Gli euro con il segno davanti, dal punto di vista di chi guarda: «+ 4,50 €».
