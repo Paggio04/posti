@@ -91,6 +91,8 @@
            avevano la stessa icona: due cose diverse, un segno solo. -->
       <symbol id="i-euro" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round"><path d="M14 5.6A5 5 0 0 0 6.2 8M6.2 12a5 5 0 0 0 7.8 2.4M3.6 8.6h6M3.6 11.4h6"/></symbol>
       <symbol id="i-fuel" viewBox="0 0 24 24"><path d="M3 22V6a2 2 0 0 1 2-2h6a2 2 0 0 1 2 2v16M3 22h10M13 10h2a2 2 0 0 1 2 2v5.5a1.5 1.5 0 0 0 3 0V9l-3-3M4 10h8" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></symbol>
+      <symbol id="i-scarica" viewBox="0 0 24 24"><path d="M12 3v12m0 0l-4.5-4.5M12 15l4.5-4.5M4 19h16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></symbol>
+      <symbol id="i-cestino" viewBox="0 0 24 24"><path d="M4 7h16M10 4h4a1 1 0 0 1 1 1v2H9V5a1 1 0 0 1 1-1zM6 7l1 12a2 2 0 0 0 2 2h6a2 2 0 0 0 2-2l1-12M10 11v6M14 11v6" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></symbol>
       <symbol id="i-logout" viewBox="0 0 24 24"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4M16 17l5-5-5-5M21 12H9" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></symbol>
       <!-- La matita di "Cambia nome": il bottone la chiedeva da sempre (#i-edit) e nello
            sprite non c'era, quindi mostrava un rettangolo vuoto. -->
@@ -579,9 +581,20 @@
         </div>
         <div class="profile-actions">
           <button type="button" id="profile-rename" class="btn btn-secondary btn-full"><svg width="15" height="15"><use href="#i-edit"/></svg> Cambia nome</button>
-          <button type="button" id="profile-export" class="btn btn-secondary btn-full">Scarica i miei dati</button>
-          <button type="button" id="profile-logout" class="btn btn-secondary btn-full btn-danger-full"><svg width="15" height="15"><use href="#i-logout"/></svg> Esci dall'account</button>
-          <button type="button" id="profile-delete" class="btn btn-secondary btn-full btn-danger-full">Elimina il mio account</button>
+          <button type="button" id="profile-export" class="btn btn-secondary btn-full"><svg width="15" height="15"><use href="#i-scarica"/></svg> Scarica i miei dati</button>
+          <button type="button" id="profile-logout" class="btn btn-secondary btn-full"><svg width="15" height="15"><use href="#i-logout"/></svg> Esci dall'account</button>
+        </div>
+
+        <!-- Fuori dalla griglia delle altre, e da solo. Cancellare l'account e'
+             l'unica cosa in tutta l'app che non si annulla: stava in fila con
+             «Esci dall'account», stessa misura e stesso rosso, e due gesti con
+             conseguenze cosi' diverse che si somigliano sono un difetto di
+             sicurezza prima che di grafica. Uscire, in rosso, faceva anche
+             gridare al lupo: col rosso su tutti e due, su uno dei due non
+             voleva piu' dire niente. -->
+        <div class="zona-pericolo">
+          <p class="zona-pericolo-testo">Cancellare l'account toglie il profilo, i posti presi e le auto pubblicate. Non si annulla.</p>
+          <button type="button" id="profile-delete" class="btn btn-secondary btn-danger-full"><svg width="15" height="15"><use href="#i-cestino"/></svg> Elimina il mio account</button>
         </div>
 
         <!-- Le auto (C33). Il testo dice il momento in cui l'informazione serve, che

@@ -2092,14 +2092,42 @@ input[type="time"]::-webkit-calendar-picker-indicator { opacity: 0.6; cursor: po
 .profile-email { color: var(--ink-soft); font-size: 0.87rem; }
 .profile-actions {
   display: grid;
-  grid-template-columns: repeat(2, minmax(0, 1fr));
+  grid-template-columns: repeat(3, minmax(0, 1fr));
   gap: 10px;
   margin-bottom: 16px;
 }
-.profile-actions .btn-full { margin-top: 0; }
 @media (max-width: 767px) {
   .profile-actions { grid-template-columns: minmax(0, 1fr); }
 }
+/* **Cancellare l'account e' l'unica cosa in tutta l'app che non si annulla**, e
+   stava in fila con «Esci dall'account»: stessa griglia, stessa misura, stesso
+   rosso, uno accanto all'altro. Uno si disfa riaccedendo, l'altro toglie il
+   profilo, i posti presi e le auto pubblicate. Due gesti con conseguenze cosi'
+   diverse che si somigliano sono un difetto di sicurezza prima che di grafica.
+   E uscire vestito di rosso faceva gridare al lupo: col rosso su tutti e due,
+   su uno dei due non voleva piu' dire niente.
+   Qui la cancellazione sta da sola, sotto una riga, con scritto cosa porta via.
+   Non e' un riquadro d'allarme — un pannello rosso che urla in una pagina dove
+   non e' successo niente — e' lo stesso foglio con una riga in piu' sopra. */
+.zona-pericolo {
+  border-top: 1px solid var(--border);
+  margin: 26px 0 16px;
+  padding-top: 16px;
+  display: flex;
+  align-items: center;
+  gap: 14px 18px;
+  flex-wrap: wrap;
+}
+.zona-pericolo-testo {
+  flex: 1 1 300px;
+  min-width: 0;
+  color: var(--ink-soft);
+  font-size: 0.85rem;
+  line-height: 1.5;
+  max-width: 60ch;
+}
+.zona-pericolo .btn { flex: none; margin-top: 0; }
+.profile-actions .btn-full { margin-top: 0; }
 .btn-danger-full { color: var(--danger); border-color: var(--danger); }
 .btn-danger-full:hover { background: var(--danger-soft); border-color: var(--danger); }
 .profile-hint { color: var(--ink-soft); font-size: 0.85rem; margin-top: 20px; max-width: 60ch; }
