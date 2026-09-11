@@ -2157,17 +2157,53 @@ che in Node si importa perché non tocca il DOM al caricamento). Le prime tre re
 - **il posto di chi guida non si prenota**: nessun posto prenotabile ci cade sopra, e la
   chiamata che lo disegna non passa `clickable`. Due prove, perché una sola si aggira.
 
-La quarta è rossa, ed è il motivo per cui il test **non è ancora in `npm run check`**:
+#### La fase 3, fatta dove lo spazio c'era — e il muro dove non c'era
 
-> `.car-svg` è larga `min(150px, 58%)` su un viewBox di 150, quindi la scala non supera
-> mai 1. Il sedile più stretto misura 34 nel disegno, cioè **34 pixel veri contro i 44
-> chiesti**. Non manca un filo: manca il 30%, e a ogni larghezza, non solo a 360.
+La scelta del proprietario fra le due strade è stata **allargare i sedili prendendo il
+pavimento**, non alzare il tetto di `.car-svg`. Fatto, e con un risultato diviso in due.
 
-Questo è il vero contenuto della fase 3, e non era «ridisegnare meglio»: o l'auto cresce,
-o i sedili si allargano prendendo lo spazio che oggi è pavimento. Una misura in più che il
-test stampa e non giudica: sulle auto da 4, 5 e 6 i sedili esterni **sforano di 1px il
-contorno dell'abitacolo** (restano dentro la scocca). Da decidere insieme al resto, non
-prima.
+**Dove c'era spazio: 44 veri.** `W_AVANTI` passa da 40 a 44, e le poltrone si spostano di
+un'unità per restare simmetriche — 30 dalla mezzeria, cioè 5 di margine dal fianco e 16 di
+luce fra le due. La coppia di dietro delle auto da 3 (e la terza fila di quelle da 6) sta
+più raccolta, 27 dalla mezzeria: è una panchina divisa in due, non due poltrone. **Le auto
+da 1, 2 e 3 sono verdi.**
+
+**Il pavimento che si è preso è quello verticale**, perché in larghezza non ce n'era: la
+seduta passa da 42 a 50, e fra due file restano 25 unità invece di 33. Non è un dettaglio
+di misura — serviva a non riaprire il difetto che `auto-svg.js` documenta da sempre: 44 per
+40 erano quadrati, e «tre quadrati in fila si leggono come una griglia invece che come una
+panchina». Allargare senza alzare rendeva quella frase vera di nuovo. Le due altezze sono
+ora costanti esportate (`H_SEDUTA`, `H_SPALLIERA`, `Y_SEDUTA`), e da lì si ricavano anche la
+piega del cuscino, il tondo della foto e le iniziali: il giorno in cui la seduta cambia,
+niente resta indietro.
+
+**Dove non c'era, non c'è andata, e non è una svista.** La panchina da tre delle auto da 4,
+5 e 6 resta a 34:
+
+> Fra i due fianchi ci sono **114 unità**. Tre sedili da 44 ne vogliono **132**: mancano 18
+> unità che non esistono, anche appiccicandoli, anche togliendo ogni margine. Il massimo
+> fisico di quella fila è 38 con zero luce, **36** con la luce che serve a non sbagliare
+> tocco — due pixel guadagnati spendendo tutto il margine dal fianco, che non li vale.
+
+Quella fila sale a 44 solo se l'auto cresce, e allora cresce anche `.car-svg`: è la strada
+che il proprietario ha scartato, e resta scartata finché non decide diversamente. Per la
+soglia AA i 34 bastano (il minimo è 24×24); i 44 sono la soglia buona, e su quella fila
+restano un debito **dichiarato**. Per questo `npm run auto` non entra ancora in
+`npm run check`: un `check` rosso per una decisione che aspetta smette di voler dire
+qualcosa.
+
+Il test adesso misura **fila per fila** invece di stampare un minimo solo: con il minimo
+unico l'auto sembrava rotta tutta, mentre la fila che non ci arriva è una.
+
+**E una copia che stava per divergere.** L'auto del cartello dell'accesso è scritta a mano
+in `index.html` — quel riquadro sta in pagina anche senza JavaScript — ed è una copia di
+`SEAT_LAYOUTS[4]`. Allargando il modulo sarebbe rimasta a 40, e le due auto si vedono nella
+stessa sessione. Allineata, e adesso c'è una quinta regola nel test che confronta le cinque
+sedute del cartello con quelle del modulo, una per una.
+
+Una misura in più che il test stampa e non giudica: sulle auto da 4, 5 e 6 i sedili esterni
+**sforano di 1px il contorno dell'abitacolo** (restano dentro la scocca, 3px dal fianco).
+Da decidere se è l'abitacolo a dover allargarsi, non prima.
 
 #### Cosa resta, riordinato
 
@@ -2175,7 +2211,8 @@ prima.
    sblocca il trasloco del guscio nell'app.
 2. **Il trasloco**: `index.html` prende il guscio del banco, e `mod/storico.js` smette di
    avere una seconda stesura del Riepilogo.
-3. **La fase 3 dell'auto**, con il numero che adesso c'è: da 34 a 44.
+3. **La panchina da tre**: o l'auto cresce (e con lei `.car-svg`), o quella fila resta a
+   34 e i 44 valgono per le poltrone. Tutto il resto della fase 3 è fatto.
 4. Il carattere da titolo, le quattro icone PNG, e i tre riquadri del banco da accendere.
 
 ---

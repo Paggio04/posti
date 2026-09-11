@@ -4,12 +4,14 @@
 // capo, e le quattro regole che il ridisegno deve rispettare erano scritte in
 // `docs/ROADMAP.md` e in nessun posto che le controllasse. Questo file le controlla.
 //
-// **Le prime tre valgono oggi, la quarta e' il debito della fase 3.** Per questo il
-// test sta in `npm run auto` e non ancora in `npm run check`: la quarta e' rossa per
-// costruzione — `.car-svg` e' larga al massimo 150px con un viewBox di 150, quindi
-// un sedile e' al piu' 40 pixel veri e la regola ne chiede 44. Non e' una svista da
-// aggirare alzando la soglia: e' la misura di quanto l'auto deve crescere. Quando la
-// fase 3 la fa crescere, questa riga entra in `check` e ci resta.
+// **Tre reggono, e la quarta regge per tre auto su sei.** Le poltrone sono state
+// allargate a 44 prendendo il pavimento (fase 3); quello che resta rosso e' la
+// **panchina da tre** delle auto da 4, 5 e 6, e non per una svista: fra i due
+// fianchi ci sono 114 unita' e tre sedili da 44 ne vogliono 132. Mancano 18 unita'
+// che non esistono, quindi quella fila sale solo se l'auto cresce — e allora cresce
+// anche `.car-svg`. Finche' quella decisione non e' presa il test sta in
+// `npm run auto` e non in `npm run check`: un `check` rosso per un lavoro che
+// aspetta una decisione smette di voler dire qualcosa.
 //
 // Si legge la geometria **dal modulo vero**, non da una copia: `mod/auto-svg.js` non
 // tocca il DOM al caricamento, quindi in Node si importa senza finestra.
@@ -17,15 +19,19 @@
 import { readFileSync } from 'node:fs';
 import { fileURLToPath } from 'node:url';
 import { dirname, join } from 'node:path';
-import { CAR_INSET, CAR_W, DRIVER_POS, SEAT_LAYOUTS, W_AVANTI } from '../mod/auto-svg.js';
+import { CAR_INSET, CAR_W, DRIVER_POS, H_SEDUTA, H_SPALLIERA, PASSO_FILA, SEAT_LAYOUTS, W_AVANTI, Y_SEDUTA } from '../mod/auto-svg.js';
 
 const RADICE = join(dirname(fileURLToPath(import.meta.url)), '..');
 
 // Come `drawSeat` disegna un sedile: la spalliera sopra, la seduta sotto. Il gruppo
-// che si tocca e' l'unione dei due, e `pos.x` e' il **centro**, non il bordo.
+// che si tocca e' l'unione dei due, e `pos.x` e' il **centro**, non il bordo. Le
+// altezze arrivano dal modulo: se lassu' cambia la seduta, qui cambia il bersaglio
+// senza che nessuno debba ricordarselo.
 function ingombro(pos) {
   const w = pos.w ?? W_AVANTI;
-  return { x1: pos.x - w / 2, x2: pos.x + w / 2, y1: pos.y - 28, y2: pos.y + 27, w, h: 55 };
+  const y1 = pos.y + Y_SEDUTA - H_SPALLIERA;
+  const y2 = pos.y + Y_SEDUTA + H_SEDUTA;
+  return { x1: pos.x - w / 2, x2: pos.x + w / 2, y1, y2, w, h: y2 - y1 };
 }
 
 const sovrapposti = (a, b) => a.x1 < b.x2 && b.x1 < a.x2 && a.y1 < b.y2 && b.y1 < a.y2;
@@ -91,6 +97,11 @@ esito(chiamata !== '' && !chiamata.includes('clickable'), 'la chiamata che lo di
 // --- 4. Il bersaglio, alla larghezza piu' stretta ------------------------------
 // La regola della fase 3: 44px veri a 360 di larghezza. Il viewBox non dice niente
 // da solo — conta quanto e' larga `.car-svg` sullo schermo, che sta nel foglio.
+//
+// **Fila per fila, non un minimo solo.** Il minimo unico diceva «34» e faceva
+// sembrare rotta tutta l'auto, mentre la fila che non ci arriva e' una: la panchina
+// da tre delle auto da 4, 5 e 6. Cosi' si vede quale, e le altre non spariscono
+// dentro la peggiore.
 console.log('\n  — il bersaglio a 360px di larghezza —');
 const css = readFileSync(join(RADICE, 'style.css'), 'utf8');
 const tetto = css.match(/\.car-svg\s*\{[^}]*width:\s*min\((\d+)px/)?.[1];
@@ -98,15 +109,52 @@ if (!tetto) {
   esito(false, 'in `style.css` non si legge la larghezza di `.car-svg`');
 } else {
   const scala = Number(tetto) / CAR_W;
-  const piuStretto = Math.min(
-    ...Object.values(SEAT_LAYOUTS).flatMap(l => Object.values(l)).map(p => ingombro(p).w),
-  );
-  const bersaglio = piuStretto * scala;
   console.log(`    --  .car-svg al massimo ${tetto}px su un viewBox di ${CAR_W} -> scala ${scala}`);
-  esito(bersaglio >= 44, `il sedile piu' stretto e' ${piuStretto} nel disegno, ${bersaglio}px veri (min 44)`);
+  for (const posti of Object.keys(SEAT_LAYOUTS).map(Number)) {
+    const sedili = Object.values(SEAT_LAYOUTS[posti]).map(ingombro);
+    // Il lato corto del bersaglio: e' quello che decide se il dito ci sta.
+    const corto = Math.min(...sedili.map((s) => Math.min(s.w, s.h)));
+    esito(corto * scala >= 44, `auto da ${posti}: il bersaglio piu' piccolo e' ${corto * scala}px (min 44)`);
+  }
+}
+
+// Il pavimento fra due file: e' da li' che viene l'altezza in piu' della seduta, e
+// finirlo vorrebbe dire far toccare due bersagli. Misura, non regola — la regola che
+// lo protegge e' la prima, che nessuna coppia si sovrapponga.
+console.log(`\n    --  fra due file restano ${PASSO_FILA - (H_SPALLIERA + H_SEDUTA)} unita' di pavimento`
+  + ` (passo ${PASSO_FILA}, ingombro ${H_SPALLIERA + H_SEDUTA})\n`);
+
+// --- 5. Il cartello dell'accesso dice la stessa auto -------------------------
+// In `index.html` l'auto del cartello e' **scritta a mano**, perche' quel riquadro
+// sta in pagina anche senza JavaScript. E' una copia di `SEAT_LAYOUTS[4]`, e una
+// copia diverge: allargando le poltrone nel modulo, il cartello sarebbe rimasto a
+// 40 e le due auto si vedono nella stessa sessione. Qui si confrontano.
+console.log('\n  — il cartello dell\'accesso —');
+const html = readFileSync(join(RADICE, 'index.html'), 'utf8');
+const cartello = html.slice(html.indexOf('<div class="auth-cartello">'));
+const sedute = [...cartello.matchAll(
+  /<rect x="(-?[\d.]+)" y="(-?[\d.]+)" width="([\d.]+)" height="([\d.]+)"[^>]*class="seat-base"/g,
+)].map((m) => m.slice(1, 5).map(Number));
+
+const attese = [DRIVER_POS, ...Object.values(SEAT_LAYOUTS[4])]
+  .map((pos) => {
+    const w = pos.w ?? W_AVANTI;
+    return [pos.x - w / 2, pos.y + Y_SEDUTA, w, H_SEDUTA];
+  })
+  .sort((a, b) => a[1] - b[1] || a[0] - b[0]);
+const trovate = [...sedute].sort((a, b) => a[1] - b[1] || a[0] - b[0]);
+
+esito(trovate.length === attese.length,
+  `nel cartello ci sono ${trovate.length} sedute, l'auto da 4 ne ha ${attese.length}`);
+if (trovate.length === attese.length) {
+  const diverse = attese.filter((att, i) => att.some((n, k) => n !== trovate[i][k]));
+  esito(diverse.length === 0, diverse.length === 0
+    ? 'ogni seduta del cartello combacia col modulo'
+    : `${diverse.length} sedute non combaciano: attesa ${JSON.stringify(diverse[0])}`);
 }
 
 console.log(bocciate === 0
   ? '\n  La geometria dell\'auto regge tutte le regole.\n'
-  : `\n  ${bocciate} regole non reggono. Le prime tre sono regressioni; la quarta e' il debito della fase 3.\n`);
+  : `\n  ${bocciate} righe non reggono. Se non sono le tre auto con la panchina da tre,
+  e' una regressione: quelle sono il debito dichiarato della fase 3.\n`);
 process.exit(bocciate === 0 ? 0 : 1);
