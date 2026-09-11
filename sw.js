@@ -12,7 +12,7 @@
 //
 // Quello che si mette in cache e' solo il guscio: i file pubblici, identici per tutti.
 
-const VERSIONE = 'wetransport-v15';  // sale quando cambia il GUSCIO qui sotto
+const VERSIONE = 'wetransport-v16';  // sale quando cambia il GUSCIO qui sotto
 // v15 (10/09/2026): `app.js` si e' spezzato in tredici moduli (C17). Sono file del
 // guscio come gli altri e vanno tutti elencati: chi ha l'app installata li chiede al
 // primo avvio, e senza queste righe la pagina offline resterebbe un guscio senza codice.
@@ -63,6 +63,7 @@ const GUSCIO = [
   '/mod/auto-svg.js',
   '/mod/dialogo.js',
   '/mod/gruppi.js',
+  '/mod/installa.js',
   '/mod/notifiche.js',
   '/mod/nucleo.js',
   '/mod/passaggi.js',

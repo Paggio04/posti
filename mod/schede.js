@@ -2,6 +2,7 @@
 // Cantiere C17: queste righe stavano in `app.js`, che ne aveva 4400. Sono le stesse,
 // spostate; quello che si aggiunge sono le due liste, in testa e in fondo.
 
+import { collegaPromo } from './installa.js';
 import { initials } from './auto-svg.js';
 import { ask } from './dialogo.js';
 import { renderGroupsView } from './gruppi.js';
@@ -40,6 +41,18 @@ function switchView(view) {
   // invece di restare ferma su una scheda che non e' quella aperta — dire una cosa
   // falsa e' peggio che non dire niente.
   fascia?.classList.toggle('spenta', !aperta);
+
+  // **La colonna, da 768px in su.** Stesso stato, letto dallo stesso `data-view`:
+  // non e' una seconda navigazione con un suo elenco da tenere allineato, sono due
+  // rese dello stesso elenco. Qui il profilo **e'** una voce come le altre, perche'
+  // in colonna c'e' posto e la faccia in alto resta comunque.
+  for (const b of document.querySelectorAll('.lato-voci .voce')) {
+    const attiva = b.dataset.view === view;
+    b.classList.toggle('attiva', attiva);
+    if (attiva) b.setAttribute('aria-current', 'page');
+    else b.removeAttribute('aria-current');
+  }
+
   const scheda = document.getElementById('top-me');
   scheda?.classList.toggle('on', view === 'profile');
   if (view === 'profile') scheda?.setAttribute('aria-current', 'page');
@@ -56,8 +69,13 @@ function switchView(view) {
   if (view === 'profile') renderProfile();
 }
 
-document.querySelectorAll('.nav-item').forEach(b =>
-  b.addEventListener('click', () => switchView(b.dataset.view)));
+for (const b of document.querySelectorAll('.nav-item, .lato-voci .voce')) {
+  b.addEventListener('click', () => switchView(b.dataset.view));
+}
+
+// Il riquadro che invita a installarla: si spegne da solo se non c'e' niente da
+// proporre — dentro un'app gia' installata, o dove il browser non offre il dialogo.
+collegaPromo(document.getElementById('promo'), document.getElementById('btn-installa'));
 
 document.getElementById('top-me')?.addEventListener('click', () => switchView('profile'));
 
