@@ -745,17 +745,15 @@ const iconaSvg = (id, w = 15) =>
 // Il tondo colorato accanto a un nome. Deriva dall'id, quindi la stessa persona
 // ha lo stesso colore in tutti i riquadri e fra una visita e l'altra — senza
 // tenere da nessuna parte una tabella di colori.
-// Sei tinte, tutte nella famiglia del viola della palette: cambiano di tinta e di
-// luminosita' quel tanto che basta a distinguere sei persone, senza diventare sei
-// accenti in un'app che ne ha uno. Sono **scure** perche' sopra ci va il
-// quasi-bianco: con il candy blue erano chiare e sopra ci andava l'onyx, ed e' il
-// verso che si e' ribaltato insieme all'accento. Un avatar e' un cerchio con due
-// lettere dentro: e' testo, e vale la soglia del testo (`npm run contrasto`).
 // Sei tinte intorno al blu della palette, che cambiano di tinta prima che di
-// luminosita': servono a distinguere sei persone, non a dire qualcosa. L'arancio
-// non e' fra loro di proposito — qui l'arancio vuol dire «tuo», e un avatar
-// arancione direbbe che quella persona sei tu. Le lettere sopra sono sempre
-// bianche, e le sei coppie le misura `tests/contrasto.mjs`.
+// luminosita': servono a distinguere sei persone, non a dire qualcosa, e per questo
+// non diventano sei accenti in un'app che ne ha uno. L'arancio non e' fra loro di
+// proposito — qui l'arancio vuol dire «tuo», e un avatar arancione direbbe che
+// quella persona sei tu. Sono **scure** perche' sopra ci va il quasi-bianco: col
+// candy blue di due palette fa erano chiare e sopra ci andava l'onyx, ed e' il verso
+// che si e' ribaltato insieme all'accento. Un avatar e' un cerchio con due lettere
+// dentro, cioe' e' testo, e vale la soglia del testo: le sei coppie le misura
+// `tests/contrasto.mjs`.
 const COLORI_AV = ['oklch(0.470 0.090 263)', 'oklch(0.440 0.070 226)', 'oklch(0.455 0.075 301)',
   'oklch(0.425 0.065 196)', 'oklch(0.480 0.085 281)', 'oklch(0.410 0.060 216)'];
 function coloreDi(id) {

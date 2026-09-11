@@ -27,6 +27,12 @@ const ROW_FRONT = 122, ROW_BACK = ROW_FRONT + PASSO_FILA, ROW_THIRD = ROW_BACK +
 // le ruote sono finite fuori di 4px, con quelle di sinistra tagliate dal bordo.
 const CAR_W = 150;                          // larghezza del viewBox
 const CAR_INSET = 18;                       // margine della scocca dal viewBox
+// Il vano dell'abitacolo, cioe' dove il tetto e' tagliato via per far vedere i
+// sedili. Stava a 22 e i sedili esterni della panchina da tre lo sforavano di un
+// pixel: appoggiavano sul suo contorno, che e' la riga che dovrebbe contenerli.
+// A 20 li contiene con un pixel di margine, e restano 2 unita' fra questo contorno
+// e il fianco della scocca.
+const ABITACOLO_INSET = 20;
 const CAR_MID = CAR_W / 2;
 const specchia = (x, w) => CAR_W - x - w;   // riflette un rettangolo sull'asse
 // Larghezza di un sedile: poltrona davanti, posto di panchina dietro.
@@ -104,8 +110,8 @@ function sagomaAuto(H) {
 // dal riferimento che mi e' stato dato — che pero' e' un'auto **di profilo**, e
 // di profilo un sedile non si puo' toccare: qui la vista resta dall'alto e di
 // quel disegno si prende il vocabolario, non l'inquadratura. Stessa ragione per
-// cui i fari sono viola e non ciano al neon: i colori dell'app sono quelli della
-// palette, e nessuno di piu'.
+// cui i fari portano il colore del tocco e non il ciano al neon: i colori dell'app
+// sono quelli della palette, e nessuno di piu'.
 //
 // Tutto quello che sta a destra si ricava da quello che sta a sinistra.
 function finitureAuto(svg, H, righe) {
@@ -176,7 +182,8 @@ function finitureAuto(svg, H, righe) {
   // Senza questo contorno, muso, abitacolo e coda sono la stessa superficie nera e
   // i sedili sembrano appoggiati sopra la lamiera invece che dentro l'auto.
   svg.appendChild(svgEl('rect', {
-    x: 22, y: 62, width: CAR_W - 44, height: H - 62 - 46, rx: 16, class: 'car-abitacolo',
+    x: ABITACOLO_INSET, y: 62, width: CAR_W - 2 * ABITACOLO_INSET, height: H - 62 - 46,
+    rx: 16, class: 'car-abitacolo',
   }));
 
   // Le due pieghe dei fianchi: danno spessore alla lamiera, come la `body-line`
@@ -204,6 +211,7 @@ function svgEl(tag, attrs) {
 }
 
 export {
+  ABITACOLO_INSET,
   CAR_INSET,
   CAR_MID,
   CAR_W,

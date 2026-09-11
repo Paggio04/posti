@@ -19,7 +19,7 @@
 import { readFileSync } from 'node:fs';
 import { fileURLToPath } from 'node:url';
 import { dirname, join } from 'node:path';
-import { CAR_INSET, CAR_W, DRIVER_POS, H_SEDUTA, H_SPALLIERA, PASSO_FILA, SEAT_LAYOUTS, W_AVANTI, Y_SEDUTA } from '../mod/auto-svg.js';
+import { ABITACOLO_INSET, CAR_INSET, CAR_W, DRIVER_POS, H_SEDUTA, H_SPALLIERA, PASSO_FILA, SEAT_LAYOUTS, W_AVANTI, Y_SEDUTA } from '../mod/auto-svg.js';
 
 const RADICE = join(dirname(fileURLToPath(import.meta.url)), '..');
 
@@ -72,15 +72,17 @@ for (const posti of Object.keys(SEAT_LAYOUTS).map(Number)) {
   const margine = Math.min(...tutti.map(s => Math.min(s.x1 - CAR_INSET, CAR_W - CAR_INSET - s.x2)));
   esito(margine >= 0, `auto da ${posti}: ${margine}px fra il sedile piu' esterno e il fianco`);
 }
-// L'abitacolo e' il riquadro che fa vedere i sedili dentro l'auto: sta piu' dentro
-// del fianco, e un sedile che lo sfora si appoggia sul suo contorno.
-const ABITACOLO_X = 22;
+// E dentro l'abitacolo, che e' il riquadro da cui si vedono i sedili: sta piu'
+// dentro del fianco, quindi e' lui il vincolo vero. Era una misura e non una regola
+// perche' non reggeva — i sedili esterni della panchina da tre lo sforavano di un
+// pixel, appoggiandosi sulla riga che dovrebbe contenerli. Adesso l'abitacolo sta a
+// 20 invece di 22 e la misura e' diventata una regola.
 const dentroAbitacolo = Math.min(
-  ...Object.values(SEAT_LAYOUTS).flatMap(l => [DRIVER_POS, ...Object.values(l)])
+  ...Object.values(SEAT_LAYOUTS).flatMap((l) => [DRIVER_POS, ...Object.values(l)])
     .map(ingombro)
-    .map(s => Math.min(s.x1 - ABITACOLO_X, CAR_W - ABITACOLO_X - s.x2)),
+    .map((s) => Math.min(s.x1 - ABITACOLO_INSET, CAR_W - ABITACOLO_INSET - s.x2)),
 );
-console.log(`    --  e ${dentroAbitacolo}px dal contorno dell'abitacolo (non e' una regola, e' una misura)`);
+esito(dentroAbitacolo >= 0, `${dentroAbitacolo}px fra il sedile piu' esterno e il contorno dell'abitacolo`);
 
 // --- 3. Il posto di chi guida non si prenota -----------------------------------
 // Due prove, perche' una sola si aggira: il posto non compare fra quelli

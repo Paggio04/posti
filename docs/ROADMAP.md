@@ -2213,7 +2213,98 @@ Da decidere se è l'abitacolo a dover allargarsi, non prima.
    avere una seconda stesura del Riepilogo.
 3. **La panchina da tre**: o l'auto cresce (e con lei `.car-svg`), o quella fila resta a
    34 e i 44 valgono per le poltrone. Tutto il resto della fase 3 è fatto.
-4. Il carattere da titolo, le quattro icone PNG, e i tre riquadri del banco da accendere.
+4. ~~Il carattere da titolo, le quattro icone PNG, e i tre riquadri del banco da
+   accendere.~~ Restano solo **il carattere da titolo** (serve il permesso di scaricarlo):
+   le icone e i tre riquadri li ha chiusi C55.
+
+### C55 — I tre riquadri accesi, l'invito che non c'era, e le immagini rifatte — *fatto*
+
+#### I tre riquadri della foto non sono piu' inerti
+
+Erano disegnati e fermi, e **il selettore di periodo lo era per forza**: un periodo non
+puo' filtrare dei numeri scritti a mano. Finche' i numeri del banco erano quattro elenchi
+battuti a tastiera, quel controllo era un ornamento, e accenderlo voleva dire prima
+dargli qualcosa da filtrare.
+
+Adesso il banco parte da un elenco di **passaggi con una data** — la stessa forma che
+hanno nell'app, dove `mod/storico.js` scarica tutti i passaggi del gruppo e poi conta.
+Novantasette giorni generati con un seme fisso, perche' un banco che mostra numeri diversi
+a ogni ricarica non si puo' approvare e due schermate a confronto non direbbero niente.
+Da li' si **ricavano** le quattro tessere, il grafico della settimana, la ciambella dei
+turni, i conti in sospeso e i prossimi passaggi: cambiare periodo e' ricontare, che e' il
+punto — nell'app non costera' una richiesta in piu'.
+
+- **La ricerca** filtra le tre schede in fondo su persone, tratte e fermate gia' caricate.
+  Senza accenti e senza maiuscole, mentre si scrive, senza un bottone: non e' una domanda
+  al server, e' un filtro su quello che si sta guardando. Il piede di ogni scheda dice due
+  cose diverse — quante righe non ci stanno e quante ne ha tolte la ricerca — perche' un
+  elenco corto mentre si cerca non e' un elenco corto, e' una ricerca.
+- **Il periodo** ricalcola davvero: 5 passaggi in 7 giorni, 27 in 30, 79 in 90. Il saldo
+  cambia perfino di segno fra un mese e tre. «Questo mese» non e' «ultimi 30 giorni» e non
+  gli e' stato fatto dire la stessa cosa: il 10 del mese sono dieci giorni.
+- Ne sono stati accesi anche i due di scheda: la **settimana** del grafico e la
+  **finestra** della ciambella. Quest'ultima resta separata dal periodo in cima di
+  proposito — «chi guida di solito» e' un'altra domanda da «com'e' andato questo mese», e
+  stringerle insieme farebbe sparire chi guida poco.
+
+Ogni controllo scrive in un solo stato e chiama un solo `disegna()`: cosi' non esiste il
+caso in cui una tessera e' del periodo nuovo e la ciambella di quello vecchio. E quando un
+filtro non trova niente la scheda lo **dice**, invece di restare vuota: vuoto e rotto si
+somigliano troppo.
+
+#### L'invito a installare, che in tre anni non e' mai stato fatto a nessuno
+
+C12 ha reso l'app installabile e poi non l'ha proposto: in tutta l'interfaccia non c'era
+una riga che dicesse che si puo' fare. `mod/installa.js` e' la logica vera, e sono **tre
+strade**, non una:
+
+1. Chrome manda `beforeinstallprompt`, e allora c'e' un dialogo da aprire. Va catturato
+   appena parte — arriva una volta sola e non aspetta che qualcuno sia pronto — e va
+   speso una volta sola: se si tenesse e si riprovasse, il secondo `prompt()` solleverebbe
+   e il bottone sembrerebbe rotto.
+2. **Safari non lo manda mai.** Non e' un errore da nascondere: li' si installa a mano, e
+   l'unica cosa utile e' dire quali due tocchi servono. Una PWA che su iPhone non dice
+   niente e' una PWA che su iPhone non si installa.
+3. Chi ce l'ha gia' non vede niente — e la prova non e' una bandierina salvata da noi, che
+   si cancella e mentirebbe, ma come la pagina e' aperta adesso (`display-mode:
+   standalone`).
+
+Oggi lo usa solo il banco, perche' il riquadro sta nel guscio nuovo che nell'app non e'
+ancora entrato (C54). Ed e' la ragione per cui `tests/moduli.mjs` adesso **confronta il
+guscio di `sw.js` con i moduli raggiungibili da `app.js`**: un modulo che l'app importa e
+il service worker non ha non da' errore in linea, da' un'app installata che offline non
+apre. `mod/installa.js` non e' nel guscio perche' l'app non lo importa; il giorno in cui lo
+importera', quella riga diventa rossa finche' non si aggiunge anche li'.
+
+#### Le cinque immagini, rifatte da quello che c'e' nel repo
+
+`icon.svg` era stato allineato in C53, i raster no: chi installava l'app si ritrovava sulla
+schermata home la tessera quasi nera con l'auto lavanda, e chi mandava il link in chat
+mandava un'anteprima di due palette fa. **Erano anche disegni diversi** — nei PNG l'auto
+era piena, nell'SVG e' di contorno, e nell'anteprima era la capsula vecchia: tre marchi,
+non uno.
+
+`npm run immagini` li rifa tutti e cinque da `icon.svg` e dall'auto del cartello in
+`index.html`, rasterizzando col Chromium che Playwright ha gia' in casa — nessuna
+dipendenza nuova. Le **maskable** non sono le altre con un altro nome: Android ritaglia
+nella forma che decide il telefono e garantisce solo il cerchio dentro l'80% del lato,
+quindi niente angoli arrotondati (li mette il sistema, e i nostri finirebbero tagliati
+storti), fondo a filo e disegno al 62%.
+
+Cosi' la domanda «quale dei due marchi e' quello buono» non si pone piu', e il giorno in
+cui cambia si cambia un file e si rilancia un comando.
+
+#### E i residui della palette vecchia nei commenti
+
+Tre commenti al presente dicevano ancora il falso: i fari dell'auto «sono viola», il viola
+«in questo foglio vuol dire si tocca», i sei colori degli avatar «tutti nella famiglia del
+viola» — quest'ultimo seguito, due righe sotto, dal paragrafo che C53 aveva aggiunto e che
+diceva il contrario. Riscritti. I commenti che raccontano **cosa c'era prima** restano:
+quelli non sono sbagliati, sono la memoria.
+
+E l'abitacolo passa da 22 a 20, cosi' i sedili esterni della panchina da tre ci stanno
+dentro invece di appoggiarsi sul suo contorno: la misura che `tests/auto.mjs` stampava e'
+diventata una regola.
 
 ---
 

@@ -3176,6 +3176,13 @@ form.signup .auth-accetto { display: block; }
   border-radius: var(--r-btn); padding: 9px var(--sp-3);
 }
 .app-lynk .btn-promo:hover { filter: brightness(1.06); }
+/* Dove `beforeinstallprompt` non esiste — Safari, su iPhone e su Mac — al posto
+   del bottone compare la riga che dice quali due tocchi servono. Prende lo stile
+   del paragrafo sopra ma **senza il margine in fondo**: e' l'ultima cosa nel
+   riquadro, e quel margine diventerebbe un buco fra la riga e il bordo. */
+.app-lynk .promo-mano {
+  font-size: 0.76rem; line-height: 1.45; opacity: 0.82; margin-bottom: 0;
+}
 
 .app-lynk .lato-io {
   display: flex; align-items: center; gap: var(--sp-3);
@@ -3404,6 +3411,11 @@ form.signup .auth-accetto { display: block; }
 /* Non scorrono: si accorciano. Le righe che ci stanno le decide
    `--righe-scheda`, e quelle in piu' diventano una riga di piede che le conta. */
 .app-lynk .righe { display: grid; grid-auto-rows: minmax(0, 1fr); min-height: 0; overflow: hidden; }
+/* Quando la ricerca non trova niente la scheda non resta vuota: dire cosa non
+   c'e' e' l'unico modo di distinguere «nessun risultato» da «non ha caricato».
+   Sta in alto e non al centro, perche' al centro di una scheda alta tre righe
+   una frase sola sembra un errore di impaginazione. */
+.app-lynk .riga-vuota { font-size: 0.8rem; color: var(--ink-soft); padding: var(--sp-3) 2px 0; }
 .app-lynk .riga {
   display: flex; align-items: center; gap: var(--sp-3);
   border-bottom: 1px solid var(--border); min-width: 0; overflow: hidden;

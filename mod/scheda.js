@@ -444,9 +444,11 @@ function renderRides(rides) {
     // colonna sua, staccata dal resto da una riga: la matrice di un tabellone
     // delle partenze, che e' il riferimento fisico dichiarato in PRODUCT.md.
     //
-    // Nera e non viola, e non e' un dettaglio: il viola in questo foglio vuol dire
-    // «si tocca» o «e' tuo», e un orario non e' nessuna delle due cose. La regola
-    // stava scritta e questo era uno dei punti in cui il foglio non la rispettava.
+    // Del colore del testo e non di quello del tocco, e non e' un dettaglio: in
+    // questo foglio il colore pieno vuol dire «si tocca» o «e' tuo», e un orario non
+    // e' nessuna delle due cose. La regola stava scritta e questo era uno dei punti
+    // in cui il foglio non la rispettava. Valeva col viola di allora e vale con il
+    // blu di adesso: e' la regola che conta, non la tinta.
     //
     // Senza orario la colonna non c'e' affatto, invece di un trattino: una casella
     // vuota su un tabellone dice «orario soppresso», e qui vorrebbe dire soltanto
