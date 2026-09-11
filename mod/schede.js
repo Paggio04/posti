@@ -147,6 +147,36 @@ tastoTema?.addEventListener('click', () => {
   }
 });
 
+// ── Dove sta la barra: in fondo alla colonna, o in cima alla pagina ────────
+// **Un nodo solo, spostato**, invece di due marcature con due elenchi di
+// ascoltatori: e' la stessa scelta gia' fatta per la fascia in basso, e per la
+// stessa ragione — due copie divergono al primo ritocco, e il ritocco va fatto
+// due volte o una delle due mente.
+//
+// Da 768px in su la colonna c'e', e la targhetta va in fondo a lei: e' il posto
+// che le da' il disegno (`.lato-io` del banco), e la fascia in alto sarebbe
+// altrimenti 44px piu' 12 di distacco **su ogni vista**, con dentro due
+// controlli appiccicati a destra e il resto aria. Il marchio li' era gia' spento,
+// perche' sta nella colonna.
+//
+// Sotto quella soglia la colonna non c'e' e la fascia in basso ha quattro schede
+// senza il Profilo: li' questa barra e' l'unica porta che ci porta, e resta dov'e'.
+//
+// Spostare un elemento non gli toglie gli ascoltatori: il tasto del tema e la
+// targhetta sono gli stessi due nodi prima e dopo.
+const laBarra = document.querySelector('#app-shell .topbar');
+const laColonna = document.querySelector('#app-shell .lato');
+const ilCorpo = document.querySelector('#app-shell .corpo');
+const daLargo = window.matchMedia('(min-width: 768px)');
+
+function sistemaBarra() {
+  if (!laBarra || !laColonna || !ilCorpo) return;
+  if (daLargo.matches) laColonna.appendChild(laBarra);
+  else ilCorpo.prepend(laBarra);
+}
+sistemaBarra();
+daLargo.addEventListener('change', sistemaBarra);
+
 // --- Cambia nome ---
 document.getElementById('profile-rename').addEventListener('click', async () => {
   const name = await ask('Il tuo nome', { text: 'È quello che appare sul sedile.', value: myName });
