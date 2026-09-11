@@ -199,8 +199,12 @@ function aggiornaSchedaProfilo() {
   av.textContent = initials(myName || '?');
   nome.textContent = myName || '—';
   const n = myGroups.length;
+  // Lo spazio fra il numero e la parola e' **insecabile**: in fondo alla colonna
+  // questa riga va a capo, e senza il legame si spezzava dopo il «2» lasciando
+  // «comitive» orfano sulla riga sotto. Rompe al punto separatore, dove la frase
+  // ha davvero una giuntura.
   ruolo.textContent = (isAdmin ? 'Amministratore · ' : '') +
-    (n === 0 ? 'nessuna comitiva' : n === 1 ? '1 comitiva' : `${n} comitive`);
+    (n === 0 ? 'nessuna\u00A0comitiva' : n === 1 ? '1\u00A0comitiva' : `${n}\u00A0comitive`);
 }
 
 function renderProfile() {
