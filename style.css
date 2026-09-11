@@ -3402,12 +3402,20 @@ form.signup .auth-accetto { display: block; }
   width: 32px; height: 32px; flex: none; display: grid; place-items: center;
   background: var(--primary-soft); color: var(--primary-testo); border-radius: var(--r-btn);
 }
-.app-lynk .k-lab {
-  font-size: 0.76rem; font-weight: 600; color: var(--ink-soft);
-  overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
-}
+/* **L'etichetta va a capo, non si tronca.** Cinque tessere in fila vogliono
+   1058 pixel di contenuto per stare ognuna su una riga sola — cioe' una finestra
+   da 1342 — quindi la fascia in cui l'ellissi se la mangiava non era «quella
+   stretta», era quasi tutta. E «Passaggi in programma» e «Passaggi in 30 giorni»
+   ridotti a «Passaggi i…» sono due tessere diverse con lo stesso nome.
+   Dove l'etichetta ci sta su una riga, andare a capo non si vede; dove non ci
+   sta, e' la differenza fra leggerla e indovinarla. Le tessere restano alte
+   uguali perche' e' la griglia a tenerle allineate, non il contenuto. */
+.app-lynk .k-lab { font-size: 0.76rem; font-weight: 600; color: var(--ink-soft); }
 .app-lynk .k-val { font-size: 1.6rem; font-weight: 700; letter-spacing: -0.035em; margin-top: var(--sp-2); font-family: var(--font-mono); line-height: 1.1; }
-.app-lynk .k-nota { font-size: 0.73rem; color: var(--ink-soft); margin-top: 1px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+/* La nota va a capo per la stessa ragione dell'etichetta qui sopra: sulla
+   tessera del carburante dice tre cose — il mese, lo scarto sul mese prima e il
+   costo a passaggio — e su una riga sola ne diceva una e mezza. */
+.app-lynk .k-nota { font-size: 0.73rem; color: var(--ink-soft); margin-top: 1px; }
 /* La linea si appoggia al fondo della scheda e prende quel che avanza: e' cosi'
    che quattro schede con etichette di lunghezza diversa restano alte uguali. */
 /* Una tessera senza linea non le tiene il posto. La quarta riga e' `1fr` proprio
@@ -3545,7 +3553,12 @@ form.signup .auth-accetto { display: block; }
 .app-lynk .ciambella svg { display: block; width: 100%; }
 .app-lynk .ciambella-n { fill: var(--ink); font-size: 26px; font-weight: 700; font-family: var(--font-mono); }
 .app-lynk .ciambella-lab { fill: var(--ink-soft); font-size: 11px; font-family: var(--font-sans); }
-.app-lynk .legenda { flex: 1 1 0; display: flex; flex-direction: column; gap: var(--sp-2); list-style: none; min-width: 0; }
+/* `list-style: none` toglie i pallini, **non il rientro**: un `ul` si porta
+   dietro `padding-inline-start: 40px` dal foglio del browser, e quaranta pixel
+   dentro una legenda larga centoquaranta sono il 28% buttato. Non si vedeva
+   perche' al largo avanzava spazio lo stesso; a 1024 i nomi diventavano «Da…»,
+   «Ad…», «Br…». Vale a ogni larghezza, non solo qui. */
+.app-lynk .legenda { flex: 1 1 0; display: flex; flex-direction: column; gap: var(--sp-2); list-style: none; padding: 0; min-width: 0; }
 .app-lynk .legenda li { display: flex; align-items: center; gap: var(--sp-2); font-size: 0.82rem; min-width: 0; }
 .app-lynk .legenda .pt { width: 10px; height: 10px; border-radius: var(--pill); flex: none; }
 .app-lynk .legenda .lg-n { font-weight: 600; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
@@ -3561,8 +3574,12 @@ form.signup .auth-accetto { display: block; }
    Sta in alto e non al centro, perche' al centro di una scheda alta tre righe
    una frase sola sembra un errore di impaginazione. */
 .app-lynk .riga-vuota { font-size: 0.8rem; color: var(--ink-soft); padding: var(--sp-3) 2px 0; }
+/* Otto pixel di distacco e non dodici. Su una riga larga duecento, tre distacchi
+   da dodici sono trentasei, e sono quelli che a 1366 separavano «1 passaggio ·
+   dal 23 ago» dal suo puntino: qui lo spazio lo decide quello che resta al testo,
+   non un passo scelto in astratto. */
 .app-lynk .riga {
-  display: flex; align-items: center; gap: var(--sp-3);
+  display: flex; align-items: center; gap: var(--sp-2);
   border-bottom: 1px solid var(--border); min-width: 0; overflow: hidden;
 }
 .app-lynk .riga:last-child { border-bottom: 0; }
@@ -3642,15 +3659,54 @@ form.signup .auth-accetto { display: block; }
   .app-lynk .corpo { padding: var(--sp-3) var(--sp-4); }
   .app-lynk .cerca { max-width: none; }
 }
-/* Sotto i 1100 la tessera scende sotto i 150px e l'etichetta non ci sta piu':
-   a 1024 ne uscivano troncate tre su cinque, e «Passaggi in…» due volte sono
-   due tessere diverse con lo stesso nome. Qui l'etichetta va a capo invece di
-   sparire — le tessere restano alte uguali perche' e' la griglia a tenerle
-   allineate, non il contenuto. E' la stessa scelta gia' fatta sul telefono, per
-   la stessa ragione. */
-@media (min-width: 768px) and (max-width: 1099px) {
-  .app-lynk .k-lab { white-space: normal; }
+/* ── La fascia di mezzo: fra il telefono e il largo ────────────────────────
+   Fra 768 e 1279 la composizione a tre colonne **non ci sta**, e la soglia non
+   e' scelta a occhio: e' l'aritmetica della riga piu' fitta, quella dei conti.
+   Vuole 34 di tondo, 81 di nome («Carla Moretti»), 68 di importo, 65 di bottone
+   e i distacchi: **316 pixel di scheda**. Tre colonne ne chiedono 972 di
+   contenuto, e 972 arrivano solo da 1280 in su — sotto, i pezzi a larghezza
+   fissa si prendono tutto e al nome resta il puntino: a 1024 ne aveva 19.
+   Togliere il tondo non basta, e un bottone che scrive nel database non puo'
+   diventare un'icona muta.
+
+   **Una schermata che ci sta perche' quello che non ci sta non si vede non ci
+   sta.** E' la regola scritta per il telefono, e qui vale uguale: si scorre — il
+   riquadro, non la pagina — le file diventano due colonne, e le schede si
+   allargano abbastanza da far stare quello che hanno da dire. La colonna di
+   navigazione resta: quella vive da 768 in su e non c'entra.
+   Da 1280 in su non cambia niente: li' la griglia a tre colonne sta in una
+   schermata, ed e' li' che e' nata. La soglia e' la stessa che il foglio ha
+   gia' — questo file ne vuole due, non cinque. */
+@media (min-width: 768px) and (max-width: 1279px) {
+  .app-lynk .app-view[data-vista="stats"] { overflow-y: auto; }
+  .app-lynk .app-view[data-vista="stats"] > #view-stats,
+  .app-lynk .app-view[data-vista="stats"] > #view-stats > .dash,
+  .app-lynk .app-view[data-vista="stats"] .vista-dash { height: auto; }
+  .app-lynk .vista-dash { display: block; }
+  .app-lynk .vista-dash > * { margin-bottom: var(--sp-3); }
+  .app-lynk .fila-due,
+  .app-lynk .fila-tre { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  /* Le schede non prendono piu' l'altezza da sopra: senza un minimo, su una
+     comitiva vuota si accartoccerebbero sulla frase che hanno dentro. */
+  .app-lynk .scheda { min-height: 190px; }
+  .app-lynk .righe { grid-auto-rows: minmax(52px, auto); }
+  /* Il piede non e' piu' costretto su una riga: qui l'altezza non e' contata al
+     pixel, e «Gli importi li vedete solo tu e la persona int…» tagliato a meta'
+     e' una frase che non dice quello per cui e' stata scritta. */
+  .app-lynk .scheda-piede { white-space: normal; }
 }
+/* E sotto i 1024 non ne stanno nemmeno due, e le cinque tessere in fila
+   diventano tre. Anche questa soglia esce dal contenuto: a 900 il corpo ha 668
+   pixel, cinque tessere ne prendono 138 l'una, l'icona 32, e all'etichetta ne
+   restano 66 — quanto la parola «programma», non uno di piu'. Con tre, 214 a
+   testa: si legge. E le due file in fondo prendono tutta la larghezza, che a
+   quel punto e' l'unico modo perche' una riga dei conti stia intera. */
+@media (min-width: 768px) and (max-width: 1023px) {
+  .app-lynk .numeri { grid-template-columns: repeat(3, minmax(0, 1fr)); }
+  .app-lynk .fila-due,
+  .app-lynk .fila-tre { grid-template-columns: minmax(0, 1fr); }
+}
+
 /* Le righe per scheda guardavano solo la larghezza, ma una riga dei conti e'
    alta tre piani — il nome, la riga che lo qualifica, la barra del peso — e
    sotto gli 890px di **altezza** la terza veniva tagliata a meta'. Una riga
@@ -3696,7 +3752,6 @@ form.signup .auth-accetto { display: block; }
      «Passaggi i…», cioe' due tessere diverse con lo stesso nome. Su questa
      fascia la pagina scorre, quindi l'etichetta puo' andare a capo invece di
      sparire. */
-  .app-lynk .k-lab, .app-lynk .k-nota { white-space: normal; overflow: visible; }
   .app-lynk .cerca { display: none; }
   .app-lynk .btn-cima { padding: 0 var(--sp-3); }
   /* Sul telefono la targhetta e' **solo il tondo**. Il nome non ci stava accanto
