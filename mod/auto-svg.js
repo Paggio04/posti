@@ -167,6 +167,7 @@ function svgEl(tag, attrs) {
 }
 
 export {
+  CAR_INSET,
   CAR_MID,
   CAR_W,
   DRIVER_POS,

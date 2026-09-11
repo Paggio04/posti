@@ -2119,6 +2119,65 @@ restare in una famiglia che la palette ha lasciato.
 `npm run check` è verde, l'identità fuori dal CSS è allineata, e il ramo è fuso una volta
 sola.
 
+### C54 — Dov'è davvero il restyling, misurato — *in corso*
+
+Prima di continuare sulle «altre quattro viste» ho misurato quante di quelle nuove
+arrivano all'app. La risposta cambia l'ordine di quello che resta.
+
+**Il mondo nuovo è un mondo parallelo, e vive solo nel banco.** Tutto il blocco sta
+sotto `.app-lynk` in `style.css` — 414 righe, il 12% del foglio — e `.app-lynk` compare
+in `banco.html` e in nessun altro file. In `index.html` non c'è né `.app-lynk`, né `.lato`,
+né `.cima`, né `.testa-vista`: **82 delle 92 classi del banco non compaiono mai
+nell'app**, che usa ancora `.bottom-nav` e le sue viste di prima.
+
+Quindi la riga di C51 «le altre quattro viste hanno la palette nuova ma la composizione
+vecchia» vale per **cinque viste su cinque**, Riepilogo compreso: il Riepilogo dell'app lo
+scrive `disegnaRiepilogo()` in `mod/storico.js` con un suo impianto (`.dash-top`,
+`#dash-conti`), che non è quello del banco. Sono due stesure della stessa vista.
+
+Il lato buono è che il namespace ha tenuto: **finora il restyling non ha potuto rompere
+niente**, perché nell'app non entra. Il lato caro è che non ha ancora consegnato niente.
+
+**E il trasloco è bloccato in basso, non in alto.** Sotto i 767px la resa provvisoria del
+banco non si limita a impaginare stretto: nasconde `.cerca` e, dentro `.fila-due` e
+`.fila-tre`, tutti i riquadri dopo il primo. Portare il guscio nell'app oggi vorrebbe dire
+pubblicare un telefono a cui manca del contenuto — e il telefono è il posto da cui questa
+app si usa. **L'immagine della barra in basso non è una rifinitura: è la condizione del
+trasloco.**
+
+#### `tests/auto.mjs`, e le quattro regole della fase 3
+
+Le regole delle decisioni 6-7 erano scritte qui e in nessun posto che le controllasse.
+Adesso c'è `npm run auto`, che legge la geometria **dal modulo vero** (`mod/auto-svg.js`,
+che in Node si importa perché non tocca il DOM al caricamento). Le prime tre reggono già:
+
+- **nessuna sovrapposizione**: la luce minima fra due bersagli è 22px sulle auto da 1 e 2,
+  6px su quella da 3, **3px** su quelle da 4, 5 e 6;
+- **tutto dentro la scocca**: 6px di margine dal fianco, 3px sulle auto da 4 in su;
+- **il posto di chi guida non si prenota**: nessun posto prenotabile ci cade sopra, e la
+  chiamata che lo disegna non passa `clickable`. Due prove, perché una sola si aggira.
+
+La quarta è rossa, ed è il motivo per cui il test **non è ancora in `npm run check`**:
+
+> `.car-svg` è larga `min(150px, 58%)` su un viewBox di 150, quindi la scala non supera
+> mai 1. Il sedile più stretto misura 34 nel disegno, cioè **34 pixel veri contro i 44
+> chiesti**. Non manca un filo: manca il 30%, e a ogni larghezza, non solo a 360.
+
+Questo è il vero contenuto della fase 3, e non era «ridisegnare meglio»: o l'auto cresce,
+o i sedili si allargano prendendo lo spazio che oggi è pavimento. Una misura in più che il
+test stampa e non giudica: sulle auto da 4, 5 e 6 i sedili esterni **sforano di 1px il
+contorno dell'abitacolo** (restano dentro la scocca). Da decidere insieme al resto, non
+prima.
+
+#### Cosa resta, riordinato
+
+1. **L'immagine della barra sotto i 768px** — non è più il punto 2 di una lista, è ciò che
+   sblocca il trasloco del guscio nell'app.
+2. **Il trasloco**: `index.html` prende il guscio del banco, e `mod/storico.js` smette di
+   avere una seconda stesura del Riepilogo.
+3. **La fase 3 dell'auto**, con il numero che adesso c'è: da 34 a 44.
+4. Il carattere da titolo, le quattro icone PNG, e i tre riquadri del banco da accendere.
+
 ---
 
 ## Decisioni prese dopo la prima stesura

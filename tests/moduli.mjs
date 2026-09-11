@@ -22,11 +22,18 @@ import path from 'node:path';
 
 const RADICE = path.join(import.meta.dirname, '..');
 const files = ['app.js', ...fs.readdirSync(path.join(RADICE, 'mod')).sort().map((f) => 'mod/' + f)];
+// **Anche i test consumano i moduli**, e un `export` che serve solo a un test non e'
+// un export orfano. `tests/auto.mjs` legge la geometria dell'auto dal modulo vero
+// invece di ricopiarsela: senza questa riga quel filo sembrerebbe reciso, e il rimedio
+// sbagliato sarebbe duplicare le costanti nel test. Di questi file si guardano gli
+// import e basta: quello che esportano non riguarda l'app.
+const lettori = fs.readdirSync(path.join(RADICE, 'tests')).sort()
+  .filter((f) => f.endsWith('.mjs')).map((f) => 'tests/' + f);
 
 const esportati = new Map();
 const importati = [];
 
-for (const f of files) {
+for (const f of [...files, ...lettori]) {
   const t = fs.readFileSync(path.join(RADICE, f), 'utf8');
   const set = new Set();
   for (const m of t.matchAll(/^export\s*\{([^}]*)\}/gm)) {
@@ -34,7 +41,7 @@ for (const f of files) {
   }
   for (const m of t.matchAll(/^export\s+(?:async\s+)?function\s+([A-Za-z_$][\w$]*)/gm)) set.add(m[1]);
   for (const m of t.matchAll(/^export\s+(?:const|let|var|class)\s+([A-Za-z_$][\w$]*)/gm)) set.add(m[1]);
-  esportati.set(f, set);
+  if (files.includes(f)) esportati.set(f, set);
 
   for (const m of t.matchAll(/^import\s*\{([^}]*)\}\s*from\s*'([^']+)'/gm)) {
     const nomi = m[1].split(',').map((p) => p.trim().split(/\s+as\s+/)[0]).filter(Boolean);
