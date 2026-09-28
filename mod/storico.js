@@ -606,9 +606,11 @@ async function disegnaRiepilogo(box) {
     const corpo = eventi.length
       ? `<div class="scheda-corpo righe">${eventi.slice(0, quante).map(e => {
         const chi = nomeCorto(e.attore);
+        // «Tu ha registrato» non e' italiano: con la propria riga il verbo passa alla seconda persona.
+        const etichetta = (mio(e.attore) ? ETICHETTA_EVENTO_TU : ETICHETTA_EVENTO)[e.tipo];
         return `<div class="riga">
-          <span class="av" style="background:${tinta(e.attore)}">${escapeHtml(iniziale(chi))}</span>
-          <span class="riga-chi"><span class="l1"><b>${escapeHtml(chi)}</b> ${ETICHETTA_EVENTO[e.tipo] || escapeHtml(e.tipo)}</span></span>
+          <span class="av" style="background:${tinta(e.attore)}">${escapeHtml(iniziale(nomePer.get(e.attore) || chi))}</span>
+          <span class="riga-chi"><span class="l1"><b>${escapeHtml(chi)}</b> ${etichetta || escapeHtml(e.tipo)}</span></span>
           <span class="riga-quando">${escapeHtml(quandoBreve(e.quando))} fa</span>
         </div>`;
       }).join('')}</div>`
@@ -646,7 +648,7 @@ async function disegnaRiepilogo(box) {
           <span class="facce">${facce.map(c => {
     const id = c.passenger_id;
     const nome = id ? nomeCorto(id) : nomeOccupante(c);
-    return `<i class="av av-piccolo" style="background:${id ? tinta(id) : 'var(--ink-soft)'}" title="${escapeHtml(nome)}${id ? '' : ' (ospite)'}">${escapeHtml(iniziale(nome))}</i>`;
+    return `<i class="av av-piccolo" style="background:${id ? tinta(id) : 'var(--ink-soft)'}" title="${escapeHtml(nome)}${id ? '' : ' (ospite)'}">${escapeHtml(iniziale((id && nomePer.get(id)) || nome))}</i>`;
   }).join('')}${piu ? `<i class="av av-piccolo av-piu">+${piu}</i>` : ''}</span>
         </div>`;
       }).join('')}</div>`
@@ -806,6 +808,14 @@ const ETICHETTA_EVENTO = {
   posto_liberato: 'ha liberato un posto',
   membro_entrato: 'è entrato nella comitiva',
   pagamento_registrato: 'ha registrato un pagamento',
+};
+const ETICHETTA_EVENTO_TU = {
+  passaggio_pubblicato: 'hai pubblicato un passaggio',
+  passaggio_annullato: 'hai annullato un passaggio',
+  posto_preso: 'hai preso un posto',
+  posto_liberato: 'hai liberato un posto',
+  membro_entrato: 'sei entrato nella comitiva',
+  pagamento_registrato: 'hai registrato un pagamento',
 };
 
 // Le cose che si **fanno** dal riepilogo e che da qui non si potrebbero fare
@@ -1139,6 +1149,7 @@ export {
   DAY_FMT,
   comitivaChiusa,
   dataBreve,
+  eur,
   loadHistory,
   loadStats,
   regoleGruppo,
