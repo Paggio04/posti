@@ -21,7 +21,7 @@ const SITE_URL = 'https://wetransport.netlify.app';
 // richiesta: **quello che vale davvero e' il minimo impostato nella dashboard di
 // Supabase**, che e' l'unico che un client non puo' saltare. Vanno tenuti uguali,
 // e insieme al minimo va acceso il confronto con gli elenchi di password rubate
-// (Auth → Policies). Sta scritto in README.md, sezione «Cosa si imposta a mano».
+// (Auth → Policies). Sta scritto in docs/SVILUPPO.md, sezione «Cosa si imposta a mano».
 const PASSWORD_MINIMO = 10;
 
 // ---- Su un'anteprima non si entra ----

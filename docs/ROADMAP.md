@@ -6,6 +6,14 @@ quando ogni pezzo si può dire finito. Nasce dall'intervista del 24/07/2026.
 Regola d'uso: un cantiere alla volta, su un branch, con il suo collaudo. Si aggiorna man mano.
 Il *perché* delle scelte architetturali sta in `docs/adr/`; qui sta il *cosa manca*.
 
+> **28/09/2026 — il progetto si chiude qui.** Una ricerca sul mercato ha detto che il
+> passaggio condiviso fra conoscenti è una funzione e non un prodotto: il gruppo WhatsApp è
+> gratis, e le nicchie dove l'app servirebbe (società sportive, eventi, casa-lavoro) sono già
+> coperte, quasi sempre gratis. Il proprietario ha deciso di fermare lo sviluppo e tenere
+> WeTransport come vetrina: il sito resta online, il README lo presenta, il manuale di chi ci
+> lavora è in `docs/SVILUPPO.md`. Quello che segue resta com'era, come storia del progetto.
+> Le voci aperte (C13 notifiche, collaudo a video, le quattro viste interne) **non** si fanno.
+
 ---
 
 ## Obiettivo
@@ -1892,7 +1900,7 @@ guarda che *qualcuno* abbia risposto, e per dire `[]` PostgREST deve interrogare
 rosso a vuoto non è solo inutile, è dannoso: un allarme che suona sempre è un allarme che si impara
 a ignorare, e a quel punto il giorno che Supabase va davvero in pausa nessuno lo guarda.
 
-**Non fatto, e non si fa dal repo** — sta in `README.md`, «Cosa si imposta a mano», e le righe
+**Non fatto, e non si fa dal repo** — sta in `docs/SVILUPPO.md`, «Cosa si imposta a mano», e le righe
 gialle in `SECURITY.md` sono quelle: il secondo progetto Supabase per le anteprime (oggi
 un'anteprima è l'app **con i dati veri dentro**, e `rete.js` ci mette un cartello che avvisa senza
 separare niente), il ripristino di un backup provato almeno una volta, il minimo password e il
@@ -1908,7 +1916,7 @@ Non un tema nuovo: la coda dei cantieri lasciati aperti dalle fasi precedenti, p
 stesso giro. C24 chiude l'ultima riga gialla vera di `SECURITY.md`, C16 ha finalmente il suo numero
 di arrivo, C20 il suo pezzo di repo, e C50 sana l'unico pezzo di schema che viveva solo in
 produzione. Restano fuori, e restano scritte, solo le voci che vogliono una dashboard, un telefono
-o due persone — `README.md`, «Cosa si imposta a mano».
+o due persone — `docs/SVILUPPO.md`, «Cosa si imposta a mano».
 
 ### C50 — Lo scarto in produzione — *fatto: `035`*
 

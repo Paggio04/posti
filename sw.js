@@ -12,7 +12,9 @@
 //
 // Quello che si mette in cache e' solo il guscio: i file pubblici, identici per tutti.
 
-const VERSIONE = 'wetransport-v16';  // sale quando cambia il GUSCIO qui sotto
+const VERSIONE = 'wetransport-v17';  // sale quando cambia il GUSCIO qui sotto
+// v17 (28/09/2026): la quota a testa esce in euro italiani («2,50 €», non «2.5 €») e
+// l'attivita' recente dice «Tu hai…». Cambiano `mod/scheda.js` e `mod/storico.js`.
 // v15 (10/09/2026): `app.js` si e' spezzato in tredici moduli (C17). Sono file del
 // guscio come gli altri e vanno tutti elencati: chi ha l'app installata li chiede al
 // primo avvio, e senza queste righe la pagina offline resterebbe un guscio senza codice.

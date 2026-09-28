@@ -8,7 +8,7 @@ import { notifichePossibili } from './notifiche.js';
 import { addDaysISO, currentDate, currentGroupId, currentUser, emptyMessage, friendlyError, hasDeparted, isAdmin, isPastDay, mioPosto, nomeDi, nomeOccupante, oraPiu, ridesList, sospeso, toast, todayISO } from './nucleo.js';
 import { clearMyRequest, gemelloDi, loadRides, setPassaggiVisibili } from './passaggi.js';
 import { bloccaSeSospeso, bottonePersona } from './persone.js';
-import { DAY_FMT } from './storico.js';
+import { DAY_FMT, eur } from './storico.js';
 import { SITE_URL, supabase } from './supabase.js';
 import { descriviAuto } from './zona.js';
 
@@ -96,7 +96,7 @@ function testoIcs(ride) {
   const descrizione = [
     `Guida ${nomeDi(ride.driver)}.`,
     liberi > 0 ? `${liberi} posti liberi quando hai scaricato questo file.` : 'Auto al completo.',
-    ride.fuel_per_person ? `Benzina: ${ride.fuel_per_person} € a testa.` : null,
+    ride.fuel_per_person ? `Benzina: ${eur(Number(ride.fuel_per_person))} a testa.` : null,
     ride.note ? `Nota: ${ride.note}` : null,
     SITE_URL,
   ].filter(Boolean).join('\n');
@@ -675,7 +675,7 @@ function renderRides(rides) {
     if (ride.fuel_per_person > 0) {
       const fuel = document.createElement('span');
       fuel.className = 'place-badge fuel';
-      fuel.innerHTML = `<svg width="12" height="12"><use href="#i-fuel"/></svg> ${ride.fuel_per_person} € a testa`;
+      fuel.innerHTML = `<svg width="12" height="12"><use href="#i-fuel"/></svg> ${eur(Number(ride.fuel_per_person))} a testa`;
       foot.appendChild(fuel);
     }
     if (ride.note) {
